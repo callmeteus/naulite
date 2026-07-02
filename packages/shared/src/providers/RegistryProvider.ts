@@ -1,5 +1,5 @@
-import type { Registry } from "../types/Registry.js";
-import type { ResolvedSecret } from "../types/Common.js";
+import type { Registry } from "../types/Registry";
+import type { ResolvedSecret } from "../types/Common";
 
 /**
  * Credentials resolved for a registry pull or push operation.

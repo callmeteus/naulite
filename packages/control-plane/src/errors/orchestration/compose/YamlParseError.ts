@@ -1,4 +1,4 @@
-import { ComposeParserError } from "./ComposeParserError.js";
+import { ComposeParserError } from "./ComposeParserError";
 
 /**
  * Thrown when the YAML parser cannot read the manifest content.

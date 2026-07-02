@@ -4,7 +4,7 @@ import {
     InstanceHealthSchema,
     InstanceSchema,
     InstanceStatusSchema
-} from "../schemas/Instance.js";
+} from "../schemas/Instance";
 
 export type Instance = z.infer<typeof InstanceSchema>;
 export type InstanceStatus = z.infer<typeof InstanceStatusSchema>;

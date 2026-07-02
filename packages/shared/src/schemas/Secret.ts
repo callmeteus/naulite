@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { TimestampSchema } from "./Common.js";
+import { TimestampSchema } from "./Common";
 
 /**
  * Cluster secret metadata. Values are never exposed in list APIs.

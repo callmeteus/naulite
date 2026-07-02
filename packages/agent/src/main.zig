@@ -1,7 +1,7 @@
 const std = @import("std");
+const agent_config = @import("agent_config.zig");
 const bootstrap = @import("bootstrap.zig");
 const cp_client = @import("cp_client.zig");
-const env_util = @import("env_util.zig");
 const http_server = @import("http_server.zig");
 const netbird = @import("netbird.zig");
 
@@ -10,31 +10,38 @@ pub fn main() !void {
     defer _ = safe_allocator.deinit();
     const allocator = safe_allocator.allocator();
 
+    var threaded = std.Io.Threaded.init(allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
     const os = bootstrap.detectOsFamily();
     std.log.info("[agent] starting os={s}", .{@tagName(os)});
 
-    var netbird_client = try netbird.NetbirdClient.loadFromEnv(allocator);
-    defer netbird_client.deinit();
+    var agent_cfg = try cp_client.loadConfig(allocator, io, os);
+    defer agent_cfg.deinit(allocator);
 
-    netbird_client.ensureConnected() catch |err| {
-        std.log.warn("[netbird] ensure connected failed: {}", .{err});
+    agent_config.save(allocator, io, &agent_cfg) catch |err| {
+        std.log.warn("[agent-config] bootstrap persist failed: {}", .{err});
     };
 
-    const cp_config = try cp_client.loadConfig(allocator);
-    try cp_client.startBackground(allocator, cp_config);
+    if (netbird.NetbirdClient.loadFromAgentConfig(allocator, &agent_cfg)) |client| {
+        var netbird_client = client;
+        defer netbird_client.deinit();
 
-    const config = http_server.Config{
+        netbird_client.ensureConnected() catch |err| {
+            std.log.warn("[netbird] ensure connected failed: {}", .{err});
+        };
+    } else |err| {
+        std.log.warn("[netbird] skipped: {}", .{err});
+    }
+
+    try cp_client.startBackground(allocator, io, &agent_cfg);
+
+    const server_config = http_server.Config{
         .listen_address = "0.0.0.0",
-        .listen_port = env_util.readEnvU16("AGENT_PORT", 9470),
-        .docker_socket = defaultDockerSocket(os),
+        .listen_port = agent_cfg.agent_port,
+        .docker_socket = agent_cfg.docker_socket,
     };
 
-    try http_server.serve(allocator, config);
-}
-
-fn defaultDockerSocket(os: bootstrap.OsFamily) []const u8 {
-    return switch (os) {
-        .windows => "//./pipe/docker_engine",
-        else => "/var/run/docker.sock",
-    };
+    try http_server.serve(allocator, server_config);
 }

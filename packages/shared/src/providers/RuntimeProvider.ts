@@ -1,6 +1,6 @@
-import type { InstanceHealth, ResourceRequirements } from "../types/index.js";
-import type { ExecutionPlan } from "../types/ExecutionPlan.js";
-import type { ResolvedSecret } from "../types/Common.js";
+import type { InstanceHealth, ResourceRequirements } from "../types/index";
+import type { ExecutionPlan } from "../types/ExecutionPlan";
+import type { ResolvedSecret } from "../types/Common";
 
 /**
  * Options for pulling a container image on a node.

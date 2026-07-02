@@ -6,7 +6,7 @@ import {
     RetentionPolicySchema,
     SecretReferenceSchema,
     TimestampSchema
-} from "./Common.js";
+} from "./Common";
 
 /**
  * Backup destination for the built-in local provider.

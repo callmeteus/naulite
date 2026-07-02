@@ -1,6 +1,6 @@
-import type { ControlPlaneStore } from "../database/ControlPlaneStore.js";
+import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 
-import type { SelfHostedNetBirdAdapter } from "./SelfHostedNetBirdAdapter.js";
+import type { SelfHostedNetBirdAdapter } from "./SelfHostedNetBirdAdapter";
 
 const SETUP_KEY_SECRET_NAME = "netbird/setup-key";
 

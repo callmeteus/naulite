@@ -3,7 +3,7 @@ import type {
     NetBirdAdapter,
     NetBirdDevice,
     NetBirdGroup
-} from "./NetBirdService.js";
+} from "./NetBirdService";
 
 /**
  * Options for the self-hosted NetBird API adapter.

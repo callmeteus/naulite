@@ -111,10 +111,17 @@ pub fn deleteResource(allocator: std.mem.Allocator, client: *Client, kind: []con
 }
 
 fn resourcePath(kind: []const u8) []const u8 {
-    if (std.mem.eql(u8, kind, "service")) return "services";
-    if (std.mem.eql(u8, kind, "volume")) return "volumes";
-    if (std.mem.eql(u8, kind, "secret")) return "secrets";
-    return kind;
+    if (std.mem.eql(u8, kind, "service")) {
+        return "services";
+    } else
+    if (std.mem.eql(u8, kind, "volume")) {
+        return "volumes";
+    } else
+    if (std.mem.eql(u8, kind, "secret")) {
+        return "secrets";
+    } else {
+        return kind;
+    }
 }
 
 /// Fetches instance logs.

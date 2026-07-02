@@ -1,2 +1,2 @@
-export { ControlPlaneStore } from "./ControlPlaneStore.js";
-export { DatabaseProvider } from "./DatabaseProvider.js";
+export { ControlPlaneStore } from "./ControlPlaneStore";
+export { DatabaseProvider } from "./DatabaseProvider";

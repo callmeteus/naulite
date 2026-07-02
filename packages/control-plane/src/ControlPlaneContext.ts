@@ -1,19 +1,19 @@
 import { PluginRegistry } from "@platform/shared";
 
-import { ControlPlaneStore } from "./database/ControlPlaneStore.js";
-import type { DatabaseProvider } from "./database/DatabaseProvider.js";
-import { GitOpsService } from "./services/GitOpsService.js";
-import { createNetBirdService } from "./services/CreateNetBirdService.js";
-import type { NetBirdCredentials } from "./services/NetBirdBootstrap.js";
-import type { NetBirdService } from "./services/NetBirdService.js";
-import { ComposeParser } from "./orchestration/ComposeParser.js";
-import { ExposurePlanner } from "./orchestration/ExposurePlanner.js";
-import { Planner } from "./orchestration/Planner.js";
-import { Scheduler } from "./orchestration/Scheduler.js";
-import { PluginLoader } from "./plugins/PluginLoader.js";
-import { BackupScheduler } from "./services/BackupScheduler.js";
-import { LogRotationScheduler } from "./services/LogRotationScheduler.js";
-import { ControlPlaneSync } from "./services/ControlPlaneSync.js";
+import { ControlPlaneStore } from "./database/ControlPlaneStore";
+import type { DatabaseProvider } from "./database/DatabaseProvider";
+import { GitOpsService } from "./services/GitOpsService";
+import { createNetBirdService } from "./services/CreateNetBirdService";
+import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
+import type { NetBirdService } from "./services/NetBirdService";
+import { ComposeParser } from "./orchestration/ComposeParser";
+import { ExposurePlanner } from "./orchestration/ExposurePlanner";
+import { Planner } from "./orchestration/Planner";
+import { Scheduler } from "./orchestration/Scheduler";
+import { PluginLoader } from "./plugins/PluginLoader";
+import { BackupScheduler } from "./modules/backup/BackupScheduler";
+import { LogRotationScheduler } from "./modules/log-rotation/LogRotationScheduler";
+import { ControlPlaneSync } from "./services/ControlPlaneSync";
 
 /**
  * Shared control plane application context.

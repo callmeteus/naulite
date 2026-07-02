@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const agent_config = @import("agent_config.zig");
+
 pub const LoadError = error{
     MissingManagementUrl,
     CloudEndpointNotAllowed,
@@ -24,15 +26,34 @@ pub const NetbirdClient = struct {
             return error.CloudEndpointNotAllowed;
         }
 
+        const normalized = normalizeManagementUrl(allocator, management_url) catch {
+            return error.InvalidManagementUrl;
+        };
+        errdefer allocator.free(normalized);
+
         return .{
             .allocator = allocator,
-            .management_url = try allocator.dupe(u8, management_url),
+            .management_url = normalized,
         };
     }
 
     /// Releases owned management URL memory.
     pub fn deinit(self: *NetbirdClient) void {
         self.allocator.free(self.management_url);
+    }
+
+    /// Loads NetBird settings from persisted agent config, then environment variables.
+    pub fn loadFromAgentConfig(
+        // The allocator to use.
+        allocator: std.mem.Allocator,
+        // Loaded agent configuration.
+        config: *const agent_config.AgentConfig,
+    ) LoadError!NetbirdClient {
+        if (config.netbird_management_url) |persisted| {
+            return init(allocator, persisted);
+        }
+
+        return loadFromEnv(allocator);
     }
 
     /// Loads NetBird settings from environment variables.
@@ -46,20 +67,7 @@ pub const NetbirdClient = struct {
         };
         const raw = std.mem.span(raw_ptr);
 
-        if (isCloudEndpoint(raw)) {
-            std.log.err("[netbird] NetBird cloud endpoints are not allowed; use self-hosted management URL", .{});
-            return error.CloudEndpointNotAllowed;
-        }
-
-        const normalized = normalizeManagementUrl(allocator, raw) catch {
-            return error.InvalidManagementUrl;
-        };
-        errdefer allocator.free(normalized);
-
-        return .{
-            .allocator = allocator,
-            .management_url = normalized,
-        };
+        return init(allocator, raw);
     }
 
     /// Returns whether the NetBird mesh is connected (stub).

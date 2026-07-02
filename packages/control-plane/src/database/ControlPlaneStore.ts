@@ -10,8 +10,8 @@ import type {
 import { randomUUID } from "node:crypto";
 import { Op } from "sequelize";
 
-import { ApiKeyCrypto } from "../auth/ApiKeyCrypto.js";
-import { JsonField, RowMapper } from "../util/RowMapper.js";
+import { ApiKeyCrypto } from "../auth/ApiKeyCrypto";
+import { JsonField, RowMapper } from "../util/RowMapper";
 
 import {
     ApiKeyModel,
@@ -21,7 +21,7 @@ import {
     SecretModel,
     ServiceModel,
     VolumeModel
-} from "./models/index.js";
+} from "./models/index";
 
 /**
  * Data access layer backed by Sequelize models.

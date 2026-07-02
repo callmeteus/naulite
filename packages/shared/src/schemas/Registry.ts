@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { SecretReferenceSchema, TimestampSchema } from "./Common.js";
+import { SecretReferenceSchema, TimestampSchema } from "./Common";
 
 /**
  * Container registry configuration declared in a manifest.

@@ -1,6 +1,6 @@
-export * from "./schemas/index.js";
-export * from "./types/index.js";
-export * from "./providers/index.js";
-export { PluginRegistry } from "./plugins/PluginRegistry.js";
-export type { PluginRegistryEntry } from "./plugins/PluginRegistry.js";
-export { NetworkGroupId } from "./orchestration/NetworkGroupId.js";
+export * from "./schemas/index";
+export * from "./types/index";
+export * from "./providers/index";
+export { PluginRegistry } from "./plugins/PluginRegistry";
+export type { PluginRegistryEntry } from "./plugins/PluginRegistry";
+export { NetworkGroupId } from "./orchestration/NetworkGroupId";

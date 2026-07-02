@@ -9,7 +9,7 @@ import {
     RetentionPolicySchema,
     SecretReferenceSchema,
     TimestampSchema
-} from "../schemas/Common.js";
+} from "../schemas/Common";
 
 export type CronExpression = z.infer<typeof CronExpressionSchema>;
 export type GlobPattern = z.infer<typeof GlobPatternSchema>;

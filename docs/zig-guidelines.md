@@ -1,25 +1,25 @@
-# Zig - diretrizes de código (Platform)
+# Zig code guidelines (Platform)
 
-Referência canônica: `packages/agent/src/runtime/docker_api.zig`.
+Canonical reference: `packages/agent/src/runtime/docker_api.zig`.
 
-Todo código Zig novo ou alterado neste monorepo deve seguir este padrão.
+All new or changed Zig code in this monorepo must follow this style.
 
-## Comentários
+## Comments
 
-### Tipos públicos (`pub const`, `pub enum`)
+### Public types (`pub const`, `pub enum`)
 
-Use uma linha `///` imediatamente antes do tipo:
+Use a single `///` line immediately before the type:
 
 ```zig
 /// HTTP response from the Docker Engine API.
 pub const DockerResponse = struct {
 ```
 
-### Campos de struct
+### Struct fields
 
-- Linha em branco após `{` do struct.
-- Comentário `//` na linha **acima** de cada campo (frase completa, ponto final).
-- Linha em branco entre campos.
+- Blank line after the struct opening `{`.
+- `//` comment on the line **above** each field (full sentence, trailing period).
+- Blank line between fields.
 
 ```zig
 pub const DockerApi = struct {
@@ -30,11 +30,11 @@ pub const DockerApi = struct {
     socket_path: []const u8,
 ```
 
-### Funções e métodos públicos
+### Public functions and methods
 
-- Uma linha `///` com resumo antes da função.
-- Parâmetros em **linhas separadas**, cada um precedido de `//` descritivo.
-- Corpo na linha seguinte ao último parâmetro.
+- One `///` summary line before the function.
+- Parameters on **separate lines**, each preceded by a descriptive `//` comment.
+- Function body on the line after the last parameter.
 
 ```zig
     /// Performs an HTTP request against the Docker Engine API.
@@ -49,49 +49,51 @@ pub const DockerApi = struct {
     ) !DockerResponse {
 ```
 
-### Funções privadas (`fn`)
+### Private functions (`fn`)
 
-- Sem `///` obrigatório; use `//` nos parâmetros quando a assinatura for multilinha.
-- Helpers triviais de uma linha podem manter assinatura compacta.
+- `///` is optional; use `//` on parameters when the signature spans multiple lines.
+- Trivial one-line helpers may keep a compact signature.
 
-### O que não usar
+### Do not use
 
-- **Não** usar `@param`, `@returns`, `@throws` (estilo Javadoc/TSDoc).
-- **Não** usar comentários `//` inline na mesma linha do campo (exceto em switches/loops muito locais).
-- **Não** deixar linhas em branco duplicadas entre blocos (máximo uma linha vazia).
+- **Do not** use `@param`, `@returns`, or `@throws` (Javadoc/TSDoc style).
+- **Do not** use inline `//` comments on the same line as a field (except in very local switches/loops).
+- **Do not** leave duplicate blank lines between blocks (at most one empty line).
 
-## Formatação
+## Formatting
 
-- Indentação: 4 espaços.
-- Imports agrupados: std, depois crates locais (`@import`).
-- `else` encadeado na mesma linha do `}` anterior quando for cadeia if-else (ver `AGENTS.md`).
-- Constantes de módulo: `snake_case` ou `SCREAMING_SNAKE` conforme já usado no arquivo.
-- Tipos: `PascalCase`. Funções: `camelCase`.
+- Indentation: 4 spaces.
+- Group imports: std first, then local crates (`@import`).
+- **Every `if` / `else` must use a `{ }` block** - never a single-line body without braces (`if (x) return y;` is forbidden).
+- Chained `else` on the same line as the previous closing `}` for if-else chains (see `AGENTS.md`).
+- Module constants: `snake_case` or `SCREAMING_SNAKE` as already used in the file.
+- Types: `PascalCase`. Functions: `camelCase`.
 
-## Structs e enums
+## Structs and enums
 
-- Métodos `pub` após campos, separados por linha em branco.
-- Enums: variantes em `camelCase`; comentário `///` no enum se exposto publicamente.
-- `error` sets nomeados quando reutilizados (`LoadError`, `ApiError`).
+- `pub` methods after fields, separated by a blank line.
+- Enums: variants in `camelCase`; `///` on the enum when it is public.
+- Named `error` sets when reused (`LoadError`, `ApiError`).
 
-## Testes
+## Tests
 
-- Bloco `test "descrição em inglês"` no final do arquivo quando houver testes.
-- Mesmo padrão de comentários nos helpers de teste se forem extraídos.
+- `test "description in English"` block at the end of the file when tests exist.
+- Same comment style on extracted test helpers.
 
-## Build e layout
+## Build and layout
 
-| Pacote | Raiz do código | Entrada |
-|--------|----------------|---------|
+| Package | Code root | Entry |
+|---------|-----------|-------|
 | `packages/agent` | `src/` | `src/main.zig` |
 | `packages/cli` | `src/` | `src/main.zig` |
 
-O CLI **não** usa mais `zig/src/` - fontes ficam diretamente em `packages/cli/src/`.
+The CLI **no longer** uses `zig/src/` - sources live directly under `packages/cli/src/`.
 
-## Checklist antes de commitar Zig
+## Pre-commit checklist for Zig
 
-- [ ] Structs com comentário `//` em cada campo público relevante
-- [ ] Funções `pub` com `///` e parâmetros documentados com `//`
-- [ ] Sem `@param` / `@returns`
-- [ ] Sem linhas em branco extras
-- [ ] `zig build` passa no pacote alterado
+- [ ] Structs with a `//` comment on each relevant public field
+- [ ] `pub` functions with `///` and parameters documented with `//`
+- [ ] No `@param` / `@returns`
+- [ ] Every `if` / `else` uses a `{ }` block
+- [ ] No extra blank lines
+- [ ] `zig build` passes in the changed package

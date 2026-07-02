@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
 
-import type { ControlPlaneStore } from "../database/ControlPlaneStore.js";
+import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 
-import { NetBirdConfig } from "./NetBirdConfig.js";
+import { NetBirdConfig } from "./NetBirdConfig";
 
 /**
  * Internal NetBird credentials managed by the control plane.

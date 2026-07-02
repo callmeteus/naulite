@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiKeyCrypto } from "../../../packages/control-plane/src/auth/ApiKeyCrypto.js";
+import { ApiKeyCrypto } from "../../../packages/control-plane/src/auth/ApiKeyCrypto";
 
 describe("ApiKeyCrypto", () => {
     it("generates secrets with plt_ prefix and stable hash", () => {

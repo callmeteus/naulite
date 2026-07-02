@@ -1,22 +1,38 @@
-export { createApp, type CreateAppOptions } from "./App.js";
-export { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext.js";
-export { DatabaseProvider } from "./database/index.js";
-export { GitOpsService } from "./services/GitOpsService.js";
-export { createNetBirdService } from "./services/CreateNetBirdService.js";
-export { NetBirdConfig } from "./services/NetBirdConfig.js";
-export { MockNetBirdAdapter, NetBirdService } from "./services/NetBirdService.js";
-export { SelfHostedNetBirdAdapter } from "./services/SelfHostedNetBirdAdapter.js";
-export { ComposeParser } from "./orchestration/ComposeParser.js";
-export { ComposeParserError } from "./errors/orchestration/compose/ComposeParserError.js";
-export { InvalidManifestDocumentError } from "./errors/orchestration/compose/InvalidManifestDocumentError.js";
-export { ManifestValidationError } from "./errors/orchestration/compose/ManifestValidationError.js";
-export { YamlParseError } from "./errors/orchestration/compose/YamlParseError.js";
-export { ExposurePlanner, type ExposurePlan } from "./orchestration/ExposurePlanner.js";
-export { NetworkGroupId } from "./orchestration/NetworkGroupId.js";
-export { Planner, type ClusterActualState, type PlannerDiff } from "./orchestration/Planner.js";
-export { Scheduler, type NodeScore, type ScheduleResult } from "./orchestration/Scheduler.js";
-export { PluginLoader } from "./plugins/PluginLoader.js";
-export { BackupScheduler } from "./services/BackupScheduler.js";
-export { LogRotationScheduler } from "./services/LogRotationScheduler.js";
-export { startServer, type ControlPlaneServer, type StartServerOptions } from "./Server.js";
-export { ControlPlaneSync } from "./services/ControlPlaneSync.js";
+export { createApp, type CreateAppOptions } from "./App";
+export { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
+export { DatabaseProvider } from "./database/index";
+export { GitOpsService } from "./services/GitOpsService";
+export { createNetBirdService } from "./services/CreateNetBirdService";
+export { NetBirdConfig } from "./services/NetBirdConfig";
+export { MockNetBirdAdapter, NetBirdService } from "./services/NetBirdService";
+export { SelfHostedNetBirdAdapter } from "./services/SelfHostedNetBirdAdapter";
+export { ComposeParser } from "./orchestration/ComposeParser";
+export { ComposeParserError } from "./errors/orchestration/compose/ComposeParserError";
+export { InvalidManifestDocumentError } from "./errors/orchestration/compose/InvalidManifestDocumentError";
+export { ManifestValidationError } from "./errors/orchestration/compose/ManifestValidationError";
+export { YamlParseError } from "./errors/orchestration/compose/YamlParseError";
+export { ExposurePlanner, type ExposurePlan } from "./orchestration/ExposurePlanner";
+export { NetworkGroupId } from "./orchestration/NetworkGroupId";
+export { Planner, type ClusterActualState, type PlannerDiff } from "./orchestration/Planner";
+export { Scheduler, type NodeScore, type ScheduleResult } from "./orchestration/Scheduler";
+export { PluginLoader } from "./plugins/PluginLoader";
+export { BackupScheduler, LogRotationScheduler } from "./modules";
+export { startServer, type ControlPlaneServer, type StartServerOptions } from "./Server";
+export { ControlPlaneSync } from "./services/ControlPlaneSync";
+export {
+    BackupDestinationProvider,
+    BackupOrchestrator,
+    createBackupOrchestrator,
+    LocalBackupDestinationProvider,
+    NodeBackupDestinationProvider,
+    BuilderProvider,
+    CronEvaluator,
+    PolicyLogRotationProvider,
+    createPolicyLogRotationProvider,
+    SecretProvider,
+    LocalSecretProvider,
+    createLocalSecretProvider,
+    VolumeProvider,
+    LocalVolumeProvider,
+    createLocalVolumeProvider
+} from "./modules";

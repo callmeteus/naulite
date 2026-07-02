@@ -1,14 +1,14 @@
-import { ApiKeyModel } from "./ApiKeyModel.js";
-import { BackupRunModel } from "./BackupRunModel.js";
-import { ControlPlaneEventModel } from "./ControlPlaneEventModel.js";
-import { GitRevisionModel } from "./GitRevisionModel.js";
-import { InstanceModel } from "./InstanceModel.js";
-import { LogRotationRunModel } from "./LogRotationRunModel.js";
-import { NodeModel } from "./NodeModel.js";
-import { SchemaMigrationModel } from "./SchemaMigrationModel.js";
-import { SecretModel } from "./SecretModel.js";
-import { ServiceModel } from "./ServiceModel.js";
-import { VolumeModel } from "./VolumeModel.js";
+import { ApiKeyModel } from "./ApiKeyModel";
+import { BackupRunModel } from "./BackupRunModel";
+import { ControlPlaneEventModel } from "./ControlPlaneEventModel";
+import { GitRevisionModel } from "./GitRevisionModel";
+import { InstanceModel } from "./InstanceModel";
+import { LogRotationRunModel } from "./LogRotationRunModel";
+import { NodeModel } from "./NodeModel";
+import { SchemaMigrationModel } from "./SchemaMigrationModel";
+import { SecretModel } from "./SecretModel";
+import { ServiceModel } from "./ServiceModel";
+import { VolumeModel } from "./VolumeModel";
 
 export {
     ApiKeyModel,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CronExpressionSchema, GlobPatternSchema, TimestampSchema } from "./Common.js";
+import { CronExpressionSchema, GlobPatternSchema, TimestampSchema } from "./Common";
 
 /**
  * Log rotation policy attached to a service or cluster default.

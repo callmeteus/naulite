@@ -1,5 +1,5 @@
-import { createApp } from "./App.js";
-import { resolveConfigFromEnv } from "./Config.js";
+import { createApp } from "./App";
+import { resolveConfigFromEnv } from "./Config";
 
 /**
  * Running admin API server handle.

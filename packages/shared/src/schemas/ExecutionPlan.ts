@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ResolvedSecretSchema, ResourceRequirementsSchema } from "./Common.js";
+import { ResolvedSecretSchema, ResourceRequirementsSchema } from "./Common";
 
 /**
  * Pull an image on the target node before instance creation.

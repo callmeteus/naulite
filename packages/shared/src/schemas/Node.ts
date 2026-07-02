@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { TimestampSchema } from "./Common.js";
-import { ClusterLabelsSchema } from "./ClusterLabels.js";
+import { TimestampSchema } from "./Common";
+import { ClusterLabelsSchema } from "./ClusterLabels";
 
 /**
  * Operational status reported by an agent node.

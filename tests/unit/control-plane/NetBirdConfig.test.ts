@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NetBirdConfig } from "../../../packages/control-plane/src/services/NetBirdConfig.js";
+import { NetBirdConfig } from "../../../packages/control-plane/src/services/NetBirdConfig";
 
 describe("NetBirdConfig", () => {
     it("rejects NetBird cloud hostnames", () => {

@@ -1,10 +1,10 @@
 import Fastify, { type FastifyInstance } from "fastify";
 
-import { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext.js";
-import { registerAuthMiddleware } from "./auth/AuthMiddleware.js";
-import { DatabaseProvider } from "./database/DatabaseProvider.js";
-import { ComposeParserError } from "./errors/orchestration/compose/ComposeParserError.js";
-import { registerRoutes } from "./routes/index.js";
+import { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
+import { registerAuthMiddleware } from "./auth/AuthMiddleware";
+import { DatabaseProvider } from "./database/DatabaseProvider";
+import { ComposeParserError } from "./errors/orchestration/compose/ComposeParserError";
+import { registerRoutes } from "./routes/index";
 
 /**
  * Options for creating the control plane Fastify application.

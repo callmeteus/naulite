@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { SecretReferenceSchema } from "./Common.js";
-import { VolumeBackupPolicySchema } from "./BackupTask.js";
-import { ClusterPlacementSchema } from "./ClusterLabels.js";
-import { IngressSchema } from "./Ingress.js";
-import { LogRotationPolicySchema } from "./LogRotationTask.js";
+import { SecretReferenceSchema } from "./Common";
+import { VolumeBackupPolicySchema } from "./BackupTask";
+import { ClusterPlacementSchema } from "./ClusterLabels";
+import { IngressSchema } from "./Ingress";
+import { LogRotationPolicySchema } from "./LogRotationTask";
 
 /**
  * Docker or Kaniko build options declared beside Compose build.

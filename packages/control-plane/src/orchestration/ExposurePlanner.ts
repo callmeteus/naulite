@@ -1,6 +1,6 @@
 import type { Manifest, NetworkExposure } from "@platform/shared";
 
-import { NetworkGroupId } from "./NetworkGroupId.js";
+import { NetworkGroupId } from "./NetworkGroupId";
 
 /**
  * Planned internal exposure through NetBird groups.

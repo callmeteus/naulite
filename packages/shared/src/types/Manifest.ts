@@ -8,7 +8,7 @@ import {
     ManifestSchema,
     ManifestServiceSchema,
     ManifestVolumeSchema
-} from "../schemas/Manifest.js";
+} from "../schemas/Manifest";
 
 export type BuildOptions = z.infer<typeof BuildOptionsSchema>;
 export type ManifestDefaults = z.infer<typeof ManifestDefaultsSchema>;

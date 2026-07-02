@@ -4,7 +4,7 @@ import path from "node:path";
 import { PlatformClient } from "@platform/sdk";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { LocalTestCluster } from "../harness/LocalTestCluster.js";
+import { LocalTestCluster } from "../harness/LocalTestCluster";
 
 const fixturePath = path.resolve(
     process.cwd(),

@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 
-import { registerApiKeyRoutes } from "./api-keys.js";
-import { registerClusterRoutes } from "./cluster.js";
-import { registerHealthRoutes } from "./health.js";
+import { registerApiKeyRoutes } from "./api-keys";
+import { registerClusterRoutes } from "./cluster";
+import { registerHealthRoutes } from "./health";
 
 /**
  * Registers all admin API HTTP routes.

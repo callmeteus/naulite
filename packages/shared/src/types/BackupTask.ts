@@ -8,7 +8,7 @@ import {
     PluginBackupDestinationSchema,
     S3BackupDestinationSchema,
     VolumeBackupPolicySchema
-} from "../schemas/BackupTask.js";
+} from "../schemas/BackupTask";
 
 export type LocalBackupDestination = z.infer<typeof LocalBackupDestinationSchema>;
 export type NodeBackupDestination = z.infer<typeof NodeBackupDestinationSchema>;

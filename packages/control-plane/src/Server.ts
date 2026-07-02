@@ -1,11 +1,11 @@
 import "reflect-metadata";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createApp } from "./App.js";
-import { createControlPlaneContext } from "./ControlPlaneContext.js";
-import { ControlPlaneStore } from "./database/ControlPlaneStore.js";
-import { DatabaseProvider } from "./database/DatabaseProvider.js";
-import { NetBirdBootstrap } from "./services/NetBirdBootstrap.js";
+import { createApp } from "./App";
+import { createControlPlaneContext } from "./ControlPlaneContext";
+import { ControlPlaneStore } from "./database/ControlPlaneStore";
+import { DatabaseProvider } from "./database/DatabaseProvider";
+import { NetBirdBootstrap } from "./services/NetBirdBootstrap";
 
 /**
  * Server startup options.

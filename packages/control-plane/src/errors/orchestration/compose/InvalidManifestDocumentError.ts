@@ -1,4 +1,4 @@
-import { ComposeParserError } from "./ComposeParserError.js";
+import { ComposeParserError } from "./ComposeParserError";
 
 /**
  * Thrown when YAML content is not a top-level mapping object.

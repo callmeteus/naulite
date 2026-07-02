@@ -4,7 +4,7 @@ import {
     NodeResourcesSchema,
     NodeSchema,
     NodeStatusSchema
-} from "../schemas/Node.js";
+} from "../schemas/Node";
 
 export type Node = z.infer<typeof NodeSchema>;
 export type NodeStatus = z.infer<typeof NodeStatusSchema>;

@@ -19,6 +19,20 @@ pub fn readEnvOrDefault(
     return try allocator.dupe(u8, default_value);
 }
 
+/// Reads an environment variable when set, or null.
+pub fn readEnvOptional(
+    allocator: std.mem.Allocator,
+    // Environment variable name.
+    key: []const u8,
+) ?[]u8 {
+    const key_z = allocator.allocSentinel(u8, key.len, 0) catch return null;
+    defer allocator.free(key_z);
+    @memcpy(key_z, key);
+
+    const value = std.c.getenv(key_z) orelse return null;
+    return allocator.dupe(u8, std.mem.span(value)) catch null;
+}
+
 /// Reads an optional unsigned integer environment variable.
 pub fn readEnvU16(
     // Environment variable name.

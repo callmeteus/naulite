@@ -4,7 +4,7 @@ import {
     PluginRegistrationSchema,
     PluginSchema,
     PluginTypeSchema
-} from "../schemas/Plugin.js";
+} from "../schemas/Plugin";
 
 export type PluginType = z.infer<typeof PluginTypeSchema>;
 export type Plugin = z.infer<typeof PluginSchema>;

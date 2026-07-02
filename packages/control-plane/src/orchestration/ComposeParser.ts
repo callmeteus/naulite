@@ -2,9 +2,9 @@ import { ManifestSchema, type Manifest, type ManifestService, type NetworkExposu
 import { parse as parseYaml } from "yaml";
 import { ZodError } from "zod";
 
-import { InvalidManifestDocumentError } from "../errors/orchestration/compose/InvalidManifestDocumentError.js";
-import { ManifestValidationError } from "../errors/orchestration/compose/ManifestValidationError.js";
-import { YamlParseError } from "../errors/orchestration/compose/YamlParseError.js";
+import { InvalidManifestDocumentError } from "../errors/orchestration/compose/InvalidManifestDocumentError";
+import { ManifestValidationError } from "../errors/orchestration/compose/ManifestValidationError";
+import { YamlParseError } from "../errors/orchestration/compose/YamlParseError";
 
 /**
  * Parsed compose document before manifest validation.

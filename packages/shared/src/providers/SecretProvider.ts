@@ -1,5 +1,5 @@
-import type { Secret } from "../types/Secret.js";
-import type { ResolvedSecret } from "../types/Common.js";
+import type { Secret } from "../types/Secret";
+import type { ResolvedSecret } from "../types/Common";
 
 /**
  * Input for creating or updating a cluster secret.

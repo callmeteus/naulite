@@ -1,4 +1,4 @@
-import { ComposeParserError } from "./ComposeParserError.js";
+import { ComposeParserError } from "./ComposeParserError";
 
 /**
  * Thrown when a parsed manifest fails platform schema validation.

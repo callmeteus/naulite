@@ -24,19 +24,25 @@ pub fn main(init: std.process.Init) !void {
     while (index < args.len) : (index += 1) {
         if (std.mem.eql(u8, args[index], "--url")) {
             index += 1;
-            if (index >= args.len) return error.InvalidArgument;
+            if (index >= args.len) {
+                return error.InvalidArgument;
+            }
             url_override = args[index];
             continue;
         }
         if (std.mem.eql(u8, args[index], "--cp")) {
             index += 1;
-            if (index >= args.len) return error.InvalidArgument;
+            if (index >= args.len) {
+                return error.InvalidArgument;
+            }
             cp_override = args[index];
             continue;
         }
         if (std.mem.eql(u8, args[index], "--port")) {
             index += 1;
-            if (index >= args.len) return error.InvalidArgument;
+            if (index >= args.len) {
+                return error.InvalidArgument;
+            }
             port_override = try std.fmt.parseInt(u16, args[index], 10);
             continue;
         }
@@ -87,26 +93,34 @@ fn handleLogin(
     while (index < argv.len) : (index += 1) {
         if (std.mem.eql(u8, argv[index], "--cp")) {
             index += 1;
-            if (index >= argv.len) return error.InvalidArgument;
+            if (index >= argv.len) {
+                return error.InvalidArgument;
+            }
             cp_host = argv[index];
             continue;
         }
         if (std.mem.eql(u8, argv[index], "--key")) {
             index += 1;
-            if (index >= argv.len) return error.InvalidArgument;
+            if (index >= argv.len) {
+                return error.InvalidArgument;
+            }
             api_key = argv[index];
             continue;
         }
         if (std.mem.eql(u8, argv[index], "--port")) {
             index += 1;
-            if (index >= argv.len) return error.InvalidArgument;
+            if (index >= argv.len) {
+                return error.InvalidArgument;
+            }
             port = try std.fmt.parseInt(u16, argv[index], 10);
             continue;
         }
         return error.InvalidArgument;
     }
 
-    if (api_key == null) return error.InvalidArgument;
+    if (api_key == null) {
+        return error.InvalidArgument;
+    }
 
     var existing = try credentials_mod.load(allocator, io, environ_map);
     defer if (existing) |*credentials| credentials.deinit(allocator);
@@ -131,14 +145,18 @@ fn dispatch(
     // Remaining argv after global flags.
     argv: []const []const u8,
 ) !u8 {
-    if (argv.len == 0) return error.InvalidArgument;
+    if (argv.len == 0) {
+        return error.InvalidArgument;
+    }
 
     if (!std.mem.eql(u8, argv[0], "cluster")) {
         try printUsage(io_output.stderrWriter());
         return error.InvalidArgument;
     }
 
-    if (argv.len < 3) return error.InvalidArgument;
+    if (argv.len < 3) {
+        return error.InvalidArgument;
+    }
 
     if (matchesAction(argv, "nodes", "get")) {
         return try runVoid(commands.getNodes(allocator, client));
@@ -166,28 +184,40 @@ fn dispatch(
         return try runVoid(commands.applyManifest(allocator, client, manifest_path));
     }
     if (std.mem.eql(u8, argv[1], "services") and std.mem.eql(u8, argv[2], "delete")) {
-        if (argv.len < 4) return error.InvalidArgument;
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
         return try runVoid(commands.deleteResource(allocator, client, "service", argv[3]));
     }
     if (std.mem.eql(u8, argv[1], "volumes") and std.mem.eql(u8, argv[2], "delete")) {
-        if (argv.len < 4) return error.InvalidArgument;
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
         return try runVoid(commands.deleteResource(allocator, client, "volume", argv[3]));
     }
     if (std.mem.eql(u8, argv[1], "secrets") and std.mem.eql(u8, argv[2], "delete")) {
-        if (argv.len < 4) return error.InvalidArgument;
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
         return try runVoid(commands.deleteResource(allocator, client, "secret", argv[3]));
     }
     if (std.mem.eql(u8, argv[1], "services") and std.mem.eql(u8, argv[2], "rotate-logs")) {
-        if (argv.len < 4) return error.InvalidArgument;
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
         return try runVoid(commands.rotateLogs(allocator, client, argv[3]));
     }
     if (std.mem.eql(u8, argv[1], "instances") and std.mem.eql(u8, argv[2], "logs")) {
-        if (argv.len < 4) return error.InvalidArgument;
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
         const tail = try readTailFlag(argv[3..]);
         return try runVoid(commands.fetchLogs(allocator, client, argv[3], tail));
     }
     if (std.mem.eql(u8, argv[1], "instances") and std.mem.eql(u8, argv[2], "exec")) {
-        if (argv.len < 4) return error.InvalidArgument;
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
         const command_argv = try sliceExecCommand(allocator, argv[4..]);
         defer allocator.free(command_argv);
         return commands.execInstance(allocator, client, argv[3], command_argv);
@@ -205,11 +235,15 @@ fn dispatch(
         return try runVoid(commands.listIngress(allocator, client));
     }
     if (std.mem.eql(u8, argv[1], "backups") and std.mem.eql(u8, argv[2], "run")) {
-        if (argv.len < 4) return error.InvalidArgument;
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
         return try runVoid(commands.runBackup(allocator, client, argv[3]));
     }
     if (std.mem.eql(u8, argv[1], "backups") and std.mem.eql(u8, argv[2], "restore")) {
-        if (argv.len < 4) return error.InvalidArgument;
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
         return try runVoid(commands.restoreBackup(allocator, client, argv[3]));
     }
 
@@ -258,7 +292,9 @@ fn sliceExecCommand(
         start = 1;
     }
 
-    if (start >= argv.len) return error.InvalidArgument;
+    if (start >= argv.len) {
+        return error.InvalidArgument;
+    }
 
     const slice = try allocator.alloc([]const u8, argv.len - start);
     @memcpy(slice, argv[start..]);

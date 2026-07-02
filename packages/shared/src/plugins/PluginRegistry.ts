@@ -1,4 +1,4 @@
-import type { PluginRegistration } from "../types/Plugin.js";
+import type { PluginRegistration } from "../types/Plugin";
 
 /**
  * Entry stored in the plugin registry.
@@ -10,7 +10,7 @@ export interface PluginRegistryEntry<T> {
 }
 
 /**
- * In-memory registry for platform plugins discovered from plugin-* directories.
+ * In-memory registry for platform plugins discovered from packages/plugins/*.
  */
 export class PluginRegistry<T extends PluginRegistration = PluginRegistration> {
     private readonly entries = new Map<string, PluginRegistryEntry<T>>();

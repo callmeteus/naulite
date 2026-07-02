@@ -4,7 +4,7 @@ import {
     IngressPathSchema,
     IngressSchema,
     IngressTlsSchema
-} from "../schemas/Ingress.js";
+} from "../schemas/Ingress";
 
 export type Ingress = z.infer<typeof IngressSchema>;
 export type IngressTls = z.infer<typeof IngressTlsSchema>;

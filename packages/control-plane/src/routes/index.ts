@@ -1,19 +1,19 @@
 import type { FastifyInstance } from "fastify";
 
-import { registerApplyRoutes } from "./apply.js";
-import { registerApiKeyRoutes } from "./api-keys.js";
-import { registerBackupRoutes } from "./backups.js";
-import { registerBuildRoutes } from "./build.js";
-import { registerClusterRoutes } from "./cluster.js";
-import { registerGitOpsRoutes } from "./gitops.js";
-import { registerHealthRoutes } from "./health.js";
-import { registerIngressRoutes } from "./ingress.js";
-import { registerInstanceRoutes } from "./instances.js";
-import { registerLogRotationRoutes } from "./log-rotation.js";
-import { registerNetBirdRoutes } from "./netbird.js";
-import { registerNodeRoutes } from "./nodes.js";
-import { registerResourceRoutes } from "./resources.js";
-import { registerWellKnownRoutes } from "./well-known.js";
+import { registerApplyRoutes } from "./apply";
+import { registerApiKeyRoutes } from "./api-keys";
+import { registerBackupRoutes } from "./backups";
+import { registerBuildRoutes } from "./build";
+import { registerClusterRoutes } from "./cluster";
+import { registerGitOpsRoutes } from "./gitops";
+import { registerHealthRoutes } from "./health";
+import { registerIngressRoutes } from "./ingress";
+import { registerInstanceRoutes } from "./instances";
+import { registerLogRotationRoutes } from "./log-rotation";
+import { registerNetBirdRoutes } from "./netbird";
+import { registerNodeRoutes } from "./nodes";
+import { registerResourceRoutes } from "./resources";
+import { registerWellKnownRoutes } from "./well-known";
 
 /**
  * Registers all control plane HTTP routes.

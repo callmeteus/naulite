@@ -9,7 +9,7 @@ See [CONTEXT.md](../CONTEXT.md) for the canonical overview. This document summar
 - Fastify HTTP API
 - Drizzle ORM with SQLite (dev) or PostgreSQL (HA)
 - Compose parser, planner, and scheduler
-- Plugin loader for `packages/plugin-*`
+- Plugin loader for `packages/plugins/*`
 - Backup and log rotation schedulers
 - GitOps revision tracking
 - NetBird service integration (self-hosted API only)

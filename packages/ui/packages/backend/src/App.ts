@@ -1,8 +1,8 @@
 import { PlatformApiError, PlatformClient } from "@platform/sdk";
 import Fastify, { type FastifyInstance } from "fastify";
 
-import { resolveConfigFromEnv } from "./Config.js";
-import { registerRoutes } from "./routes/index.js";
+import { resolveConfigFromEnv } from "./Config";
+import { registerRoutes } from "./routes/index";
 
 /**
  * Options for creating the admin API Fastify application.

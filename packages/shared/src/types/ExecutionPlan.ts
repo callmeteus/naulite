@@ -11,7 +11,7 @@ import {
     RemoveInstanceOperationSchema,
     StartInstanceOperationSchema,
     StopInstanceOperationSchema
-} from "../schemas/ExecutionPlan.js";
+} from "../schemas/ExecutionPlan";
 
 export type PullOperation = z.infer<typeof PullOperationSchema>;
 export type CreateInstanceOperation = z.infer<typeof CreateInstanceOperationSchema>;

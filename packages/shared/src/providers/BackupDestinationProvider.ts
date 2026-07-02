@@ -1,4 +1,4 @@
-import type { BackupTask } from "../types/BackupTask.js";
+import type { BackupTask } from "../types/BackupTask";
 
 /**
  * Result metadata for a completed backup upload or write.

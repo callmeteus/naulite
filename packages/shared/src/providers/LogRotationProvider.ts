@@ -1,4 +1,4 @@
-import type { LogRotationPolicy, LogRotationTask } from "../types/LogRotationTask.js";
+import type { LogRotationPolicy, LogRotationTask } from "../types/LogRotationTask";
 
 /**
  * Result metadata for a completed log rotation run.

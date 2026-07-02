@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { SecretReferenceSchema } from "./Common.js";
+import { SecretReferenceSchema } from "./Common";
 
 /**
  * TLS configuration for an ingress route.

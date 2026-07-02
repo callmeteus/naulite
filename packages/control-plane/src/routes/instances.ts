@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { AgentProxyError, AgentProxyService } from "../services/AgentProxyService.js";
+import { AgentProxyError, AgentProxyService } from "../services/AgentProxyService";
 
 const InstanceStatusBodySchema = z.object({
     status: z.enum(["pending", "running", "stopped", "failed"]),

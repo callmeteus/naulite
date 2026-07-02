@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { LifecycleStatusSchema, TimestampSchema } from "./Common.js";
-import { ClusterPlacementSchema } from "./ClusterLabels.js";
-import { IngressSchema } from "./Ingress.js";
-import { LogRotationPolicySchema } from "./LogRotationTask.js";
+import { LifecycleStatusSchema, TimestampSchema } from "./Common";
+import { ClusterPlacementSchema } from "./ClusterLabels";
+import { IngressSchema } from "./Ingress";
+import { LogRotationPolicySchema } from "./LogRotationTask";
 
 /**
  * Desired service state managed by the control plane.

@@ -1,18 +1,18 @@
 # Admin authentication
 
-O painel admin usa autenticação por **service token** no BFF (`ui-backend`).
+The admin dashboard uses **service token** authentication in the BFF (`ui-backend`).
 
-## Fluxo atual (dogfood)
+## Current flow (dogfood)
 
-1. Defina `ADMIN_API_KEY` no `.env` da raiz do monorepo `platform/`.
-2. O script `bin/dev.sh` / `bin/dev.ps1` injeta a chave no BFF e no control plane quando necessário.
-3. O frontend fala apenas com `/api` (BFF). O BFF encaminha chamadas ao control plane com `Authorization: Bearer <ADMIN_API_KEY>`.
+1. Set `ADMIN_API_KEY` in the `.env` file at the root of the `platform/` monorepo.
+2. `bin/dev.sh` / `bin/dev.ps1` inject the key into the BFF and control plane when needed.
+3. The frontend talks only to `/api` (BFF). The BFF forwards requests to the control plane with `Authorization: Bearer <ADMIN_API_KEY>`.
 
-## Quando usar
+## When to use
 
-- Ambientes locais e dogfood com operadores de confiança.
-- Automação CI que chama o BFF diretamente.
+- Local and dogfood environments with trusted operators.
+- CI automation that calls the BFF directly.
 
-## Próximo passo (opcional)
+## Optional next step
 
-Sessão com cookie no BFF e tabela `admin_users` no control plane para operadores sem acesso ao `.env`.
+BFF session cookies and an `admin_users` table in the control plane for operators without access to `.env`.

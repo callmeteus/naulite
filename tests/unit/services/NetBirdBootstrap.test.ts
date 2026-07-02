@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { ControlPlaneStore } from "../../../packages/control-plane/src/database/ControlPlaneStore.js";
+import { ControlPlaneStore } from "../../../packages/control-plane/src/database/ControlPlaneStore";
 import {
     NETBIRD_INTERNAL_SECRET_NAME,
     NetBirdBootstrap
-} from "../../../packages/control-plane/src/services/NetBirdBootstrap.js";
+} from "../../../packages/control-plane/src/services/NetBirdBootstrap";
 
 describe("NetBirdBootstrap", () => {
     it("returns stored credentials without calling NetBird setup", async () => {

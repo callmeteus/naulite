@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { LocalTestCluster } from "../harness/LocalTestCluster.js";
+import { LocalTestCluster } from "../harness/LocalTestCluster";
 
 const execFileAsync = promisify(execFile);
 const cliEntrypoint = path.resolve(process.cwd(), "packages/cli/bin/platform.js");

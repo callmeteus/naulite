@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { LocalTestCluster } from "../harness/LocalTestCluster.js";
+import { LocalTestCluster } from "../harness/LocalTestCluster";
 
 describe("LocalTestCluster health smoke", () => {
     let dockerEnabled = false;

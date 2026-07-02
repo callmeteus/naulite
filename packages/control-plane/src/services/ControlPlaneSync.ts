@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { Op } from "sequelize";
 
-import type { DatabaseProvider } from "../database/DatabaseProvider.js";
-import { ControlPlaneEventModel } from "../database/models/index.js";
+import type { DatabaseProvider } from "../database/DatabaseProvider";
+import { ControlPlaneEventModel } from "../database/models/index";
 
 /**
  * Control plane sync event payload.

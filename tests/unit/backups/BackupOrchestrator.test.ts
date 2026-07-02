@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { BackupOrchestrator } from "@platform/backups";
+import { BackupOrchestrator } from "@platform/control-plane";
 import type { BackupTask } from "@platform/shared";
 import { afterEach, describe, expect, it } from "vitest";
 

@@ -8,7 +8,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Sequelize } from "sequelize-typescript";
 
-import { controlPlaneModels, SchemaMigrationModel } from "./models/index.js";
+import { controlPlaneModels, SchemaMigrationModel } from "./models/index";
 
 /**
  * Control plane database provider backed by Sequelize ORM.

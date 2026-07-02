@@ -1,9 +1,9 @@
 import type { ExecutionOperation, Instance, Node } from "@platform/shared";
 
-import type { ControlPlaneContext } from "../ControlPlaneContext.js";
-import type { PlannerDiff } from "../orchestration/Planner.js";
+import type { ControlPlaneContext } from "../ControlPlaneContext";
+import type { PlannerDiff } from "../orchestration/Planner";
 
-import { AgentDispatcher } from "./AgentDispatcher.js";
+import { AgentDispatcher } from "./AgentDispatcher";
 
 /**
  * Result of applying a manifest through the control plane.

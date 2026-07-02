@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { TimestampSchema } from "./Common.js";
-import { VolumeBackupPolicySchema } from "./BackupTask.js";
+import { TimestampSchema } from "./Common";
+import { VolumeBackupPolicySchema } from "./BackupTask";
 
 /**
  * Cluster-scoped volume lifecycle status.

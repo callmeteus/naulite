@@ -1,6 +1,6 @@
 import type { Instance, Node } from "@platform/shared";
 
-import type { ControlPlaneStore } from "../database/ControlPlaneStore.js";
+import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 
 /**
  * Proxies instance-scoped requests from the control plane to node agents.

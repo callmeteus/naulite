@@ -1,4 +1,4 @@
-import type { Ingress } from "../types/Ingress.js";
+import type { Ingress } from "../types/Ingress";
 
 /**
  * Route definition consumed by the gateway provider.

@@ -1,4 +1,4 @@
-import { PlatformApiError } from "./PlatformApiError.js";
+import { PlatformApiError } from "./PlatformApiError";
 import type {
     ApiKey,
     ApplyResponse,
@@ -24,8 +24,8 @@ import type {
     Secret,
     Service,
     Volume
-} from "./types.js";
-import type { Node } from "./types.js";
+} from "./types";
+import type { Node } from "./types";
 
 /**
  * Typed HTTP client for all control plane REST routes.
@@ -427,5 +427,5 @@ export class PlatformClient {
     }
 }
 
-export { PlatformApiError } from "./PlatformApiError.js";
-export type * from "./types.js";
+export { PlatformApiError } from "./PlatformApiError";
+export type * from "./types";

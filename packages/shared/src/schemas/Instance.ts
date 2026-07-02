@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { LifecycleStatusSchema, ResourceRequirementsSchema, TimestampSchema } from "./Common.js";
+import { LifecycleStatusSchema, ResourceRequirementsSchema, TimestampSchema } from "./Common";
 
 /**
  * Runtime status for a single service instance on a node.

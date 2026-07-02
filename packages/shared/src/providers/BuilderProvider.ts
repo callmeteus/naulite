@@ -1,5 +1,5 @@
-import type { ClusterPlacement } from "../types/ClusterLabels.js";
-import type { ResolvedSecret } from "../types/Common.js";
+import type { ClusterPlacement } from "../types/ClusterLabels";
+import type { ResolvedSecret } from "../types/Common";
 
 /**
  * Options for a local Docker build on a builder-capable node.

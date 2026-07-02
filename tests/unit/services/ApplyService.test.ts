@@ -1,7 +1,7 @@
 import type { ExecutionOperation } from "@platform/shared";
 import { describe, expect, it } from "vitest";
 
-import { ApplyService } from "../../../packages/control-plane/src/services/ApplyService.js";
+import { ApplyService } from "../../../packages/control-plane/src/services/ApplyService";
 
 describe("ApplyService", () => {
     it("filters instance operations to the scheduled node only", () => {

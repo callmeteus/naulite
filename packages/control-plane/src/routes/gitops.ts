@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { ApplyService } from "../services/ApplyService.js";
+import { ApplyService } from "../services/ApplyService";
 
 const GitOpsWebhookBodySchema = z.object({
     repositoryUrl: z.string().url(),

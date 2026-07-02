@@ -29,6 +29,44 @@ Bootstrap scripts install platform node dependencies and register agents with th
 
 NetBird cloud (`api.netbird.io`) is not supported. See [netbird.md](./netbird.md).
 
+## Agent persisted configuration
+
+The Zig agent writes a JSON snapshot of its identity and connectivity settings to disk so it can reconnect after restart without re-supplying environment variables.
+
+| Platform | Default path |
+|----------|--------------|
+| Linux / macOS | `/var/lib/platform/agent.json` |
+| Windows | `%ProgramData%\Platform\agent.json` |
+
+Override with `PLATFORM_AGENT_CONFIG`.
+
+### Precedence
+
+1. Defaults baked into the agent binary
+2. Values from `agent.json` when the file exists
+3. Environment variables (highest priority, useful for dev overrides)
+
+On startup the agent persists the merged configuration. After a successful `POST /nodes/register`, it updates the file with the control plane response (`id`, `hostname`, `agentUrl`, `agentVersion`, `netbirdDeviceId`, etc.).
+
+### JSON fields (camelCase)
+
+| Field | Description |
+|-------|-------------|
+| `cpUrl` | Control plane base URL |
+| `nodeId` | Node id assigned or confirmed by the control plane |
+| `hostname` | Hostname reported to the control plane |
+| `agentUrl` | Agent HTTP URL reachable by the control plane |
+| `agentVersion` | Agent build version |
+| `agentPort` | Agent HTTP listen port |
+| `dockerSocket` | Docker socket path or Windows named pipe |
+| `netbirdManagementUrl` | Self-hosted NetBird management URL |
+| `netbirdSetupKey` | NetBird enrollment key from bootstrap |
+| `netbirdDeviceId` | NetBird device id after enrollment |
+
+### Future one-liner bootstrap
+
+Planned install scripts will accept `--setup-key` and `--host` (control plane public URL). Only the node registration route needs to be exposed on the internet for enrollment; exposing the full control plane API remains optional and operator-dependent.
+
 ## Post-bootstrap verification
 
 ```bash

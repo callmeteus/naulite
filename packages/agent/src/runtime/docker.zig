@@ -22,7 +22,7 @@ pub const DockerClient = struct {
         return .{
             .socket_path = socket_path,
             .allocator = allocator,
-            .cp_config = cp_client.loadConfig(allocator) catch null,
+            .cp_config = cp_client.loadConfigSnapshot(allocator),
         };
     }
 

@@ -4,6 +4,9 @@
     "type": "module",
     "workspaces": [
         "packages/*",
+        "packages/runtimes/*",
+        "packages/plugins/*",
+        "packages/builders/*",
         "packages/ui/packages/*"
     ],
     "scripts": {

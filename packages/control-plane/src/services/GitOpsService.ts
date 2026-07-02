@@ -6,8 +6,8 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import type { Manifest } from "@platform/shared";
 
-import { GitRevisionModel } from "../database/models/index.js";
-import { ComposeParser } from "../orchestration/ComposeParser.js";
+import { GitRevisionModel } from "../database/models/index";
+import { ComposeParser } from "../orchestration/ComposeParser";
 
 /**
  * Git repository checkout options.

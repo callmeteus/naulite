@@ -26,8 +26,12 @@ Pods, ReplicaSets, DaemonSets, StatefulSets, CRDs, Operators, Admission Controll
 | `ui` | Web dashboard (`ui-frontend` + `ui-backend` BFF); strings in `packages/ui/packages/frontend/src/ui/en.json` |
 | `control-plane` | Fastify API, database, orchestration, GitOps, schedulers |
 | `agent` | Zig executor on each node |
-| `runtime-docker`, `runtime-podman`, `runtime-containerd`, `builders`, `gateway`, `volumes`, `secrets`, `backups`, `log-rotation` | Core providers |
-| `plugin-*` | Swappable extensions (`plugin-s3`, future Azure/GCS/Vault plugins) |
+| `runtime-docker`, `runtime-podman`, `runtime-containerd` | Under `packages/runtimes/*` - container runtime providers |
+| `builders/docker`, `builders/kaniko` | Dedicated builder plugins extending `BuilderProvider` |
+| `plugins/s3` | Backup destination plugins (e.g. S3); future: `plugins/infisical-secret-provider` |
+| `gateway` | Ingress gateway provider (Traefik + NetBird) |
+| `control-plane` modules | Local providers: `src/modules/backup`, `log-rotation`, `secrets`, `volumes` |
+| `plugins/*` | Swappable extensions (`plugins/s3`, future `plugins/infisical-secret-provider`, etc.) |
 
 ## Manifest model
 
@@ -50,7 +54,7 @@ Agents expose health, metrics, logs, exec, execution plan application, backup ta
 
 ## Provider plugin model
 
-- Directory convention: `packages/plugin-<name>/`
+- Directory convention: `packages/plugins/<name>/` (registry id = directory name, e.g. `s3`)
 - Registered id: `<name>` without the `plugin-` prefix
 - Auto-discovery in the control plane; no central import list
 

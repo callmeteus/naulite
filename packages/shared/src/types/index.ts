@@ -7,49 +7,49 @@ export type {
     ResolvedSecret,
     LifecycleStatus,
     Timestamp
-} from "./Common.js";
+} from "./Common";
 
 export type {
     ClusterLabels,
     ClusterPlacement
-} from "./ClusterLabels.js";
+} from "./ClusterLabels";
 
 export type {
     Node,
     NodeStatus,
     NodeResources
-} from "./Node.js";
+} from "./Node";
 
 export type {
     Service,
     ServiceStatus
-} from "./Service.js";
+} from "./Service";
 
 export type {
     Instance,
     InstanceStatus,
     InstanceHealth
-} from "./Instance.js";
+} from "./Instance";
 
 export type {
     Volume,
     VolumeStatus
-} from "./Volume.js";
+} from "./Volume";
 
-export type { Secret } from "./Secret.js";
+export type { Secret } from "./Secret";
 
-export type { Registry } from "./Registry.js";
+export type { Registry } from "./Registry";
 
 export type {
     Network,
     NetworkExposure
-} from "./Network.js";
+} from "./Network";
 
 export type {
     Ingress,
     IngressTls,
     IngressPath
-} from "./Ingress.js";
+} from "./Ingress";
 
 export type {
     LocalBackupDestination,
@@ -59,13 +59,13 @@ export type {
     VolumeBackupPolicy,
     BackupTask,
     BackupTaskStatus
-} from "./BackupTask.js";
+} from "./BackupTask";
 
 export type {
     LogRotationPolicy,
     LogRotationTask,
     LogRotationTaskStatus
-} from "./LogRotationTask.js";
+} from "./LogRotationTask";
 
 export type {
     PullOperation,
@@ -78,7 +78,7 @@ export type {
     EnsureVolumeOperation,
     ExecutionOperation,
     ExecutionPlan
-} from "./ExecutionPlan.js";
+} from "./ExecutionPlan";
 
 export type {
     BuildOptions,
@@ -88,12 +88,12 @@ export type {
     ManifestNetwork,
     ManifestRegistry,
     Manifest
-} from "./Manifest.js";
+} from "./Manifest";
 
 export type {
     PluginType,
     Plugin,
     PluginRegistration
-} from "./Plugin.js";
+} from "./Plugin";
 
-export type { ApiKey, CreatedApiKey } from "./ApiKey.js";
+export type { ApiKey, CreatedApiKey } from "./ApiKey";

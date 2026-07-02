@@ -7,49 +7,49 @@ export {
     ResolvedSecretSchema,
     LifecycleStatusSchema,
     TimestampSchema
-} from "./Common.js";
+} from "./Common";
 
 export {
     ClusterLabelsSchema,
     ClusterPlacementSchema
-} from "./ClusterLabels.js";
+} from "./ClusterLabels";
 
 export {
     NodeSchema,
     NodeStatusSchema,
     NodeResourcesSchema
-} from "./Node.js";
+} from "./Node";
 
 export {
     ServiceSchema,
     ServiceStatusSchema
-} from "./Service.js";
+} from "./Service";
 
 export {
     InstanceSchema,
     InstanceStatusSchema,
     InstanceHealthSchema
-} from "./Instance.js";
+} from "./Instance";
 
 export {
     VolumeSchema,
     VolumeStatusSchema
-} from "./Volume.js";
+} from "./Volume";
 
-export { SecretSchema } from "./Secret.js";
+export { SecretSchema } from "./Secret";
 
-export { RegistrySchema } from "./Registry.js";
+export { RegistrySchema } from "./Registry";
 
 export {
     NetworkSchema,
     NetworkExposureSchema
-} from "./Network.js";
+} from "./Network";
 
 export {
     IngressSchema,
     IngressTlsSchema,
     IngressPathSchema
-} from "./Ingress.js";
+} from "./Ingress";
 
 export {
     LocalBackupDestinationSchema,
@@ -59,13 +59,13 @@ export {
     VolumeBackupPolicySchema,
     BackupTaskSchema,
     BackupTaskStatusSchema
-} from "./BackupTask.js";
+} from "./BackupTask";
 
 export {
     LogRotationPolicySchema,
     LogRotationTaskSchema,
     LogRotationTaskStatusSchema
-} from "./LogRotationTask.js";
+} from "./LogRotationTask";
 
 export {
     ExecutionPlanSchema,
@@ -78,7 +78,7 @@ export {
     ConnectNetworkOperationSchema,
     DisconnectNetworkOperationSchema,
     EnsureVolumeOperationSchema
-} from "./ExecutionPlan.js";
+} from "./ExecutionPlan";
 
 export {
     ManifestSchema,
@@ -88,16 +88,16 @@ export {
     ManifestRegistrySchema,
     ManifestDefaultsSchema,
     BuildOptionsSchema
-} from "./Manifest.js";
+} from "./Manifest";
 
 export {
     PluginSchema,
     PluginTypeSchema,
     PluginRegistrationSchema
-} from "./Plugin.js";
+} from "./Plugin";
 
 export {
     ApiKeySchema,
     CreatedApiKeySchema,
     CreateApiKeyBodySchema
-} from "./ApiKeySchema.js";
+} from "./ApiKeySchema";

@@ -1,7 +1,7 @@
-import { MockNetBirdAdapter, NetBirdService } from "./NetBirdService.js";
-import { NetBirdConfig } from "./NetBirdConfig.js";
-import type { NetBirdCredentials } from "./NetBirdBootstrap.js";
-import { SelfHostedNetBirdAdapter } from "./SelfHostedNetBirdAdapter.js";
+import { MockNetBirdAdapter, NetBirdService } from "./NetBirdService";
+import { NetBirdConfig } from "./NetBirdConfig";
+import type { NetBirdCredentials } from "./NetBirdBootstrap";
+import { SelfHostedNetBirdAdapter } from "./SelfHostedNetBirdAdapter";
 
 /**
  * Creates the NetBird service for the control plane.

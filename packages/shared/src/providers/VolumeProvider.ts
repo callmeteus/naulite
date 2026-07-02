@@ -1,4 +1,4 @@
-import type { Volume } from "../types/Volume.js";
+import type { Volume } from "../types/Volume";
 
 /**
  * Options for provisioning a cluster volume on a node.
