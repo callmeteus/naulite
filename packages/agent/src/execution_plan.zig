@@ -107,13 +107,17 @@ pub fn parseExecutionPlan(
     };
 
     const operations_value = root.object.get("operations") orelse return error.InvalidExecutionPlan;
-    if (operations_value != .array) return error.InvalidExecutionPlan;
+    if (operations_value != .array) {
+        return error.InvalidExecutionPlan;
+    }
 
     const operations = try allocator.alloc(ExecutionPlan.Operation, operations_value.array.items.len);
     errdefer allocator.free(operations);
 
     for (operations_value.array.items, 0..) |item, index| {
-        if (item != .object) return error.InvalidExecutionPlan;
+        if (item != .object) {
+            return error.InvalidExecutionPlan;
+        }
 
         const type_value = item.object.get("type") orelse return error.InvalidExecutionPlan;
         const type_name = switch (type_value) {
@@ -146,7 +150,9 @@ fn duplicateRequiredString(
     // Required string field name.
     field_name: []const u8,
 ) ![]u8 {
-    if (root != .object) return error.InvalidExecutionPlan;
+    if (root != .object) {
+        return error.InvalidExecutionPlan;
+    }
 
     const value = root.object.get(field_name) orelse return error.InvalidExecutionPlan;
     return switch (value) {

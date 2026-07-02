@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
+import { registerBootstrapRoutes } from "./bootstrap";
 import { registerApplyRoutes } from "./apply";
 import { registerApiKeyRoutes } from "./api-keys";
 import { registerBackupRoutes } from "./backups";
@@ -23,6 +24,7 @@ import { registerWellKnownRoutes } from "./well-known";
  */
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
     await registerWellKnownRoutes(app);
+    await registerBootstrapRoutes(app);
     await registerHealthRoutes(app);
     await registerNodeRoutes(app);
     await registerClusterRoutes(app);

@@ -16,8 +16,20 @@
 | 7 - CLI | completed | 2026-07-02 | 2026-07-02 |
 | 8 - UI | completed | 2026-07-02 | 2026-07-02 |
 | 9 - HA Dogfood | completed | 2026-07-02 | 2026-07-02 |
+| 10 - Agent bootstrap | completed | 2026-07-02 | 2026-07-02 |
 
 ## Log
+
+### 2026-07-02 - Agent and control plane bootstrap
+
+- Agent persists identity in `agent.json` (`/var/lib/platform/agent.json` or `%ProgramData%\Platform\agent.json`)
+- Control plane public bootstrap routes: `GET /bootstrap/agent` (setup-key auth), `GET /bootstrap/setup-key` (loopback)
+- `POST /nodes/register` remains the only remote write path required for agent enrollment
+- Bootstrap scripts: `bootstrap/control-plane-install.{sh,ps1}` and `bootstrap/agent-install.{sh,ps1}`
+- Agent install accepts `--host` and `--setup-key`, writes config, installs systemd/Windows service
+- Control plane install accepts `--host`, boots Docker Compose stack, prints agent install command with setup key
+- Zig style: all `if` / `else` use `{ }` blocks across agent and CLI packages
+- Platform docs standardized to English (`zig-guidelines.md`, `admin-auth.md`, `bootstrap.md`)
 
 ### 2026-07-02 - V1 implementation complete
 

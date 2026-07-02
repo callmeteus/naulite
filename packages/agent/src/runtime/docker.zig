@@ -196,7 +196,9 @@ pub const DockerClient = struct {
         defer parsed.deinit();
 
         const root = parsed.value;
-        if (root != .object) return error.InvalidOperationJson;
+        if (root != .object) {
+            return error.InvalidOperationJson;
+        }
 
         const value = root.object.get(field_name) orelse return error.MissingOperationField;
         return switch (value) {
@@ -210,7 +212,9 @@ pub const DockerClient = struct {
         defer parsed.deinit();
 
         const root = parsed.value;
-        if (root != .object) return default_value;
+        if (root != .object) {
+            return default_value;
+        }
 
         const value = root.object.get(field_name) orelse return default_value;
         return switch (value) {
@@ -228,10 +232,14 @@ pub const DockerClient = struct {
         defer parsed.deinit();
 
         const root = parsed.value;
-        if (root != .object) return &[_][]const u8{};
+        if (root != .object) {
+            return &[_][]const u8{};
+        }
 
         const value = root.object.get(field_name) orelse return &[_][]const u8{};
-        if (value != .array) return &[_][]const u8{};
+        if (value != .array) {
+            return &[_][]const u8{};
+        }
 
         const values = try allocator.alloc([]const u8, value.array.items.len);
         for (value.array.items, 0..) |item, index| {
@@ -249,10 +257,14 @@ pub const DockerClient = struct {
         defer parsed.deinit();
 
         const root = parsed.value;
-        if (root != .object) return &[_][]const u8{};
+        if (root != .object) {
+            return &[_][]const u8{};
+        }
 
         const value = root.object.get("environment") orelse return &[_][]const u8{};
-        if (value != .object) return &[_][]const u8{};
+        if (value != .object) {
+            return &[_][]const u8{};
+        }
 
         var pairs: std.ArrayList([]const u8) = .empty;
         errdefer {
@@ -279,7 +291,9 @@ pub const DockerClient = struct {
         defer parsed.deinit();
 
         const root = parsed.value;
-        if (root != .object) return try allocator.dupe(u8, "{}");
+        if (root != .object) {
+            return try allocator.dupe(u8, "{}");
+        }
 
         const ports_value = root.object.get("ports") orelse return try allocator.dupe(u8, "{}");
         if (ports_value != .array or ports_value.array.items.len == 0) {
@@ -291,7 +305,9 @@ pub const DockerClient = struct {
         try output.append(allocator, '{');
 
         for (ports_value.array.items, 0..) |port_item, index| {
-            if (port_item != .object) continue;
+            if (port_item != .object) {
+                continue;
+            }
             const container_port_value = port_item.object.get("containerPort") orelse continue;
             const container_port: i64 = switch (container_port_value) {
                 .integer => |n| n,
@@ -320,7 +336,9 @@ pub const DockerClient = struct {
                 break :blk "tcp";
             };
 
-            if (index > 0) try output.append(allocator, ',');
+            if (index > 0) {
+                try output.append(allocator, ',');
+            }
             const binding = try std.fmt.allocPrint(
                 allocator,
                 "\"{d}/{s}\":[{{\"HostPort\":\"{d}\"}}]",
@@ -339,7 +357,9 @@ pub const DockerClient = struct {
         defer parsed.deinit();
 
         const root = parsed.value;
-        if (root != .object) return try allocator.dupe(u8, "[]");
+        if (root != .object) {
+            return try allocator.dupe(u8, "[]");
+        }
 
         const volumes_value = root.object.get("volumes") orelse return try allocator.dupe(u8, "[]");
         if (volumes_value != .array or volumes_value.array.items.len == 0) {
@@ -351,7 +371,9 @@ pub const DockerClient = struct {
         try output.append(allocator, '[');
 
         for (volumes_value.array.items, 0..) |volume_item, index| {
-            if (volume_item != .object) continue;
+            if (volume_item != .object) {
+                continue;
+            }
             const volume_name = volume_item.object.get("volumeName") orelse continue;
             const mount_path = volume_item.object.get("mountPath") orelse continue;
             const volume_name_text = switch (volume_name) {
@@ -372,7 +394,9 @@ pub const DockerClient = struct {
                 break :blk false;
             };
 
-            if (index > 0) try output.append(allocator, ',');
+            if (index > 0) {
+                try output.append(allocator, ',');
+            }
             const bind_entry = if (read_only)
                 try std.fmt.allocPrint(allocator, "\"{s}:{s}:ro\"", .{ volume_name_text, mount_path_text })
             else

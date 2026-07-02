@@ -30,6 +30,10 @@ function isRemoteExemptPath(method: string, path: string): boolean {
         return true;
     }
 
+    if (method === "GET" && path === "/bootstrap/agent") {
+        return true;
+    }
+
     return false;
 }
 

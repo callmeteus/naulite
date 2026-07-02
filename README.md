@@ -77,6 +77,7 @@ platform/
 - [docs/backups.md](docs/backups.md)
 - [docs/log-rotation.md](docs/log-rotation.md)
 - [docs/bootstrap.md](docs/bootstrap.md)
+- [docs/admin-auth.md](docs/admin-auth.md)
   
 ## Development
   

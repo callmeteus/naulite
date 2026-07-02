@@ -51,9 +51,15 @@ pub const AgentConfig = struct {
         allocator.free(self.agent_version);
         allocator.free(self.docker_socket);
         allocator.free(self.config_path);
-        if (self.netbird_management_url) |value| allocator.free(value);
-        if (self.netbird_setup_key) |value| allocator.free(value);
-        if (self.netbird_device_id) |value| allocator.free(value);
+        if (self.netbird_management_url) |value| {
+            allocator.free(value);
+        }
+        if (self.netbird_setup_key) |value| {
+            allocator.free(value);
+        }
+        if (self.netbird_device_id) |value| {
+            allocator.free(value);
+        }
     }
 };
 
@@ -221,13 +227,27 @@ fn loadFromDisk(
     var parsed = try std.json.parseFromSlice(PersistedConfig, allocator, contents, .{});
     defer parsed.deinit();
 
-    if (parsed.value.cpUrl) |value| try replaceString(allocator, &config.cp_url, value);
-    if (parsed.value.nodeId) |value| try replaceString(allocator, &config.node_id, value);
-    if (parsed.value.hostname) |value| try replaceString(allocator, &config.hostname, value);
-    if (parsed.value.agentUrl) |value| try replaceString(allocator, &config.agent_url, value);
-    if (parsed.value.agentVersion) |value| try replaceString(allocator, &config.agent_version, value);
-    if (parsed.value.agentPort) |value| config.agent_port = value;
-    if (parsed.value.dockerSocket) |value| try replaceString(allocator, &config.docker_socket, value);
+    if (parsed.value.cpUrl) |value| {
+        try replaceString(allocator, &config.cp_url, value);
+    }
+    if (parsed.value.nodeId) |value| {
+        try replaceString(allocator, &config.node_id, value);
+    }
+    if (parsed.value.hostname) |value| {
+        try replaceString(allocator, &config.hostname, value);
+    }
+    if (parsed.value.agentUrl) |value| {
+        try replaceString(allocator, &config.agent_url, value);
+    }
+    if (parsed.value.agentVersion) |value| {
+        try replaceString(allocator, &config.agent_version, value);
+    }
+    if (parsed.value.agentPort) |value| {
+        config.agent_port = value;
+    }
+    if (parsed.value.dockerSocket) |value| {
+        try replaceString(allocator, &config.docker_socket, value);
+    }
     if (parsed.value.netbirdManagementUrl) |value| {
         try replaceOptionalString(allocator, &config.netbird_management_url, value);
     }
@@ -319,7 +339,9 @@ fn replaceOptionalString(
     target: *?[]const u8,
     value: []const u8,
 ) !void {
-    if (target.*) |existing| allocator.free(existing);
+    if (target.*) |existing| {
+        allocator.free(existing);
+    }
     target.* = try allocator.dupe(u8, value);
 }
 

@@ -3,9 +3,12 @@ import { PluginRegistry } from "@platform/shared";
 import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import type { DatabaseProvider } from "./database/DatabaseProvider";
 import { GitOpsService } from "./services/GitOpsService";
+import { NetBirdEnrollmentService } from "./services/NetBirdEnrollmentService";
 import { createNetBirdService } from "./services/CreateNetBirdService";
 import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
 import type { NetBirdService } from "./services/NetBirdService";
+import { NetBirdConfig } from "./services/NetBirdConfig";
+import { SelfHostedNetBirdAdapter } from "./services/SelfHostedNetBirdAdapter";
 import { ComposeParser } from "./orchestration/ComposeParser";
 import { ExposurePlanner } from "./orchestration/ExposurePlanner";
 import { Planner } from "./orchestration/Planner";
@@ -32,6 +35,7 @@ export interface ControlPlaneContext {
     logRotationScheduler: LogRotationScheduler;
     controlPlaneSync: ControlPlaneSync;
     netBirdService: NetBirdService;
+    netBirdEnrollment: NetBirdEnrollmentService;
     applyRevision: number;
 }
 
@@ -55,9 +59,13 @@ export function createControlPlaneContext(
     packagesDir: string,
     options: CreateControlPlaneContextOptions = {}
 ): ControlPlaneContext {
+    const store = new ControlPlaneStore();
+    const netBirdService = createNetBirdService(options.netBirdCredentials);
+    const netBirdEnrollment = createNetBirdEnrollmentService(store, options.netBirdCredentials);
+
     return {
         databaseProvider,
-        store: new ControlPlaneStore(),
+        store,
         pluginRegistry: new PluginRegistry(),
         pluginLoader: new PluginLoader(packagesDir),
         composeParser: new ComposeParser(),
@@ -68,9 +76,34 @@ export function createControlPlaneContext(
         backupScheduler: new BackupScheduler(),
         logRotationScheduler: new LogRotationScheduler(),
         controlPlaneSync: new ControlPlaneSync(databaseProvider),
-        netBirdService: createNetBirdService(options.netBirdCredentials),
+        netBirdService,
+        netBirdEnrollment,
         applyRevision: 0
     };
+}
+
+/**
+ * Builds the NetBird enrollment service for agent bootstrap flows.
+ *
+ * @param store Control plane persistence layer
+ * @param credentials Bootstrapped NetBird API credentials
+ * @returns NetBird enrollment service
+ */
+function createNetBirdEnrollmentService(
+    store: ControlPlaneStore,
+    credentials?: NetBirdCredentials
+): NetBirdEnrollmentService {
+    if (NetBirdConfig.useMockAdapter()) {
+        return new NetBirdEnrollmentService(store, new SelfHostedNetBirdAdapter({
+            apiUrl: "http://mock-netbird",
+            token: credentials?.apiToken ?? "mock-netbird-token"
+        }));
+    }
+
+    return new NetBirdEnrollmentService(store, new SelfHostedNetBirdAdapter({
+        apiUrl: NetBirdConfig.resolveApiUrl(),
+        token: credentials?.apiToken ?? process.env.NETBIRD_TOKEN
+    }));
 }
 
 declare module "fastify" {

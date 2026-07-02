@@ -36,7 +36,7 @@ export class NetBirdEnrollmentService {
             name: SETUP_KEY_SECRET_NAME,
             keys: ["key"],
             value: { key: created.key },
-            description: "Chave interna de enrollment NetBird para agentes."
+            description: "Internal NetBird enrollment key for platform agents."
         });
 
         return created.key;

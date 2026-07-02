@@ -1,6 +1,6 @@
 # Bootstrap
 
-Bootstrap scripts install platform node dependencies and register agents with the control plane.
+Bootstrap scripts install platform nodes and register agents with the control plane.
 
 ## Goals
 
@@ -8,24 +8,91 @@ Bootstrap scripts install platform node dependencies and register agents with th
 - Install Docker without sudo where possible
 - Install and connect NetBird against your **self-hosted** management URL (cloud endpoints are rejected)
 - Install the agent as a systemd service (Linux) or Windows service
-- Register the node with the control plane using bootstrap tokens
+- Register the node with the control plane using setup keys
 
-## Scripts (planned)
+## Scripts
 
-| Script | Platform |
-|--------|----------|
-| `bootstrap/install.sh` | Linux and macOS via `curl \| sh` |
-| `bootstrap/install.ps1` | Windows PowerShell |
+| Script | Platform | Purpose |
+|--------|----------|---------|
+| `bootstrap/control-plane-install.sh` | Linux / macOS | Install control plane stack (Docker Compose) |
+| `bootstrap/control-plane-install.ps1` | Windows | Install control plane stack (Docker Compose) |
+| `bootstrap/agent-install.sh` | Linux / macOS | Install agent and persist `agent.json` |
+| `bootstrap/agent-install.ps1` | Windows | Install agent and persist `agent.json` |
+| `bootstrap/install.sh` | Linux / macOS | Alias for `agent-install.sh` |
+| `bootstrap/install.ps1` | Windows | Alias for `agent-install.ps1` |
+
+## Control plane one-liner
+
+From the platform monorepo root on a Docker host:
+
+```bash
+sudo bash bootstrap/control-plane-install.sh --host https://cp.example.com
+```
+
+Windows:
+
+```powershell
+.\bootstrap\control-plane-install.ps1 -HostUrl https://cp.example.com
+```
+
+The script:
+
+1. Writes `PLATFORM_PUBLIC_URL` (and optional NetBird public URLs) to `.env`
+2. Initializes NetBird config when missing
+3. Runs `docker compose up -d --build`
+4. Waits for `/health`
+5. Creates `ADMIN_API_KEY` when empty
+6. Fetches a reusable NetBird setup key from `GET /bootstrap/setup-key` (loopback only)
+7. Prints the agent install command
+
+## Agent one-liner
+
+On a worker machine:
+
+```bash
+curl -fsSL https://example.com/bootstrap/agent-install.sh | sudo bash -s -- \
+  --host https://cp.example.com \
+  --setup-key <setup-key-from-control-plane-bootstrap>
+```
+
+Windows:
+
+```powershell
+.\bootstrap\agent-install.ps1 -HostUrl https://cp.example.com -SetupKey <setup-key>
+```
+
+The script:
+
+1. Optionally calls `GET /bootstrap/agent` with `X-Platform-Setup-Key` to resolve `netbirdManagementUrl`
+2. Writes `/var/lib/platform/agent.json` (or `%ProgramData%\Platform\agent.json` on Windows)
+3. Installs or builds the Zig agent binary
+4. Starts a systemd or Windows service with `PLATFORM_AGENT_CONFIG` pointing at the JSON file
+
+## Public routes
+
+When the control plane API is private except for enrollment, expose only:
+
+| Route | Auth | Purpose |
+|-------|------|---------|
+| `POST /nodes/register` | None (remote exempt) | Agent registration and heartbeat identity |
+| `GET /bootstrap/agent` | `X-Platform-Setup-Key` header | Returns `cpUrl` and `netbirdManagementUrl` for agent install |
+
+`GET /bootstrap/setup-key` is **loopback only** and used by the control plane install script.
+
+Exposing the full control plane API on the internet remains optional and operator-dependent.
 
 ## Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `PLATFORM_CP_URL` | Control plane registration URL |
-| `PLATFORM_BOOTSTRAP_TOKEN` | One-time or scoped enrollment token |
+| `PLATFORM_CP_URL` | Control plane base URL (agent runtime override) |
+| `PLATFORM_PUBLIC_URL` | Public control plane URL returned to enrolling agents |
+| `PLATFORM_BOOTSTRAP_TOKEN` | Reserved for future scoped enrollment tokens |
 | `PLATFORM_NODE_LABELS` | Optional JSON labels for scheduling |
-| `NETBIRD_MANAGEMENT_URL` | Self-hosted NetBird management URL (required) |
+| `NETBIRD_MANAGEMENT_URL` | Self-hosted NetBird management URL (control plane internal) |
+| `NETBIRD_PUBLIC_MANAGEMENT_URL` | Public NetBird URL returned to enrolling agents |
 | `NETBIRD_SETUP_KEY` | NetBird enrollment key for the node |
+| `PLATFORM_AGENT_CONFIG` | Override path for persisted agent JSON |
 
 NetBird cloud (`api.netbird.io`) is not supported. See [netbird.md](./netbird.md).
 
@@ -62,10 +129,6 @@ On startup the agent persists the merged configuration. After a successful `POST
 | `netbirdManagementUrl` | Self-hosted NetBird management URL |
 | `netbirdSetupKey` | NetBird enrollment key from bootstrap |
 | `netbirdDeviceId` | NetBird device id after enrollment |
-
-### Future one-liner bootstrap
-
-Planned install scripts will accept `--setup-key` and `--host` (control plane public URL). Only the node registration route needs to be exposed on the internet for enrollment; exposing the full control plane API remains optional and operator-dependent.
 
 ## Post-bootstrap verification
 

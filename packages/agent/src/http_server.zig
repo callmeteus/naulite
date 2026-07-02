@@ -168,13 +168,21 @@ fn handleConnection(
         const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, chunk[0..]) catch |err| {
             return err;
         };
-        if (read_count == 0) break;
+        if (read_count == 0) {
+            break;
+        }
         try received.appendSlice(allocator, chunk[0..read_count]);
-        if (std.mem.indexOf(u8, received.items, "\r\n\r\n") != null) break;
-        if (received.items.len >= 1024 * 1024) return error.RequestTooLarge;
+        if (std.mem.indexOf(u8, received.items, "\r\n\r\n") != null) {
+            break;
+        }
+        if (received.items.len >= 1024 * 1024) {
+            return error.RequestTooLarge;
+        }
     }
 
-    if (received.items.len == 0) return;
+    if (received.items.len == 0) {
+        return;
+    }
 
     const header_end = std.mem.indexOf(u8, received.items, "\r\n\r\n") orelse return error.InvalidHttpRequest;
     const header_section = received.items[0..header_end];
@@ -192,7 +200,9 @@ fn handleConnection(
     defer if (body_owned) |owned| allocator.free(owned);
 
     const body: []const u8 = blk: {
-        if (content_length == 0) break :blk &[_]u8{};
+        if (content_length == 0) {
+            break :blk &[_]u8{};
+        }
 
         if (received.items.len >= body_start + content_length) {
             break :blk received.items[body_start .. body_start + content_length];
@@ -211,7 +221,9 @@ fn handleConnection(
             const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, chunk[0..]) catch |err| {
                 return err;
             };
-            if (read_count == 0) return error.EndOfStream;
+            if (read_count == 0) {
+                return error.EndOfStream;
+            }
             @memcpy(owned[index .. index + read_count], chunk[0..read_count]);
             index += read_count;
         }
@@ -315,8 +327,12 @@ fn handleBackupTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
     const result = try backup_executor.executeBackupTask(ctx.allocator, body);
     defer ctx.allocator.free(result.task_id);
     defer ctx.allocator.free(result.status);
-    if (result.archive_path) |archive_path| ctx.allocator.free(archive_path);
-    if (result.error_message) |error_message| ctx.allocator.free(error_message);
+    if (result.archive_path) |archive_path| {
+        ctx.allocator.free(archive_path);
+    }
+    if (result.error_message) |error_message| {
+        ctx.allocator.free(error_message);
+    }
 
     const response_body = try std.fmt.allocPrint(
         ctx.allocator,
@@ -336,7 +352,9 @@ fn handleLogRotationTask(ctx: *const RouteContext, body: []const u8) !HttpRespon
     defer ctx.allocator.free(result.task_id);
     defer ctx.allocator.free(result.status);
     defer ctx.allocator.free(result.rotated_files);
-    if (result.error_message) |error_message| ctx.allocator.free(error_message);
+    if (result.error_message) |error_message| {
+        ctx.allocator.free(error_message);
+    }
 
     const response_body = try std.fmt.allocPrint(
         ctx.allocator,
@@ -397,7 +415,9 @@ fn parseContentLength(header_section: []const u8) !usize {
     _ = lines.next();
 
     while (lines.next()) |line| {
-        if (line.len == 0) continue;
+        if (line.len == 0) {
+            continue;
+        }
         const colon = std.mem.indexOfScalar(u8, line, ':') orelse continue;
         const name = std.mem.trim(u8, line[0..colon], " ");
         if (std.ascii.eqlIgnoreCase(name, "content-length")) {
@@ -458,10 +478,14 @@ fn parseStringArrayField(allocator: std.mem.Allocator, body: []const u8, field_n
     defer parsed.deinit();
 
     const root = parsed.value;
-    if (root != .object) return error.InvalidRequestBody;
+    if (root != .object) {
+        return error.InvalidRequestBody;
+    }
 
     const field = root.object.get(field_name) orelse return error.MissingField;
-    if (field != .array) return error.InvalidFieldType;
+    if (field != .array) {
+        return error.InvalidFieldType;
+    }
 
     const values = try allocator.alloc([]const u8, field.array.items.len);
     for (field.array.items, 0..) |item, index| {

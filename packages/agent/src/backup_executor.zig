@@ -31,7 +31,9 @@ pub fn executeBackupTask(
     defer parsed.deinit();
 
     const root = parsed.value;
-    if (root != .object) return error.InvalidBackupTask;
+    if (root != .object) {
+        return error.InvalidBackupTask;
+    }
 
     const task_id_value = root.object.get("taskId") orelse return error.InvalidBackupTask;
     const task_id = switch (task_id_value) {

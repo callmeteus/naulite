@@ -101,4 +101,5 @@ See `docs/backups.md` and `docs/log-rotation.md`.
 - [Backups](docs/backups.md)
 - [Log rotation](docs/log-rotation.md)
 - [Bootstrap](docs/bootstrap.md)
+- [Admin authentication](docs/admin-auth.md)
 - [Development progress](PROGRESS.md)

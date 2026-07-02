@@ -54,6 +54,8 @@ services:
         environment:
             NODE_ENV: production
             DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
+            PLATFORM_PUBLIC_URL: ${PLATFORM_PUBLIC_URL:-}
+            NETBIRD_PUBLIC_MANAGEMENT_URL: ${NETBIRD_PUBLIC_MANAGEMENT_URL:-}
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
             CP_INSTANCE_ID: cp-1
@@ -82,6 +84,8 @@ services:
         environment:
             NODE_ENV: production
             DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
+            PLATFORM_PUBLIC_URL: ${PLATFORM_PUBLIC_URL:-}
+            NETBIRD_PUBLIC_MANAGEMENT_URL: ${NETBIRD_PUBLIC_MANAGEMENT_URL:-}
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
             CP_INSTANCE_ID: cp-2

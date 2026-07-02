@@ -41,7 +41,9 @@ pub fn readEnvU16(
     default_value: u16,
 ) u16 {
     var key_buffer: [256]u8 = undefined;
-    if (key.len >= key_buffer.len) return default_value;
+    if (key.len >= key_buffer.len) {
+        return default_value;
+    }
     @memcpy(key_buffer[0..key.len], key);
     key_buffer[key.len] = 0;
 

@@ -31,7 +31,9 @@ pub fn executeLogRotationTask(
     defer parsed.deinit();
 
     const root = parsed.value;
-    if (root != .object) return error.InvalidLogRotationTask;
+    if (root != .object) {
+        return error.InvalidLogRotationTask;
+    }
 
     const task_id_value = root.object.get("taskId") orelse return error.InvalidLogRotationTask;
     const task_id = switch (task_id_value) {
