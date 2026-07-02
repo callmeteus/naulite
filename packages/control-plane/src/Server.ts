@@ -3,7 +3,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApp } from "./App.js";
 import { createControlPlaneContext } from "./ControlPlaneContext.js";
+import { ControlPlaneStore } from "./database/ControlPlaneStore.js";
 import { DatabaseProvider } from "./database/DatabaseProvider.js";
+import { NetBirdBootstrap } from "./services/NetBirdBootstrap.js";
 
 /**
  * Server startup options.
@@ -44,7 +46,11 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     await databaseProvider.connect(DatabaseProvider.resolveOptionsFromEnv());
     await databaseProvider.migrate();
 
-    const context = createControlPlaneContext(databaseProvider, packagesDir);
+    const store = new ControlPlaneStore();
+    const netBirdCredentials = await NetBirdBootstrap.ensureCredentials(store);
+    const context = createControlPlaneContext(databaseProvider, packagesDir, {
+        netBirdCredentials
+    });
     await context.pluginLoader.load(context.pluginRegistry);
     context.backupScheduler.start();
     context.logRotationScheduler.start();

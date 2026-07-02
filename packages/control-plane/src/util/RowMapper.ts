@@ -52,6 +52,7 @@ export namespace RowMapper {
         capabilities: unknown;
         resources: unknown;
         agentVersion: string;
+        agentUrl: string | null;
         netbirdDeviceId: string | null;
         lastHeartbeatAt: string;
         createdAt: string;
@@ -65,6 +66,7 @@ export namespace RowMapper {
             capabilities: JsonField.parse<string[]>(row.capabilities),
             resources: JsonField.parse(row.resources),
             agentVersion: row.agentVersion,
+            agentUrl: row.agentUrl ?? undefined,
             netbirdDeviceId: row.netbirdDeviceId ?? undefined,
             lastHeartbeatAt: row.lastHeartbeatAt,
             createdAt: row.createdAt,

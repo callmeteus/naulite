@@ -11,10 +11,11 @@ import { randomUUID } from "node:crypto";
 import { Op } from "sequelize";
 
 import { ApiKeyCrypto } from "../auth/ApiKeyCrypto.js";
-import { RowMapper } from "../util/RowMapper.js";
+import { JsonField, RowMapper } from "../util/RowMapper.js";
 
 import {
     ApiKeyModel,
+    BackupRunModel,
     InstanceModel,
     NodeModel,
     SecretModel,
@@ -26,7 +27,6 @@ import {
  * Data access layer backed by Sequelize models.
  */
 export class ControlPlaneStore {
-
     /**
      * Lists all registered nodes.
      *
@@ -49,13 +49,24 @@ export class ControlPlaneStore {
     }
 
     /**
+     * Finds a node by hostname.
+     *
+     * @param hostname Node hostname
+     * @returns Node when found
+     */
+    async getNodeByHostname(hostname: string): Promise<Node | null> {
+        const row = await NodeModel.findOne({ where: { hostname } });
+        return row ? RowMapper.node(row.get({ plain: true })) : null;
+    }
+
+    /**
      * Persists a node registration.
      *
      * @param node Node to store
      * @returns Nothing.
      */
     async saveNode(node: Node): Promise<void> {
-        await NodeModel.create({
+        await NodeModel.upsert({
             id: node.id,
             hostname: node.hostname,
             status: node.status,
@@ -63,10 +74,89 @@ export class ControlPlaneStore {
             capabilities: node.capabilities,
             resources: node.resources,
             agentVersion: node.agentVersion,
+            agentUrl: node.agentUrl ?? null,
             netbirdDeviceId: node.netbirdDeviceId ?? null,
             lastHeartbeatAt: node.lastHeartbeatAt,
             createdAt: node.createdAt,
             updatedAt: node.updatedAt
+        });
+    }
+
+    /**
+     * Updates node heartbeat telemetry.
+     *
+     * @param nodeId Node identifier
+     * @param patch Heartbeat fields
+     * @returns Updated node when found
+     */
+    async updateNodeHeartbeat(
+        nodeId: string,
+        patch: {
+            status?: Node["status"];
+            resources?: Node["resources"];
+        }
+    ): Promise<Node | null> {
+        const row = await NodeModel.findByPk(nodeId);
+
+        if (!row) {
+            return null;
+        }
+
+        const now = new Date().toISOString();
+        const updates: Partial<NodeModel> = {
+            lastHeartbeatAt: now,
+            updatedAt: now
+        };
+
+        if (patch.status) {
+            updates.status = patch.status;
+        }
+
+        if (patch.resources) {
+            updates.resources = patch.resources;
+        }
+
+        await row.update(updates);
+        return RowMapper.node(row.get({ plain: true }));
+    }
+
+    /**
+     * Lists backup run summaries.
+     *
+     * @returns Backup run records
+     */
+    async listBackupRuns(): Promise<Array<{
+        id: string;
+        volumeName: string;
+        status: "pending" | "running" | "succeeded" | "failed";
+        startedAt?: string;
+        completedAt?: string;
+        destination?: string;
+    }>> {
+        const rows = await BackupRunModel.findAll({
+            order: [["createdAt", "DESC"]]
+        });
+
+        return rows.map((row) => {
+            const plain = row.get({ plain: true }) as {
+                id: string;
+                volumeName: string;
+                status: string;
+                startedAt: string | null;
+                completedAt: string | null;
+                payload: Record<string, unknown>;
+            };
+
+            return {
+                id: plain.id,
+                volumeName: plain.volumeName,
+                status: plain.status as "pending" | "running" | "succeeded" | "failed",
+                startedAt: plain.startedAt ?? undefined,
+                completedAt: plain.completedAt ?? undefined,
+                destination: typeof plain.payload.destination === "string"
+                    ? plain.payload.destination
+                    : undefined
+            };
         });
     }
 
@@ -108,6 +198,58 @@ export class ControlPlaneStore {
     async listSecrets(): Promise<Secret[]> {
         const rows = await SecretModel.findAll();
         return rows.map((row) => RowMapper.secret(row.get({ plain: true })));
+    }
+
+    /**
+     * Reads internal cluster secret values by secret name.
+     *
+     * @param name Cluster secret name
+     * @returns Secret key-value map when found
+     */
+    async getClusterSecretValues(name: string): Promise<Record<string, string> | null> {
+        const row = await SecretModel.findOne({ where: { name } });
+
+        if (!row) {
+            return null;
+        }
+
+        const plain = row.get({ plain: true }) as { value: unknown };
+        const parsed = JsonField.parse<Record<string, string>>(plain.value);
+
+        if (!parsed || typeof parsed !== "object") {
+            return null;
+        }
+
+        return parsed;
+    }
+
+    /**
+     * Upserts a cluster-scoped secret with encrypted payload values.
+     *
+     * @param input Secret metadata and values
+     * @returns Nothing.
+     */
+    async upsertClusterSecret(input: {
+        name: string;
+        keys: string[];
+        value: Record<string, string>;
+        description?: string;
+    }): Promise<void> {
+        const now = new Date().toISOString();
+        const existing = await SecretModel.findOne({ where: { name: input.name } });
+        const id = existing?.id ?? `secret:${input.name}`;
+
+        await SecretModel.upsert({
+            id,
+            name: input.name,
+            keys: input.keys,
+            scope: "cluster",
+            serviceName: null,
+            description: input.description ?? null,
+            value: input.value,
+            createdAt: existing?.createdAt ?? now,
+            updatedAt: now
+        });
     }
 
     /**

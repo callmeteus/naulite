@@ -7,13 +7,13 @@ services:
             - netbird
         env_file:
             - dashboard.env
-        ports:
-            - "${NETBIRD_DASHBOARD_PORT:-9080}:80"
 
     netbird-server:
         image: netbirdio/netbird-server:latest
         container_name: netbird-server
         restart: unless-stopped
+        environment:
+            NB_SETUP_PAT_ENABLED: "true"
         networks:
             - netbird
         ports:

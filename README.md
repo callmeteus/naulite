@@ -20,7 +20,20 @@ yarn test:unit
 ```
   
 With Docker available:
-  
+
+```bash
+# Linux/macOS/Git Bash
+./bin/dev.sh
+
+# Windows PowerShell
+./bin/dev.ps1
+
+# Or via yarn (picks script by OS)
+yarn dev:docker
+```
+
+This creates `.env` when missing, bootstraps NetBird config under `infra/netbird/`, runs `docker compose up -d --build`, and creates `ADMIN_API_KEY` when empty.
+
 ```bash
 yarn test:unit:docker
 yarn test:e2e
@@ -75,6 +88,7 @@ platform/
 | `yarn test:unit:docker` | Docker-backed unit tests |
 | `yarn test:e2e` | End-to-end smoke and flows |
 | `yarn dev` | Start package dev servers in parallel |
+| `yarn dev:docker` | Bootstrap NetBird + start full Docker stack (`bin/dev.sh` / `bin/dev.ps1`) |
   
 ## License
   

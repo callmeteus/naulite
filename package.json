@@ -14,7 +14,8 @@
         "test:unit:docker": "vitest run --config vitest.docker.config.ts",
         "test:unit:all": "yarn test:unit && yarn test:unit:docker",
         "test:e2e": "vitest run --config vitest.e2e.config.ts",
-        "dev": "turbo run dev --parallel"
+        "dev": "turbo run dev --parallel",
+        "dev:docker": "node -e \"process.platform==='win32'?require('child_process').spawn('powershell',['-File','bin/dev.ps1'],{stdio:'inherit'}):require('child_process').spawn('bash',['bin/dev.sh'],{stdio:'inherit'})\""
     },
     "devDependencies": {
         "@types/node": "^22.10.5",

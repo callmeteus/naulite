@@ -4,6 +4,7 @@ import { ControlPlaneStore } from "./database/ControlPlaneStore.js";
 import type { DatabaseProvider } from "./database/DatabaseProvider.js";
 import { GitOpsService } from "./services/GitOpsService.js";
 import { createNetBirdService } from "./services/CreateNetBirdService.js";
+import type { NetBirdCredentials } from "./services/NetBirdBootstrap.js";
 import type { NetBirdService } from "./services/NetBirdService.js";
 import { ComposeParser } from "./orchestration/ComposeParser.js";
 import { ExposurePlanner } from "./orchestration/ExposurePlanner.js";
@@ -35,15 +36,24 @@ export interface ControlPlaneContext {
 }
 
 /**
+ * Options for building the control plane application context.
+ */
+export interface CreateControlPlaneContextOptions {
+    netBirdCredentials?: NetBirdCredentials;
+}
+
+/**
  * Builds the default control plane application context.
  * 
  * @param databaseProvider Connected database provider
  * @param packagesDir Packages directory for plugin discovery
+ * @param options Optional context overrides
  * @returns Control plane context
  */
 export function createControlPlaneContext(
     databaseProvider: DatabaseProvider,
-    packagesDir: string
+    packagesDir: string,
+    options: CreateControlPlaneContextOptions = {}
 ): ControlPlaneContext {
     return {
         databaseProvider,
@@ -58,7 +68,7 @@ export function createControlPlaneContext(
         backupScheduler: new BackupScheduler(),
         logRotationScheduler: new LogRotationScheduler(),
         controlPlaneSync: new ControlPlaneSync(databaseProvider),
-        netBirdService: createNetBirdService(),
+        netBirdService: createNetBirdService(options.netBirdCredentials),
         applyRevision: 0
     };
 }

@@ -56,7 +56,6 @@ services:
             DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
-            NETBIRD_TOKEN: ${NETBIRD_TOKEN:-}
             CP_INSTANCE_ID: cp-1
             CP_PEER_URLS: http://control-plane-2:8080
             CP_PLUGINS: s3
@@ -85,7 +84,6 @@ services:
             DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
-            NETBIRD_TOKEN: ${NETBIRD_TOKEN:-}
             CP_INSTANCE_ID: cp-2
             CP_PEER_URLS: http://control-plane-1:8080
             CP_PLUGINS: s3
@@ -122,6 +120,24 @@ services:
             - ui-backend
         ports:
             - "3000:80"
+
+    agent-1:
+        build:
+            context: infra/agent-dogfood
+        restart: unless-stopped
+        environment:
+            NODE_ID: agent-1
+            HOSTNAME: agent-1
+            PLATFORM_CP_URL: http://control-plane-1:8080
+            AGENT_URL: http://agent-1:9470
+            AGENT_PORT: "9470"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        depends_on:
+            control-plane-1:
+                condition: service_started
+        ports:
+            - "9470:9470"
 
 volumes:
     pgdata:

@@ -1,0 +1,69 @@
+import { describe, expect, it, vi } from "vitest";
+
+import type { ExecutionPlan, Node } from "@platform/shared";
+
+import { AgentDispatcher } from "../../../packages/control-plane/src/services/AgentDispatcher.js";
+
+const baseNode: Node = {
+    id: "node-1",
+    hostname: "agent-1",
+    status: "online",
+    labels: {},
+    capabilities: ["docker"],
+    resources: {
+        cpuMillisTotal: 1000,
+        cpuMillisUsed: 0,
+        memoryMbTotal: 1024,
+        memoryMbUsed: 0,
+        diskMbTotal: 1024,
+        diskMbUsed: 0
+    },
+    agentVersion: "test",
+    agentUrl: "http://agent-1:9470",
+    lastHeartbeatAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+};
+
+const basePlan: ExecutionPlan = {
+    planId: "demo-node-1-1",
+    revision: 1,
+    nodeId: "node-1",
+    manifestName: "demo",
+    operations: [],
+    createdAt: new Date().toISOString()
+};
+
+describe("AgentDispatcher", () => {
+    it("dispatches plans to agents with agentUrl", async () => {
+        const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ accepted: true }), { status: 202 }));
+
+        const results = await AgentDispatcher.dispatchPlans([basePlan], [baseNode], fetchImpl);
+
+        expect(results).toHaveLength(1);
+        expect(results[0]?.status).toBe("dispatched");
+        expect(fetchImpl).toHaveBeenCalledWith(
+            "http://agent-1:9470/execution/apply",
+            expect.objectContaining({ method: "POST" })
+        );
+    });
+
+    it("skips nodes without agentUrl", async () => {
+        const fetchImpl = vi.fn();
+        const node = { ...baseNode, agentUrl: undefined };
+
+        const results = await AgentDispatcher.dispatchPlans([basePlan], [node], fetchImpl);
+
+        expect(results[0]?.status).toBe("skipped");
+        expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
+    it("marks failed agent responses", async () => {
+        const fetchImpl = vi.fn(async () => new Response("boom", { status: 500 }));
+
+        const results = await AgentDispatcher.dispatchPlans([basePlan], [baseNode], fetchImpl);
+
+        expect(results[0]?.status).toBe("failed");
+        expect(results[0]?.httpStatus).toBe(500);
+    });
+});

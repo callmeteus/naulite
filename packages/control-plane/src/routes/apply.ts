@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
+import { AgentDispatcher } from "../services/AgentDispatcher.js";
+
 const ApplyBodySchema = z.object({
     manifestYaml: z.string().min(1).optional(),
     manifest: z.string().min(1).optional()
@@ -94,6 +96,20 @@ export async function registerApplyRoutes(app: FastifyInstance): Promise<void> {
             );
         });
 
+        const dispatch = await AgentDispatcher.dispatchPlans(plans, nodes);
+
+        for (const result of dispatch) {
+            app.log.debug(
+                {
+                    nodeId: result.nodeId,
+                    planId: result.planId,
+                    status: result.status,
+                    agentUrl: result.agentUrl
+                },
+                "agent dispatch result"
+            );
+        }
+
         return {
             revision: app.controlPlane.applyRevision,
             manifestName: manifest.name,
@@ -107,7 +123,8 @@ export async function registerApplyRoutes(app: FastifyInstance): Promise<void> {
                 volumesToRemove: diff.volumesToRemove.length
             },
             exposurePlan,
-            plans
+            plans,
+            dispatch
         };
     });
 }

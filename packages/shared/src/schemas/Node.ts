@@ -37,6 +37,7 @@ export const NodeSchema = z.object({
     capabilities: z.array(z.string()).default([]),
     resources: NodeResourcesSchema,
     agentVersion: z.string().min(1),
+    agentUrl: z.string().url().optional(),
     netbirdDeviceId: z.string().min(1).optional(),
     lastHeartbeatAt: TimestampSchema,
     createdAt: TimestampSchema,

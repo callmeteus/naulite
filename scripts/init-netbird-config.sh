@@ -72,6 +72,6 @@ LETSENCRYPT_DOMAIN=none
 EOF
 
 echo "NetBird config written to infra/netbird/ (config.yaml, dashboard.env)."
-echo "Dashboard: http://127.0.0.1:${NETBIRD_DASHBOARD_PORT:-9080}"
 echo "Management API (host): ${PUBLIC_API_URL}/api"
 echo "Control plane (Docker network): http://netbird-server/api"
+echo "Credentials are bootstrapped automatically by the control plane on first startup."

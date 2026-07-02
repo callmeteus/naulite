@@ -99,7 +99,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
         }
 
         if (this.token) {
-            headers.set("Authorization", `Bearer ${this.token}`);
+            headers.set("Authorization", `Token ${this.token}`);
         }
 
         const response = await this.fetchImpl(`${this.apiUrl}${path}`, {

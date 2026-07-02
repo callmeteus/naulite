@@ -30,6 +30,9 @@ export class NodeModel extends Model {
     @Column({ type: DataType.STRING, field: "agent_version" })
     declare agentVersion: string;
 
+    @Column({ type: DataType.STRING, field: "agent_url" })
+    declare agentUrl: string | null;
+
     @Column({ type: DataType.STRING, field: "netbird_device_id" })
     declare netbirdDeviceId: string | null;
 
