@@ -5,12 +5,20 @@ const i18n = @import("i18n.zig");
 const io_output = @import("io_output.zig");
 
 /// Writes JSON to stdout with a trailing newline.
-pub fn printJson(stdout: anytype, body: []const u8) !void {
+pub fn printJson(
+    stdout: anytype,
+    // JSON body to print.
+    body: []const u8,
+) !void {
     try stdout.print("{s}\n", .{body});
 }
 
 /// Lists cluster nodes.
-pub fn getNodes(allocator: std.mem.Allocator, client: *Client) !void {
+pub fn getNodes(
+    allocator: std.mem.Allocator,
+    // Control plane HTTP client.
+    client: *Client,
+) !void {
     const stdout = io_output.stdoutWriter();
     const response = try client.get("/nodes");
     defer allocator.free(response.body);
@@ -67,7 +75,13 @@ pub fn clusterStatus(allocator: std.mem.Allocator, client: *Client) !void {
 }
 
 /// Applies a compose manifest file.
-pub fn applyManifest(allocator: std.mem.Allocator, client: *Client, manifest_path: []const u8) !void {
+pub fn applyManifest(
+    allocator: std.mem.Allocator,
+    // Control plane HTTP client.
+    client: *Client,
+    // Path to the manifest YAML file.
+    manifest_path: []const u8,
+) !void {
     const stdout = io_output.stdoutWriter();
     const manifest_buffer = try allocator.alloc(u8, 8 * 1024 * 1024);
     defer allocator.free(manifest_buffer);
@@ -141,7 +155,15 @@ pub fn rotateLogs(allocator: std.mem.Allocator, client: *Client, service_name: [
 }
 
 /// Executes a command inside an instance.
-pub fn execInstance(allocator: std.mem.Allocator, client: *Client, instance_id: []const u8, command_argv: []const []const u8) !u8 {
+pub fn execInstance(
+    allocator: std.mem.Allocator,
+    // Control plane HTTP client.
+    client: *Client,
+    // Target instance identifier.
+    instance_id: []const u8,
+    // Command argv to execute.
+    command_argv: []const []const u8,
+) !u8 {
     const stdout = io_output.stdoutWriter();
     const stderr = io_output.stderrWriter();
     const path = try std.fmt.allocPrint(allocator, "/instances/{s}/exec", .{instance_id});

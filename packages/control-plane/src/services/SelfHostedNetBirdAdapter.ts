@@ -84,6 +84,47 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
     }
 
     /**
+     * Creates a reusable setup key for agent enrollment.
+     *
+     * @param name Setup key label
+     * @returns Created setup key metadata
+     */
+    async createSetupKey(name: string): Promise<{ id: string; key: string; name: string }> {
+        return this.request("/setup-keys", {
+            method: "POST",
+            body: JSON.stringify({
+                name,
+                type: "reusable",
+                expires_in: 0,
+                auto_groups: [],
+                usage_limit: 0
+            })
+        });
+    }
+
+    /**
+     * Lists setup keys from the self-hosted NetBird API.
+     *
+     * @returns Setup key records
+     */
+    async listSetupKeys(): Promise<Array<{ id: string; name: string }>> {
+        const payload = await this.request<{ items?: Array<{ id: string; name: string }> }>("/setup-keys");
+        return payload.items ?? [];
+    }
+
+    /**
+     * Revokes a setup key by id.
+     *
+     * @param setupKeyId Setup key identifier
+     * @returns Nothing.
+     */
+    async revokeSetupKey(setupKeyId: string): Promise<void> {
+        await this.request(`/setup-keys/${encodeURIComponent(setupKeyId)}`, {
+            method: "DELETE"
+        });
+    }
+
+    /**
      * Performs an authenticated request against the self-hosted NetBird API.
      * 
      * @param path API path relative to the configured base URL

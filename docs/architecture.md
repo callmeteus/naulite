@@ -24,8 +24,8 @@ See [CONTEXT.md](../CONTEXT.md) for the canonical overview. This document summar
 
 ### CLI and UI
 
-- CLI is implemented in Zig (`packages/cli/zig/`); NPM install via `bin/platform.js` spawning the native binary
-- Strings live in `zig/src/i18n.zig`
+- CLI is implemented in Zig (`packages/cli/src/`); NPM install via `bin/platform.js` spawning the native binary
+- Strings live in `src/i18n.zig`
 - UI uses Vue 3, Vite, Pinia, and the same SDK through a dev proxy
 
 ## Deploy flow

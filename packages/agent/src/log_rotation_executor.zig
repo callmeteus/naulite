@@ -1,14 +1,27 @@
 const std = @import("std");
 
+/// Result of a log rotation task executed on the agent.
 pub const LogRotationTaskResult = struct {
+    // Control plane task identifier.
     task_id: []const u8,
+
+    // Final task status string.
     status: []const u8,
+
+    // Paths of rotated log files.
     rotated_files: []const []const u8,
+
+    // Error message when the task failed.
     error_message: ?[]const u8,
 };
 
 /// Executes a log rotation task JSON payload from the control plane.
-pub fn executeLogRotationTask(allocator: std.mem.Allocator, body: []const u8) !LogRotationTaskResult {
+pub fn executeLogRotationTask(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+    // The log rotation task JSON payload.
+    body: []const u8,
+) !LogRotationTaskResult {
     const parsed = try std.json.parseFromSlice(
         std.json.Value,
         allocator,

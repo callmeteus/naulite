@@ -1,20 +1,37 @@
 const std = @import("std");
 const execution_plan = @import("../execution_plan.zig");
+const cp_client = @import("../cp_client.zig");
 const docker_api = @import("docker_api.zig");
 
 pub const DockerClient = struct {
+    // Path to the Docker Unix socket or named pipe.
     socket_path: []const u8,
+
+    // The allocator to use.
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator, socket_path: []const u8) DockerClient {
+    // Optional control plane configuration for status callbacks.
+    cp_config: ?cp_client.Config,
+
+    /// Creates a Docker client bound to a socket path.
+    pub fn init(
+        allocator: std.mem.Allocator,
+        // Path to the Docker socket.
+        socket_path: []const u8,
+    ) DockerClient {
         return .{
             .socket_path = socket_path,
             .allocator = allocator,
+            .cp_config = cp_client.loadConfig(allocator) catch null,
         };
     }
 
     /// Applies an execution plan by dispatching each operation to the Docker API.
-    pub fn applyPlan(self: *DockerClient, plan: execution_plan.ExecutionPlan) !void {
+    pub fn applyPlan(
+        self: *DockerClient,
+        // Parsed execution plan from the control plane.
+        plan: execution_plan.ExecutionPlan,
+    ) !void {
         std.log.info(
             "[docker] apply planId={s} revision={d} operations={d}",
             .{ plan.plan_id, plan.revision, plan.operations.len },
@@ -30,7 +47,9 @@ pub const DockerClient = struct {
     /// Fetches container logs for an instance.
     pub fn getContainerLogs(
         self: *DockerClient,
+        // Instance identifier from the control plane.
         instance_id: []const u8,
+        // Maximum number of log lines to return.
         tail: ?usize,
     ) ![]const u8 {
         const api = docker_api.DockerApi.init(self.allocator, self.socket_path);
@@ -43,7 +62,9 @@ pub const DockerClient = struct {
     /// Executes a command inside a running container.
     pub fn execContainer(
         self: *DockerClient,
+        // Instance identifier from the control plane.
         instance_id: []const u8,
+        // Command argv to run inside the container.
         command: []const []const u8,
     ) !ExecResult {
         _ = self;
@@ -124,6 +145,9 @@ pub const DockerClient = struct {
 
         try api.startContainer(container_name);
         std.log.info("[docker] started container name={s}", .{container_name});
+        if (self.cp_config) |config| {
+            cp_client.reportInstanceRunning(self.allocator, config, instance_id);
+        }
     }
 
     fn handleStop(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
@@ -134,6 +158,9 @@ pub const DockerClient = struct {
         defer self.allocator.free(container_name);
 
         try api.stopContainer(container_name);
+        if (self.cp_config) |config| {
+            cp_client.reportInstanceStopped(self.allocator, config, instance_id);
+        }
     }
 
     fn handleRemove(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
@@ -145,6 +172,9 @@ pub const DockerClient = struct {
         defer self.allocator.free(container_name);
 
         try api.removeContainer(container_name, force);
+        if (self.cp_config) |config| {
+            cp_client.reportInstanceStopped(self.allocator, config, instance_id);
+        }
     }
 
     fn handleEnsureVolume(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
@@ -364,7 +394,12 @@ pub const DockerClient = struct {
 };
 
 pub const ExecResult = struct {
+    // Process exit code from the exec session.
     exit_code: i32,
+
+    // Captured stdout text.
     stdout: []const u8,
+
+    // Captured stderr text.
     stderr: []const u8,
 };

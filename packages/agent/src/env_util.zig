@@ -1,7 +1,13 @@
 const std = @import("std");
 
 /// Reads an environment variable or returns a duplicated default value.
-pub fn readEnvOrDefault(allocator: std.mem.Allocator, key: []const u8, default_value: []const u8) ![]u8 {
+pub fn readEnvOrDefault(
+    allocator: std.mem.Allocator,
+    // Environment variable name.
+    key: []const u8,
+    // Default value when the variable is unset.
+    default_value: []const u8,
+) ![]u8 {
     const key_z = try allocator.allocSentinel(u8, key.len, 0);
     defer allocator.free(key_z);
     @memcpy(key_z, key);
@@ -14,7 +20,12 @@ pub fn readEnvOrDefault(allocator: std.mem.Allocator, key: []const u8, default_v
 }
 
 /// Reads an optional unsigned integer environment variable.
-pub fn readEnvU16(key: []const u8, default_value: u16) u16 {
+pub fn readEnvU16(
+    // Environment variable name.
+    key: []const u8,
+    // Default value when the variable is unset or invalid.
+    default_value: u16,
+) u16 {
     var key_buffer: [256]u8 = undefined;
     if (key.len >= key_buffer.len) return default_value;
     @memcpy(key_buffer[0..key.len], key);

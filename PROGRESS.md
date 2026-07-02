@@ -24,14 +24,14 @@
 - Monorepo foundation: 17 packages, Turbo workspaces, shared ESLint/TSConfig, CI workflow
 - `@platform/shared`: Zod schemas, provider interfaces, `PluginRegistry`, `NetworkGroupId`
 - `@platform/control-plane`: Fastify REST, Sequelize (SQLite dev + PostgreSQL HA), planner, scheduler, GitOps, NetBird self-hosted
-- `@platform/agent` (Zig): HTTP executor, bootstrap scripts, backup/log-rotation task handlers
-- Dogfood agent (`infra/agent-dogfood`): Node.js agent for Docker compose (register, heartbeat, `/execution/apply`)
+- `@platform/agent` (Zig 0.17): Docker Engine API executor, CP register/heartbeat, instance status callbacks, HTTP server on `std.Io`
+- Dogfood compose uses Zig agent image (`packages/agent/Dockerfile`); `infra/agent-dogfood` removed
 - `bin/dev.sh` / `bin/dev.ps1`: NetBird config bootstrap, `docker compose up`, auto `ADMIN_API_KEY` when missing
 - NetBird credentials bootstrapped automatically into cluster secret `netbird/internal` (no manual token)
 - Providers: runtime-docker, runtime-podman, runtime-containerd, volumes, secrets, registries, builders, gateway, backups, log-rotation, plugin-s3
 - `@platform/cli` + `@platform/sdk`: kubectl-style commands via typed HTTP client
 - `@platform/ui-frontend` / `@platform/ui-backend`: Vue 3 dashboard + Fastify admin BFF (nodes, services, deploy, backups); cluster state via Vue `reactive()`
-- Tests: 24 unit tests, e2e harness with `LocalTestCluster` (Docker-gated)
+- Tests: 41 unit tests, e2e harness with real control plane + Zig agent (`LocalTestCluster`)
 - Examples: minimal, app-with-db, rushpedia overlays, minecraft, with-defaults
 - Dogfood: `docker-compose.yml` with HA control plane, Postgres, MinIO, UI, NetBird, `agent-1`
 - Control plane database uses **Sequelize** + **sequelize-typescript** (SQLite dev, PostgreSQL HA)

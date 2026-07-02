@@ -1,8 +1,6 @@
 const std = @import("std");
 
 /// Builds the platform agent.
-/// @param b The build context.
-/// @returns Nothing.
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});

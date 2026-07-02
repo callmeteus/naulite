@@ -2,6 +2,7 @@ import { PlatformApiError } from "./PlatformApiError.js";
 import type {
     ApiKey,
     ApplyResponse,
+    ApplyResultPayload,
     BackupRun,
     BackupTask,
     BuildRequest,
@@ -144,7 +145,17 @@ export class PlatformClient {
      * @returns Apply summary
      */
     async applyManifest(manifestYaml: string): Promise<ApplyResponse> {
-        return this.request<ApplyResponse>("POST", "/apply", { manifest: manifestYaml });
+        const payload = await this.request<ApplyResultPayload>("POST", "/apply", { manifest: manifestYaml });
+
+        return {
+            revision: payload.revision,
+            manifestName: payload.manifestName,
+            servicesCreated: payload.diff.servicesToCreate,
+            servicesUpdated: payload.diff.servicesToUpdate,
+            servicesDeleted: payload.diff.servicesToRemove,
+            instancesToCreate: payload.diff.instancesToCreate,
+            dispatch: payload.dispatch
+        };
     }
 
     /**
@@ -277,7 +288,50 @@ export class PlatformClient {
      * @returns Apply summary when a deploy is triggered
      */
     async gitOpsWebhook(payload: GitOpsWebhookPayload): Promise<ApplyResponse> {
-        return this.request<ApplyResponse>("POST", "/gitops/webhook", payload);
+        const result = await this.request<ApplyResultPayload>("POST", "/gitops/webhook", payload);
+
+        return {
+            revision: result.revision,
+            manifestName: result.manifestName,
+            servicesCreated: result.diff.servicesToCreate,
+            servicesUpdated: result.diff.servicesToUpdate,
+            servicesDeleted: result.diff.servicesToRemove,
+            instancesToCreate: result.diff.instancesToCreate,
+            dispatch: result.dispatch
+        };
+    }
+
+    /**
+     * Lists recorded GitOps revisions.
+     *
+     * @returns Revision list wrapper
+     */
+    async listGitOpsRevisions(manifestName?: string): Promise<{ revisions: Array<Record<string, unknown>> }> {
+        const query = manifestName ? `?manifestName=${encodeURIComponent(manifestName)}` : "";
+        return this.request("GET", `/gitops/revisions${query}`);
+    }
+
+    /**
+     * Rolls back to a recorded GitOps revision.
+     *
+     * @param revisionId Revision identifier
+     * @returns Apply summary
+     */
+    async rollbackGitOps(revisionId: string): Promise<ApplyResponse> {
+        const result = await this.request<ApplyResultPayload>(
+            "POST",
+            `/gitops/rollback/${encodeURIComponent(revisionId)}`
+        );
+
+        return {
+            revision: result.revision,
+            manifestName: result.manifestName,
+            servicesCreated: result.diff.servicesToCreate,
+            servicesUpdated: result.diff.servicesToUpdate,
+            servicesDeleted: result.diff.servicesToRemove,
+            instancesToCreate: result.diff.instancesToCreate,
+            dispatch: result.dispatch
+        };
     }
 
     /**

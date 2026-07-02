@@ -334,6 +334,130 @@ export class ControlPlaneStore {
         await ServiceModel.destroy({
             where: { id: serviceId }
         });
+        await InstanceModel.destroy({
+            where: { serviceId }
+        });
+    }
+
+    /**
+     * Deletes a service by name.
+     *
+     * @param name Service name
+     * @returns Whether a service was deleted
+     */
+    async deleteServiceByName(name: string): Promise<boolean> {
+        const row = await ServiceModel.findOne({ where: { name } });
+
+        if (!row) {
+            return false;
+        }
+
+        await this.deleteService(row.id);
+        return true;
+    }
+
+    /**
+     * Updates an instance record.
+     *
+     * @param instanceId Instance identifier
+     * @param patch Fields to update
+     * @returns Updated instance when found
+     */
+    async updateInstance(
+        instanceId: string,
+        patch: {
+            status?: Instance["status"];
+            containerId?: string;
+            health?: Instance["health"];
+        }
+    ): Promise<Instance | null> {
+        const row = await InstanceModel.findByPk(instanceId);
+
+        if (!row) {
+            return null;
+        }
+
+        const now = new Date().toISOString();
+        const updates: Partial<InstanceModel> = {
+            updatedAt: now
+        };
+
+        if (patch.status) {
+            updates.status = patch.status;
+        }
+
+        if (patch.containerId) {
+            updates.containerId = patch.containerId;
+        }
+
+        if (patch.health) {
+            updates.health = patch.health;
+        }
+
+        await row.update(updates);
+        return RowMapper.instance(row.get({ plain: true }));
+    }
+
+    /**
+     * Deletes a volume by name when it is not referenced by running instances.
+     *
+     * @param name Volume name
+     * @returns Whether a volume was deleted
+     */
+    async deleteVolumeByName(name: string): Promise<boolean> {
+        const row = await VolumeModel.findOne({ where: { name } });
+
+        if (!row) {
+            return false;
+        }
+
+        await VolumeModel.destroy({ where: { id: row.id } });
+        return true;
+    }
+
+    /**
+     * Deletes secret metadata by name.
+     *
+     * @param name Secret name
+     * @returns Whether a secret was deleted
+     */
+    async deleteSecretByName(name: string): Promise<boolean> {
+        const affected = await SecretModel.destroy({ where: { name } });
+        return affected > 0;
+    }
+
+    /**
+     * Enqueues a backup run for a volume.
+     *
+     * @param volumeName Volume name
+     * @returns Created backup run summary
+     */
+    async enqueueBackupRun(volumeName: string): Promise<{
+        id: string;
+        volumeName: string;
+        status: "pending";
+        startedAt: string;
+    }> {
+        const now = new Date().toISOString();
+        const id = randomUUID();
+
+        await BackupRunModel.create({
+            id,
+            volumeName,
+            status: "pending",
+            startedAt: now,
+            completedAt: null,
+            payload: {},
+            createdAt: now,
+            updatedAt: now
+        });
+
+        return {
+            id,
+            volumeName,
+            status: "pending",
+            startedAt: now
+        };
     }
 
     /**

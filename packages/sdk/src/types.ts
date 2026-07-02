@@ -46,16 +46,62 @@ export interface ClusterStatus {
     health: ClusterHealth;
     leaderId?: string;
     revision?: string;
+    summary?: {
+        nodes: number;
+        onlineNodes: number;
+        services: number;
+        instances: number;
+        runningInstances: number;
+        volumes: number;
+        secrets: number;
+        applyRevision: number;
+    };
+    nodes?: Node[];
+    services?: Service[];
+    instances?: Instance[];
+    volumes?: Volume[];
+    secrets?: Secret[];
 }
 
 /**
  * Apply manifest response.
  */
 export interface ApplyResponse {
-    revision: string;
+    revision: string | number;
+    manifestName: string;
     servicesCreated: number;
     servicesUpdated: number;
     servicesDeleted: number;
+    instancesToCreate?: number;
+    dispatch?: Array<{
+        nodeId: string;
+        planId: string;
+        status: string;
+        agentUrl?: string;
+    }>;
+}
+
+/**
+ * Full apply payload returned directly by the control plane.
+ */
+export interface ApplyResultPayload {
+    revision: number;
+    manifestName: string;
+    diff: {
+        servicesToCreate: number;
+        servicesToUpdate: number;
+        servicesToRemove: number;
+        instancesToCreate: number;
+        instancesToRemove: number;
+        volumesToEnsure: number;
+        volumesToRemove: number;
+    };
+    dispatch: Array<{
+        nodeId: string;
+        planId: string;
+        status: string;
+        agentUrl?: string;
+    }>;
 }
 
 /**

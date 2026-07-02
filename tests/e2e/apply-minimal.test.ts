@@ -62,9 +62,14 @@ describe("apply minimal manifest via SDK", () => {
         const body = await response.json() as {
             manifestName: string;
             diff: { servicesToCreate: number };
+            dispatch?: Array<{ status: string }>;
         };
         expect(body.manifestName).toBe("minimal");
         expect(body.diff.servicesToCreate).toBeGreaterThanOrEqual(1);
+
+        if (body.dispatch && body.dispatch.length > 0) {
+            expect(body.dispatch[0]?.status).toBe("dispatched");
+        }
 
         const services = await client.listServices();
         expect(services.some((service) => service.name === "web")).toBe(true);

@@ -9,6 +9,11 @@ import { t } from "./ui/Translate";
             <nav>
                 <router-link to="/nodes">{{ t("nodes") }}</router-link>
                 <router-link to="/services">{{ t("services") }}</router-link>
+                <router-link to="/instances">{{ t("instances") }}</router-link>
+                <router-link to="/volumes">{{ t("volumes") }}</router-link>
+                <router-link to="/secrets">{{ t("secrets") }}</router-link>
+                <router-link to="/cluster">{{ t("cluster") }}</router-link>
+                <router-link to="/gitops">{{ t("gitops") }}</router-link>
                 <router-link to="/deploy">{{ t("deploy") }}</router-link>
                 <router-link to="/backups">{{ t("backups") }}</router-link>
                 <router-link to="/api-keys">{{ t("apiKeys") }}</router-link>

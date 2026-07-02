@@ -19,6 +19,15 @@ jobs:
                     node-version: "22"
                     cache: yarn
                     cache-dependency-path: platform/yarn.lock
+
+            - name: Setup Zig
+                uses: goto-bus-stop/setup-zig@v2
+                with:
+                    version: master
+
+            - name: Build Zig agent
+                working-directory: platform/packages/agent
+                run: zig build -Doptimize=ReleaseSafe
   
             - name: Install dependencies
                 working-directory: platform

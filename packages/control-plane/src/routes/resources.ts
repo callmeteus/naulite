@@ -1,9 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
+import { createDeclarativeRegistryProvider } from "@platform/registries";
+
 /**
  * Registers resource listing routes.
- * 
+ *
  * @param app Fastify application instance
  * @returns Nothing.
  */
@@ -48,9 +50,69 @@ export async function registerResourceRoutes(app: FastifyInstance): Promise<void
     });
 
     app.get("/registry", async () => {
+        const provider = createDeclarativeRegistryProvider({
+            registries: [
+                {
+                    id: "docker.io",
+                    name: "Docker Hub",
+                    url: "https://index.docker.io/v1/",
+                    isDefault: true
+                }
+            ]
+        });
+        const registries = await provider.list();
+
         return {
-            registries: ["docker.io"]
+            registries: registries.map((entry) => entry.id)
         };
+    });
+
+    app.delete("/services/:name", async (request, reply) => {
+        const params = z.object({
+            name: z.string().min(1)
+        }).parse(request.params);
+        const deleted = await app.controlPlane.store.deleteServiceByName(params.name);
+
+        if (!deleted) {
+            return reply.status(404).send({
+                error: "not_found",
+                message: `Serviço ${params.name} não encontrado.`
+            });
+        }
+
+        return { deleted: true, name: params.name };
+    });
+
+    app.delete("/volumes/:name", async (request, reply) => {
+        const params = z.object({
+            name: z.string().min(1)
+        }).parse(request.params);
+        const deleted = await app.controlPlane.store.deleteVolumeByName(params.name);
+
+        if (!deleted) {
+            return reply.status(404).send({
+                error: "not_found",
+                message: `Volume ${params.name} não encontrado.`
+            });
+        }
+
+        return { deleted: true, name: params.name };
+    });
+
+    app.delete("/secrets/:name", async (request, reply) => {
+        const params = z.object({
+            name: z.string().min(1)
+        }).parse(request.params);
+        const deleted = await app.controlPlane.store.deleteSecretByName(params.name);
+
+        if (!deleted) {
+            return reply.status(404).send({
+                error: "not_found",
+                message: `Secret ${params.name} não encontrado.`
+            });
+        }
+
+        return { deleted: true, name: params.name };
     });
 
     app.get("/backups", async () => {

@@ -3,15 +3,27 @@ const env_util = @import("env_util.zig");
 
 /// Control plane client configuration loaded from environment variables.
 pub const Config = struct {
+    // Control plane base URL.
     cp_url: []const u8,
+
+    // Node identifier registered with the control plane.
     node_id: []const u8,
+
+    // Hostname reported during registration.
     hostname: []const u8,
+
+    // Agent HTTP URL reachable by the control plane.
     agent_url: []const u8,
+
+    // Agent version string reported during registration.
     agent_version: []const u8,
 };
 
 /// Loads agent control plane configuration from environment variables.
-pub fn loadConfig(allocator: std.mem.Allocator) !Config {
+pub fn loadConfig(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+) !Config {
     const cp_url = try env_util.readEnvOrDefault(allocator, "PLATFORM_CP_URL", "http://control-plane-1:8080");
     errdefer allocator.free(cp_url);
 
@@ -44,7 +56,11 @@ pub fn loadConfig(allocator: std.mem.Allocator) !Config {
 }
 
 /// Starts background registration and heartbeat loop against the control plane.
-pub fn startBackground(allocator: std.mem.Allocator, config: Config) !void {
+pub fn startBackground(
+    allocator: std.mem.Allocator,
+    // Loaded control plane configuration.
+    config: Config,
+) !void {
     const heap_config = try allocator.create(Config);
     heap_config.* = config;
 
@@ -113,6 +129,65 @@ fn sendHeartbeat(allocator: std.mem.Allocator, config: Config) !void {
     defer allocator.free(path);
 
     try postJson(allocator, path, body);
+}
+
+fn reportInstanceStatus(
+    allocator: std.mem.Allocator,
+    config: Config,
+    instance_id: []const u8,
+    status: []const u8,
+) void {
+    const path = std.fmt.allocPrint(
+        allocator,
+        "{s}/instances/{s}/status",
+        .{ config.cp_url, instance_id },
+    ) catch {
+        return;
+    };
+    defer allocator.free(path);
+
+    const body = std.fmt.allocPrint(
+        allocator,
+        "{{\"status\":\"{s}\"}}",
+        .{status},
+    ) catch {
+        return;
+    };
+    defer allocator.free(body);
+
+    postJson(allocator, path, body) catch |err| {
+        std.log.warn("[cp] instance status report failed id={s} status={s} err={}", .{ instance_id, status, err });
+    };
+}
+
+pub fn reportInstanceRunning(
+    allocator: std.mem.Allocator,
+    // Control plane client configuration.
+    config: Config,
+    // Instance identifier to report.
+    instance_id: []const u8,
+) void {
+    reportInstanceStatus(allocator, config, instance_id, "running");
+}
+
+pub fn reportInstanceStopped(
+    allocator: std.mem.Allocator,
+    // Control plane client configuration.
+    config: Config,
+    // Instance identifier to report.
+    instance_id: []const u8,
+) void {
+    reportInstanceStatus(allocator, config, instance_id, "stopped");
+}
+
+pub fn reportInstanceFailed(
+    allocator: std.mem.Allocator,
+    // Control plane client configuration.
+    config: Config,
+    // Instance identifier to report.
+    instance_id: []const u8,
+) void {
+    reportInstanceStatus(allocator, config, instance_id, "failed");
 }
 
 fn postJson(allocator: std.mem.Allocator, url: []const u8, body: []const u8) !void {

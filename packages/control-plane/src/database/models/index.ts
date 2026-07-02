@@ -5,6 +5,7 @@ import { GitRevisionModel } from "./GitRevisionModel.js";
 import { InstanceModel } from "./InstanceModel.js";
 import { LogRotationRunModel } from "./LogRotationRunModel.js";
 import { NodeModel } from "./NodeModel.js";
+import { SchemaMigrationModel } from "./SchemaMigrationModel.js";
 import { SecretModel } from "./SecretModel.js";
 import { ServiceModel } from "./ServiceModel.js";
 import { VolumeModel } from "./VolumeModel.js";
@@ -17,6 +18,7 @@ export {
     InstanceModel,
     LogRotationRunModel,
     NodeModel,
+    SchemaMigrationModel,
     SecretModel,
     ServiceModel,
     VolumeModel
@@ -35,5 +37,6 @@ export const controlPlaneModels = [
     LogRotationRunModel,
     GitRevisionModel,
     ControlPlaneEventModel,
-    ApiKeyModel
+    ApiKeyModel,
+    SchemaMigrationModel
 ];

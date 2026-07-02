@@ -128,8 +128,7 @@ export class LocalTestCluster {
     static getAgentUrl(nodeId: string): string {
         const ports: Record<string, string> = {
             "node-a": "http://localhost:19001",
-            "node-b": "http://localhost:19002",
-            builder: "http://localhost:19003"
+            "agent-1": "http://localhost:19001"
         };
 
         return ports[nodeId] ?? "http://localhost:19000";

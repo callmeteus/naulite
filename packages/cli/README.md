@@ -108,6 +108,6 @@ Credentials file: `~/.platform/credentials.json` with `{ "apiKey", "cpHost", "cp
 
 | Path | Role |
 |------|------|
-| `zig/src/` | Zig CLI implementation |
+| `src/` | Zig CLI implementation |
 | `bin/platform.js` | NPM entrypoint (spawns native binary) |
 | `native/` | Copied binary after `yarn copy:native` |

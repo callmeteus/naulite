@@ -4,11 +4,16 @@ const Client = @import("control_plane_client.zig").Client;
 const Config = @import("config.zig").Config;
 const credentials_mod = @import("credentials.zig");
 
+/// Resolved control plane target for CLI execution.
 pub const ResolvedTarget = struct {
+    // Connection settings for API calls.
     config: Config,
+
+    // Whether the CLI targets a local or remote control plane.
     mode: Mode,
 };
 
+/// Control plane reachability mode.
 pub const Mode = enum {
     local,
     remote,
@@ -17,7 +22,13 @@ pub const Mode = enum {
 const DEFAULT_PORT: u16 = 8080;
 
 /// Probes whether a local control plane responds on the given port.
-pub fn probeLocalControlPlane(allocator: std.mem.Allocator, io: std.Io, port: u16) !bool {
+pub fn probeLocalControlPlane(
+    allocator: std.mem.Allocator,
+    // Process I/O handle.
+    io: std.Io,
+    // TCP port to probe.
+    port: u16,
+) !bool {
     const url_127 = try std.fmt.allocPrint(allocator, "http://127.0.0.1:{d}", .{port});
     defer allocator.free(url_127);
     const url_localhost = try std.fmt.allocPrint(allocator, "http://localhost:{d}", .{port});
@@ -44,7 +55,10 @@ fn buildBaseUrl(allocator: std.mem.Allocator, host: []const u8, port: u16) ![]co
     return std.fmt.allocPrint(allocator, "http://{s}:{d}", .{ host, port });
 }
 
-fn resolveApiKey(environ_map: *const std.process.Environ.Map, credentials: ?credentials_mod.Credentials) ?[]const u8 {
+fn resolveApiKey(
+    environ_map: *const std.process.Environ.Map,
+    credentials: ?credentials_mod.Credentials,
+) ?[]const u8 {
     if (environ_map.get("PLATFORM_API_KEY")) |value| {
         return value;
     }
@@ -60,10 +74,15 @@ fn resolveApiKey(environ_map: *const std.process.Environ.Map, credentials: ?cred
 /// Resolves the control plane URL and auth mode for CLI execution.
 pub fn resolve(
     allocator: std.mem.Allocator,
+    // Process I/O handle.
     io: std.Io,
+    // Process environment map.
     environ_map: *const std.process.Environ.Map,
+    // Optional `--url` override.
     url_override: ?[]const u8,
+    // Optional `--cp` host override.
     cp_override: ?[]const u8,
+    // Optional `--port` override.
     port_override: ?u16,
 ) !ResolvedTarget {
     var saved = try credentials_mod.load(allocator, io, environ_map);

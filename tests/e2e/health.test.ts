@@ -47,7 +47,7 @@ describe("LocalTestCluster health smoke", () => {
         const response = await fetch(`${LocalTestCluster.getAgentUrl("node-a")}/health`);
         expect(response.ok).toBe(true);
 
-        const body = await response.json() as { nodeId: string };
-        expect(body.nodeId).toBe("node-a");
+        const body = await response.json() as { status: string };
+        expect(body.status).toBe("ok");
     });
 });

@@ -7,19 +7,33 @@ const log_rotation_executor = @import("log_rotation_executor.zig");
 const docker = @import("runtime/docker.zig");
 
 pub const Config = struct {
+    // Listen address for the agent HTTP server.
     listen_address: []const u8 = "0.0.0.0",
+
+    // Listen port for the agent HTTP server.
     listen_port: u16 = 9470,
+
+    // Path to the Docker Unix socket or named pipe.
     docker_socket: []const u8 = "/var/run/docker.sock",
 };
 
+/// HTTP response returned by route handlers.
 pub const HttpResponse = struct {
+    // The HTTP status code.
     status: u16,
+
+    // Response Content-Type header value.
     content_type: []const u8,
+
+    // Response body bytes.
     body: []const u8,
 };
 
 const RouteContext = struct {
+    // The allocator to use.
     allocator: std.mem.Allocator,
+
+    // Docker runtime client for container operations.
     docker_client: *docker.DockerClient,
 };
 
@@ -31,9 +45,13 @@ pub fn healthResponseBody() []const u8 {
 /// Handles an HTTP request and returns a response without binding a socket.
 pub fn handleRequest(
     allocator: std.mem.Allocator,
+    // Docker runtime client for container operations.
     docker_client: *docker.DockerClient,
+    // The HTTP method.
     method: []const u8,
+    // Request path without query string.
     path: []const u8,
+    // Request body bytes.
     body: []const u8,
 ) !HttpResponse {
     const ctx = RouteContext{
@@ -100,7 +118,11 @@ pub fn handleRequest(
 }
 
 /// Starts the REST HTTP server and blocks until interrupted.
-pub fn serve(allocator: std.mem.Allocator, config: Config) !void {
+pub fn serve(
+    allocator: std.mem.Allocator,
+    // HTTP server and Docker client configuration.
+    config: Config,
+) !void {
     var threaded = std.Io.Threaded.init(allocator, .{});
     defer threaded.deinit();
     const io = threaded.io();
@@ -128,8 +150,11 @@ pub fn serve(allocator: std.mem.Allocator, config: Config) !void {
 
 fn handleConnection(
     allocator: std.mem.Allocator,
+    // Process I/O handle.
     io: std.Io,
+    // Docker runtime client for container operations.
     docker_client: *docker.DockerClient,
+    // Accepted client stream.
     stream: *std.Io.net.Stream,
 ) !void {
     var received: std.ArrayList(u8) = .empty;

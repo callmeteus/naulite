@@ -2,13 +2,23 @@ const std = @import("std");
 
 const Io = std.Io;
 
+/// Saved CLI credentials for remote control plane access.
 pub const Credentials = struct {
+    // API key secret.
     api_key: ?[]const u8 = null,
+
+    // NetBird or remote control plane host.
     cp_host: ?[]const u8 = null,
+
+    // Control plane HTTP port.
     cp_port: u16 = 8080,
 
     /// Releases owned credential strings.
-    pub fn deinit(self: Credentials, allocator: std.mem.Allocator) void {
+    pub fn deinit(
+        self: Credentials,
+        // The allocator to use.
+        allocator: std.mem.Allocator,
+    ) void {
         if (self.api_key) |value| {
             allocator.free(value);
         }
@@ -21,6 +31,7 @@ pub const Credentials = struct {
 /// Returns the default credentials file path for the current user.
 pub fn credentialsPath(
     allocator: std.mem.Allocator,
+    // Process environment map.
     environ_map: *const std.process.Environ.Map,
 ) ![]const u8 {
     const home = environ_map.get("USERPROFILE") orelse environ_map.get("HOME") orelse ".";
@@ -30,7 +41,9 @@ pub fn credentialsPath(
 /// Loads saved CLI credentials when the file exists.
 pub fn load(
     allocator: std.mem.Allocator,
+    // Process I/O handle.
     io: Io,
+    // Process environment map.
     environ_map: *const std.process.Environ.Map,
 ) !?Credentials {
     const file_path = try credentialsPath(allocator, environ_map);
@@ -66,8 +79,11 @@ pub fn load(
 /// Persists CLI credentials for remote control plane access.
 pub fn save(
     allocator: std.mem.Allocator,
+    // Process I/O handle.
     io: Io,
+    // Process environment map.
     environ_map: *const std.process.Environ.Map,
+    // Credentials to persist.
     credentials: Credentials,
 ) !void {
     const file_path = try credentialsPath(allocator, environ_map);

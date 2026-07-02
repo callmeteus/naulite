@@ -8,7 +8,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Sequelize } from "sequelize-typescript";
 
-import { controlPlaneModels } from "./models/index.js";
+import { controlPlaneModels, SchemaMigrationModel } from "./models/index.js";
 
 /**
  * Control plane database provider backed by Sequelize ORM.
@@ -98,9 +98,24 @@ export class DatabaseProvider implements DatabaseProviderContract {
      * @returns Migration result summary
      */
     async migrate(): Promise<DatabaseMigrationResult> {
-        await this.getSequelize().sync();
+        const sequelize = this.getSequelize();
+        const migrationName = "001-initial-schema";
+        const existing = await SchemaMigrationModel.findByPk(migrationName);
+
+        if (!existing) {
+            await sequelize.sync();
+            await SchemaMigrationModel.create({
+                name: migrationName,
+                appliedAt: new Date().toISOString()
+            });
+            return {
+                applied: [migrationName],
+                pending: []
+            };
+        }
+
         return {
-            applied: ["sequelize-sync"],
+            applied: [migrationName],
             pending: []
         };
     }

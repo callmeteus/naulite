@@ -6,12 +6,20 @@ pub const LoadError = error{
     InvalidManagementUrl,
 };
 
+/// NetBird mesh client bound to a self-hosted management endpoint.
 pub const NetbirdClient = struct {
+    // The allocator to use.
     allocator: std.mem.Allocator,
+
+    // Normalized self-hosted management URL.
     management_url: []const u8,
 
     /// Creates a NetBird client for a self-hosted management endpoint.
-    pub fn init(allocator: std.mem.Allocator, management_url: []const u8) !NetbirdClient {
+    pub fn init(
+        allocator: std.mem.Allocator,
+        // Self-hosted NetBird management URL.
+        management_url: []const u8,
+    ) !NetbirdClient {
         if (isCloudEndpoint(management_url)) {
             return error.CloudEndpointNotAllowed;
         }
@@ -28,7 +36,10 @@ pub const NetbirdClient = struct {
     }
 
     /// Loads NetBird settings from environment variables.
-    pub fn loadFromEnv(allocator: std.mem.Allocator) LoadError!NetbirdClient {
+    pub fn loadFromEnv(
+        // The allocator to use.
+        allocator: std.mem.Allocator,
+    ) LoadError!NetbirdClient {
         const raw_ptr = std.c.getenv("NETBIRD_MANAGEMENT_URL") orelse std.c.getenv("NETBIRD_API_URL") orelse {
             std.log.err("[netbird] NETBIRD_MANAGEMENT_URL is required (self-hosted only)", .{});
             return error.MissingManagementUrl;
@@ -64,7 +75,10 @@ pub const NetbirdClient = struct {
 };
 
 /// Returns whether the URL points to NetBird cloud instead of self-hosted.
-pub fn isCloudEndpoint(url: []const u8) bool {
+pub fn isCloudEndpoint(
+    // URL to inspect.
+    url: []const u8,
+) bool {
     const cloud_markers = [_][]const u8{
         "api.netbird.io",
         "app.netbird.io",

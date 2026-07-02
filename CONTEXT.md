@@ -21,7 +21,7 @@ Pods, ReplicaSets, DaemonSets, StatefulSets, CRDs, Operators, Admission Controll
 | Package | Responsibility |
 |---------|----------------|
 | `shared` | Zod schemas, domain types, provider interfaces, plugin registry |
-| `cli` | Zig CLI (`zig build`); NPM wrapper in `bin/platform.js`; strings in `zig/src/i18n.zig` |
+| `cli` | Zig CLI (`zig build`); NPM wrapper in `bin/platform.js`; strings in `src/i18n.zig` |
 | `sdk` | Typed HTTP client for control plane routes |
 | `ui` | Web dashboard (`ui-frontend` + `ui-backend` BFF); strings in `packages/ui/packages/frontend/src/ui/en.json` |
 | `control-plane` | Fastify API, database, orchestration, GitOps, schedulers |
@@ -91,6 +91,7 @@ See `docs/backups.md` and `docs/log-rotation.md`.
 ## Related docs
 
 - [Architecture](docs/architecture.md)
+- [Zig code guidelines](docs/zig-guidelines.md)
 - [Manifest reference](docs/manifest.md)
 - [Networks](docs/networks.md)
 - [Backups](docs/backups.md)

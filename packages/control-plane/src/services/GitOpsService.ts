@@ -135,35 +135,35 @@ export class GitOpsService {
     }
 
     /**
+     * Loads a recorded revision by id.
+     *
+     * @param revisionId Revision identifier
+     * @returns Revision record when found
+     */
+    async getRevision(revisionId: string): Promise<GitRevisionRecord | null> {
+        const revisionRow = await GitRevisionModel.findByPk(revisionId);
+
+        if (!revisionRow) {
+            return null;
+        }
+
+        return GitOpsService.mapRevisionRow(revisionRow.get({ plain: true }));
+    }
+
+    /**
      * Rolls back to a previous revision by re-applying its manifest YAML.
-     * 
+     *
      * @param revisionId Revision id to roll back to
      * @returns Parsed manifest from the rolled back revision
      */
     async rollback(revisionId: string): Promise<Manifest> {
-        const revisionRow = await GitRevisionModel.findByPk(revisionId);
+        const revision = await this.getRevision(revisionId);
 
-        if (!revisionRow) {
+        if (!revision) {
             throw new Error(`Git revision ${revisionId} was not found.`);
         }
 
-        const revision = revisionRow.get({ plain: true });
-
-        const manifest = this.composeParser.parse(revision.manifestYaml);
-
-        await this.recordRevision(
-            {
-                repositoryUrl: revision.repositoryUrl,
-                branch: revision.branch,
-                commitSha: revision.commitSha,
-                overlayPaths: GitOpsService.parseOverlayPaths(revision.overlayPaths)
-            },
-            revision.manifestYaml,
-            manifest,
-            revisionId
-        );
-
-        return manifest;
+        return this.composeParser.parse(revision.manifestYaml);
     }
 
     /**

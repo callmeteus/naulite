@@ -11,6 +11,7 @@ pub const OperationType = enum {
     disconnectNetwork,
     ensureVolume,
 
+    /// Parses an operation type from its JSON string name.
     pub fn fromString(value: []const u8) ?OperationType {
         return std.meta.stringToEnum(OperationType, value);
     }
@@ -18,19 +19,39 @@ pub const OperationType = enum {
 
 /// Parsed execution plan JSON from the control plane (no YAML on the agent).
 pub const ExecutionPlan = struct {
+    // Unique plan identifier.
     plan_id: []const u8,
+
+    // Manifest revision number.
     revision: i64,
+
+    // Target node identifier.
     node_id: []const u8,
+
+    // Applied manifest name.
     manifest_name: []const u8,
+
+    // ISO timestamp when the plan was created.
     created_at: []const u8,
+
+    // Ordered runtime operations.
     operations: []const Operation,
 
+    /// Single operation entry inside an execution plan.
     pub const Operation = struct {
+        // Operation kind to dispatch.
         op_type: OperationType,
+
+        // Raw JSON payload for the operation.
         raw_json: []const u8,
     };
 
-    pub fn deinit(self: *ExecutionPlan, allocator: std.mem.Allocator) void {
+    /// Releases owned plan strings and operation payloads.
+    pub fn deinit(
+        self: *ExecutionPlan,
+        // The allocator to use.
+        allocator: std.mem.Allocator,
+    ) void {
         allocator.free(self.plan_id);
         allocator.free(self.node_id);
         allocator.free(self.manifest_name);
@@ -45,7 +66,12 @@ pub const ExecutionPlan = struct {
 };
 
 /// Parses an ExecutionPlan JSON document from the control plane.
-pub fn parseExecutionPlan(allocator: std.mem.Allocator, body: []const u8) !ExecutionPlan {
+pub fn parseExecutionPlan(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+    // Raw JSON document body.
+    body: []const u8,
+) !ExecutionPlan {
     const parsed = try std.json.parseFromSlice(
         std.json.Value,
         allocator,
@@ -115,7 +141,9 @@ pub fn parseExecutionPlan(allocator: std.mem.Allocator, body: []const u8) !Execu
 
 fn duplicateRequiredString(
     allocator: std.mem.Allocator,
+    // Parsed JSON root value.
     root: std.json.Value,
+    // Required string field name.
     field_name: []const u8,
 ) ![]u8 {
     if (root != .object) return error.InvalidExecutionPlan;

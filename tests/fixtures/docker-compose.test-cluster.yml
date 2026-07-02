@@ -12,90 +12,37 @@ services:
             interval: 5s
             timeout: 5s
             retries: 10
-  
-    minio:
-        image: minio/minio:latest
-        command: server /data --console-address ":9001"
-        environment:
-            MINIO_ROOT_USER: minioadmin
-            MINIO_ROOT_PASSWORD: minioadmin
-        ports:
-            - "9000:9000"
-            - "9001:9001"
-  
-    netbird-mock:
-        image: node:22-alpine
-        working_dir: /app
-        command:
-            - node
-            - -e
-            - >-
-                require("http").createServer((q,r)=>{r.writeHead(200);r.end(JSON.stringify({groups:[],devices:[]}))}).listen(8080)
-        ports:
-            - "18081:8080"
-  
+
     control-plane-1:
         build:
-            context: ./docker
-            dockerfile: control-plane.Dockerfile
+            context: ../../..
+            dockerfile: packages/control-plane/Dockerfile
         environment:
-            CONTROL_PLANE_ID: cp-1
             DATABASE_URL: postgres://platform:platform@postgres:5432/platform
-            PORT: "8080"
-            NETBIRD_API_URL: http://netbird-mock:8080/api
-            NETBIRD_MANAGEMENT_URL: http://netbird-mock:8080
+            CP_INSTANCE_ID: cp-1
+            NETBIRD_API_URL: http://127.0.0.1:1/api
+            NETBIRD_MANAGEMENT_URL: http://127.0.0.1:1
         ports:
             - "18080:8080"
         depends_on:
             postgres:
                 condition: service_healthy
-  
-    control-plane-2:
-        build:
-            context: ./docker
-            dockerfile: control-plane.Dockerfile
-        environment:
-            CONTROL_PLANE_ID: cp-2
-            DATABASE_URL: postgres://platform:platform@postgres:5432/platform
-            PORT: "8080"
-            NETBIRD_API_URL: http://netbird-mock:8080/api
-            NETBIRD_MANAGEMENT_URL: http://netbird-mock:8080
-        ports:
-            - "18082:8080"
-        depends_on:
-            postgres:
-                condition: service_healthy
-  
+
     agent-node-a:
         build:
-            context: ./docker
-            dockerfile: agent.Dockerfile
+            context: ../../..
+            dockerfile: packages/agent/Dockerfile
         environment:
-            NODE_ID: node-a
-            PORT: "8080"
-            NETBIRD_MANAGEMENT_URL: http://netbird-mock:8080
+            NODE_ID: agent-1
+            HOSTNAME: agent-1
+            PLATFORM_CP_URL: http://control-plane-1:8080
+            AGENT_URL: http://agent-node-a:9470
+            AGENT_PORT: "9470"
+            AGENT_VERSION: zig-0.1.0
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
         ports:
-            - "19001:8080"
-  
-    agent-node-b:
-        build:
-            context: ./docker
-            dockerfile: agent.Dockerfile
-        environment:
-            NODE_ID: node-b
-            PORT: "8080"
-            NETBIRD_MANAGEMENT_URL: http://netbird-mock:8080
-        ports:
-            - "19002:8080"
-  
-    agent-builder:
-        build:
-            context: ./docker
-            dockerfile: worker.Dockerfile
-        environment:
-            NODE_ID: builder
-            CAPABILITY: builder
-            PORT: "8080"
-            NETBIRD_MANAGEMENT_URL: http://netbird-mock:8080
-        ports:
-            - "19003:8080"
+            - "19001:9470"
+        depends_on:
+            control-plane-1:
+                condition: service_started

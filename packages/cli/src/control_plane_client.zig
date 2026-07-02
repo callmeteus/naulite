@@ -8,19 +8,37 @@ pub const ApiError = error{
     ApiError,
 };
 
+/// HTTP response from the control plane API.
 pub const Response = struct {
+    // The HTTP status code.
     status: u16,
+
+    // The response body.
     body: []const u8,
 };
 
+/// HTTP client for the Platform control plane API.
 pub const Client = struct {
+    // The allocator to use.
     allocator: std.mem.Allocator,
+
+    // Process I/O handle.
     io: std.Io,
+
+    // Resolved connection settings.
     config: Config,
+
+    // Underlying HTTP client.
     http: std.http.Client,
 
     /// Creates a control plane HTTP client.
-    pub fn init(allocator: std.mem.Allocator, io: std.Io, config: Config) Client {
+    pub fn init(
+        allocator: std.mem.Allocator,
+        // Process I/O handle.
+        io: std.Io,
+        // Resolved connection settings.
+        config: Config,
+    ) Client {
         return .{
             .allocator = allocator,
             .io = io,
@@ -35,22 +53,44 @@ pub const Client = struct {
     }
 
     /// Performs a GET request and returns the response body.
-    pub fn get(self: *Client, path: []const u8) !Response {
+    pub fn get(
+        self: *Client,
+        // API path relative to the base URL.
+        path: []const u8,
+    ) !Response {
         return self.request("GET", path, null);
     }
 
     /// Performs a DELETE request.
-    pub fn delete(self: *Client, path: []const u8) !Response {
+    pub fn delete(
+        self: *Client,
+        // API path relative to the base URL.
+        path: []const u8,
+    ) !Response {
         return self.request("DELETE", path, null);
     }
 
     /// Performs a POST request with a JSON body.
-    pub fn postJson(self: *Client, path: []const u8, body: []const u8) !Response {
+    pub fn postJson(
+        self: *Client,
+        // API path relative to the base URL.
+        path: []const u8,
+        // JSON request body.
+        body: []const u8,
+    ) !Response {
         return self.request("POST", path, body);
     }
 
     /// Performs an HTTP request against the control plane API.
-    pub fn request(self: *Client, method: []const u8, path: []const u8, body: ?[]const u8) !Response {
+    pub fn request(
+        self: *Client,
+        // The HTTP method.
+        method: []const u8,
+        // API path relative to the base URL.
+        path: []const u8,
+        // Optional JSON request body.
+        body: ?[]const u8,
+    ) !Response {
         const url = try std.fmt.allocPrint(
             self.allocator,
             "{s}{s}",

@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+/// Host operating system family detected at runtime.
 pub const OsFamily = enum {
     linux,
     windows,
@@ -8,17 +9,28 @@ pub const OsFamily = enum {
     unknown,
 };
 
+/// Bootstrap status reported to the control plane.
 pub const BootstrapStatus = struct {
+    // Detected operating system family.
     os: OsFamily,
+
+    // Human-readable OS version string.
     os_version: []const u8,
+
+    // CPU architecture name.
     arch: []const u8,
+
+    // Whether the Docker socket is reachable.
     docker_available: bool,
+
+    // Whether NetBird reports a connected mesh.
     netbird_connected: bool,
+
+    // Agent build version string.
     agent_version: []const u8,
 };
 
 /// Detects the host operating system family.
-/// @returns The operating system family.
 pub fn detectOsFamily() OsFamily {
     return switch (builtin.os.tag) {
         .linux => .linux,
@@ -29,9 +41,10 @@ pub fn detectOsFamily() OsFamily {
 }
 
 /// Collects bootstrap status for reporting to the control plane.
-/// @param allocator The allocator to use.
-/// @returns The bootstrap status.
-pub fn collectStatus(allocator: std.mem.Allocator) !BootstrapStatus {
+pub fn collectStatus(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+) !BootstrapStatus {
     const os = detectOsFamily();
     const arch = @tagName(builtin.cpu.arch);
 
