@@ -1,9 +1,10 @@
 import Fastify, { type FastifyInstance } from "fastify";
 
+import { ControlPlaneService } from "./ControlPlaneService";
 import { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
 import { registerAuthMiddleware } from "./auth/AuthMiddleware";
 import { DatabaseProvider } from "./database/DatabaseProvider";
-import { ComposeParserError } from "./errors/orchestration/compose/ComposeParserError";
+import { registerErrorHandler } from "./errors/RegisterErrorHandler";
 import { registerRoutes } from "./routes/index";
 
 /**
@@ -30,34 +31,11 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
         logger: options.logger ?? true
     });
 
-    app.decorate("controlPlane", context);
+    ControlPlaneService.install(context);
 
     await registerAuthMiddleware(app);
 
-    app.setErrorHandler((error, _request, reply) => {
-        if (error instanceof ComposeParserError) {
-            reply.code(error.statusCode);
-            return {
-                code: error.code,
-                message: error.message,
-                details: error.details
-            };
-        }
-
-        if (error instanceof Error && "issues" in error) {
-            reply.code(400);
-            return {
-                message: "Validation failed.",
-                details: error
-            };
-        }
-
-        app.log.error({ err: error }, "request failed");
-        reply.code(500);
-        return {
-            message: error instanceof Error ? error.message : "Internal server error."
-        };
-    });
+    registerErrorHandler(app);
 
     await registerRoutes(app);
     return app;

@@ -2,7 +2,6 @@ import { PluginRegistry } from "@platform/shared";
 
 import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import type { DatabaseProvider } from "./database/DatabaseProvider";
-import { GitOpsService } from "./services/GitOpsService";
 import { NetBirdEnrollmentService } from "./services/NetBirdEnrollmentService";
 import { createNetBirdService } from "./services/CreateNetBirdService";
 import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
@@ -17,7 +16,6 @@ import { PluginLoader } from "./plugins/PluginLoader";
 import { BackupScheduler } from "./modules/backup/BackupScheduler";
 import { LogRotationScheduler } from "./modules/log-rotation/LogRotationScheduler";
 import { ControlPlaneSync } from "./services/ControlPlaneSync";
-
 /**
  * Shared control plane application context.
  */
@@ -30,9 +28,7 @@ export interface ControlPlaneContext {
     planner: Planner;
     scheduler: Scheduler;
     exposurePlanner: ExposurePlanner;
-    gitOpsService: GitOpsService;
-    backupScheduler: BackupScheduler;
-    logRotationScheduler: LogRotationScheduler;
+    backupScheduler: BackupScheduler;    logRotationScheduler: LogRotationScheduler;
     controlPlaneSync: ControlPlaneSync;
     netBirdService: NetBirdService;
     netBirdEnrollment: NetBirdEnrollmentService;
@@ -72,9 +68,7 @@ export function createControlPlaneContext(
         planner: new Planner(),
         scheduler: new Scheduler(),
         exposurePlanner: new ExposurePlanner(),
-        gitOpsService: new GitOpsService(),
-        backupScheduler: new BackupScheduler(),
-        logRotationScheduler: new LogRotationScheduler(),
+        backupScheduler: new BackupScheduler(),        logRotationScheduler: new LogRotationScheduler(),
         controlPlaneSync: new ControlPlaneSync(databaseProvider),
         netBirdService,
         netBirdEnrollment,
@@ -106,8 +100,3 @@ function createNetBirdEnrollmentService(
     }));
 }
 
-declare module "fastify" {
-    interface FastifyInstance {
-        controlPlane: ControlPlaneContext;
-    }
-}

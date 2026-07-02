@@ -1,4 +1,5 @@
 export { createApp, type CreateAppOptions } from "./App";
+export { ControlPlaneService } from "./ControlPlaneService";
 export { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
 export { DatabaseProvider } from "./database/index";
 export { GitOpsService } from "./services/GitOpsService";

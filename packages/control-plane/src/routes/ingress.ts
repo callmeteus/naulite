@@ -1,14 +1,9 @@
-import type { FastifyInstance } from "fastify";
+import { ControlPlaneService } from "../ControlPlaneService";
+import { defineRoute } from "../routing/DefineRoute";
 
-/**
- * Registers ingress listing routes.
- *
- * @param app Fastify application instance
- * @returns Nothing.
- */
-export async function registerIngressRoutes(app: FastifyInstance): Promise<void> {
-    app.get("/ingress", async () => {
-        const services = await app.controlPlane.store.listServices();
+export const GET = defineRoute({
+    async handler() {
+        const services = await ControlPlaneService.Store.listServices();
 
         return services
             .filter((service) => service.ingress !== undefined && service.ingress !== null)
@@ -17,5 +12,5 @@ export async function registerIngressRoutes(app: FastifyInstance): Promise<void>
                 hosts: service.ingress?.host ? [service.ingress.host] : [],
                 tlsEnabled: service.ingress?.tls?.enabled ?? false
             }));
-    });
-}
+    }
+});

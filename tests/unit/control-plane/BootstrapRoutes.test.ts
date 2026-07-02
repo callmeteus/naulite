@@ -5,7 +5,7 @@ import type { ControlPlaneContext } from "../../../packages/control-plane/src/Co
 import {
     resolvePublicControlPlaneUrl,
     resolvePublicNetBirdManagementUrl
-} from "../../../packages/control-plane/src/routes/bootstrapUrls";
+} from "../../../packages/control-plane/src/bootstrap/BootstrapUrls";
 
 const ENV_KEYS = [
     "PLATFORM_PUBLIC_URL",

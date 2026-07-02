@@ -1,37 +1,32 @@
-import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { AgentProxyError, AgentProxyService } from "../services/AgentProxyService";
+import { AgentProxyError, AgentProxyService } from "../../../../services/AgentProxyService";
+import { ControlPlaneService } from "../../../../ControlPlaneService";
+import { defineRoute } from "../../../../routing/DefineRoute";
 
-/**
- * Registers service log rotation routes.
- *
- * @param app Fastify application instance
- * @returns Nothing.
- */
-export async function registerLogRotationRoutes(app: FastifyInstance): Promise<void> {
-    app.post("/services/:name/logs/rotate", async (request, reply) => {
-        const params = z.object({
+export const POST = defineRoute({
+    async handler(req, res) {
+        const routeParams = z.object({
             name: z.string().min(1)
-        }).parse(request.params);
+        }).parse(req.params);
 
-        const services = await app.controlPlane.store.listServices();
-        const service = services.find((entry) => entry.name === params.name);
+        const services = await ControlPlaneService.Store.listServices();
+        const service = services.find((entry) => entry.name === routeParams.name);
 
         if (!service) {
-            return reply.status(404).send({
+            return res.status(404).send({
                 error: "not_found",
-                message: `Serviço ${params.name} não encontrado.`
+                message: `Serviço ${routeParams.name} não encontrado.`
             });
         }
 
-        const instances = await app.controlPlane.store.listInstances();
+        const instances = await ControlPlaneService.Store.listInstances();
         const instance = instances.find((entry) => entry.serviceName === service.name);
-        const nodes = await app.controlPlane.store.listNodes();
+        const nodes = await ControlPlaneService.Store.listNodes();
         const node = nodes.find((entry) => entry.id === instance?.nodeId) ?? nodes[0];
 
         if (!node?.agentUrl) {
-            return reply.status(503).send({
+            return res.status(503).send({
                 error: "agent_unavailable",
                 message: "Nenhum agente disponível para rotacionar logs."
             });
@@ -44,16 +39,16 @@ export async function registerLogRotationRoutes(app: FastifyInstance): Promise<v
             });
         } catch (err) {
             if (err instanceof AgentProxyError) {
-                return reply.status(err.statusCode).send({
+                return res.status(err.statusCode).send({
                     error: err.code,
                     message: err.message
                 });
             }
 
-            return reply.status(500).send({
+            return res.status(500).send({
                 error: "internal_error",
                 message: "Falha ao despachar rotação de logs."
             });
         }
-    });
-}
+    }
+});

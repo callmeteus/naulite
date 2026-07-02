@@ -1,0 +1,42 @@
+import type { FastifyInstance } from "fastify";
+
+import { ComposeParserError } from "./orchestration/compose/ComposeParserError";
+import { TreatedError } from "./TreatedError";
+
+/**
+ * Registers the control plane global Fastify error handler.
+ *
+ * @param app Fastify application instance
+ * @returns Nothing.
+ */
+export function registerErrorHandler(app: FastifyInstance): void {
+    app.setErrorHandler((error, _request, reply) => {
+        if (error instanceof TreatedError) {
+            reply.code(error.statusCode);
+            return error.toResponseBody();
+        }
+
+        if (error instanceof ComposeParserError) {
+            reply.code(error.statusCode);
+            return {
+                code: error.code,
+                message: error.message,
+                details: error.details
+            };
+        }
+
+        if (error instanceof Error && "issues" in error) {
+            reply.code(400);
+            return {
+                message: "Validation failed.",
+                details: error
+            };
+        }
+
+        app.log.error({ err: error }, "request failed");
+        reply.code(500);
+        return {
+            message: error instanceof Error ? error.message : "Internal server error."
+        };
+    });
+}

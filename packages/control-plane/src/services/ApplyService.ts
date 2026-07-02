@@ -1,5 +1,6 @@
 import type { ExecutionOperation, Instance, Node } from "@platform/shared";
 
+import { ControlPlaneService } from "../ControlPlaneService";
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 import type { PlannerDiff } from "../orchestration/Planner";
 
@@ -42,39 +43,37 @@ export namespace ApplyService {
     /**
      * Parses and applies a manifest YAML, dispatching execution plans to agents.
      *
-     * @param context Control plane application context
      * @param manifestYaml Manifest document body
      * @param options Optional Git metadata for revision recording
      * @returns Apply summary including dispatch results
      */
     export async function execute(
-        context: ControlPlaneContext,
         manifestYaml: string,
         options: ApplyExecuteOptions = {}
     ): Promise<ApplyResult> {
-        const manifest = context.composeParser.parse(manifestYaml);
+        const manifest = ControlPlaneService.Orchestration.ComposeParser.parse(manifestYaml);
         const [services, instances, volumes, nodes] = await Promise.all([
-            context.store.listServices(),
-            context.store.listInstances(),
-            context.store.listVolumes(),
-            context.store.listNodes()
+            ControlPlaneService.Store.listServices(),
+            ControlPlaneService.Store.listInstances(),
+            ControlPlaneService.Store.listVolumes(),
+            ControlPlaneService.Store.listNodes()
         ]);
 
-        const diff = context.planner.diff(manifest, {
+        const diff = ControlPlaneService.Orchestration.Planner.diff(manifest, {
             services,
             instances,
             volumes
         });
 
-        context.applyRevision += 1;
+        ControlPlaneService.Apply.incrementRevision();
 
         const instanceNodes = buildInstanceNodeMap(instances, diff);
 
         for (const service of [...diff.servicesToCreate, ...diff.servicesToUpdate]) {
             const manifestService = manifest.services[service.name];
-            await context.store.upsertService(service);
+            await ControlPlaneService.Store.upsertService(service);
 
-            const schedule = context.scheduler.schedule(
+            const schedule = ControlPlaneService.Orchestration.Scheduler.schedule(
                 service,
                 manifestService,
                 nodes
@@ -88,31 +87,31 @@ export namespace ApplyService {
                         updatedAt: new Date().toISOString()
                     };
                     instanceNodes.set(scheduled.id, scheduled.nodeId);
-                    await context.store.insertInstance(scheduled);
+                    await ControlPlaneService.Store.insertInstance(scheduled);
                 }
             }
         }
 
         for (const volume of diff.volumesToEnsure) {
-            await context.store.insertVolume(volume);
+            await ControlPlaneService.Store.insertVolume(volume);
         }
 
         for (const service of diff.servicesToRemove) {
-            await context.store.deleteService(service.id);
+            await ControlPlaneService.Store.deleteService(service.id);
         }
 
-        const exposures = context.composeParser.extractInternalExposures(manifest);
-        const exposurePlan = context.exposurePlanner.plan(manifest, exposures);
+        const exposures = ControlPlaneService.Orchestration.ComposeParser.extractInternalExposures(manifest);
+        const exposurePlan = ControlPlaneService.Orchestration.Exposure.plan(manifest, exposures);
 
         for (const entry of exposurePlan.entries) {
-            await context.netBirdService.ensureInternalGroup(entry.netbirdGroupName);
+            await ControlPlaneService.NetBird.ensureInternalGroup(entry.netbirdGroupName);
         }
 
-        await context.gitOpsService.recordRevision(
+        await ControlPlaneService.GitOps.recordRevision(
             {
                 repositoryUrl: options.repositoryUrl ?? "inline://apply",
                 branch: options.branch ?? "main",
-                commitSha: options.commitSha ?? `rev-${context.applyRevision}`,
+                commitSha: options.commitSha ?? `rev-${ControlPlaneService.Apply.getRevision()}`,
                 overlayPaths: []
             },
             manifestYaml,
@@ -120,18 +119,18 @@ export namespace ApplyService {
             options.rolledBackFromId
         );
 
-        await context.controlPlaneSync.publish("apply", {
+        await ControlPlaneService.Sync.publish("apply", {
             manifestName: manifest.name,
-            revision: context.applyRevision
+            revision: ControlPlaneService.Apply.getRevision()
         });
 
         const operations = addPullOperations(diff.operations);
         const plans = nodes.map((node) => {
             const nodeOperations = filterOperationsForNode(node.id, operations, instanceNodes, nodes);
-            return context.planner.buildExecutionPlan(
+            return ControlPlaneService.Orchestration.Planner.buildExecutionPlan(
                 manifest.name,
                 node.id,
-                context.applyRevision,
+                ControlPlaneService.Apply.getRevision(),
                 nodeOperations
             );
         });
@@ -139,7 +138,7 @@ export namespace ApplyService {
         const dispatch = await AgentDispatcher.dispatchPlans(plans, nodes);
 
         return {
-            revision: context.applyRevision,
+            revision: ControlPlaneService.Apply.getRevision(),
             manifestName: manifest.name,
             diff: {
                 servicesToCreate: diff.servicesToCreate.length,

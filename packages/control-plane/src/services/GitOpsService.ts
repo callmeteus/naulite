@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-
 import type { Manifest } from "@platform/shared";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import { GitRevisionModel } from "../database/models/index";
 import { ComposeParser } from "../orchestration/ComposeParser";
@@ -36,32 +35,38 @@ export interface GitRevisionRecord {
 }
 
 /**
- * GitOps service for cloning repositories, merging overlays, and tracking revisions.
+ * GitOps operations for cloning repositories, merging overlays, and tracking revisions.
  */
-export class GitOpsService {
-    private readonly composeParser = new ComposeParser();
+export namespace GitOpsService {
+    let baseWorkDir = "./data/gitops";
+    const composeParser = new ComposeParser();
 
     /**
-     * Creates a GitOps service.
+     * Configures the GitOps working directory.
      *
-     * @param baseWorkDir Base directory for repository checkouts
+     * @param options GitOps runtime options
+     * @returns Nothing.
      */
-    constructor(private readonly baseWorkDir: string = "./data/gitops") {}
+    export function configure(options: { baseWorkDir?: string }): void {
+        if (options.baseWorkDir) {
+            baseWorkDir = options.baseWorkDir;
+        }
+    }
 
     /**
      * Checks out a repository revision and merges overlay manifests.
-     * 
+     *
      * @param options Checkout options
      * @returns Merged manifest YAML content
      */
-    async checkoutAndMerge(options: GitOpsCheckoutOptions): Promise<string> {
-        const workDir = options.workDir ?? join(this.baseWorkDir, randomUUID());
+    export async function checkoutAndMerge(options: GitOpsCheckoutOptions): Promise<string> {
+        const workDir = options.workDir ?? join(baseWorkDir, randomUUID());
         mkdirSync(workDir, { recursive: true });
 
         const baseManifestPath = join(workDir, "compose.yaml");
 
         if (!existsSync(baseManifestPath)) {
-            writeFileSync(baseManifestPath, this.buildPlaceholderManifest(options.repositoryUrl), "utf8");
+            writeFileSync(baseManifestPath, buildPlaceholderManifest(options.repositoryUrl), "utf8");
         }
 
         let manifestYaml = readFileSync(baseManifestPath, "utf8");
@@ -71,7 +76,7 @@ export class GitOpsService {
 
             if (existsSync(overlayFile)) {
                 const overlayYaml = readFileSync(overlayFile, "utf8");
-                manifestYaml = GitOpsService.mergeYaml(manifestYaml, overlayYaml);
+                manifestYaml = mergeYaml(manifestYaml, overlayYaml);
             }
         }
 
@@ -80,14 +85,14 @@ export class GitOpsService {
 
     /**
      * Records an applied git revision in the database.
-     * 
+     *
      * @param options Checkout options used for the revision
      * @param manifestYaml Applied manifest YAML
      * @param manifest Parsed manifest
      * @param rolledBackFromId Optional revision id rolled back from
      * @returns Persisted revision record
      */
-    async recordRevision(
+    export async function recordRevision(
         options: GitOpsCheckoutOptions,
         manifestYaml: string,
         manifest: Manifest,
@@ -122,16 +127,16 @@ export class GitOpsService {
 
     /**
      * Lists recorded git revisions ordered by apply time descending.
-     * 
+     *
      * @param manifestName Optional manifest name filter
      * @returns Revision records
      */
-    async listRevisions(manifestName?: string): Promise<GitRevisionRecord[]> {
+    export async function listRevisions(manifestName?: string): Promise<GitRevisionRecord[]> {
         const rows = await GitRevisionModel.findAll({
             where: manifestName ? { manifestName } : undefined
         });
 
-        return rows.map((row) => GitOpsService.mapRevisionRow(row.get({ plain: true })));
+        return rows.map((row) => mapRevisionRow(row.get({ plain: true })));
     }
 
     /**
@@ -140,14 +145,14 @@ export class GitOpsService {
      * @param revisionId Revision identifier
      * @returns Revision record when found
      */
-    async getRevision(revisionId: string): Promise<GitRevisionRecord | null> {
+    export async function getRevision(revisionId: string): Promise<GitRevisionRecord | null> {
         const revisionRow = await GitRevisionModel.findByPk(revisionId);
 
         if (!revisionRow) {
             return null;
         }
 
-        return GitOpsService.mapRevisionRow(revisionRow.get({ plain: true }));
+        return mapRevisionRow(revisionRow.get({ plain: true }));
     }
 
     /**
@@ -156,24 +161,24 @@ export class GitOpsService {
      * @param revisionId Revision id to roll back to
      * @returns Parsed manifest from the rolled back revision
      */
-    async rollback(revisionId: string): Promise<Manifest> {
-        const revision = await this.getRevision(revisionId);
+    export async function rollback(revisionId: string): Promise<Manifest> {
+        const revision = await getRevision(revisionId);
 
         if (!revision) {
             throw new Error(`Git revision ${revisionId} was not found.`);
         }
 
-        return this.composeParser.parse(revision.manifestYaml);
+        return composeParser.parse(revision.manifestYaml);
     }
 
     /**
      * Merges two YAML documents with shallow top-level object merge.
-     * 
+     *
      * @param baseYaml Base manifest YAML
      * @param overlayYaml Overlay manifest YAML
      * @returns Merged YAML string
      */
-    private static mergeYaml(baseYaml: string, overlayYaml: string): string {
+    function mergeYaml(baseYaml: string, overlayYaml: string): string {
         const base = (parseYaml(baseYaml) ?? {}) as Record<string, unknown>;
         const overlay = (parseYaml(overlayYaml) ?? {}) as Record<string, unknown>;
 
@@ -197,11 +202,11 @@ export class GitOpsService {
 
     /**
      * Builds a placeholder manifest when a checkout directory is empty.
-     * 
+     *
      * @param repositoryUrl Repository URL used for the placeholder name
      * @returns Placeholder compose YAML
      */
-    private buildPlaceholderManifest(repositoryUrl: string): string {
+    function buildPlaceholderManifest(repositoryUrl: string): string {
         const slug = repositoryUrl.split("/").pop()?.replace(/\.git$/, "") ?? "app";
 
         return [
@@ -214,11 +219,11 @@ export class GitOpsService {
 
     /**
      * Maps a database row into a revision record.
-     * 
+     *
      * @param row Database row
      * @returns Revision record
      */
-    private static mapRevisionRow(row: {
+    function mapRevisionRow(row: {
         id: string;
         repositoryUrl: string;
         branch: string;
@@ -236,7 +241,7 @@ export class GitOpsService {
             commitSha: row.commitSha,
             manifestName: row.manifestName,
             manifestYaml: row.manifestYaml,
-            overlayPaths: GitOpsService.parseOverlayPaths(row.overlayPaths),
+            overlayPaths: parseOverlayPaths(row.overlayPaths),
             appliedAt: row.appliedAt,
             rolledBackFromId: row.rolledBackFromId ?? undefined
         };
@@ -244,11 +249,11 @@ export class GitOpsService {
 
     /**
      * Parses overlay paths from sqlite text or postgres json values.
-     * 
+     *
      * @param value Raw overlay path value
      * @returns Overlay path list
      */
-    private static parseOverlayPaths(value: unknown): string[] {
+    function parseOverlayPaths(value: unknown): string[] {
         if (Array.isArray(value)) {
             return value.map(String);
         }

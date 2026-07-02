@@ -9,7 +9,7 @@ import {
     removeTempPlatformRoot,
     resolveBashExecutable,
     runBootstrapScript
-} from "./shellRunner";
+} from "./ShellRunner";
 
 const bashAvailable = await resolveBashExecutable();
 const describeBootstrap = bashAvailable ? describe : describe.skip;

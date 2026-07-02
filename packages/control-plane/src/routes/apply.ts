@@ -1,7 +1,7 @@
-import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { ApplyService } from "../services/ApplyService";
+import { defineRoute } from "../routing/DefineRoute";
 
 const ApplyBodySchema = z.object({
     manifestYaml: z.string().min(1).optional(),
@@ -10,20 +10,14 @@ const ApplyBodySchema = z.object({
     message: "manifestYaml or manifest is required."
 });
 
-/**
- * Registers manifest apply routes.
- *
- * @param app Fastify application instance
- * @returns Nothing.
- */
-export async function registerApplyRoutes(app: FastifyInstance): Promise<void> {
-    app.post("/apply", async (request) => {
-        const body = ApplyBodySchema.parse(request.body);
+export const POST = defineRoute({
+    async handler(req) {
+        const body = ApplyBodySchema.parse(req.body);
         const manifestYaml = body.manifestYaml ?? body.manifest ?? "";
-        const result = await ApplyService.execute(app.controlPlane, manifestYaml);
+        const result = await ApplyService.execute(manifestYaml);
 
         for (const entry of result.dispatch) {
-            app.log.debug(
+            req.log.debug(
                 {
                     nodeId: entry.nodeId,
                     planId: entry.planId,
@@ -35,5 +29,5 @@ export async function registerApplyRoutes(app: FastifyInstance): Promise<void> {
         }
 
         return result;
-    });
-}
+    }
+});

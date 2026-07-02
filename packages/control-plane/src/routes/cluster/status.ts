@@ -1,23 +1,18 @@
-import type { FastifyInstance } from "fastify";
+import { ControlPlaneService } from "../../ControlPlaneService";
+import { defineRoute } from "../../routing/DefineRoute";
 
-/**
- * Registers cluster status routes.
- * 
- * @param app Fastify application instance
- * @returns Nothing.
- */
-export async function registerClusterRoutes(app: FastifyInstance): Promise<void> {
-    app.get("/cluster/status", async () => {
+export const GET = defineRoute({
+    async handler() {
         const [nodes, services, instances, volumes, secrets] = await Promise.all([
-            app.controlPlane.store.listNodes(),
-            app.controlPlane.store.listServices(),
-            app.controlPlane.store.listInstances(),
-            app.controlPlane.store.listVolumes(),
-            app.controlPlane.store.listSecrets()
+            ControlPlaneService.Store.listNodes(),
+            ControlPlaneService.Store.listServices(),
+            ControlPlaneService.Store.listInstances(),
+            ControlPlaneService.Store.listVolumes(),
+            ControlPlaneService.Store.listSecrets()
         ]);
 
         const onlineNodes = nodes.filter((node) => node.status === "online").length;
-        const databaseHealthy = await app.controlPlane.databaseProvider.healthCheck();
+        const databaseHealthy = await ControlPlaneService.Database.healthCheck();
         const healthStatus = !databaseHealthy
             ? "unhealthy"
             : onlineNodes === 0
@@ -32,7 +27,7 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
                 serviceCount: services.length
             },
             leaderId: process.env.CP_INSTANCE_ID ?? "control-plane",
-            revision: String(app.controlPlane.applyRevision),
+            revision: String(ControlPlaneService.Apply.getRevision()),
             summary: {
                 nodes: nodes.length,
                 onlineNodes,
@@ -41,7 +36,7 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
                 runningInstances: instances.filter((instance) => instance.status === "running").length,
                 volumes: volumes.length,
                 secrets: secrets.length,
-                applyRevision: app.controlPlane.applyRevision
+                applyRevision: ControlPlaneService.Apply.getRevision()
             },
             nodes,
             services,
@@ -49,5 +44,5 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
             volumes,
             secrets
         };
-    });
-}
+    }
+});

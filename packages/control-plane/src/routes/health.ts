@@ -1,17 +1,12 @@
-import type { FastifyInstance } from "fastify";
+import { ControlPlaneService } from "../ControlPlaneService";
+import { defineRoute } from "../routing/DefineRoute";
 
-/**
- * Registers health check routes.
- * 
- * @param app Fastify application instance
- * @returns Nothing.
- */
-export async function registerHealthRoutes(app: FastifyInstance): Promise<void> {
-    app.get("/health", async () => {
-        const databaseHealthy = await app.controlPlane.databaseProvider.healthCheck();
+export const GET = defineRoute({
+    async handler() {
+        const databaseHealthy = await ControlPlaneService.Database.healthCheck();
         const [nodes, services] = await Promise.all([
-            app.controlPlane.store.listNodes(),
-            app.controlPlane.store.listServices()
+            ControlPlaneService.Store.listNodes(),
+            ControlPlaneService.Store.listServices()
         ]);
 
         const onlineNodes = nodes.filter((node) => node.status === "online").length;
@@ -29,14 +24,5 @@ export async function registerHealthRoutes(app: FastifyInstance): Promise<void> 
             database: databaseHealthy ? "up" : "down",
             timestamp: new Date().toISOString()
         };
-    });
-
-    app.get("/health/live", async () => ({ status: "ok" }));
-
-    app.get("/health/ready", async () => {
-        const databaseHealthy = await app.controlPlane.databaseProvider.healthCheck();
-        return {
-            ready: databaseHealthy
-        };
-    });
-}
+    }
+});
