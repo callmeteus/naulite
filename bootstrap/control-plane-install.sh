@@ -2,13 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLATFORM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PLATFORM_ROOT="${PLATFORM_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 
 CP_HOST=""
 NETBIRD_DOMAIN="${NETBIRD_DOMAIN:-netbird.local}"
 NETBIRD_HTTP_PROTOCOL="${NETBIRD_HTTP_PROTOCOL:-http}"
 NETBIRD_PUBLIC_MANAGEMENT_URL=""
 NETBIRD_SERVER_PORT="${NETBIRD_SERVER_PORT:-9081}"
+DRY_RUN=0
 
 log() {
     printf '[platform-control-plane] %s\n' "$*"
@@ -25,6 +26,7 @@ Options:
   --netbird-http-protocol <protocol>   http or https for NetBird dashboard (default: http)
   --netbird-public-management-url <url> Public NetBird management URL for enrolling agents
   --netbird-server-port <port>         Host port for NetBird management API (default: 9081)
+  --dry-run                            Validate input and write .env only
   -h, --help                           Show this help
 EOF
 }
@@ -51,6 +53,10 @@ parse_args() {
             --netbird-server-port)
                 NETBIRD_SERVER_PORT="${2:-}"
                 shift 2
+                ;;
+            --dry-run)
+                DRY_RUN=1
+                shift
                 ;;
             -h|--help)
                 usage
@@ -231,6 +237,13 @@ EOF
 
 main() {
     parse_args "$@"
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        prepare_env
+        log "dry-run complete env=${PLATFORM_ROOT}/.env"
+        exit 0
+    fi
+
     require_docker
     prepare_env
     init_netbird

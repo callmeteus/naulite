@@ -81,6 +81,22 @@ When the control plane API is private except for enrollment, expose only:
 
 Exposing the full control plane API on the internet remains optional and operator-dependent.
 
+## Dry-run mode
+
+Both shell installers support `--dry-run` for validation without root, Docker, or systemd:
+
+```bash
+bash bootstrap/agent-install.sh --dry-run \
+  --host https://cp.example.com \
+  --setup-key <key> \
+  --config-path /tmp/agent.json
+
+PLATFORM_ROOT=/tmp/platform-bootstrap bash bootstrap/control-plane-install.sh --dry-run \
+  --host https://cp.example.com
+```
+
+Dry-run executes argument parsing and config/env writes only. Unit tests in `tests/unit/bootstrap/` exercise these paths with temporary directories and a mock control plane HTTP server.
+
 ## Environment variables
 
 | Variable | Purpose |

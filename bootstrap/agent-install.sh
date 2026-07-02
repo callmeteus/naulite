@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLATFORM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PLATFORM_ROOT="${PLATFORM_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 
 AGENT_VERSION="${AGENT_VERSION:-zig-0.1.0}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/platform-agent}"
@@ -14,6 +14,7 @@ CONFIG_PATH="${CONFIG_PATH:-/var/lib/platform/agent.json}"
 CP_HOST=""
 SETUP_KEY=""
 NETBIRD_MANAGEMENT_URL=""
+DRY_RUN=0
 
 log() {
     printf '[platform-agent] %s\n' "$*"
@@ -31,6 +32,7 @@ Options:
   --agent-port <port>              Agent HTTP listen port (default: 9470)
   --install-dir <path>             Install directory (default: /opt/platform-agent)
   --config-path <path>             Agent JSON config path (default: /var/lib/platform/agent.json)
+  --dry-run                        Validate input, fetch bootstrap data, write config only
   -h, --help                       Show this help
 EOF
 }
@@ -69,6 +71,10 @@ parse_args() {
             --config-path)
                 CONFIG_PATH="${2:-}"
                 shift 2
+                ;;
+            --dry-run)
+                DRY_RUN=1
+                shift
                 ;;
             -h|--help)
                 usage
@@ -220,6 +226,17 @@ EOF
 
 main() {
     parse_args "$@"
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        local os
+        os="$(detect_os)"
+        log "dry-run installing platform-agent ${AGENT_VERSION}"
+        fetch_bootstrap_bundle
+        write_agent_config "${os}"
+        log "dry-run complete config=${CONFIG_PATH}"
+        exit 0
+    fi
+
     require_root
 
     local os
