@@ -73,13 +73,11 @@ pub fn parseExecutionPlan(allocator: std.mem.Allocator, body: []const u8) !Execu
     const created_at = try duplicateRequiredString(allocator, root, "createdAt");
     errdefer allocator.free(created_at);
 
-    const revision: i64 = switch (root.object.get("revision")) {
-        .some => |value| switch (value) {
-            .integer => |n| n,
-            .float => |n| @intFromFloat(n),
-            else => return error.InvalidExecutionPlan,
-        },
-        .null => return error.InvalidExecutionPlan,
+    const revision_value = root.object.get("revision") orelse return error.InvalidExecutionPlan;
+    const revision: i64 = switch (revision_value) {
+        .integer => |n| n,
+        .float => |n| @intFromFloat(n),
+        else => return error.InvalidExecutionPlan,
     };
 
     const operations_value = root.object.get("operations") orelse return error.InvalidExecutionPlan;
@@ -98,7 +96,7 @@ pub fn parseExecutionPlan(allocator: std.mem.Allocator, body: []const u8) !Execu
         };
 
         const op_type = OperationType.fromString(type_name) orelse return error.UnknownOperationType;
-        const raw_json = try std.json.stringifyAlloc(allocator, item, .{});
+        const raw_json = try std.json.Stringify.valueAlloc(allocator, item, .{});
         operations[index] = .{
             .op_type = op_type,
             .raw_json = raw_json,

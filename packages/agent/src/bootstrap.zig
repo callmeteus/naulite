@@ -52,13 +52,20 @@ pub fn collectStatus(allocator: std.mem.Allocator) !BootstrapStatus {
     };
 }
 
-/// Probes whether the Docker socket is reachable (stub).
-/// @returns Whether the Docker socket is reachable.
+/// Probes whether the Docker socket is reachable.
 pub fn probeDockerSocket() bool {
-    return switch (detectOsFamily()) {
-        .linux => std.fs.accessAbsolute("/var/run/docker.sock", .{}),
-        .windows => std.fs.accessAbsolute("//./pipe/docker_engine", .{}),
-        .macos => std.fs.accessAbsolute("/var/run/docker.sock", .{}),
-        .unknown => error.FileNotFound,
-    } catch false;
+    var threaded = std.Io.Threaded.init(std.heap.page_allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    const socket_path = switch (detectOsFamily()) {
+        .linux, .macos => "/var/run/docker.sock",
+        .windows => "//./pipe/docker_engine",
+        .unknown => return false,
+    };
+
+    const unix_address = std.Io.net.UnixAddress.init(socket_path) catch return false;
+    const stream = unix_address.connect(io) catch return false;
+    stream.close(io);
+    return true;
 }

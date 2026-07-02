@@ -101,53 +101,132 @@ pub fn handleRequest(
 
 /// Starts the REST HTTP server and blocks until interrupted.
 pub fn serve(allocator: std.mem.Allocator, config: Config) !void {
+    var threaded = std.Io.Threaded.init(allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
     var docker_client = docker.DockerClient.init(allocator, config.docker_socket);
 
-    const address = try std.net.Address.parseIp4(config.listen_address, config.listen_port);
-    var server = try address.listen(.{
-        .reuse_address = true,
-    });
-    defer server.deinit();
+    var address = try std.Io.net.IpAddress.parseIp4(config.listen_address, config.listen_port);
+    var server = try address.listen(io, .{ .reuse_address = true });
+    defer server.deinit(io);
 
     std.log.info("[http] listening on {s}:{d}", .{ config.listen_address, config.listen_port });
 
     while (true) {
-        const connection = try server.accept();
-        defer connection.stream.close();
-
-        var read_buffer: [4096]u8 = undefined;
-        var http_server = std.http.Server.init(connection, &read_buffer);
-        var request = http_server.receiveHead() catch |err| {
-            std.log.warn("[http] failed to read request head: {}", .{err});
+        var stream = server.accept(io) catch |err| {
+            std.log.warn("[http] accept failed: {}", .{err});
             continue;
         };
 
-        const method = methodToString(request.head.method);
-        const target = request.head.target;
-
-        var request_arena = std.heap.ArenaAllocator.init(allocator);
-        defer request_arena.deinit();
-        const request_allocator = request_arena.allocator();
-
-        const body = try readRequestBody(request_allocator, &request);
-        const path = try normalizePath(request_allocator, target);
-
-        const response = handleRequest(request_allocator, &docker_client, method, path, body) catch |err| {
-            std.log.err("[http] handler failed: {}", .{err});
-            try writeResponse(&request, 500, "application/json", "{\"error\":\"internal server error\"}");
-            continue;
+        handleConnection(allocator, io, &docker_client, &stream) catch |err| {
+            std.log.warn("[http] connection failed: {}", .{err});
         };
-        defer request_allocator.free(response.body);
-
-        try writeResponse(&request, response.status, response.content_type, response.body);
+        stream.close(io);
     }
+}
+
+fn handleConnection(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    docker_client: *docker.DockerClient,
+    stream: *std.Io.net.Stream,
+) !void {
+    var received: std.ArrayList(u8) = .empty;
+    defer received.deinit(allocator);
+
+    var read_buffer: [4096]u8 = undefined;
+    var net_reader = stream.reader(io, &read_buffer);
+
+    while (true) {
+        var chunk: [1024]u8 = undefined;
+        const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, chunk[0..]) catch |err| {
+            return err;
+        };
+        if (read_count == 0) break;
+        try received.appendSlice(allocator, chunk[0..read_count]);
+        if (std.mem.indexOf(u8, received.items, "\r\n\r\n") != null) break;
+        if (received.items.len >= 1024 * 1024) return error.RequestTooLarge;
+    }
+
+    if (received.items.len == 0) return;
+
+    const header_end = std.mem.indexOf(u8, received.items, "\r\n\r\n") orelse return error.InvalidHttpRequest;
+    const header_section = received.items[0..header_end];
+
+    const request_line_end = std.mem.indexOfScalar(u8, header_section, '\n') orelse return error.InvalidHttpRequest;
+    const request_line = std.mem.trim(u8, header_section[0..request_line_end], "\r");
+
+    var request_parts = std.mem.tokenizeScalar(u8, request_line, ' ');
+    const method = request_parts.next() orelse return error.InvalidHttpRequest;
+    const target = request_parts.next() orelse return error.InvalidHttpRequest;
+
+    const content_length = try parseContentLength(header_section);
+    const body_start = header_end + 4;
+    var body_owned: ?[]u8 = null;
+    defer if (body_owned) |owned| allocator.free(owned);
+
+    const body: []const u8 = blk: {
+        if (content_length == 0) break :blk &[_]u8{};
+
+        if (received.items.len >= body_start + content_length) {
+            break :blk received.items[body_start .. body_start + content_length];
+        }
+
+        const owned = try allocator.alloc(u8, content_length);
+        body_owned = owned;
+        const already_read = received.items.len - body_start;
+        if (already_read > 0) {
+            @memcpy(owned[0..already_read], received.items[body_start..]);
+        }
+
+        var index = already_read;
+        while (index < content_length) {
+            var chunk: [1024]u8 = undefined;
+            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, chunk[0..]) catch |err| {
+                return err;
+            };
+            if (read_count == 0) return error.EndOfStream;
+            @memcpy(owned[index .. index + read_count], chunk[0..read_count]);
+            index += read_count;
+        }
+
+        break :blk owned;
+    };
+
+    var request_arena = std.heap.ArenaAllocator.init(allocator);
+    defer request_arena.deinit();
+    const request_allocator = request_arena.allocator();
+
+    const path = try normalizePath(request_allocator, target);
+
+    const response = handleRequest(request_allocator, docker_client, method, path, body) catch |err| {
+        std.log.err("[http] handler failed: {}", .{err});
+        try writeRawResponse(io, stream, 500, "Internal Server Error", "application/json", "{\"error\":\"internal server error\"}");
+        return;
+    };
+    defer request_allocator.free(response.body);
+
+    try writeRawResponse(io, stream, response.status, statusText(response.status), response.content_type, response.body);
 }
 
 fn handleExecutionApply(ctx: *const RouteContext, body: []const u8) !HttpResponse {
     var plan = try execution_plan.parseExecutionPlan(ctx.allocator, body);
     defer plan.deinit(ctx.allocator);
 
-    try ctx.docker_client.applyPlan(plan);
+    ctx.docker_client.applyPlan(plan) catch |err| {
+        std.log.err("[http] execution apply failed: {}", .{err});
+        const response_body = try std.fmt.allocPrint(
+            ctx.allocator,
+            "{{\"accepted\":false,\"planId\":\"{s}\",\"message\":\"apply failed\"}}",
+            .{plan.plan_id},
+        );
+        return .{
+            .status = 500,
+            .content_type = "application/json",
+            .body = response_body,
+        };
+    };
 
     const response_body = try std.fmt.allocPrint(
         ctx.allocator,
@@ -265,7 +344,7 @@ fn handleBackupReceive(ctx: *const RouteContext, body: []const u8) !HttpResponse
 }
 
 fn handleBootstrapStatus(ctx: *const RouteContext) !HttpResponse {
-    var status = try bootstrap.collectStatus(ctx.allocator);
+    const status = try bootstrap.collectStatus(ctx.allocator);
     defer ctx.allocator.free(status.os_version);
 
     const response_body = try std.fmt.allocPrint(
@@ -288,20 +367,51 @@ fn handleBootstrapStatus(ctx: *const RouteContext) !HttpResponse {
     };
 }
 
-fn readRequestBody(allocator: std.mem.Allocator, request: *std.http.Server.Request) ![]const u8 {
-    const content_length = request.head.content_length orelse 0;
-    if (content_length == 0) return &[_]u8{};
+fn parseContentLength(header_section: []const u8) !usize {
+    var lines = std.mem.splitSequence(u8, header_section, "\r\n");
+    _ = lines.next();
 
-    const body = try allocator.alloc(u8, content_length);
-    var index: usize = 0;
-
-    while (index < content_length) {
-        const read_count = try request.reader().read(body[index..]);
-        if (read_count == 0) return error.EndOfStream;
-        index += read_count;
+    while (lines.next()) |line| {
+        if (line.len == 0) continue;
+        const colon = std.mem.indexOfScalar(u8, line, ':') orelse continue;
+        const name = std.mem.trim(u8, line[0..colon], " ");
+        if (std.ascii.eqlIgnoreCase(name, "content-length")) {
+            const value = std.mem.trim(u8, line[colon + 1 ..], " ");
+            return try std.fmt.parseInt(usize, value, 10);
+        }
     }
 
-    return body;
+    return 0;
+}
+
+fn writeRawResponse(
+    io: std.Io,
+    stream: *std.Io.net.Stream,
+    status: u16,
+    status_text: []const u8,
+    content_type: []const u8,
+    body: []const u8,
+) !void {
+    var write_buffer: [4096]u8 = undefined;
+    var net_writer = stream.writer(io, &write_buffer);
+
+    try std.Io.Writer.print(
+        &net_writer.interface,
+        "HTTP/1.1 {d} {s}\r\nContent-Type: {s}\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n{s}",
+        .{ status, status_text, content_type, body.len, body },
+    );
+    try std.Io.Writer.flush(&net_writer.interface);
+}
+
+fn statusText(status: u16) []const u8 {
+    return switch (status) {
+        200 => "OK",
+        201 => "Created",
+        202 => "Accepted",
+        404 => "Not Found",
+        500 => "Internal Server Error",
+        else => "OK",
+    };
 }
 
 fn normalizePath(allocator: std.mem.Allocator, target: []const u8) ![]const u8 {
@@ -337,44 +447,6 @@ fn parseStringArrayField(allocator: std.mem.Allocator, body: []const u8, field_n
     }
 
     return values;
-}
-
-fn writeResponse(
-    request: *std.http.Server.Request,
-    status: u16,
-    content_type: []const u8,
-    body: []const u8,
-) !void {
-    try request.respond(body, .{
-        .status = httpStatusFromCode(status),
-        .extra_headers = &.{
-            .{ .name = "content-type", .value = content_type },
-        },
-    });
-}
-
-fn methodToString(method: std.http.Method) []const u8 {
-    return switch (method) {
-        .GET => "GET",
-        .POST => "POST",
-        .PUT => "PUT",
-        .PATCH => "PATCH",
-        .DELETE => "DELETE",
-        .HEAD => "HEAD",
-        .OPTIONS => "OPTIONS",
-        else => "UNKNOWN",
-    };
-}
-
-fn httpStatusFromCode(status: u16) std.http.Status {
-    return switch (status) {
-        200 => .ok,
-        201 => .created,
-        202 => .accepted,
-        404 => .not_found,
-        500 => .internal_server_error,
-        else => .internal_server_error,
-    };
 }
 
 fn jsonStringLiteral(allocator: std.mem.Allocator, value: []const u8) ![]const u8 {

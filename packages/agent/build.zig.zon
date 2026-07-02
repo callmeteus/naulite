@@ -1,7 +1,7 @@
 .{
     .name = .platform_agent,
     .version = "0.1.0",
-    .fingerprint = 0xb3c4d5e6f708192a,
+    .fingerprint = 0x14d7f819f38ba5d5,
     .minimum_zig_version = "0.14.0",
     .paths = .{
         "build.zig",

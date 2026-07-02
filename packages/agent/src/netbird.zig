@@ -29,10 +29,11 @@ pub const NetbirdClient = struct {
 
     /// Loads NetBird settings from environment variables.
     pub fn loadFromEnv(allocator: std.mem.Allocator) LoadError!NetbirdClient {
-        const raw = std.posix.getenv("NETBIRD_MANAGEMENT_URL") orelse std.posix.getenv("NETBIRD_API_URL") orelse {
+        const raw_ptr = std.c.getenv("NETBIRD_MANAGEMENT_URL") orelse std.c.getenv("NETBIRD_API_URL") orelse {
             std.log.err("[netbird] NETBIRD_MANAGEMENT_URL is required (self-hosted only)", .{});
             return error.MissingManagementUrl;
         };
+        const raw = std.mem.span(raw_ptr);
 
         if (isCloudEndpoint(raw)) {
             std.log.err("[netbird] NetBird cloud endpoints are not allowed; use self-hosted management URL", .{});
@@ -53,7 +54,6 @@ pub const NetbirdClient = struct {
     /// Returns whether the NetBird mesh is connected (stub).
     pub fn isConnected(self: *const NetbirdClient) bool {
         std.log.debug("[netbird] connected check management_url={s}", .{self.management_url});
-        _ = self;
         return false;
     }
 

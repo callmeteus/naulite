@@ -1,5 +1,7 @@
 const std = @import("std");
 const bootstrap = @import("bootstrap.zig");
+const cp_client = @import("cp_client.zig");
+const env_util = @import("env_util.zig");
 const http_server = @import("http_server.zig");
 const netbird = @import("netbird.zig");
 
@@ -18,9 +20,12 @@ pub fn main() !void {
         std.log.warn("[netbird] ensure connected failed: {}", .{err});
     };
 
+    const cp_config = try cp_client.loadConfig(allocator);
+    try cp_client.startBackground(allocator, cp_config);
+
     const config = http_server.Config{
         .listen_address = "0.0.0.0",
-        .listen_port = 9470,
+        .listen_port = env_util.readEnvU16("AGENT_PORT", 9470),
         .docker_socket = defaultDockerSocket(os),
     };
 
