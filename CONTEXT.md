@@ -26,7 +26,7 @@ Pods, ReplicaSets, DaemonSets, StatefulSets, CRDs, Operators, Admission Controll
 | `ui` | Web dashboard (`ui-frontend` + `ui-backend` BFF); strings in `packages/ui/packages/frontend/src/ui/en.json` |
 | `control-plane` | Fastify API, database, orchestration, GitOps, schedulers |
 | `agent` | Zig executor on each node |
-| `runtime-docker`, `runtime-podman`, `runtime-containerd`, `builders`, `gateway`, `volumes`, `secrets`, `registries`, `backups`, `log-rotation` | Core providers |
+| `runtime-docker`, `runtime-podman`, `runtime-containerd`, `builders`, `gateway`, `volumes`, `secrets`, `backups`, `log-rotation` | Core providers |
 | `plugin-*` | Swappable extensions (`plugin-s3`, future Azure/GCS/Vault plugins) |
 
 ## Manifest model

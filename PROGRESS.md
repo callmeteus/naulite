@@ -28,7 +28,7 @@
 - Dogfood compose uses Zig agent image (`packages/agent/Dockerfile`); `infra/agent-dogfood` removed
 - `bin/dev.sh` / `bin/dev.ps1`: NetBird config bootstrap, `docker compose up`, auto `ADMIN_API_KEY` when missing
 - NetBird credentials bootstrapped automatically into cluster secret `netbird/internal` (no manual token)
-- Providers: runtime-docker, runtime-podman, runtime-containerd, volumes, secrets, registries, builders, gateway, backups, log-rotation, plugin-s3
+- Providers: runtime-docker, runtime-podman, runtime-containerd, volumes, secrets, builders, gateway, backups, log-rotation, plugin-s3
 - `@platform/cli` + `@platform/sdk`: kubectl-style commands via typed HTTP client
 - `@platform/ui-frontend` / `@platform/ui-backend`: Vue 3 dashboard + Fastify admin BFF (nodes, services, deploy, backups); cluster state via Vue `reactive()`
 - Tests: 41 unit tests, e2e harness with real control plane + Zig agent (`LocalTestCluster`)

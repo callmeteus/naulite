@@ -1,8 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { createDeclarativeRegistryProvider } from "@platform/registries";
-
 /**
  * Registers resource listing routes.
  *
@@ -50,23 +48,32 @@ export async function registerResourceRoutes(app: FastifyInstance): Promise<void
     });
 
     app.get("/registry", async () => {
-        const provider = createDeclarativeRegistryProvider({
-            registries: [
-                {
-                    id: "docker.io",
-                    name: "Docker Hub",
-                    url: "https://index.docker.io/v1/",
-                    isDefault: true
+        const revisions = await app.controlPlane.gitOpsService.listRevisions();
+        const latestByManifest = new Map<string, (typeof revisions)[number]>();
+
+        for (const revision of revisions) {
+            const current = latestByManifest.get(revision.manifestName);
+            if (!current || revision.appliedAt > current.appliedAt) {
+                latestByManifest.set(revision.manifestName, revision);
+            }
+        }
+
+        const registryIds = new Set<string>();
+        for (const revision of latestByManifest.values()) {
+            try {
+                const manifest = app.controlPlane.composeParser.parse(revision.manifestYaml);
+                for (const registryName of Object.keys(manifest.registries)) {
+                    registryIds.add(registryName);
                 }
-            ]
-        });
-        const registries = await provider.list();
+            } catch (err) {
+                console.debug("[registry] skip manifest=%s parse failed: %o", revision.manifestName, err);
+            }
+        }
 
         return {
-            registries: registries.map((entry) => entry.id)
+            registries: [...registryIds].sort()
         };
     });
-
     app.delete("/services/:name", async (request, reply) => {
         const params = z.object({
             name: z.string().min(1)
