@@ -1,0 +1,19 @@
+{
+    "name": "@platform/runtime-docker",
+    "version": "0.1.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "lint": "eslint src/"
+    },
+    "dependencies": {
+        "@platform/shared": "0.1.0",
+        "dockerode": "^4.0.4"
+    },
+    "devDependencies": {
+        "@types/dockerode": "^3.3.34",
+        "typescript": "^5.7.2"
+    }
+}

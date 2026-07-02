@@ -1,0 +1,98 @@
+name: platform
+  
+platform:
+    version: 0.1.0
+    plugins:
+        enabled:
+            - s3
+  
+services:
+    postgres:
+        image: postgres:16-alpine
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: platform
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+            POSTGRES_DB: platform
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U platform"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+        ports:
+            - "5432:5432"
+  
+    minio:
+        image: minio/minio:latest
+        restart: unless-stopped
+        command: server /data --console-address ":9001"
+        environment:
+            MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+        volumes:
+            - minio-data:/data
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+  
+    control-plane-1:
+        build:
+            context: .
+            dockerfile: packages/control-plane/Dockerfile
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+        environment:
+            NODE_ENV: production
+            DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
+            CP_INSTANCE_ID: cp-1
+            CP_PEER_URLS: http://control-plane-2:8080
+            CP_PLUGINS: s3
+            S3_ENDPOINT: http://minio:9000
+            S3_FORCE_PATH_STYLE: "true"
+        ports:
+            - "8080:8080"
+        volumes:
+            - cp-data-1:/var/lib/platform
+  
+    control-plane-2:
+        build:
+            context: .
+            dockerfile: packages/control-plane/Dockerfile
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+        environment:
+            NODE_ENV: production
+            DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
+            CP_INSTANCE_ID: cp-2
+            CP_PEER_URLS: http://control-plane-1:8080
+            CP_PLUGINS: s3
+            S3_ENDPOINT: http://minio:9000
+            S3_FORCE_PATH_STYLE: "true"
+        ports:
+            - "8081:8080"
+        volumes:
+            - cp-data-2:/var/lib/platform
+  
+    ui:
+        build:
+            context: .
+            dockerfile: packages/ui/Dockerfile
+        restart: unless-stopped
+        depends_on:
+            - control-plane-1
+        environment:
+            VITE_API_URL: http://localhost:8080
+        ports:
+            - "3000:80"
+  
+volumes:
+    pgdata:
+    minio-data:
+    cp-data-1:
+    cp-data-2:

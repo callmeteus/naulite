@@ -1,0 +1,173 @@
+name: bookstore
+  
+volumes:
+    postgres-data:
+        strategy: local
+        access: readWriteOnce
+        size: 20Gi
+        backup:
+            schedule: "0 3 * * *"
+            includes:
+                - "pgdata/**"
+                - "**/*.conf"
+            excludes:
+                - "pgdata/pg_wal/**"
+                - "**/*.tmp"
+            retention:
+                maxCount: 14
+                maxAgeDays: 90
+            destination:
+                provider: s3
+                bucket: prod-backups
+                prefix: bookstore/postgres/
+                region: us-east-1
+                credentialsSecret: backup-s3-creds
+  
+    uploads:
+        strategy: local
+        access: readWriteOnce
+        size: 50Gi
+        backup:
+            schedule: "0 4 * * 0"
+            includes:
+                - "**/*"
+            excludes:
+                - "**/cache/**"
+            retention:
+                maxCount: 4
+            destination:
+                provider: node
+                nodeId: storage-node-01
+                path: /mnt/backups/bookstore-uploads
+  
+    redis-data:
+        strategy: local
+        access: readWriteOnce
+  
+registries:
+    default: ghcr
+    entries:
+        ghcr:
+            url: ghcr.io
+            credentialsSecret: ghcr-pull
+  
+networks:
+    edge:
+    app:
+    data:
+    metrics-local:
+        local: true
+  
+services:
+    postgres:
+        image: postgres:16-alpine
+        restart: unless-stopped
+        networks:
+            - data
+        environment:
+            POSTGRES_DB: bookstore
+            POSTGRES_USER: bookstore
+            POSTGRES_PASSWORD:
+                secret: postgres-credentials
+                key: password
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
+        cluster:
+            labels:
+                role: database
+        capabilities:
+            - storage
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U bookstore"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+  
+    api:
+        build:
+            context: ./api
+            dockerfile: Dockerfile
+        buildOptions:
+            provider: docker
+            cluster:
+                labels:
+                    capability: builder
+        image: ghcr.io/acme/bookstore-api:${GIT_SHA:-latest}
+        restart: unless-stopped
+        networks:
+            - edge
+            - app
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_started
+        environment:
+            DATABASE_URL:
+                secret: postgres-credentials
+                key: databaseUrl
+            JWT_SECRET:
+                secret: api-secrets
+                key: jwt
+        volumes:
+            - uploads:/app/uploads
+        logRotation:
+            schedule: "0 0 * * *"
+            paths:
+                - /app/logs/*.log
+            maxSizeMb: 200
+            maxFiles: 14
+            compress: true
+            excludes:
+                - "**/*.gz"
+        cluster:
+            labels:
+                role: app
+        ingress:
+            enabled: true
+            hosts:
+                - api.bookstore.example.com
+            tls:
+                certificateSecret: bookstore-api-tls
+                privateKeySecret: bookstore-api-tls
+  
+    redis:
+        image: redis:7-alpine
+        restart: unless-stopped
+        networks:
+            - data
+        command: ["redis-server", "--appendonly", "yes"]
+        volumes:
+            - redis-data:/data
+        cluster:
+            labels:
+                role: cache
+  
+    worker:
+        build:
+            context: ./worker
+        buildOptions:
+            provider: kaniko
+            cluster:
+                labels:
+                    capability: builder
+            registry: ghcr
+        image: ghcr.io/acme/bookstore-worker:${GIT_SHA:-latest}
+        restart: unless-stopped
+        networks:
+            - app
+        depends_on:
+            - api
+            - redis
+        environment:
+            REDIS_URL: redis://redis:6379
+        cluster:
+            labels:
+                role: worker
+        logRotation:
+            schedule: "0 */6 * * *"
+            paths:
+                - /var/log/worker/*.log
+            maxSizeMb: 50
+            maxFiles: 5
+            compress: true

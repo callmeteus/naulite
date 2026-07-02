@@ -1,0 +1,28 @@
+{
+    "name": "platform",
+    "private": true,
+    "type": "module",
+    "workspaces": [
+        "packages/*"
+    ],
+    "scripts": {
+        "build": "turbo run build",
+        "lint": "turbo run lint",
+        "test": "yarn test:unit:all && yarn test:e2e",
+        "test:unit": "vitest run --config vitest.config.ts",
+        "test:unit:docker": "vitest run --config vitest.docker.config.ts",
+        "test:unit:all": "yarn test:unit && yarn test:unit:docker",
+        "test:e2e": "vitest run --config vitest.e2e.config.ts",
+        "dev": "turbo run dev --parallel"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.5",
+        "typescript-eslint": "^8.19.1",
+        "globals": "^15.14.0",
+        "eslint": "^9.17.0",
+        "turbo": "^2.3.3",
+        "typescript": "^5.7.2",
+        "vitest": "^2.1.8"
+    },
+    "packageManager": "yarn@1.22.22"
+}

@@ -1,0 +1,45 @@
+name: CI
+  
+on:
+    push:
+        branches: [main, master]
+    pull_request:
+  
+jobs:
+    verify:
+        runs-on: ubuntu-latest
+  
+        steps:
+            - name: Checkout
+                uses: actions/checkout@v4
+  
+            - name: Setup Node.js
+                uses: actions/setup-node@v4
+                with:
+                    node-version: "22"
+                    cache: yarn
+                    cache-dependency-path: platform/yarn.lock
+  
+            - name: Install dependencies
+                working-directory: platform
+                run: yarn install --frozen-lockfile
+  
+            - name: Lint
+                working-directory: platform
+                run: yarn lint
+  
+            - name: Unit tests
+                working-directory: platform
+                run: yarn test:unit
+  
+            - name: Docker unit tests
+                working-directory: platform
+                run: yarn test:unit:docker
+  
+            - name: E2E tests
+                working-directory: platform
+                run: yarn test:e2e
+  
+            - name: Build
+                working-directory: platform
+                run: yarn build

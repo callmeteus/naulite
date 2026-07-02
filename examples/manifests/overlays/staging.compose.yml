@@ -1,0 +1,27 @@
+# Merged on top of base by CP GitOps (deep merge)
+name: rushpedia
+  
+services:
+    backend:
+        environment:
+            NODE_ENV: staging
+            LOG_LEVEL: debug
+  
+    frontend:
+        ingress:
+            enabled: true
+            hosts:
+                - staging.rushpedia.example.com
+            tls: true
+  
+volumes:
+    pgdata:
+        backup:
+            schedule: "0 5 * * *"
+            includes:
+                - "**/*"
+            retention:
+                maxCount: 3
+            destination:
+                provider: local
+                path: /var/backups/staging/pgdata

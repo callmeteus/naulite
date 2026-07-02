@@ -1,0 +1,20 @@
+{
+    "name": "@platform/cli",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "bin": {
+        "platform": "./bin/platform.js"
+    },
+    "files": [
+        "bin",
+        "native",
+        "zig-out/bin"
+    ],
+    "scripts": {
+        "build": "zig build",
+        "copy:native": "node scripts/copy-native.mjs",
+        "build:all": "zig build && yarn copy:native",
+        "lint": "eslint bin/"
+    }
+}

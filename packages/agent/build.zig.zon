@@ -1,0 +1,11 @@
+.{
+    .name = "platform-agent",
+    .version = "0.1.0",
+    .fingerprint = 0xb3c4d5e6f708192a,
+    .minimum_zig_version = "0.13.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

@@ -1,0 +1,63 @@
+name: minecraft
+  
+networks:
+    game:
+  
+services:
+    minecraft:
+        image: itzg/minecraft-server:latest
+        restart: unless-stopped
+        networks:
+            - game
+        ports:
+            - "25565:25565"
+        environment:
+            EULA: "TRUE"
+            MEMORY: 4G
+            TYPE: PAPER
+        volumes:
+            - world-data:/data
+        cluster:
+            labels:
+                role: game
+                region: sa-east-1
+        capabilities:
+            - runtime
+        logRotation:
+            schedule: "0 */12 * * *"
+            paths:
+                - /data/logs/*.log
+                - /data/crash-reports/*.txt
+            maxSizeMb: 500
+            maxFiles: 20
+            compress: true
+        healthcheck:
+            test: ["CMD", "mc-health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+  
+volumes:
+    world-data:
+        strategy: local
+        access: readWriteOnce
+        size: 100Gi
+        backup:
+            schedule: "0 */4 * * *"
+            includes:
+                - "world/**"
+                - "paper.yml"
+                - "server.properties"
+            excludes:
+                - "world/playerdata/*.dat_old"
+                - "**/cache/**"
+            retention:
+                maxCount: 42
+                maxAgeDays: 14
+            destination:
+                provider: s3
+                bucket: game-backups
+                prefix: minecraft/worlds/
+                region: sa-east-1
+                endpoint: https://s3.sa-east-1.amazonaws.com
+                credentialsSecret: backup-s3-creds

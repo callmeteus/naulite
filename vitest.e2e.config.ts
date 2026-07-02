@@ -1,0 +1,26 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { defineConfig } from "vitest/config";
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
+    resolve: {
+        alias: {
+            "@platform/shared": path.resolve(rootDir, "packages/shared/src/index.ts"),
+            "@platform/sdk": path.resolve(rootDir, "packages/sdk/src/index.ts"),
+            "@platform/control-plane": path.resolve(rootDir, "packages/control-plane/src/index.ts"),
+            "@platform/backups": path.resolve(rootDir, "packages/backups/src/index.ts"),
+            "@platform/secrets": path.resolve(rootDir, "packages/secrets/src/index.ts"),
+            "@platform/log-rotation": path.resolve(rootDir, "packages/log-rotation/src/index.ts"),
+            "@platform/plugin-s3": path.resolve(rootDir, "packages/plugin-s3/src/index.ts")
+        }
+    },
+    test: {
+        include: ["tests/e2e/**/*.test.ts"],
+        environment: "node",
+        testTimeout: 180_000,
+        hookTimeout: 300_000
+    }
+});

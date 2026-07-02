@@ -1,0 +1,39 @@
+name: rushpedia
+  
+services:
+    backend:
+        cluster:
+            labels:
+                env: production
+        capabilities:
+            - runtime
+  
+    frontend:
+        ingress:
+            tls:
+                certificateSecret: rushpedia-prod-tls
+                privateKeySecret: rushpedia-prod-tls
+  
+    postgres:
+        cluster:
+            labels:
+                role: database
+                env: production
+  
+volumes:
+    pgdata:
+        backup:
+            schedule: "0 1 * * *"
+            includes:
+                - "pgdata/**"
+            excludes:
+                - "pgdata/pg_wal/**"
+            retention:
+                maxCount: 30
+                maxAgeDays: 365
+            destination:
+                provider: s3
+                bucket: techtail-prod-backups
+                prefix: rushpedia/pgdata/
+                region: sa-east-1
+                credentialsSecret: backup-s3-creds

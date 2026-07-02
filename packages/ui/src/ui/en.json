@@ -1,0 +1,20 @@
+{
+    "dashboard": "Dashboard",
+    "nodes": "Nodes",
+    "services": "Services",
+    "deploy": "Deploy",
+    "backups": "Backups",
+    "logRotation": "Log Rotation",
+    "apiKeys": "API Keys",
+    "apiKeysHint": "Generate keys for remote CLI access over NetBird. Copy the secret once when created.",
+    "apiKeyName": "Name",
+    "apiKeyNamePlaceholder": "My laptop",
+    "createApiKey": "Create API Key",
+    "apiKeyCreated": "New API key",
+    "apiKeyCopyOnce": "Copy this secret now. It will not be shown again.",
+    "apiKeyPrefix": "Prefix",
+    "apiKeyCreatedAt": "Created",
+    "apiKeyLastUsed": "Last used",
+    "revokeApiKey": "Revoke",
+    "dismiss": "Dismiss"
+}
