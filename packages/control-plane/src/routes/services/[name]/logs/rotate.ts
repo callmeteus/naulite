@@ -1,22 +1,36 @@
-import { z } from "zod";
-
 import { AgentProxyError, AgentProxyService } from "../../../../services/AgentProxyService";
 import { ControlPlaneService } from "../../../../ControlPlaneService";
+import { AuthPreHandlers } from "../../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../../routing/DefineRoute";
+import {
+    LooseObjectSchema,
+    NameParamsSchema,
+    RouteErrorResponseSchema
+} from "@platform/shared";
 
 export const POST = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "Rotate service logs",
+        description: "Dispatches log rotation to the agent responsible for the service.",
+        tags: ["services"],
+        operationId: "rotateServiceLogs",
+        params: NameParamsSchema,
+        response: {
+            200: LooseObjectSchema,
+            404: RouteErrorResponseSchema,
+            503: RouteErrorResponseSchema
+        }
+    },
     async handler(req, res) {
-        const routeParams = z.object({
-            name: z.string().min(1)
-        }).parse(req.params);
-
+        const { name } = req.params;
         const services = await ControlPlaneService.Store.listServices();
-        const service = services.find((entry) => entry.name === routeParams.name);
+        const service = services.find((entry) => entry.name === name);
 
         if (!service) {
             return res.status(404).send({
                 error: "not_found",
-                message: `Serviço ${routeParams.name} não encontrado.`
+                message: `Service ${name} not found.`
             });
         }
 
@@ -28,7 +42,7 @@ export const POST = defineRoute({
         if (!node?.agentUrl) {
             return res.status(503).send({
                 error: "agent_unavailable",
-                message: "Nenhum agente disponível para rotacionar logs."
+                message: "No agent is available to rotate logs."
             });
         }
 
@@ -47,7 +61,7 @@ export const POST = defineRoute({
 
             return res.status(500).send({
                 error: "internal_error",
-                message: "Falha ao despachar rotação de logs."
+                message: "Failed to dispatch log rotation."
             });
         }
     }

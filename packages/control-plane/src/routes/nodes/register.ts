@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { NodeSchema } from "@platform/shared";
+import { ClusterLabelsSchema, NodeResourcesSchema, NodeSchema } from "@platform/shared";
 import { z } from "zod";
 
 import { ControlPlaneService } from "../../ControlPlaneService";
@@ -11,22 +11,26 @@ const RegisterNodeBodySchema = z.object({
     hostname: z.string().min(1),
     agentVersion: z.string().min(1),
     agentUrl: z.string().url().optional(),
-    labels: z.record(z.string(), z.string()).default({}),
+    labels: ClusterLabelsSchema.default({}),
     capabilities: z.array(z.string()).default([]),
-    resources: z.object({
-        cpuMillisTotal: z.number().int().nonnegative(),
-        cpuMillisUsed: z.number().int().nonnegative(),
-        memoryMbTotal: z.number().int().nonnegative(),
-        memoryMbUsed: z.number().int().nonnegative(),
-        diskMbTotal: z.number().int().nonnegative(),
-        diskMbUsed: z.number().int().nonnegative()
-    }),
+    resources: NodeResourcesSchema,
     netbirdDeviceId: z.string().min(1).optional()
 });
 
 export const POST = defineRoute({
+    schema: {
+        summary: "Register node",
+        description: "Registers or updates an agent in the cluster during bootstrap.",
+        tags: ["nodes"],
+        operationId: "registerNode",
+        body: RegisterNodeBodySchema,
+        response: {
+            200: NodeSchema,
+            201: NodeSchema
+        }
+    },
     async handler(req, res) {
-        const body = RegisterNodeBodySchema.parse(req.body);
+        const body = req.body;
         const now = new Date().toISOString();
         const existing = body.id
             ? await ControlPlaneService.Store.getNode(body.id)

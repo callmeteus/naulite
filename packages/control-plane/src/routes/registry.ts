@@ -1,7 +1,19 @@
 import { ControlPlaneService } from "../ControlPlaneService";
+import { AuthPreHandlers } from "../auth/AuthPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
+import { RegistryListResponseSchema } from "@platform/shared";
 
 export const GET = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "List registries",
+        description: "Lists registries referenced by the most recently applied manifests.",
+        tags: ["registry"],
+        operationId: "listRegistries",
+        response: {
+            200: RegistryListResponseSchema
+        }
+    },
     async handler() {
         const revisions = await ControlPlaneService.GitOps.listRevisions();
         const latestByManifest = new Map<string, (typeof revisions)[number]>();

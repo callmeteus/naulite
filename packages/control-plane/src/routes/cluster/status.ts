@@ -1,7 +1,19 @@
 import { ControlPlaneService } from "../../ControlPlaneService";
+import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
+import { LooseObjectSchema } from "@platform/shared";
 
 export const GET = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "Get cluster status",
+        description: "Returns a consolidated view of cluster health, leader, and inventory.",
+        tags: ["cluster"],
+        operationId: "getClusterStatus",
+        response: {
+            200: LooseObjectSchema
+        }
+    },
     async handler() {
         const [nodes, services, instances, volumes, secrets] = await Promise.all([
             ControlPlaneService.Store.listNodes(),

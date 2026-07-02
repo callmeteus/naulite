@@ -129,6 +129,7 @@ export namespace RouteFileLoader {
             app.route({
                 method,
                 url: routePath,
+                schema: definition.schema,
                 preHandler: definition.preHandlers.length > 0 ? definition.preHandlers : undefined,
                 handler: async (request, reply) => {
                     return definition.handler(request, reply);

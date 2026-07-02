@@ -1,0 +1,10 @@
+import { z } from "zod";
+
+/**
+ * Request body for service build routes.
+ */
+export const BuildServiceBodySchema = z.object({
+    serviceName: z.string().min(1),
+    provider: z.string().min(1).optional(),
+    registry: z.string().min(1).optional()
+});

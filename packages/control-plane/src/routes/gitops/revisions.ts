@@ -1,16 +1,28 @@
-import { z } from "zod";
-
 import { ControlPlaneService } from "../../ControlPlaneService";
+import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
+import {
+    GitOpsRevisionListResponseSchema,
+    ManifestNameQuerySchema
+} from "@platform/shared";
 
 export const GET = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "List GitOps revisions",
+        description: "Lists applied manifest revisions with an optional manifest name filter.",
+        tags: ["gitops"],
+        operationId: "listGitOpsRevisions",
+        querystring: ManifestNameQuerySchema,
+        response: {
+            200: GitOpsRevisionListResponseSchema
+        }
+    },
     async handler(req) {
-        const query = z.object({
-            manifestName: z.string().min(1).optional()
-        }).parse(req.query);
+        const { manifestName } = req.query;
 
         return {
-            revisions: await ControlPlaneService.GitOps.listRevisions(query.manifestName)
+            revisions: await ControlPlaneService.GitOps.listRevisions(manifestName)
         };
     }
 });

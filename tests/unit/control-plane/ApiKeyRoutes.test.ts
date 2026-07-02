@@ -14,6 +14,7 @@ function createApiKeyTestContext(): ControlPlaneContext {
             listApiKeys: vi.fn(async () => [{
                 id: "key-1",
                 name: "panel",
+                prefix: "plt_ab",
                 createdAt: "2026-07-02T00:00:00.000Z",
                 revokedAt: null
             }]),
@@ -94,6 +95,7 @@ describe("api key routes", () => {
         expect(response.json()).toEqual([{
             id: "key-1",
             name: "panel",
+            prefix: "plt_ab",
             createdAt: "2026-07-02T00:00:00.000Z",
             revokedAt: null
         }]);

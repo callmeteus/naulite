@@ -1,7 +1,17 @@
 import { ControlPlaneService } from "../ControlPlaneService";
 import { defineRoute } from "../routing/DefineRoute";
+import { HealthSummaryResponseSchema } from "@platform/shared";
 
 export const GET = defineRoute({
+    schema: {
+        summary: "Health check",
+        description: "Checks aggregated control plane, database, and node health.",
+        tags: ["health"],
+        operationId: "getHealth",
+        response: {
+            200: HealthSummaryResponseSchema
+        }
+    },
     async handler() {
         const databaseHealthy = await ControlPlaneService.Database.healthCheck();
         const [nodes, services] = await Promise.all([

@@ -2,7 +2,6 @@ import Fastify, { type FastifyInstance } from "fastify";
 
 import { ControlPlaneService } from "./ControlPlaneService";
 import { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
-import { registerAuthMiddleware } from "./auth/AuthMiddleware";
 import { DatabaseProvider } from "./database/DatabaseProvider";
 import { registerErrorHandler } from "./errors/RegisterErrorHandler";
 import { registerRoutes } from "./routes/index";
@@ -32,8 +31,6 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     });
 
     ControlPlaneService.install(context);
-
-    await registerAuthMiddleware(app);
 
     registerErrorHandler(app);
 

@@ -1,25 +1,32 @@
-import { z } from "zod";
-
+import {
+    IdParamsSchema,
+    InstanceSchema,
+    RouteErrorResponseSchema,
+    UpdateInstanceStatusBodySchema
+} from "@platform/shared";
 import { ControlPlaneService } from "../../../ControlPlaneService";
+import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 
-const InstanceStatusBodySchema = z.object({
-    status: z.enum(["pending", "running", "stopped", "failed"]),
-    containerId: z.string().min(1).optional(),
-    health: z.object({
-        healthy: z.boolean(),
-        checkedAt: z.string().min(1),
-        message: z.string().optional()
-    }).optional()
-});
 
 export const POST = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "Update instance status",
+        description: "Updates status, container, and health check data reported by the agent.",
+        tags: ["instances"],
+        operationId: "updateInstanceStatus",
+        params: IdParamsSchema,
+        body: UpdateInstanceStatusBodySchema,
+        response: {
+            200: InstanceSchema,
+            404: RouteErrorResponseSchema
+        }
+    },
     async handler(req, res) {
-        const routeParams = z.object({
-            id: z.string().min(1)
-        }).parse(req.params);
-        const body = InstanceStatusBodySchema.parse(req.body);
-        const updated = await ControlPlaneService.Store.updateInstance(routeParams.id, {
+        const { id } = req.params;
+        const body = req.body;
+        const updated = await ControlPlaneService.Store.updateInstance(id, {
             status: body.status,
             containerId: body.containerId,
             health: body.health
@@ -28,7 +35,7 @@ export const POST = defineRoute({
         if (!updated) {
             return res.status(404).send({
                 error: "not_found",
-                message: `Instância ${routeParams.id} não encontrada.`
+                message: `Instance ${id} not found.`
             });
         }
 

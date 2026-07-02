@@ -25,6 +25,19 @@ export function registerErrorHandler(app: FastifyInstance): void {
             };
         }
 
+        if (
+            typeof error === "object"
+            && error !== null
+            && "code" in error
+            && (error as { code: string }).code === "FST_ERR_VALIDATION"
+        ) {
+            reply.code(400);
+            return {
+                message: "Validation failed.",
+                details: (error as { validation?: unknown }).validation
+            };
+        }
+
         if (error instanceof Error && "issues" in error) {
             reply.code(400);
             return {

@@ -1,21 +1,34 @@
-import { z } from "zod";
-
 import { ApplyService } from "../../../services/ApplyService";
 import { ControlPlaneService } from "../../../ControlPlaneService";
+import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
+import {
+    LooseObjectSchema,
+    RevisionIdParamsSchema,
+    RouteErrorResponseSchema
+} from "@platform/shared";
 
 export const POST = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "Rollback GitOps revision",
+        description: "Reapplies a previous manifest revision in the cluster.",
+        tags: ["gitops"],
+        operationId: "rollbackGitOpsRevision",
+        params: RevisionIdParamsSchema,
+        response: {
+            200: LooseObjectSchema,
+            404: RouteErrorResponseSchema
+        }
+    },
     async handler(req, res) {
-        const routeParams = z.object({
-            revisionId: z.string().min(1)
-        }).parse(req.params);
-
-        const revision = await ControlPlaneService.GitOps.getRevision(routeParams.revisionId);
+        const { revisionId } = req.params;
+        const revision = await ControlPlaneService.GitOps.getRevision(revisionId);
 
         if (!revision) {
             return res.status(404).send({
                 error: "not_found",
-                message: `Revisão ${routeParams.revisionId} não encontrada.`
+                message: `Revision ${revisionId} not found.`
             });
         }
 

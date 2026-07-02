@@ -1,18 +1,22 @@
-import { z } from "zod";
-
 import { ApplyService } from "../services/ApplyService";
+import { AuthPreHandlers } from "../auth/AuthPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
-
-const ApplyBodySchema = z.object({
-    manifestYaml: z.string().min(1).optional(),
-    manifest: z.string().min(1).optional()
-}).refine((body) => body.manifestYaml !== undefined || body.manifest !== undefined, {
-    message: "manifestYaml or manifest is required."
-});
+import { ApplyManifestBodySchema, LooseObjectSchema } from "@platform/shared";
 
 export const POST = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "Apply manifest",
+        description: "Applies a YAML manifest to the cluster and dispatches the plan to agents.",
+        tags: ["apply"],
+        operationId: "applyManifest",
+        body: ApplyManifestBodySchema,
+        response: {
+            200: LooseObjectSchema
+        }
+    },
     async handler(req) {
-        const body = ApplyBodySchema.parse(req.body);
+        const body = req.body;
         const manifestYaml = body.manifestYaml ?? body.manifest ?? "";
         const result = await ApplyService.execute(manifestYaml);
 

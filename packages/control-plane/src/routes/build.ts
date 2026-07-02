@@ -1,24 +1,36 @@
-import { z } from "zod";
-
 import { AgentProxyError, AgentProxyService } from "../services/AgentProxyService";
 import { ControlPlaneService } from "../ControlPlaneService";
+import { AuthPreHandlers } from "../auth/AuthPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
+import {
+    BuildServiceBodySchema,
+    LooseObjectSchema,
+    RouteErrorResponseSchema
+} from "@platform/shared";
 
 export const POST = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "Trigger service build",
+        description: "Requests a service image build on a node with the builder capability.",
+        tags: ["build"],
+        operationId: "triggerServiceBuild",
+        body: BuildServiceBodySchema,
+        response: {
+            200: LooseObjectSchema,
+            404: RouteErrorResponseSchema,
+            503: RouteErrorResponseSchema
+        }
+    },
     async handler(req, res) {
-        const body = z.object({
-            serviceName: z.string().min(1),
-            provider: z.string().min(1).optional(),
-            registry: z.string().min(1).optional()
-        }).parse(req.body);
-
+        const { serviceName, provider, registry } = req.body;
         const services = await ControlPlaneService.Store.listServices();
-        const service = services.find((entry) => entry.name === body.serviceName);
+        const service = services.find((entry) => entry.name === serviceName);
 
         if (!service) {
             return res.status(404).send({
                 error: "not_found",
-                message: `Serviço ${body.serviceName} não encontrado.`
+                message: `Service ${serviceName} not found.`
             });
         }
 
@@ -28,15 +40,15 @@ export const POST = defineRoute({
         if (!builderNode?.agentUrl) {
             return res.status(503).send({
                 error: "builder_not_configured",
-                message: "Nenhum builder está configurado no cluster."
+                message: "No builder is configured in the cluster."
             });
         }
 
         try {
             const response = await AgentProxyService.postTask(builderNode.agentUrl, "/tasks/build", {
-                serviceName: body.serviceName,
-                provider: body.provider,
-                registry: body.registry
+                serviceName,
+                provider,
+                registry
             });
 
             return response;
@@ -50,7 +62,7 @@ export const POST = defineRoute({
 
             return res.status(503).send({
                 error: "builder_not_configured",
-                message: "Build remoto ainda não está implementado no agente."
+                message: "Remote build is not implemented on the agent yet."
             });
         }
     }

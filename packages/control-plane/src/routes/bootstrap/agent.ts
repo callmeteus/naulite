@@ -1,28 +1,37 @@
+import { z } from "zod";
+
 import {
     resolvePublicControlPlaneUrl,
     resolvePublicNetBirdManagementUrl
 } from "../../bootstrap/BootstrapUrls";
-import { ControlPlaneService } from "../../ControlPlaneService";
-import { HTTP401Error, HTTP403Error, HTTP503Error } from "../../errors/TreatedError";
+import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { HTTP503Error } from "../../errors/TreatedError";
 import { defineRoute } from "../../routing/DefineRoute";
+import {
+    AgentBootstrapResponseSchema,
+    RouteMessageResponseSchema
+} from "@platform/shared";
 
-const SETUP_KEY_SECRET_NAME = "netbird/setup-key";
+const AgentBootstrapHeadersSchema = z.object({
+    "x-platform-setup-key": z.string().min(1).optional()
+});
 
 export const GET = defineRoute({
+    preHandler: AuthPreHandlers.checkAgentSetupKey(),
+    schema: {
+        summary: "Agent bootstrap",
+        description: "Returns public control plane and NetBird URLs for agent enrollment.",
+        tags: ["bootstrap"],
+        operationId: "getAgentBootstrap",
+        headers: AgentBootstrapHeadersSchema,
+        response: {
+            200: AgentBootstrapResponseSchema,
+            401: RouteMessageResponseSchema,
+            403: RouteMessageResponseSchema,
+            503: RouteMessageResponseSchema
+        }
+    },
     async handler(req) {
-        const headerKey = req.headers["x-platform-setup-key"];
-        const setupKey = typeof headerKey === "string" ? headerKey.trim() : "";
-
-        if (!setupKey) {
-            throw new HTTP401Error("Missing setup key.");
-        }
-
-        const stored = await ControlPlaneService.Store.getClusterSecretValues(SETUP_KEY_SECRET_NAME);
-
-        if (!stored?.key || stored.key !== setupKey) {
-            throw new HTTP403Error("Invalid setup key.");
-        }
-
         const netbirdManagementUrl = resolvePublicNetBirdManagementUrl();
 
         if (!netbirdManagementUrl) {

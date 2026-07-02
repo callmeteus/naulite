@@ -101,3 +101,5 @@ export {
     CreatedApiKeySchema,
     CreateApiKeyBodySchema
 } from "./ApiKeySchema";
+
+export * from "./routes";

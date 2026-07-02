@@ -1,31 +1,33 @@
-import { z } from "zod";
-
 import { ApplyService } from "../../services/ApplyService";
 import { ControlPlaneService } from "../../ControlPlaneService";
+import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
-
-const GitOpsWebhookBodySchema = z.object({
-    repositoryUrl: z.string().url(),
-    branch: z.string().min(1).default("main"),
-    commitSha: z.string().min(1).optional(),
-    revision: z.string().min(1).optional(),
-    overlayPaths: z.array(z.string().min(1)).default([]),
-    manifestPath: z.string().min(1).default("compose.yaml")
-});
+import { GitOpsWebhookBodySchema, LooseObjectSchema } from "@platform/shared";
 
 export const POST = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "Webhook GitOps",
+        description: "Receives a repository event, checks out/merges, and applies the resulting manifest.",
+        tags: ["gitops"],
+        operationId: "handleGitOpsWebhook",
+        body: GitOpsWebhookBodySchema,
+        response: {
+            200: LooseObjectSchema
+        }
+    },
     async handler(req) {
-        const body = GitOpsWebhookBodySchema.parse(req.body);
+        const body = req.body;
         const manifestYaml = await ControlPlaneService.GitOps.checkoutAndMerge({
             repositoryUrl: body.repositoryUrl,
-            branch: body.branch,
+            branch: body.branch ?? "main",
             commitSha: body.commitSha ?? body.revision,
-            overlayPaths: body.overlayPaths
+            overlayPaths: body.overlayPaths ?? []
         });
 
         const applyResult = await ApplyService.execute(manifestYaml, {
             repositoryUrl: body.repositoryUrl,
-            branch: body.branch,
+            branch: body.branch ?? "main",
             commitSha: body.commitSha ?? body.revision
         });
 

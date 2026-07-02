@@ -1,21 +1,31 @@
 import { z } from "zod";
 
+import { InstanceListQuerySchema, InstanceSchema } from "@platform/shared";
 import { ControlPlaneService } from "../ControlPlaneService";
+import { AuthPreHandlers } from "../auth/AuthPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
 
 export const GET = defineRoute({
+    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "List instances",
+        description: "Lists service instances with optional service or node filters.",
+        tags: ["instances"],
+        operationId: "listInstances",
+        querystring: InstanceListQuerySchema,
+        response: {
+            200: z.array(InstanceSchema)
+        }
+    },
     async handler(req) {
-        const query = z.object({
-            serviceName: z.string().min(1).optional(),
-            nodeId: z.string().min(1).optional()
-        }).parse(req.query);
+        const { serviceName, nodeId } = req.query;
         return (await ControlPlaneService.Store.listInstances())
             .filter((instance) => {
-                if (query.serviceName && instance.serviceName !== query.serviceName) {
+                if (serviceName && instance.serviceName !== serviceName) {
                     return false;
                 }
 
-                if (query.nodeId && instance.nodeId !== query.nodeId) {
+                if (nodeId && instance.nodeId !== nodeId) {
                     return false;
                 }
 
