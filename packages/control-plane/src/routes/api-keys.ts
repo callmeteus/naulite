@@ -13,7 +13,7 @@ function isLocalRequest(request: FastifyRequest): boolean {
 }
 
 /**
- * Registers API key management routes for the admin panel.
+ * Registers API key management routes (internal - consumed by the admin API).
  * 
  * @param app Fastify application instance
  * @returns Nothing.
@@ -28,12 +28,7 @@ export async function registerApiKeyRoutes(app: FastifyInstance): Promise<void> 
         return app.controlPlane.store.listApiKeys();
     });
 
-    app.post("/api-keys", async (request, reply) => {
-        if (!isLocalRequest(request)) {
-            reply.code(403);
-            return { message: "API keys can only be created from the control plane host." };
-        }
-
+    app.post("/api-keys", async (request) => {
         const body = CreateApiKeyBodySchema.parse(request.body);
         return app.controlPlane.store.createApiKey(body.name);
     });

@@ -2,7 +2,10 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 const ApplyBodySchema = z.object({
-    manifestYaml: z.string().min(1)
+    manifestYaml: z.string().min(1).optional(),
+    manifest: z.string().min(1).optional()
+}).refine((body) => body.manifestYaml !== undefined || body.manifest !== undefined, {
+    message: "manifestYaml or manifest is required."
 });
 
 /**
@@ -14,7 +17,8 @@ const ApplyBodySchema = z.object({
 export async function registerApplyRoutes(app: FastifyInstance): Promise<void> {
     app.post("/apply", async (request) => {
         const body = ApplyBodySchema.parse(request.body);
-        const manifest = app.controlPlane.composeParser.parse(body.manifestYaml);
+        const manifestYaml = body.manifestYaml ?? body.manifest ?? "";
+        const manifest = app.controlPlane.composeParser.parse(manifestYaml);
         const [services, instances, volumes, nodes] = await Promise.all([
             app.controlPlane.store.listServices(),
             app.controlPlane.store.listInstances(),
@@ -72,7 +76,7 @@ export async function registerApplyRoutes(app: FastifyInstance): Promise<void> {
                 branch: "main",
                 commitSha: `rev-${app.controlPlane.applyRevision}`
             },
-            body.manifestYaml,
+            body.manifestYaml ?? body.manifest ?? "",
             manifest
         );
 

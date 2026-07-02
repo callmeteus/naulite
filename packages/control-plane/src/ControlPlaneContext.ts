@@ -1,18 +1,18 @@
 import { PluginRegistry } from "@platform/shared";
 
-import type { DatabaseProvider } from "./database/DatabaseProvider.js";
 import { ControlPlaneStore } from "./database/ControlPlaneStore.js";
-import { GitOpsService } from "./gitops/GitOpsService.js";
+import type { DatabaseProvider } from "./database/DatabaseProvider.js";
+import { GitOpsService } from "./services/GitOpsService.js";
+import { createNetBirdService } from "./services/CreateNetBirdService.js";
+import type { NetBirdService } from "./services/NetBirdService.js";
 import { ComposeParser } from "./orchestration/ComposeParser.js";
 import { ExposurePlanner } from "./orchestration/ExposurePlanner.js";
 import { Planner } from "./orchestration/Planner.js";
 import { Scheduler } from "./orchestration/Scheduler.js";
 import { PluginLoader } from "./plugins/PluginLoader.js";
-import { BackupScheduler } from "./schedulers/BackupScheduler.js";
-import { LogRotationScheduler } from "./schedulers/LogRotationScheduler.js";
-import { ControlPlaneSync } from "./sync/ControlPlaneSync.js";
-import type { NetBirdService } from "./netbird/NetBirdService.js";
-import { createNetBirdService } from "./netbird/createNetBirdService.js";
+import { BackupScheduler } from "./services/BackupScheduler.js";
+import { LogRotationScheduler } from "./services/LogRotationScheduler.js";
+import { ControlPlaneSync } from "./services/ControlPlaneSync.js";
 
 /**
  * Shared control plane application context.
@@ -47,16 +47,16 @@ export function createControlPlaneContext(
 ): ControlPlaneContext {
     return {
         databaseProvider,
-        store: new ControlPlaneStore(databaseProvider),
+        store: new ControlPlaneStore(),
         pluginRegistry: new PluginRegistry(),
         pluginLoader: new PluginLoader(packagesDir),
         composeParser: new ComposeParser(),
         planner: new Planner(),
         scheduler: new Scheduler(),
         exposurePlanner: new ExposurePlanner(),
-        gitOpsService: new GitOpsService(databaseProvider),
-        backupScheduler: new BackupScheduler(databaseProvider),
-        logRotationScheduler: new LogRotationScheduler(databaseProvider),
+        gitOpsService: new GitOpsService(),
+        backupScheduler: new BackupScheduler(),
+        logRotationScheduler: new LogRotationScheduler(),
         controlPlaneSync: new ControlPlaneSync(databaseProvider),
         netBirdService: createNetBirdService(),
         applyRevision: 0

@@ -22,7 +22,7 @@ export interface DatabaseMigrationResult {
 }
 
 /**
- * Database provider contract abstracting SQLite and PostgreSQL via Drizzle.
+ * Database provider contract abstracting SQLite and PostgreSQL via Sequelize.
  */
 export interface DatabaseProvider {
     /**

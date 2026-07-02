@@ -1,11 +1,15 @@
 name: platform
-  
+
+include:
+    - path: infra/netbird/docker-compose.yml
+      project_directory: infra/netbird
+
 platform:
     version: 0.1.0
     plugins:
         enabled:
             - s3
-  
+
 services:
     postgres:
         image: postgres:16-alpine
@@ -23,7 +27,7 @@ services:
             retries: 10
         ports:
             - "5432:5432"
-  
+
     minio:
         image: minio/minio:latest
         restart: unless-stopped
@@ -36,7 +40,7 @@ services:
         ports:
             - "9000:9000"
             - "9001:9001"
-  
+
     control-plane-1:
         build:
             context: .
@@ -45,9 +49,14 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+            netbird-server:
+                condition: service_started
         environment:
             NODE_ENV: production
             DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
+            NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
+            NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
+            NETBIRD_TOKEN: ${NETBIRD_TOKEN:-}
             CP_INSTANCE_ID: cp-1
             CP_PEER_URLS: http://control-plane-2:8080
             CP_PLUGINS: s3
@@ -57,7 +66,10 @@ services:
             - "8080:8080"
         volumes:
             - cp-data-1:/var/lib/platform
-  
+        networks:
+            - default
+            - netbird
+
     control-plane-2:
         build:
             context: .
@@ -66,9 +78,14 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+            netbird-server:
+                condition: service_started
         environment:
             NODE_ENV: production
             DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
+            NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
+            NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
+            NETBIRD_TOKEN: ${NETBIRD_TOKEN:-}
             CP_INSTANCE_ID: cp-2
             CP_PEER_URLS: http://control-plane-1:8080
             CP_PLUGINS: s3
@@ -78,19 +95,34 @@ services:
             - "8081:8080"
         volumes:
             - cp-data-2:/var/lib/platform
-  
-    ui:
+        networks:
+            - default
+            - netbird
+
+    ui-backend:
         build:
             context: .
-            dockerfile: packages/ui/Dockerfile
+            dockerfile: packages/ui/packages/backend/Dockerfile
         restart: unless-stopped
         depends_on:
             - control-plane-1
         environment:
-            VITE_API_URL: http://localhost:8080
+            NODE_ENV: production
+            CONTROL_PLANE_URL: http://control-plane-1:8080
+            ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+
+    ui:
+        build:
+            context: .
+            dockerfile: packages/ui/Dockerfile
+            args:
+                VITE_ADMIN_API_URL: /api
+        restart: unless-stopped
+        depends_on:
+            - ui-backend
         ports:
             - "3000:80"
-  
+
 volumes:
     pgdata:
     minio-data:

@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const Io = std.Io;
+
 pub const Credentials = struct {
     api_key: ?[]const u8 = null,
     cp_host: ?[]const u8 = null,
@@ -17,20 +19,29 @@ pub const Credentials = struct {
 };
 
 /// Returns the default credentials file path for the current user.
-pub fn credentialsPath(allocator: std.mem.Allocator) ![]const u8 {
-    const home = std.posix.getenv("USERPROFILE") orelse std.posix.getenv("HOME") orelse ".";
+pub fn credentialsPath(
+    allocator: std.mem.Allocator,
+    environ_map: *const std.process.Environ.Map,
+) ![]const u8 {
+    const home = environ_map.get("USERPROFILE") orelse environ_map.get("HOME") orelse ".";
     return std.fs.path.join(allocator, &.{ home, ".platform", "credentials.json" });
 }
 
 /// Loads saved CLI credentials when the file exists.
-pub fn load(allocator: std.mem.Allocator) !?Credentials {
-    const file_path = try credentialsPath(allocator);
+pub fn load(
+    allocator: std.mem.Allocator,
+    io: Io,
+    environ_map: *const std.process.Environ.Map,
+) !?Credentials {
+    const file_path = try credentialsPath(allocator, environ_map);
     defer allocator.free(file_path);
 
-    const file = std.fs.cwd().openFile(file_path, .{}) catch return null;
-    defer file.close();
+    var read_buffer: [4096]u8 = undefined;
+    const file = std.Io.Dir.cwd().openFile(io, file_path, .{}) catch return null;
+    defer file.close(io);
 
-    const contents = try file.readToEndAlloc(allocator, 64 * 1024);
+    var file_reader = file.reader(io, &read_buffer);
+    const contents = try file_reader.interface.readAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(contents);
 
     var parsed = try std.json.parseFromSlice(
@@ -53,26 +64,36 @@ pub fn load(allocator: std.mem.Allocator) !?Credentials {
 }
 
 /// Persists CLI credentials for remote control plane access.
-pub fn save(allocator: std.mem.Allocator, credentials: Credentials) !void {
-    const file_path = try credentialsPath(allocator);
+pub fn save(
+    allocator: std.mem.Allocator,
+    io: Io,
+    environ_map: *const std.process.Environ.Map,
+    credentials: Credentials,
+) !void {
+    const file_path = try credentialsPath(allocator, environ_map);
     defer allocator.free(file_path);
 
     if (std.fs.path.dirname(file_path)) |parent| {
-        try std.fs.cwd().makePath(parent);
+        try std.Io.Dir.cwd().createDirPath(io, parent);
     }
 
-    var body = std.ArrayList(u8).init(allocator);
-    defer body.deinit();
-
-    try std.json.stringify(.{
+    const json_body = try std.json.Stringify.valueAlloc(allocator, .{
         .apiKey = credentials.api_key,
         .cpHost = credentials.cp_host,
         .cpPort = credentials.cp_port,
-    }, .{}, body.writer());
+    }, .{});
+    defer allocator.free(json_body);
 
-    try body.append('\n');
+    var payload: std.ArrayList(u8) = .empty;
+    defer payload.deinit(allocator);
+    try payload.appendSlice(allocator, json_body);
+    try payload.append(allocator, '\n');
 
-    const file = try std.fs.cwd().createFile(file_path, .{ .truncate = true });
-    defer file.close();
-    try file.writeAll(body.items);
+    var write_buffer: [4096]u8 = undefined;
+    const file = try std.Io.Dir.cwd().createFile(io, file_path, .{ .truncate = true });
+    defer file.close(io);
+
+    var file_writer = file.writer(io, &write_buffer);
+    try file_writer.interface.writeAll(payload.items);
+    try file_writer.interface.flush();
 }

@@ -23,6 +23,6 @@ export default tseslint.config(
         }
     },
     {
-        ignores: ["**/dist/**", "**/node_modules/**", "packages/ui/dist/**"]
+        ignores: ["**/dist/**", "**/node_modules/**", "packages/ui/packages/frontend/dist/**"]
     }
 );

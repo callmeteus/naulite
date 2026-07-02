@@ -23,7 +23,7 @@ Pods, ReplicaSets, DaemonSets, StatefulSets, CRDs, Operators, Admission Controll
 | `shared` | Zod schemas, domain types, provider interfaces, plugin registry |
 | `cli` | Zig CLI (`zig build`); NPM wrapper in `bin/platform.js`; strings in `zig/src/i18n.zig` |
 | `sdk` | Typed HTTP client for control plane routes |
-| `ui` | Web dashboard; strings in `src/ui/en.json` |
+| `ui` | Web dashboard (`ui-frontend` + `ui-backend` BFF); strings in `packages/ui/packages/frontend/src/ui/en.json` |
 | `control-plane` | Fastify API, database, orchestration, GitOps, schedulers |
 | `agent` | Zig executor on each node |
 | `runtime-docker`, `runtime-podman`, `runtime-containerd`, `builders`, `gateway`, `volumes`, `secrets`, `registries`, `backups`, `log-rotation` | Core providers |
@@ -78,7 +78,7 @@ See `docs/backups.md` and `docs/log-rotation.md`.
 
 ## Communication and database
 
-- Control plane REST API for CLI, UI, GitOps, and agents.
+- Control plane REST API for CLI, agents, GitOps, and the admin BFF.
 - SQLite for single-node dev; PostgreSQL for HA multi-control-plane deployments.
 - Multi-CP sync uses PostgreSQL events and shared state.
 

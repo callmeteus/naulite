@@ -1,0 +1,22 @@
+{
+    "name": "@platform/ui-backend",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "main": "./dist/Server.js",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "lint": "eslint src/",
+        "start": "node dist/Server.js",
+        "dev": "tsc -p tsconfig.json && node dist/Server.js"
+    },
+    "dependencies": {
+        "@platform/sdk": "0.1.0",
+        "@platform/shared": "0.1.0",
+        "fastify": "^5.2.0",
+        "zod": "^3.24.1"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.2"
+    }
+}

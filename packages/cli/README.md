@@ -6,11 +6,12 @@ See [CONTEXT.md](../../CONTEXT.md) for architecture and [PROGRESS.md](../../PROG
 
 ## Install
 
-Requires [Zig](https://ziglang.org/) 0.13+ to build the binary.
+Requires [Zig](https://ziglang.org/) **0.14+** (tested with 0.17 at `C:\zig`) to build the binary.
 
 ```bash
 cd packages/cli
 zig build
+# Windows: zig-out\bin\platform.exe
 ./zig-out/bin/platform cluster status get
 ```
 

@@ -15,15 +15,17 @@ pub const Response = struct {
 
 pub const Client = struct {
     allocator: std.mem.Allocator,
+    io: std.Io,
     config: Config,
     http: std.http.Client,
 
     /// Creates a control plane HTTP client.
-    pub fn init(allocator: std.mem.Allocator, config: Config) Client {
+    pub fn init(allocator: std.mem.Allocator, io: std.Io, config: Config) Client {
         return .{
             .allocator = allocator,
+            .io = io,
             .config = config,
-            .http = .{ .allocator = allocator },
+            .http = .{ .allocator = allocator, .io = io },
         };
     }
 
@@ -57,13 +59,17 @@ pub const Client = struct {
         defer self.allocator.free(url);
 
         const uri = try std.Uri.parse(url);
+        const method_enum = std.meta.stringToEnum(std.http.Method, method) orelse return ApiError.HttpRequestFailed;
 
-        var headers = std.ArrayList(std.http.Header).init(self.allocator);
-        defer headers.deinit();
+        var extra_headers: [4]std.http.Header = undefined;
+        var header_count: usize = 0;
 
-        try headers.append(.{ .name = "Accept", .value = "application/json" });
+        extra_headers[header_count] = .{ .name = "Accept", .value = "application/json" };
+        header_count += 1;
+
         if (body != null) {
-            try headers.append(.{ .name = "Content-Type", .value = "application/json" });
+            extra_headers[header_count] = .{ .name = "Content-Type", .value = "application/json" };
+            header_count += 1;
         }
 
         var auth_value: ?[]u8 = null;
@@ -71,44 +77,35 @@ pub const Client = struct {
 
         if (self.config.token) |token| {
             auth_value = try std.fmt.allocPrint(self.allocator, "Bearer {s}", .{token});
-            try headers.append(.{ .name = "Authorization", .value = auth_value.? });
+            extra_headers[header_count] = .{ .name = "Authorization", .value = auth_value.? };
+            header_count += 1;
         }
 
-        const owned_headers = try headers.toOwnedSlice();
-        defer self.allocator.free(owned_headers);
+        const response_buffer = try self.allocator.alloc(u8, 16 * 1024 * 1024);
+        defer self.allocator.free(response_buffer);
 
-        const method_enum = std.meta.stringToEnum(std.http.Method, method) orelse return ApiError.HttpRequestFailed;
+        var response_writer = std.Io.Writer.fixed(response_buffer);
 
-        var req = try self.http.open(method_enum, uri, .{
-            .extra_headers = owned_headers,
-        }, .{
-            .redirect_behavior = .unhandled,
-        });
-        defer req.deinit();
+        const result = std.http.Client.fetch(&self.http, .{
+            .location = .{ .uri = uri },
+            .method = method_enum,
+            .payload = body,
+            .extra_headers = extra_headers[0..header_count],
+            .response_writer = &response_writer,
+        }) catch {
+            return ApiError.HttpRequestFailed;
+        };
 
-        if (body) |payload| {
-            try req.send(payload);
-        } else {
-            try req.send();
-        }
-
-        try req.wait();
-
-        var response_body = std.ArrayList(u8).init(self.allocator);
-        defer response_body.deinit();
-
-        try req.reader().readAllArrayList(&response_body, 16 * 1024 * 1024);
-
-        const status: u16 = @intCast(req.response.status);
+        const status: u16 = @intFromEnum(result.status);
 
         if (status < 200 or status >= 300) {
-            std.log.err("[cli] api status=%d body={s}", .{ status, response_body.items });
+            std.log.err("[cli] api status={d} body={s}", .{ status, response_writer.buffered() });
             return ApiError.ApiError;
         }
 
         return .{
             .status = status,
-            .body = try self.allocator.dupe(u8, response_body.items),
+            .body = try self.allocator.dupe(u8, response_writer.buffered()),
         };
     }
 };

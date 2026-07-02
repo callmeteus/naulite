@@ -9,28 +9,20 @@ const credentials_mod = @import("credentials.zig");
 const control_plane_client = @import("control_plane_client.zig");
 
 const resolve_mod = @import("resolve.zig");
+const io_output = @import("io_output.zig");
 
 
 
-pub fn main() !void {
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-
-    defer _ = gpa.deinit();
-
-    const allocator = gpa.allocator();
-
-
-
-    const args = try std.process.argsAlloc(allocator);
-
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    io_output.bind(init.io);
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
 
 
     if (args.len < 2) {
 
-        try printUsage(std.io.getStdErr().writer());
+        try printUsage(io_output.stderrWriter());
 
         return error.InvalidArgument;
 
@@ -88,7 +80,7 @@ pub fn main() !void {
 
         if (std.mem.eql(u8, args[index], "--help") or std.mem.eql(u8, args[index], "-h")) {
 
-            try printUsage(std.io.getStdOut().writer());
+            try printUsage(io_output.stdoutWriter());
 
             return;
 
@@ -102,7 +94,7 @@ pub fn main() !void {
 
     if (index >= args.len) {
 
-        try printUsage(std.io.getStdErr().writer());
+        try printUsage(io_output.stderrWriter());
 
         return error.InvalidArgument;
 
@@ -112,7 +104,7 @@ pub fn main() !void {
 
     if (std.mem.eql(u8, args[index], "login")) {
 
-        try handleLogin(allocator, args[index..]);
+        try handleLogin(allocator, init.io, init.environ_map, args[index..]);
 
         return;
 
@@ -120,13 +112,13 @@ pub fn main() !void {
 
 
 
-    const resolved = try resolve_mod.resolve(allocator, url_override, cp_override, port_override);
+    const resolved = try resolve_mod.resolve(allocator, init.io, init.environ_map, url_override, cp_override, port_override);
 
     defer resolved.config.deinit(allocator);
 
 
 
-    var client = control_plane_client.Client.init(allocator, resolved.config);
+    var client = control_plane_client.Client.init(allocator, init.io, resolved.config);
 
     defer client.deinit();
 
@@ -146,7 +138,12 @@ pub fn main() !void {
 
 /// Saves remote control plane credentials for NetBird access.
 
-fn handleLogin(allocator: std.mem.Allocator, argv: []const []const u8) !void {
+fn handleLogin(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    environ_map: *const std.process.Environ.Map,
+    argv: []const []const u8,
+) !void {
 
     var cp_host: ?[]const u8 = null;
 
@@ -206,7 +203,7 @@ fn handleLogin(allocator: std.mem.Allocator, argv: []const []const u8) !void {
 
 
 
-    var existing = try credentials_mod.load(allocator);
+    var existing = try credentials_mod.load(allocator, io, environ_map);
 
     defer if (existing) |*credentials| credentials.deinit(allocator);
 
@@ -216,7 +213,7 @@ fn handleLogin(allocator: std.mem.Allocator, argv: []const []const u8) !void {
 
 
 
-    try credentials_mod.save(allocator, .{
+    try credentials_mod.save(allocator, io, environ_map, .{
 
         .api_key = api_key,
 
@@ -228,7 +225,7 @@ fn handleLogin(allocator: std.mem.Allocator, argv: []const []const u8) !void {
 
 
 
-    const stdout = std.io.getStdOut().writer();
+    const stdout = io_output.stdoutWriter();
 
     try stdout.writeAll("Credentials saved.\n");
 
@@ -246,7 +243,7 @@ fn dispatch(allocator: std.mem.Allocator, client: *control_plane_client.Client, 
 
     if (!std.mem.eql(u8, argv[0], "cluster")) {
 
-        try printUsage(std.io.getStdErr().writer());
+        try printUsage(io_output.stderrWriter());
 
         return error.InvalidArgument;
 
@@ -347,7 +344,7 @@ fn dispatch(allocator: std.mem.Allocator, client: *control_plane_client.Client, 
         return try runVoid(commands.restoreBackup(allocator, client, argv[3]));
     }
 
-    try printUsage(std.io.getStdErr().writer());
+    try printUsage(io_output.stderrWriter());
     return error.InvalidArgument;
 }
 

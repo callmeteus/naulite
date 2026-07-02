@@ -1,20 +1,31 @@
-# @platform/ui
+# Platform UI
 
-Minimal Vue 3 dashboard for the Platform control plane.
+Web dashboard for Platform. Split into a Vue frontend and a Fastify admin API (BFF).
 
-See [CONTEXT.md](../../CONTEXT.md) for architecture and [PROGRESS.md](../../PROGRESS.md) for current development status.
+## Packages
+
+| Package | Path | Role |
+|---------|------|------|
+| `@platform/ui-frontend` | `packages/frontend` | Vue 3 SPA served by nginx |
+| `@platform/ui-backend` | `packages/backend` | Admin API; calls control plane with service credentials |
+
+The browser talks only to `/api` on the UI host. nginx proxies that to `ui-backend`, which calls the control plane over the Docker network with `ADMIN_API_KEY`.
 
 ## Development
 
 ```bash
-yarn dev
+# Terminal 1 - control plane
+yarn workspace @platform/control-plane start
+
+# Terminal 2 - admin API
+yarn workspace @platform/ui-backend dev
+
+# Terminal 3 - frontend
+yarn workspace @platform/ui-frontend dev
 ```
 
-Set `PLATFORM_CP_URL` to point the Vite proxy at your control plane instance.
+Vite proxies `/api` to `http://localhost:3001` (admin API). Local dev against a loopback control plane does not require `ADMIN_API_KEY`.
 
-## Views
+## Docker
 
-- Nodes
-- Services
-- Deploy
-- Backups
+Root `docker-compose.yml` runs `ui-backend` and `ui` (nginx + static frontend). Set `ADMIN_API_KEY` in `.env` to a control plane API key when the backend cannot reach the CP via loopback.

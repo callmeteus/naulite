@@ -1,26 +1,60 @@
 {
+
     "name": "@platform/control-plane",
+
     "version": "0.1.0",
+
     "private": true,
+
     "type": "module",
+
     "main": "./dist/index.js",
+
     "types": "./dist/index.d.ts",
+
     "scripts": {
+
         "build": "tsc -p tsconfig.json",
+
         "lint": "eslint src/",
+
         "start": "node dist/Server.js"
+
     },
+
     "dependencies": {
+
         "@platform/shared": "0.1.0",
-        "@libsql/client": "^0.14.0",
-        "drizzle-orm": "^0.38.3",
+
         "fastify": "^5.2.0",
+
         "pg": "^8.13.1",
+
+        "pg-hstore": "^2.3.4",
+
+        "reflect-metadata": "^0.2.2",
+
+        "sequelize": "^6.37.5",
+
+        "sequelize-typescript": "^2.1.6",
+
+        "sqlite3": "^5.1.7",
+
         "yaml": "^2.7.0",
+
         "zod": "^3.24.1"
+
     },
+
     "devDependencies": {
+
         "@types/pg": "^8.11.10",
+
+        "@types/validator": "^13.12.2",
+
         "typescript": "^5.7.2"
+
     }
+
 }
+

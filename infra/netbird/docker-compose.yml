@@ -1,0 +1,33 @@
+services:
+    dashboard:
+        image: netbirdio/dashboard:latest
+        container_name: netbird-dashboard
+        restart: unless-stopped
+        networks:
+            - netbird
+        env_file:
+            - dashboard.env
+        ports:
+            - "${NETBIRD_DASHBOARD_PORT:-9080}:80"
+
+    netbird-server:
+        image: netbirdio/netbird-server:latest
+        container_name: netbird-server
+        restart: unless-stopped
+        networks:
+            - netbird
+        ports:
+            - "${NETBIRD_SERVER_PORT:-9081}:80"
+            - "3478:3478/udp"
+        volumes:
+            - netbird_data:/var/lib/netbird
+            - ./config.yaml:/etc/netbird/config.yaml
+        command:
+            - --config
+            - /etc/netbird/config.yaml
+
+volumes:
+    netbird_data:
+
+networks:
+    netbird:

@@ -1,5 +1,10 @@
 import { ManifestSchema, type Manifest, type ManifestService, type NetworkExposure } from "@platform/shared";
 import { parse as parseYaml } from "yaml";
+import { ZodError } from "zod";
+
+import { InvalidManifestDocumentError } from "../errors/orchestration/compose/InvalidManifestDocumentError.js";
+import { ManifestValidationError } from "../errors/orchestration/compose/ManifestValidationError.js";
+import { YamlParseError } from "../errors/orchestration/compose/YamlParseError.js";
 
 /**
  * Parsed compose document before manifest validation.
@@ -25,10 +30,16 @@ export class ComposeParser {
      * @returns Validated platform manifest
      */
     parse(yamlContent: string): Manifest {
-        const document = parseYaml(yamlContent) as RawComposeDocument | null;
+        let document: RawComposeDocument | null;
 
-        if (!document || typeof document !== "object") {
-            throw new Error("Manifest YAML must contain a top-level object.");
+        try {
+            document = parseYaml(yamlContent) as RawComposeDocument | null;
+        } catch (err) {
+            throw new YamlParseError(err);
+        }
+
+        if (!document || typeof document !== "object" || Array.isArray(document)) {
+            throw new InvalidManifestDocumentError();
         }
 
         const manifestName = document.name ?? "default";
@@ -48,7 +59,15 @@ export class ComposeParser {
             defaults: ComposeParser.mapDefaults(document.defaults ?? document.xPlatform?.defaults as Record<string, unknown> | undefined)
         };
 
-        return ManifestSchema.parse(manifestCandidate);
+        try {
+            return ManifestSchema.parse(manifestCandidate);
+        } catch (err) {
+            if (err instanceof ZodError) {
+                throw new ManifestValidationError(err.issues);
+            }
+
+            throw err;
+        }
     }
 
     /**

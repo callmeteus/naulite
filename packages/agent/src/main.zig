@@ -4,9 +4,9 @@ const http_server = @import("http_server.zig");
 const netbird = @import("netbird.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var safe_allocator: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
     const os = bootstrap.detectOsFamily();
     std.log.info("[agent] starting os={s}", .{@tagName(os)});

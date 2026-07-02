@@ -4,93 +4,35 @@ import type {
     DatabaseMigrationResult,
     DatabaseProvider as DatabaseProviderContract
 } from "@platform/shared";
-import { createClient, type Client } from "@libsql/client";
-import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
-import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
-import { sql } from "drizzle-orm";
-import { Pool } from "pg";
-import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { Sequelize } from "sequelize-typescript";
 
-import { getSchemaForDialect } from "./schema.js";
-import { postgresSchema } from "./schema.pg.js";
-import { sqliteSchema } from "./schema.sqlite.js";
-
-const moduleDir = dirname(fileURLToPath(import.meta.url));
+import { controlPlaneModels } from "./models/index.js";
 
 /**
- * Drizzle database handle for SQLite.
- */
-export type SqliteDb = ReturnType<typeof drizzleLibsql<typeof sqliteSchema>>;
-
-/**
- * Drizzle database handle for PostgreSQL.
- */
-export type PgDb = ReturnType<typeof drizzlePg<typeof postgresSchema>>;
-
-/**
- * Drizzle database handle for either SQLite or PostgreSQL.
- */
-export type ControlPlaneDb = SqliteDb | PgDb;
-
-/**
- * Control plane database provider backed by Drizzle ORM.
+ * Control plane database provider backed by Sequelize ORM.
  */
 export class DatabaseProvider implements DatabaseProviderContract {
     private dialect: DatabaseDialect = "sqlite";
-    private sqliteDb: SqliteDb | null = null;
-    private pgDb: PgDb | null = null;
-    private sqliteClient: Client | null = null;
-    private pgPool: Pool | null = null;
-    private appliedMigrations: string[] = [];
+    private sequelize: Sequelize | null = null;
 
     /**
-     * Returns the active Drizzle database handle.
-     * 
-     * @returns Connected Drizzle database instance
+     * Returns the active Sequelize instance.
+     *
+     * @returns Connected Sequelize instance
      */
-    getDb(): ControlPlaneDb {
-        if (this.sqliteDb) {
-            return this.sqliteDb;
+    getSequelize(): Sequelize {
+        if (!this.sequelize) {
+            throw new Error("Database is not connected.");
         }
 
-        if (this.pgDb) {
-            return this.pgDb;
-        }
-
-        throw new Error("Database is not connected.");
-    }
-
-    /**
-     * Returns the SQLite Drizzle handle.
-     * 
-     * @returns SQLite Drizzle database instance
-     */
-    getSqliteDb(): SqliteDb {
-        if (!this.sqliteDb) {
-            throw new Error("SQLite database is not connected.");
-        }
-
-        return this.sqliteDb;
-    }
-
-    /**
-     * Returns the PostgreSQL Drizzle handle.
-     * 
-     * @returns PostgreSQL Drizzle database instance
-     */
-    getPgDb(): PgDb {
-        if (!this.pgDb) {
-            throw new Error("PostgreSQL database is not connected.");
-        }
-
-        return this.pgDb;
+        return this.sequelize;
     }
 
     /**
      * Returns the active database dialect.
-     * 
+     *
      * @returns Configured database dialect
      */
     getDialect(): DatabaseDialect {
@@ -99,7 +41,7 @@ export class DatabaseProvider implements DatabaseProviderContract {
 
     /**
      * Opens a connection pool to the configured database.
-     * 
+     *
      * @param options Database connection options
      * @returns Nothing.
      */
@@ -107,97 +49,70 @@ export class DatabaseProvider implements DatabaseProviderContract {
         this.dialect = options.dialect;
 
         if (options.dialect === "postgresql") {
-            this.pgPool = new Pool({
-                connectionString: options.url,
-                max: options.maxConnections ?? 10,
-                ssl: options.ssl ? { rejectUnauthorized: false } : undefined
+            this.sequelize = new Sequelize(options.url, {
+                dialect: "postgres",
+                models: controlPlaneModels,
+                logging: false,
+                pool: {
+                    max: options.maxConnections ?? 10
+                },
+                dialectOptions: options.ssl
+                    ? { ssl: { rejectUnauthorized: false } }
+                    : undefined
             });
-            this.pgDb = drizzlePg(this.pgPool, { schema: postgresSchema });
+            await this.sequelize.authenticate();
             return;
         }
 
-        const libsqlUrl = DatabaseProvider.toLibsqlUrl(options.url);
-        const databasePath = libsqlUrl.replace(/^file:/, "");
-        const parentDir = dirname(databasePath);
+        const storage = DatabaseProvider.resolveSqliteStoragePath(options.url);
+        const parentDir = dirname(storage);
 
         if (parentDir && parentDir !== "." && !existsSync(parentDir)) {
             mkdirSync(parentDir, { recursive: true });
         }
 
-        this.sqliteClient = createClient({ url: libsqlUrl });
-        this.sqliteDb = drizzleLibsql(this.sqliteClient, { schema: sqliteSchema });
+        this.sequelize = new Sequelize({
+            dialect: "sqlite",
+            storage,
+            models: controlPlaneModels,
+            logging: false
+        });
+        await this.sequelize.authenticate();
     }
 
     /**
      * Closes active database connections.
-     * 
+     *
      * @returns Nothing.
      */
     async disconnect(): Promise<void> {
-        if (this.pgPool) {
-            await this.pgPool.end();
-            this.pgPool = null;
+        if (this.sequelize) {
+            await this.sequelize.close();
+            this.sequelize = null;
         }
-
-        if (this.sqliteClient) {
-            this.sqliteClient.close();
-            this.sqliteClient = null;
-        }
-
-        this.sqliteDb = null;
-        this.pgDb = null;
     }
 
     /**
-     * Applies pending schema migrations.
-     * 
+     * Synchronizes Sequelize models with the database schema.
+     *
      * @returns Migration result summary
      */
     async migrate(): Promise<DatabaseMigrationResult> {
-        const migrationsFolder = join(moduleDir, "migrations", this.dialect);
-        const migrationFiles = DatabaseProvider.listMigrationFiles(migrationsFolder);
-        const pending: string[] = [];
-
-        for (const migrationFile of migrationFiles) {
-            if (this.appliedMigrations.includes(migrationFile)) {
-                continue;
-            }
-
-            const migrationSql = readFileSync(join(migrationsFolder, migrationFile), "utf8");
-            const statements = migrationSql
-                .split(";")
-                .map((statement) => statement.trim())
-                .filter((statement) => statement.length > 0);
-
-            for (const statement of statements) {
-                if (this.dialect === "postgresql") {
-                    await this.getPgDb().execute(sql.raw(statement));
-                } else if (this.sqliteClient) {
-                    await this.sqliteClient.execute(statement);
-                }
-            }
-
-            this.appliedMigrations.push(migrationFile);
-        }
-
+        await this.getSequelize().sync();
         return {
-            applied: this.appliedMigrations,
-            pending
+            applied: ["sequelize-sync"],
+            pending: []
         };
     }
 
     /**
      * Reports whether the database connection is healthy.
-     * 
+     *
      * @returns Whether the database is reachable
      */
     async healthCheck(): Promise<boolean> {
         try {
-            if (this.dialect === "postgresql") {
-                await this.getPgDb().execute(sql`SELECT 1`);
-            } else if (this.sqliteClient) {
-                await this.sqliteClient.execute("SELECT 1");
-            }
+            await this.getSequelize().authenticate();
             return true;
         } catch {
             return false;
@@ -206,7 +121,7 @@ export class DatabaseProvider implements DatabaseProviderContract {
 
     /**
      * Resolves default connection options from environment variables.
-     * 
+     *
      * @returns Database connection options
      */
     static resolveOptionsFromEnv(): DatabaseConnectionOptions {
@@ -230,49 +145,16 @@ export class DatabaseProvider implements DatabaseProviderContract {
     }
 
     /**
-     * Lists SQL migration files present for a dialect folder.
-     * 
-     * @param migrationsFolder Migration directory path
-     * @returns Sorted migration file names
+     * Converts sqlite connection URLs into filesystem storage paths.
+     *
+     * @param url SQLite connection URL
+     * @returns Filesystem path for sqlite storage
      */
-    /**
-     * Converts sqlite connection URLs into libsql file URLs.
-     * 
-     * @param url SQLite or libsql connection URL
-     * @returns libsql-compatible file URL
-     */
-    private static toLibsqlUrl(url: string): string {
+    private static resolveSqliteStoragePath(url: string): string {
         if (url.startsWith("file:")) {
-            return url;
+            return url.replace(/^file:/, "");
         }
 
-        const databasePath = url.replace(/^sqlite:\/\//, "");
-        return `file:${databasePath}`;
+        return url.replace(/^sqlite:\/\//, "");
     }
-
-    /**
-     * Lists SQL migration files present for a dialect folder.
-     * 
-     * @param migrationsFolder Migration directory path
-     * @returns Sorted migration file names
-     */
-    private static listMigrationFiles(migrationsFolder: string): string[] {
-        try {
-            return readdirSync(migrationsFolder)
-                .filter((entry) => entry.endsWith(".sql"))
-                .sort();
-        } catch {
-            return [];
-        }
-    }
-}
-
-/**
- * Returns the schema tables for the active dialect.
- * 
- * @param provider Connected database provider
- * @returns Drizzle schema tables
- */
-export function getActiveSchema(provider: DatabaseProvider) {
-    return getSchemaForDialect(provider.getDialect());
 }

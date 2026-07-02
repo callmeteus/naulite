@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ComposeParser } from "@platform/control-plane";
+import {
+    ComposeParser,
+    InvalidManifestDocumentError,
+    ManifestValidationError,
+    YamlParseError
+} from "@platform/control-plane";
 import { describe, expect, it } from "vitest";
 
 const fixturePath = path.resolve(
@@ -24,9 +29,32 @@ describe("ComposeParser", () => {
         expect(manifest.networks).toEqual({});
     });
 
-    it("throws when YAML content is not a top-level object", () => {
+    it("throws InvalidManifestDocumentError when YAML content is not a top-level object", () => {
+        expect(() => parser.parse("just a string")).toThrow(InvalidManifestDocumentError);
         expect(() => parser.parse("just a string")).toThrow(
             "Manifest YAML must contain a top-level object."
         );
+    });
+
+    it("throws InvalidManifestDocumentError when YAML content is a top-level array", () => {
+        expect(() => parser.parse("- item\n")).toThrow(InvalidManifestDocumentError);
+    });
+
+    it("throws YamlParseError when YAML syntax is invalid", () => {
+        expect(() => parser.parse("services:\n  web: [")).toThrow(YamlParseError);
+    });
+
+    it("throws ManifestValidationError when manifest schema validation fails", () => {
+        const yamlContent = [
+            "name: invalid",
+            "services:",
+            "  web:",
+            "    image: nginx:1.27-alpine",
+            "    ingress:",
+            "      exposure: internal",
+            "      paths: []"
+        ].join("\n");
+
+        expect(() => parser.parse(yamlContent)).toThrow(ManifestValidationError);
     });
 });

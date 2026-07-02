@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApp } from "./App.js";

@@ -27,11 +27,11 @@
 - `@platform/agent` (Zig): HTTP executor, bootstrap scripts, backup/log-rotation task handlers
 - Providers: runtime-docker, runtime-podman, runtime-containerd, volumes, secrets, registries, builders, gateway, backups, log-rotation, plugin-s3
 - `@platform/cli` + `@platform/sdk`: kubectl-style commands via typed HTTP client
-- `@platform/ui`: Vue 3 dashboard (nodes, services, deploy, backups)
+- `@platform/ui-frontend` / `@platform/ui-backend`: Vue 3 dashboard + Fastify admin BFF (nodes, services, deploy, backups)
 - Tests: 24 unit tests, e2e harness with `LocalTestCluster` (Docker-gated)
 - Examples: minimal, app-with-db, rushpedia overlays, minecraft, with-defaults
 - Dogfood: `docker-compose.yml` with HA control plane, Postgres, MinIO, UI
-- Replaced `better-sqlite3` with `@libsql/client` for cross-platform installs (no native build on Windows)
+- Control plane database uses **Sequelize** + **sequelize-typescript** (SQLite dev, PostgreSQL HA)
 
 ### 2026-07-02 - Monorepo foundation scaffold
 

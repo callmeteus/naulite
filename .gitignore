@@ -3,3 +3,4 @@ node_modules/
 dist/
 **/zig-out/
 packages/cli/native/
+**/.zig-cache/

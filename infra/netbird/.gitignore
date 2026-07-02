@@ -1,0 +1,8 @@
+config.yaml
+dashboard.env
+proxy.env
+traefik-dynamic.yaml
+nginx-netbird.conf
+caddyfile-netbird.txt
+npm-advanced-config.txt
+crowdsec/

@@ -17,7 +17,7 @@ pub const Mode = enum {
 const DEFAULT_PORT: u16 = 8080;
 
 /// Probes whether a local control plane responds on the given port.
-pub fn probeLocalControlPlane(allocator: std.mem.Allocator, port: u16) !bool {
+pub fn probeLocalControlPlane(allocator: std.mem.Allocator, io: std.Io, port: u16) !bool {
     const url_127 = try std.fmt.allocPrint(allocator, "http://127.0.0.1:{d}", .{port});
     defer allocator.free(url_127);
     const url_localhost = try std.fmt.allocPrint(allocator, "http://localhost:{d}", .{port});
@@ -26,7 +26,7 @@ pub fn probeLocalControlPlane(allocator: std.mem.Allocator, port: u16) !bool {
     const urls = [_][]const u8{ url_127, url_localhost };
 
     for (urls) |base_url| {
-        var client = Client.init(allocator, .{ .base_url = base_url, .token = null });
+        var client = Client.init(allocator, io, .{ .base_url = base_url, .token = null });
         defer client.deinit();
 
         const response = client.get("/health") catch continue;
@@ -44,11 +44,11 @@ fn buildBaseUrl(allocator: std.mem.Allocator, host: []const u8, port: u16) ![]co
     return std.fmt.allocPrint(allocator, "http://{s}:{d}", .{ host, port });
 }
 
-fn resolveApiKey(credentials: ?credentials_mod.Credentials) ?[]const u8 {
-    if (std.posix.getenv("PLATFORM_API_KEY")) |value| {
+fn resolveApiKey(environ_map: *const std.process.Environ.Map, credentials: ?credentials_mod.Credentials) ?[]const u8 {
+    if (environ_map.get("PLATFORM_API_KEY")) |value| {
         return value;
     }
-    if (std.posix.getenv("PLATFORM_TOKEN")) |value| {
+    if (environ_map.get("PLATFORM_TOKEN")) |value| {
         return value;
     }
     if (credentials) |saved| {
@@ -60,15 +60,17 @@ fn resolveApiKey(credentials: ?credentials_mod.Credentials) ?[]const u8 {
 /// Resolves the control plane URL and auth mode for CLI execution.
 pub fn resolve(
     allocator: std.mem.Allocator,
+    io: std.Io,
+    environ_map: *const std.process.Environ.Map,
     url_override: ?[]const u8,
     cp_override: ?[]const u8,
     port_override: ?u16,
 ) !ResolvedTarget {
-    var saved = try credentials_mod.load(allocator);
+    var saved = try credentials_mod.load(allocator, io, environ_map);
     defer if (saved) |*credentials| credentials.deinit(allocator);
 
     const port = port_override orelse if (saved) |credentials| credentials.cp_port else DEFAULT_PORT;
-    const api_key = resolveApiKey(saved);
+    const api_key = resolveApiKey(environ_map, saved);
 
     if (url_override) |url| {
         return .{
@@ -94,7 +96,7 @@ pub fn resolve(
         };
     }
 
-    if (std.posix.getenv("PLATFORM_CP_URL")) |env_url| {
+    if (environ_map.get("PLATFORM_CP_URL")) |env_url| {
         return .{
             .config = .{
                 .base_url = try Config.trimTrailingSlashOwned(allocator, env_url),
@@ -104,7 +106,7 @@ pub fn resolve(
         };
     }
 
-    if (try probeLocalControlPlane(allocator, port)) {
+    if (try probeLocalControlPlane(allocator, io, port)) {
         return .{
             .config = .{
                 .base_url = try buildBaseUrl(allocator, "127.0.0.1", port),

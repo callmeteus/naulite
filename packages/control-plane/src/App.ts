@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext.js";
 import { registerAuthMiddleware } from "./auth/AuthMiddleware.js";
 import { DatabaseProvider } from "./database/DatabaseProvider.js";
+import { ComposeParserError } from "./errors/orchestration/compose/ComposeParserError.js";
 import { registerRoutes } from "./routes/index.js";
 
 /**
@@ -34,6 +35,15 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     await registerAuthMiddleware(app);
 
     app.setErrorHandler((error, _request, reply) => {
+        if (error instanceof ComposeParserError) {
+            reply.code(error.statusCode);
+            return {
+                code: error.code,
+                message: error.message,
+                details: error.details
+            };
+        }
+
         if (error instanceof Error && "issues" in error) {
             reply.code(400);
             return {
