@@ -1,4 +1,4 @@
-import type { Instance, Node, Secret, Service, Volume, ApiKey } from "@platform/shared";
+import type { Instance, Node, NodeProvision, Secret, Service, Volume, ApiKey } from "@platform/shared";
 
 /**
  * JSON field helpers for sqlite text columns.
@@ -92,6 +92,7 @@ export namespace RowMapper {
         networks: unknown;
         ingress: unknown;
         logRotation: unknown;
+        deploySpec: unknown;
         lifecycleStatus: string | null;
         createdAt: string;
         updatedAt: string;
@@ -108,6 +109,7 @@ export namespace RowMapper {
             networks: JsonField.parse<string[]>(row.networks),
             ingress: JsonField.parse(row.ingress),
             logRotation: JsonField.parse(row.logRotation),
+            deploySpec: JsonField.parse(row.deploySpec),
             lifecycleStatus: row.lifecycleStatus as Service["lifecycleStatus"],
             createdAt: row.createdAt,
             updatedAt: row.updatedAt
@@ -233,6 +235,44 @@ export namespace RowMapper {
             createdAt: row.createdAt,
             lastUsedAt: row.lastUsedAt ?? undefined,
             revokedAt: row.revokedAt ?? undefined
+        };
+    }
+
+    /**
+     * Maps a node provision database row into a NodeProvision model.
+     *
+     * @param row Database row
+     * @returns Node provision model
+     */
+    export function nodeProvision(row: {
+        id: string;
+        provider: string;
+        cloudInstanceId: string | null;
+        status: string;
+        nodeId: string | null;
+        instanceType: string;
+        amiId: string;
+        labels: unknown;
+        capabilities: unknown;
+        region: string | null;
+        error: string | null;
+        createdAt: string;
+        updatedAt: string;
+    }): NodeProvision {
+        return {
+            id: row.id,
+            provider: row.provider,
+            cloudInstanceId: row.cloudInstanceId ?? undefined,
+            status: row.status as NodeProvision["status"],
+            nodeId: row.nodeId ?? undefined,
+            instanceType: row.instanceType,
+            amiId: row.amiId,
+            labels: JsonField.parse(row.labels),
+            capabilities: JsonField.parse<string[]>(row.capabilities),
+            region: row.region ?? undefined,
+            error: row.error ?? undefined,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt
         };
     }
 }

@@ -1,14 +1,40 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
 const store = useClusterStore();
+const volumeName = ref("");
 
 onMounted(() => {
     void store.refreshBackups();
 });
+
+/**
+ * Triggers a manual backup for the entered volume name.
+ *
+ * @returns Nothing.
+ */
+async function runBackup(): Promise<void> {
+    const trimmed = volumeName.value.trim();
+    if (!trimmed) {
+        return;
+    }
+
+    await store.runBackup(trimmed);
+    volumeName.value = "";
+}
+
+/**
+ * Restores a backup run by identifier.
+ *
+ * @param backupId Backup run identifier
+ * @returns Nothing.
+ */
+async function restoreBackup(backupId: string): Promise<void> {
+    await store.restoreBackup(backupId);
+}
 </script>
 
 <template>
@@ -17,6 +43,16 @@ onMounted(() => {
         <p v-if="store.loading">Loading...</p>
         <p v-else-if="store.error" class="error">{{ store.error }}</p>
         <div v-else class="panel">
+            <form class="actions" @submit.prevent="runBackup">
+                <input
+                    v-model="volumeName"
+                    type="text"
+                    :placeholder="t('backupVolumePlaceholder')"
+                />
+                <button type="submit" :disabled="store.loading || !volumeName.trim()">
+                    {{ t("runBackup") }}
+                </button>
+            </form>
             <table>
                 <thead>
                     <tr>
@@ -24,6 +60,7 @@ onMounted(() => {
                         <th>Volume</th>
                         <th>Status</th>
                         <th>Destination</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -32,6 +69,15 @@ onMounted(() => {
                         <td>{{ backup.volumeName }}</td>
                         <td>{{ backup.status }}</td>
                         <td>{{ backup.destination ?? "-" }}</td>
+                        <td>
+                            <button
+                                type="button"
+                                :disabled="store.loading || backup.status === 'running'"
+                                @click="restoreBackup(backup.id)"
+                            >
+                                {{ t("restoreBackup") }}
+                            </button>
+                        </td>
                     </tr>
                 </tbody>
             </table>

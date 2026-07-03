@@ -93,8 +93,30 @@ export class ComposeParser {
             buildOptions: (platform.buildOptions ?? rawService.buildOptions) as ManifestService["buildOptions"],
             ingress: (platform.ingress ?? rawService.ingress) as ManifestService["ingress"],
             logRotation: (platform.logRotation ?? rawService.logRotation) as ManifestService["logRotation"],
-            secrets: (platform.secrets ?? rawService.secrets ?? []) as ManifestService["secrets"]
+            secrets: (platform.secrets ?? rawService.secrets ?? []) as ManifestService["secrets"],
+            deploy: ComposeParser.mapDeploy(platform.deploy ?? rawService.deploy)
         };
+    }
+
+    /**
+     * Maps deploy block from compose extensions.
+     *
+     * @param rawDeploy Raw deploy object
+     * @returns Manifest deploy options when present
+     */
+    private static mapDeploy(rawDeploy: unknown): ManifestService["deploy"] {
+        if (!rawDeploy || typeof rawDeploy !== "object") {
+            return undefined;
+        }
+
+        const deploy = rawDeploy as Record<string, unknown>;
+        const replicas = Number(deploy.replicas ?? 1);
+
+        if (!Number.isInteger(replicas) || replicas < 1) {
+            return undefined;
+        }
+
+        return { replicas };
     }
 
     /**

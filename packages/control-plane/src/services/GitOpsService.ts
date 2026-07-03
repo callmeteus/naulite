@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { Manifest } from "@platform/shared";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import { GitRevisionModel } from "../database/models/index";
 import { ComposeParser } from "../orchestration/ComposeParser";
+import { GitRepository } from "../gitops/GitRepository";
+import { ManifestMerge } from "../gitops/ManifestMerge";
 
 /**
  * Git repository checkout options.
@@ -16,7 +17,16 @@ export interface GitOpsCheckoutOptions {
     branch: string;
     commitSha?: string;
     overlayPaths?: string[];
+    manifestPath?: string;
     workDir?: string;
+}
+
+/**
+ * Result of checking out a repository and merging overlays.
+ */
+export interface CheckoutMergeResult {
+    manifestYaml: string;
+    commitSha: string;
 }
 
 /**
@@ -57,30 +67,46 @@ export namespace GitOpsService {
      * Checks out a repository revision and merges overlay manifests.
      *
      * @param options Checkout options
-     * @returns Merged manifest YAML content
+     * @returns Merged manifest YAML and resolved commit SHA
      */
-    export async function checkoutAndMerge(options: GitOpsCheckoutOptions): Promise<string> {
+    export async function checkoutAndMerge(options: GitOpsCheckoutOptions): Promise<CheckoutMergeResult> {
+        mkdirSync(baseWorkDir, { recursive: true });
+
         const workDir = options.workDir ?? join(baseWorkDir, randomUUID());
-        mkdirSync(workDir, { recursive: true });
+        const manifestPath = options.manifestPath ?? "compose.yaml";
 
-        const baseManifestPath = join(workDir, "compose.yaml");
+        const checkout = await GitRepository.cloneCheckout({
+            repositoryUrl: options.repositoryUrl,
+            branch: options.branch,
+            commitSha: options.commitSha,
+            workDir
+        });
 
-        if (!existsSync(baseManifestPath)) {
-            writeFileSync(baseManifestPath, buildPlaceholderManifest(options.repositoryUrl), "utf8");
+        const baseManifestFile = join(workDir, manifestPath);
+
+        if (!existsSync(baseManifestFile)) {
+            throw new Error(`Manifest file ${manifestPath} was not found in the checked out repository.`);
         }
 
-        let manifestYaml = readFileSync(baseManifestPath, "utf8");
+        let manifestYaml = readFileSync(baseManifestFile, "utf8");
 
         for (const overlayPath of options.overlayPaths ?? []) {
             const overlayFile = join(workDir, overlayPath);
 
-            if (existsSync(overlayFile)) {
-                const overlayYaml = readFileSync(overlayFile, "utf8");
-                manifestYaml = mergeYaml(manifestYaml, overlayYaml);
+            if (!existsSync(overlayFile)) {
+                console.debug("[gitops] overlay skip missing path=%s", overlayPath);
+                continue;
             }
+
+            const overlayYaml = readFileSync(overlayFile, "utf8");
+            manifestYaml = ManifestMerge.mergeYaml(manifestYaml, overlayYaml);
+            console.debug("[gitops] overlay merged path=%s", overlayPath);
         }
 
-        return manifestYaml;
+        return {
+            manifestYaml,
+            commitSha: checkout.commitSha
+        };
     }
 
     /**
@@ -169,52 +195,6 @@ export namespace GitOpsService {
         }
 
         return composeParser.parse(revision.manifestYaml);
-    }
-
-    /**
-     * Merges two YAML documents with shallow top-level object merge.
-     *
-     * @param baseYaml Base manifest YAML
-     * @param overlayYaml Overlay manifest YAML
-     * @returns Merged YAML string
-     */
-    function mergeYaml(baseYaml: string, overlayYaml: string): string {
-        const base = (parseYaml(baseYaml) ?? {}) as Record<string, unknown>;
-        const overlay = (parseYaml(overlayYaml) ?? {}) as Record<string, unknown>;
-
-        return stringifyYaml({
-            ...base,
-            ...overlay,
-            services: {
-                ...(base.services as Record<string, unknown> | undefined),
-                ...(overlay.services as Record<string, unknown> | undefined)
-            },
-            volumes: {
-                ...(base.volumes as Record<string, unknown> | undefined),
-                ...(overlay.volumes as Record<string, unknown> | undefined)
-            },
-            networks: {
-                ...(base.networks as Record<string, unknown> | undefined),
-                ...(overlay.networks as Record<string, unknown> | undefined)
-            }
-        });
-    }
-
-    /**
-     * Builds a placeholder manifest when a checkout directory is empty.
-     *
-     * @param repositoryUrl Repository URL used for the placeholder name
-     * @returns Placeholder compose YAML
-     */
-    function buildPlaceholderManifest(repositoryUrl: string): string {
-        const slug = repositoryUrl.split("/").pop()?.replace(/\.git$/, "") ?? "app";
-
-        return [
-            `name: ${slug}`,
-            "services: {}",
-            "volumes: {}",
-            "networks: {}"
-        ].join("\n");
     }
 
     /**

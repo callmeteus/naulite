@@ -7,6 +7,7 @@ describe("LocalTestCluster health smoke", () => {
 
     beforeAll(async () => {
         dockerEnabled = await LocalTestCluster.isDockerAvailable();
+        LocalTestCluster.assertDockerAvailable(dockerEnabled);
         if (!dockerEnabled) {
             return;
         }
@@ -14,7 +15,8 @@ describe("LocalTestCluster health smoke", () => {
         try {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
-        } catch {
+        } catch (err) {
+            LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
         }
     }, 300_000);
@@ -29,6 +31,9 @@ describe("LocalTestCluster health smoke", () => {
 
     it("returns healthy status from the primary control plane", async (context) => {
         if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
             context.skip();
         }
 
@@ -41,6 +46,9 @@ describe("LocalTestCluster health smoke", () => {
 
     it("exposes agent health endpoints", async (context) => {
         if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
             context.skip();
         }
 

@@ -21,8 +21,14 @@ export {
 } from "./Node";
 
 export {
+    NodeProvisionSchema,
+    NodeProvisionStatusSchema
+} from "./NodeProvision";
+
+export {
     ServiceSchema,
-    ServiceStatusSchema
+    ServiceStatusSchema,
+    ServiceDeploySpecSchema
 } from "./Service";
 
 export {
@@ -39,6 +45,15 @@ export {
 export { SecretSchema } from "./Secret";
 
 export { RegistrySchema } from "./Registry";
+
+export {
+    LocalContainerRegistryDestinationSchema,
+    NodeContainerRegistryDestinationSchema,
+    S3ContainerRegistryDestinationSchema,
+    PluginContainerRegistryDestinationSchema,
+    ContainerRegistryDestinationSchema,
+    ContainerRegistryImageSchema
+} from "./ContainerRegistry";
 
 export {
     NetworkSchema,

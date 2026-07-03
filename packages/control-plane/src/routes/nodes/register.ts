@@ -14,7 +14,8 @@ const RegisterNodeBodySchema = z.object({
     labels: ClusterLabelsSchema.default({}),
     capabilities: z.array(z.string()).default([]),
     resources: NodeResourcesSchema,
-    netbirdDeviceId: z.string().min(1).optional()
+    netbirdDeviceId: z.string().min(1).optional(),
+    provisionId: z.string().min(1).optional()
 });
 
 export const POST = defineRoute({
@@ -51,6 +52,11 @@ export const POST = defineRoute({
         });
 
         await ControlPlaneService.Store.saveNode(node);
+
+        if (body.provisionId) {
+            await ControlPlaneService.NodeProvision.completeRegistration(body.provisionId, node.id);
+        }
+
         res.code(existing ? 200 : 201);
         return node;
     }

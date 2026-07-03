@@ -8,7 +8,8 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Sequelize } from "sequelize-typescript";
 
-import { controlPlaneModels, SchemaMigrationModel } from "./models/index";
+import { MigrationRunner } from "./MigrationRunner";
+import { controlPlaneModels } from "./models/index";
 
 /**
  * Control plane database provider backed by Sequelize ORM.
@@ -99,25 +100,8 @@ export class DatabaseProvider implements DatabaseProviderContract {
      */
     async migrate(): Promise<DatabaseMigrationResult> {
         const sequelize = this.getSequelize();
-        const migrationName = "001-initial-schema";
-        const existing = await SchemaMigrationModel.findByPk(migrationName);
-
-        if (!existing) {
-            await sequelize.sync();
-            await SchemaMigrationModel.create({
-                name: migrationName,
-                appliedAt: new Date().toISOString()
-            });
-            return {
-                applied: [migrationName],
-                pending: []
-            };
-        }
-
-        return {
-            applied: [migrationName],
-            pending: []
-        };
+        const runner = new MigrationRunner(sequelize, this.dialect);
+        return runner.run();
     }
 
     /**

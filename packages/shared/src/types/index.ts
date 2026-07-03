@@ -21,8 +21,14 @@ export type {
 } from "./Node";
 
 export type {
+    NodeProvision,
+    NodeProvisionStatus
+} from "./NodeProvision";
+
+export type {
     Service,
-    ServiceStatus
+    ServiceStatus,
+    ServiceDeploySpec
 } from "./Service";
 
 export type {
@@ -39,6 +45,15 @@ export type {
 export type { Secret } from "./Secret";
 
 export type { Registry } from "./Registry";
+
+export type {
+    LocalContainerRegistryDestination,
+    NodeContainerRegistryDestination,
+    S3ContainerRegistryDestination,
+    PluginContainerRegistryDestination,
+    ContainerRegistryDestination,
+    ContainerRegistryImage
+} from "./ContainerRegistry";
 
 export type {
     Network,

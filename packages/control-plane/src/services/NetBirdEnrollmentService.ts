@@ -1,6 +1,6 @@
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 
-import type { SelfHostedNetBirdAdapter } from "./SelfHostedNetBirdAdapter";
+import type { NetBirdAdapter } from "./NetBirdService";
 
 const SETUP_KEY_SECRET_NAME = "netbird/setup-key";
 
@@ -12,11 +12,11 @@ export class NetBirdEnrollmentService {
      * Creates the enrollment service.
      *
      * @param store Control plane store
-     * @param adapter Self-hosted NetBird adapter
+     * @param adapter NetBird adapter used for setup key provisioning
      */
     constructor(
         private readonly store: ControlPlaneStore,
-        private readonly adapter: SelfHostedNetBirdAdapter
+        private readonly adapter: NetBirdAdapter
     ) {}
 
     /**

@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const netbird = @import("netbird.zig");
+
 /// Host operating system family detected at runtime.
 pub const OsFamily = enum {
     linux,
@@ -44,6 +46,8 @@ pub fn detectOsFamily() OsFamily {
 pub fn collectStatus(
     // The allocator to use.
     allocator: std.mem.Allocator,
+    // Optional NetBird client used to report mesh connectivity.
+    netbird_client: ?*netbird.NetbirdClient,
 ) !BootstrapStatus {
     const os = detectOsFamily();
     const arch = @tagName(builtin.cpu.arch);
@@ -55,12 +59,14 @@ pub fn collectStatus(
         .unknown => try allocator.dupe(u8, "unknown"),
     };
 
+    const netbird_connected = if (netbird_client) |client| client.isConnected() else false;
+
     return .{
         .os = os,
         .os_version = os_version,
         .arch = arch,
         .docker_available = probeDockerSocket(),
-        .netbird_connected = false,
+        .netbird_connected = netbird_connected,
         .agent_version = "0.1.0",
     };
 }

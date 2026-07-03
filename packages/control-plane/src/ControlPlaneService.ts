@@ -1,7 +1,9 @@
-import type { Instance, Node, Service, Volume } from "@platform/shared";
+import type { Instance as InstanceModel, Node, SecretUpsertInput, Service, Volume } from "@platform/shared";
 
 import type { ControlPlaneContext } from "./ControlPlaneContext";
 import type { ControlPlaneStore } from "./database/ControlPlaneStore";
+import { ClusterStateService } from "./services/ClusterStateService";
+import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { GitOpsService } from "./services/GitOpsService";
 
 /**
@@ -31,6 +33,90 @@ export namespace ControlPlaneService {
         }
 
         return context;
+    }
+
+    /**
+     * Control plane instance metadata.
+     */
+    export namespace Instance {
+        /**
+         * @returns Active control plane instance id
+         */
+        export function getId(): string {
+            return ControlPlaneService.requireContext().instanceId;
+        }
+    }
+
+    /**
+     * Leader election state for HA deployments.
+     */
+    export namespace Leader {
+        /**
+         * @returns Whether this instance is the elected leader
+         */
+        export function isLeader(): boolean {
+            return ControlPlaneService.requireContext().leaderElection.isLeader();
+        }
+
+        /**
+         * @returns Current leader instance id
+         */
+        export function getLeaderId(): string {
+            return ControlPlaneService.requireContext().leaderElection.getLeaderId();
+        }
+
+        /**
+         * @returns Nothing.
+         */
+        export function requireLeader(): void {
+            ControlPlaneService.requireContext().leaderElection.requireLeader();
+        }
+    }
+
+    /**
+     * Cluster secret management operations.
+     */
+    export namespace Secrets {
+        /**
+         * @returns Cluster secret metadata
+         */
+        export function list(): ReturnType<ControlPlaneContext["secretsService"]["list"]> {
+            return ControlPlaneService.requireContext().secretsService.list();
+        }
+
+        /**
+         * @param name Secret name
+         * @returns Secret metadata when found
+         */
+        export function getByName(name: string): ReturnType<ControlPlaneContext["secretsService"]["getByName"]> {
+            return ControlPlaneService.requireContext().secretsService.getByName(name);
+        }
+
+        /**
+         * @param input Secret upsert payload
+         * @returns Stored secret metadata
+         */
+        export async function upsert(input: SecretUpsertInput) {
+            const secret = await ControlPlaneService.requireContext().secretsService.upsert(input);
+            await ControlPlaneService.Sync.publish(ControlPlaneSync.EVENTS.SECRET_CHANGED, {
+                name: input.name
+            });
+            return secret;
+        }
+
+        /**
+         * @param name Secret name
+         * @returns Whether a secret was deleted
+         */
+        export async function deleteByName(name: string) {
+            const deleted = await ControlPlaneService.requireContext().secretsService.deleteByName(name);
+
+            if (deleted) {
+                await ControlPlaneService.Sync.publish(ControlPlaneSync.EVENTS.SECRET_CHANGED, { name });
+            }
+
+            return deleted;
+        }
     }
 
     /**
@@ -135,6 +221,19 @@ export namespace ControlPlaneService {
         }
 
         /**
+         * @param input Secret metadata and values
+         * @returns Stored secret metadata
+         */
+        export function upsertClusterSecret(input: {
+            name: string;
+            keys: string[];
+            value: Record<string, string>;
+            description?: string;
+        }): ReturnType<ControlPlaneStore["upsertClusterSecret"]> {
+            return backing().upsertClusterSecret(input);
+        }
+
+        /**
          * @param service Service payload
          * @returns Nothing.
          */
@@ -146,7 +245,7 @@ export namespace ControlPlaneService {
          * @param instance Instance payload
          * @returns Nothing.
          */
-        export function insertInstance(instance: Instance): ReturnType<ControlPlaneStore["insertInstance"]> {
+        export function insertInstance(instance: InstanceModel): ReturnType<ControlPlaneStore["insertInstance"]> {
             return backing().insertInstance(instance);
         }
 
@@ -156,6 +255,26 @@ export namespace ControlPlaneService {
          */
         export function insertVolume(volume: Volume): ReturnType<ControlPlaneStore["insertVolume"]> {
             return backing().insertVolume(volume);
+        }
+
+        /**
+         * @param instanceId Instance identifier
+         * @returns Nothing.
+         */
+        export function deleteInstance(instanceId: string): ReturnType<ControlPlaneStore["deleteInstance"]> {
+            return backing().deleteInstance(instanceId);
+        }
+
+        /**
+         * @param volumeId Volume identifier
+         * @param patch Volume fields to update
+         * @returns Nothing.
+         */
+        export function updateVolume(
+            volumeId: string,
+            patch: Parameters<ControlPlaneStore["updateVolume"]>[1]
+        ): ReturnType<ControlPlaneStore["updateVolume"]> {
+            return backing().updateVolume(volumeId, patch);
         }
 
         /**
@@ -265,12 +384,79 @@ export namespace ControlPlaneService {
      * Git revision tracking and repository checkout.
      */
     export namespace GitOps {
-        export const checkoutAndMerge = GitOpsService.checkoutAndMerge;
-        export const recordRevision = GitOpsService.recordRevision;
-        export const listRevisions = GitOpsService.listRevisions;
-        export const getRevision = GitOpsService.getRevision;
-        export const rollback = GitOpsService.rollback;
-        export const configure = GitOpsService.configure;
+        /**
+         * Checks out a repository and merges overlay manifests.
+         *
+         * @param input Checkout request
+         * @returns Merged manifest YAML and commit metadata
+         */
+        export function checkoutAndMerge(
+            ...args: Parameters<typeof GitOpsService.checkoutAndMerge>
+        ): ReturnType<typeof GitOpsService.checkoutAndMerge> {
+            return GitOpsService.checkoutAndMerge(...args);
+        }
+
+        /**
+         * Records an applied Git revision in cluster state.
+         *
+         * @param input Revision metadata
+         * @param manifestYaml Manifest body
+         * @param manifest Parsed manifest
+         * @param rolledBackFromId Optional rollback source revision id
+         * @returns Stored revision summary
+         */
+        export function recordRevision(
+            ...args: Parameters<typeof GitOpsService.recordRevision>
+        ): ReturnType<typeof GitOpsService.recordRevision> {
+            return GitOpsService.recordRevision(...args);
+        }
+
+        /**
+         * Lists stored GitOps revisions.
+         *
+         * @returns Revision metadata list
+         */
+        export function listRevisions(
+            ...args: Parameters<typeof GitOpsService.listRevisions>
+        ): ReturnType<typeof GitOpsService.listRevisions> {
+            return GitOpsService.listRevisions(...args);
+        }
+
+        /**
+         * Loads a single GitOps revision by id.
+         *
+         * @param revisionId Revision identifier
+         * @returns Revision metadata when found
+         */
+        export function getRevision(
+            ...args: Parameters<typeof GitOpsService.getRevision>
+        ): ReturnType<typeof GitOpsService.getRevision> {
+            return GitOpsService.getRevision(...args);
+        }
+
+        /**
+         * Rolls the cluster back to a previous GitOps revision.
+         *
+         * @param revisionId Revision identifier
+         * @returns Apply result from the rollback manifest
+         */
+        export function rollback(
+            ...args: Parameters<typeof GitOpsService.rollback>
+        ): ReturnType<typeof GitOpsService.rollback> {
+            return GitOpsService.rollback(...args);
+        }
+
+        /**
+         * Configures the GitOps working directory.
+         *
+         * @param options GitOps service options
+         * @returns Nothing.
+         */
+        export function configure(
+            ...args: Parameters<typeof GitOpsService.configure>
+        ): ReturnType<typeof GitOpsService.configure> {
+            return GitOpsService.configure(...args);
+        }
     }
 
     /**
@@ -312,6 +498,65 @@ export namespace ControlPlaneService {
         export function ensureInternalGroup(name: string): ReturnType<ControlPlaneContext["netBirdService"]["ensureInternalGroup"]> {
             return ControlPlaneService.requireContext().netBirdService.ensureInternalGroup(name);
         }
+
+        /**
+         * @param groupId NetBird group identifier
+         * @param policyName Stable policy name
+         * @param ports Optional destination ports
+         * @returns Ensured ACL metadata
+         */
+        export function ensureGroupAccessPolicy(
+            groupId: string,
+            policyName: string,
+            ports: string[] = []
+        ): ReturnType<ControlPlaneContext["netBirdService"]["ensureGroupAccessPolicy"]> {
+            return ControlPlaneService.requireContext().netBirdService.ensureGroupAccessPolicy(groupId, policyName, ports);
+        }
+
+        /**
+         * @param peerIds NetBird peer identifiers from registered nodes
+         * @returns Updated platform nodes group
+         */
+        export function syncPlatformNodePeers(
+            peerIds: string[]
+        ): ReturnType<ControlPlaneContext["netBirdService"]["syncPlatformNodePeers"]> {
+            return ControlPlaneService.requireContext().netBirdService.syncPlatformNodePeers(peerIds);
+        }
+    }
+
+    /**
+     * Ingress gateway operations.
+     */
+    export namespace Gateway {
+        /**
+         * @param route Gateway route definition
+         * @returns Nothing.
+         */
+        export function upsertRoute(
+            route: Parameters<ControlPlaneContext["gatewayProvider"]["upsertRoute"]>[0]
+        ): ReturnType<ControlPlaneContext["gatewayProvider"]["upsertRoute"]> {
+            return ControlPlaneService.requireContext().gatewayProvider.upsertRoute(route);
+        }
+
+        /**
+         * @param serviceName Service name associated with the route
+         * @param host Ingress host name
+         * @returns Nothing.
+         */
+        export function removeRoute(
+            serviceName: string,
+            host: string
+        ): ReturnType<ControlPlaneContext["gatewayProvider"]["removeRoute"]> {
+            return ControlPlaneService.requireContext().gatewayProvider.removeRoute(serviceName, host);
+        }
+
+        /**
+         * @param host Host name to secure
+         * @returns Nothing.
+         */
+        export function requestAutoTls(host: string): ReturnType<ControlPlaneContext["gatewayProvider"]["requestAutoTls"]> {
+            return ControlPlaneService.requireContext().gatewayProvider.requestAutoTls(host);
+        }
     }
 
     /**
@@ -327,19 +572,100 @@ export namespace ControlPlaneService {
     }
 
     /**
+     * Cloud node provisioning operations.
+     */
+    export namespace NodeProvision {
+        /**
+         * @param input Provision request payload
+         * @returns Created node provision record
+         */
+        export function provision(
+            input: Parameters<ControlPlaneContext["nodeProvisionService"]["provision"]>[0]
+        ): ReturnType<ControlPlaneContext["nodeProvisionService"]["provision"]> {
+            return ControlPlaneService.requireContext().nodeProvisionService.provision(input);
+        }
+
+        /**
+         * @returns Node provision records
+         */
+        export function listProvisions(): ReturnType<ControlPlaneContext["nodeProvisionService"]["listProvisions"]> {
+            return ControlPlaneService.requireContext().nodeProvisionService.listProvisions();
+        }
+
+        /**
+         * @param id Provision identifier
+         * @returns Node provision record
+         */
+        export function getProvision(
+            id: string
+        ): ReturnType<ControlPlaneContext["nodeProvisionService"]["getProvision"]> {
+            return ControlPlaneService.requireContext().nodeProvisionService.getProvision(id);
+        }
+
+        /**
+         * @param id Provision identifier
+         * @returns Updated node provision record
+         */
+        export function terminateProvision(
+            id: string
+        ): ReturnType<ControlPlaneContext["nodeProvisionService"]["terminateProvision"]> {
+            return ControlPlaneService.requireContext().nodeProvisionService.terminateProvision(id);
+        }
+
+        /**
+         * @param provisionId Provision identifier
+         * @param nodeId Registered node identifier
+         * @returns Updated node provision when found
+         */
+        export function completeRegistration(
+            provisionId: string,
+            nodeId: string
+        ): ReturnType<ControlPlaneContext["nodeProvisionService"]["completeRegistration"]> {
+            return ControlPlaneService.requireContext().nodeProvisionService.completeRegistration(provisionId, nodeId);
+        }
+
+        /**
+         * @param provisionId Provision identifier
+         * @param setupKey Setup key presented by the agent
+         * @returns Whether the setup key is valid for the provision
+         */
+        export function validateProvisionSetupKey(
+            provisionId: string,
+            setupKey: string
+        ): ReturnType<ControlPlaneContext["nodeProvisionService"]["validateProvisionSetupKey"]> {
+            return ControlPlaneService.requireContext().nodeProvisionService.validateProvisionSetupKey(
+                provisionId,
+                setupKey
+            );
+        }
+    }
+
+    /**
      * Control plane cluster synchronization events.
      */
     export namespace Sync {
         /**
          * @param event Event name
          * @param payload Event payload
-         * @returns Nothing.
+         * @returns Published event when stored
          */
         export function publish(
             event: Parameters<ControlPlaneContext["controlPlaneSync"]["publish"]>[0],
             payload: Parameters<ControlPlaneContext["controlPlaneSync"]["publish"]>[1]
         ): ReturnType<ControlPlaneContext["controlPlaneSync"]["publish"]> {
             return ControlPlaneService.requireContext().controlPlaneSync.publish(event, payload);
+        }
+
+        /**
+         * @param eventType Event type identifier
+         * @param listener Event listener callback
+         * @returns Nothing.
+         */
+        export function subscribe(
+            eventType: string,
+            listener: Parameters<ControlPlaneContext["controlPlaneSync"]["subscribe"]>[1]
+        ): void {
+            ControlPlaneService.requireContext().controlPlaneSync.subscribe(eventType, listener);
         }
     }
 
@@ -359,10 +685,88 @@ export namespace ControlPlaneService {
          *
          * @returns Updated revision number
          */
-        export function incrementRevision(): number {
+        export async function incrementRevision(): Promise<number> {
             const active = ControlPlaneService.requireContext();
             active.applyRevision += 1;
+            await ClusterStateService.saveApplyRevision(active.applyRevision);
+            await ControlPlaneService.Sync.publish(ControlPlaneSync.EVENTS.APPLY_REVISION_CHANGED, {
+                revision: active.applyRevision
+            });
             return active.applyRevision;
+        }
+    }
+
+    /**
+     * Private container registry blob storage.
+     */
+    export namespace ContainerRegistry {
+        /**
+         * @returns Stored container images
+         */
+        export function listImages(): ReturnType<ControlPlaneContext["containerRegistryService"]["listImages"]> {
+            return ControlPlaneService.requireContext().containerRegistryService.listImages();
+        }
+
+        /**
+         * @param name Image name
+         * @param tag Image tag
+         * @returns Image metadata when present
+         */
+        export function getImage(
+            name: string,
+            tag: string
+        ): ReturnType<ControlPlaneContext["containerRegistryService"]["getImage"]> {
+            return ControlPlaneService.requireContext().containerRegistryService.getImage(name, tag);
+        }
+
+        /**
+         * @param name Image name
+         * @param tag Image tag
+         * @returns Blob metadata when present
+         */
+        export function headImage(
+            name: string,
+            tag: string
+        ): ReturnType<ControlPlaneContext["containerRegistryService"]["headImage"]> {
+            return ControlPlaneService.requireContext().containerRegistryService.headImage(name, tag);
+        }
+
+        /**
+         * @param name Image name
+         * @param tag Image tag
+         * @returns Image metadata and readable blob stream
+         */
+        export function getImageStream(
+            name: string,
+            tag: string
+        ): ReturnType<ControlPlaneContext["containerRegistryService"]["getImageStream"]> {
+            return ControlPlaneService.requireContext().containerRegistryService.getImageStream(name, tag);
+        }
+
+        /**
+         * @param name Image name
+         * @param tag Image tag
+         * @param body Incoming request body stream
+         * @returns Persisted image metadata
+         */
+        export function putImage(
+            name: string,
+            tag: string,
+            body: Parameters<ControlPlaneContext["containerRegistryService"]["putImage"]>[2]
+        ): ReturnType<ControlPlaneContext["containerRegistryService"]["putImage"]> {
+            return ControlPlaneService.requireContext().containerRegistryService.putImage(name, tag, body);
+        }
+
+        /**
+         * @param name Image name
+         * @param tag Image tag
+         * @returns Whether an image was deleted
+         */
+        export function deleteImage(
+            name: string,
+            tag: string
+        ): ReturnType<ControlPlaneContext["containerRegistryService"]["deleteImage"]> {
+            return ControlPlaneService.requireContext().containerRegistryService.deleteImage(name, tag);
         }
     }
 

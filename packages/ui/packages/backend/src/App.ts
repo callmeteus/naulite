@@ -1,6 +1,7 @@
 import { PlatformApiError, PlatformClient } from "@platform/sdk";
 import Fastify, { type FastifyInstance } from "fastify";
 
+import { AuthPreHandlers } from "./auth/AuthPreHandlers";
 import { resolveConfigFromEnv } from "./Config";
 import { registerRoutes } from "./routes/index";
 
@@ -31,6 +32,24 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     });
 
     app.decorate("controlPlane", controlPlane);
+
+    app.addHook("onRequest", async (request, reply) => {
+        if (request.url === "/health" || request.url.startsWith("/health?")) {
+            return;
+        }
+
+        try {
+            AuthPreHandlers.enforceAdminApiKey(request, options.adminApiKey ?? envConfig.adminApiKey);
+        } catch (error) {
+            const statusCode = error instanceof Error && "statusCode" in error
+                ? Number((error as Error & { statusCode: number }).statusCode)
+                : 401;
+
+            return reply.code(statusCode).send({
+                message: error instanceof Error ? error.message : "Unauthorized."
+            });
+        }
+    });
 
     app.setErrorHandler((error, _request, reply) => {
         if (error instanceof PlatformApiError) {

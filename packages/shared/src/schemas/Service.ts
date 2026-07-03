@@ -1,9 +1,28 @@
 import { z } from "zod";
 
-import { LifecycleStatusSchema, TimestampSchema } from "./Common";
+import { LifecycleStatusSchema, SecretReferenceSchema, TimestampSchema } from "./Common";
 import { ClusterPlacementSchema } from "./ClusterLabels";
 import { IngressSchema } from "./Ingress";
 import { LogRotationPolicySchema } from "./LogRotationTask";
+
+/**
+ * Container runtime spec persisted for planner diffing between applies.
+ */
+export const ServiceDeploySpecSchema = z.object({
+    command: z.array(z.string()).default([]),
+    environment: z.record(z.string(), z.string()).default({}),
+    ports: z.array(z.object({
+        containerPort: z.number().int().positive(),
+        hostPort: z.number().int().positive().optional(),
+        protocol: z.enum(["tcp", "udp"]).default("tcp")
+    })).default([]),
+    secrets: z.array(SecretReferenceSchema).default([]),
+    volumeMounts: z.array(z.object({
+        volumeName: z.string().min(1),
+        mountPath: z.string().min(1),
+        readOnly: z.boolean().default(false)
+    })).default([])
+});
 
 /**
  * Desired service state managed by the control plane.
@@ -32,6 +51,7 @@ export const ServiceSchema = z.object({
     networks: z.array(z.string()).default([]),
     ingress: IngressSchema.optional(),
     logRotation: LogRotationPolicySchema.optional(),
+    deploySpec: ServiceDeploySpecSchema.optional(),
     lifecycleStatus: LifecycleStatusSchema.optional(),
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema

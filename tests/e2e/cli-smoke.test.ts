@@ -14,6 +14,7 @@ describe("platform CLI smoke", () => {
 
     beforeAll(async () => {
         dockerEnabled = await LocalTestCluster.isDockerAvailable();
+        LocalTestCluster.assertDockerAvailable(dockerEnabled);
         if (!dockerEnabled) {
             return;
         }
@@ -21,7 +22,8 @@ describe("platform CLI smoke", () => {
         try {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
-        } catch {
+        } catch (err) {
+            LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
         }
     }, 300_000);
@@ -36,6 +38,9 @@ describe("platform CLI smoke", () => {
 
     it("prints cluster status through the CLI against the local test cluster", async (context) => {
         if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
             context.skip();
         }
 
@@ -58,6 +63,9 @@ describe("platform CLI smoke", () => {
 
     it("fails when the CLI targets an unreachable control plane URL", async (context) => {
         if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
             context.skip();
         }
 

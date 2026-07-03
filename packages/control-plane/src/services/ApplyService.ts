@@ -1,10 +1,14 @@
-import type { ExecutionOperation, Instance, Node } from "@platform/shared";
+import type { ExecutionOperation, Instance, Manifest, ManifestService, Node, SecretFilter } from "@platform/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
 import type { ControlPlaneContext } from "../ControlPlaneContext";
+import { HTTP503Error } from "../errors/TreatedError";
+import { NetworkGroupId } from "../orchestration/NetworkGroupId";
 import type { PlannerDiff } from "../orchestration/Planner";
+import type { LocalSecretProvider } from "../modules/secrets/LocalSecretProvider";
 
 import { AgentDispatcher } from "./AgentDispatcher";
+import { BuildService } from "./BuildService";
 
 /**
  * Result of applying a manifest through the control plane.
@@ -51,6 +55,7 @@ export namespace ApplyService {
         manifestYaml: string,
         options: ApplyExecuteOptions = {}
     ): Promise<ApplyResult> {
+        const context = ControlPlaneService.requireContext();
         const manifest = ControlPlaneService.Orchestration.ComposeParser.parse(manifestYaml);
         const [services, instances, volumes, nodes] = await Promise.all([
             ControlPlaneService.Store.listServices(),
@@ -65,22 +70,29 @@ export namespace ApplyService {
             volumes
         });
 
-        ControlPlaneService.Apply.incrementRevision();
+        await ControlPlaneService.Apply.incrementRevision();
 
         const instanceNodes = buildInstanceNodeMap(instances, diff);
 
         for (const service of [...diff.servicesToCreate, ...diff.servicesToUpdate]) {
             const manifestService = manifest.services[service.name];
-            await ControlPlaneService.Store.upsertService(service);
+            const newInstances = diff.instancesToCreate.filter((entry) => entry.serviceId === service.id);
 
-            const schedule = ControlPlaneService.Orchestration.Scheduler.schedule(
-                service,
-                manifestService,
-                nodes
-            );
+            if (newInstances.length > 0) {
+                const schedule = ControlPlaneService.Orchestration.Scheduler.schedule(
+                    service,
+                    manifestService,
+                    nodes
+                );
 
-            if (schedule) {
-                for (const instance of diff.instancesToCreate.filter((entry) => entry.serviceId === service.id)) {
+                if (!schedule) {
+                    console.debug("[apply] schedule failed service=%s nodes=%d", service.name, nodes.length);
+                    throw new HTTP503Error(`No eligible node found for service "${service.name}".`, {
+                        serviceName: service.name
+                    });
+                }
+
+                for (const instance of newInstances) {
                     const scheduled: Instance = {
                         ...instance,
                         nodeId: schedule.node.id,
@@ -90,22 +102,38 @@ export namespace ApplyService {
                     await ControlPlaneService.Store.insertInstance(scheduled);
                 }
             }
+
+            await ControlPlaneService.Store.upsertService(service);
         }
 
-        for (const volume of diff.volumesToEnsure) {
-            await ControlPlaneService.Store.insertVolume(volume);
+        for (const instance of diff.instancesToRemove) {
+            await ControlPlaneService.Store.deleteInstance(instance.id);
         }
 
         for (const service of diff.servicesToRemove) {
             await ControlPlaneService.Store.deleteService(service.id);
         }
 
+        for (const volume of diff.volumesToRemove) {
+            await ControlPlaneService.Store.deleteVolumeByName(volume.name);
+        }
+
+        const volumeNodeAssignments = buildVolumeNodeAssignments(manifest, diff, instanceNodes);
+
+        for (const volume of diff.volumesToEnsure) {
+            const nodeId = volumeNodeAssignments.get(volume.name);
+            await ControlPlaneService.Store.insertVolume({
+                ...volume,
+                nodeId
+            });
+        }
+
         const exposures = ControlPlaneService.Orchestration.ComposeParser.extractInternalExposures(manifest);
         const exposurePlan = ControlPlaneService.Orchestration.Exposure.plan(manifest, exposures);
 
-        for (const entry of exposurePlan.entries) {
-            await ControlPlaneService.NetBird.ensureInternalGroup(entry.netbirdGroupName);
-        }
+        await provisionNetBirdResources(manifest, exposurePlan.entries, nodes);
+
+        await provisionPublicIngressRoutes(manifest, nodes, instanceNodes);
 
         await ControlPlaneService.GitOps.recordRevision(
             {
@@ -124,7 +152,17 @@ export namespace ApplyService {
             revision: ControlPlaneService.Apply.getRevision()
         });
 
-        const operations = addPullOperations(diff.operations);
+        const resolvedOperations = await BuildService.resolveBuildOperations(
+            context,
+            manifest,
+            diff.operations,
+            nodes
+        );
+        const operations = await enrichOperationsWithSecrets(
+            addPullOperations(resolvedOperations),
+            manifest,
+            context.secretProvider
+        );
         const plans = nodes.map((node) => {
             const nodeOperations = filterOperationsForNode(node.id, operations, instanceNodes, nodes);
             return ControlPlaneService.Orchestration.Planner.buildExecutionPlan(
@@ -184,6 +222,127 @@ export namespace ApplyService {
     }
 
     /**
+     * Resolves node assignments for newly ensured volumes.
+     *
+     * @param manifest Parsed manifest
+     * @param diff Planner diff for the current apply
+     * @param instanceNodes Instance id to node id map
+     * @returns Volume name to node id map
+     */
+    function buildVolumeNodeAssignments(
+        manifest: Manifest,
+        diff: PlannerDiff,
+        instanceNodes: Map<string, string>
+    ): Map<string, string> {
+        const assignments = new Map<string, string>();
+
+        for (const volume of diff.volumesToEnsure) {
+            const serviceName = findServiceMountingVolume(manifest, volume.name);
+            const scheduledInstance = diff.instancesToCreate.find((instance) => instance.serviceName === serviceName);
+            const nodeId = scheduledInstance ? instanceNodes.get(scheduledInstance.id) : undefined;
+
+            if (nodeId && nodeId !== "unscheduled") {
+                assignments.set(volume.name, nodeId);
+            }
+        }
+
+        return assignments;
+    }
+
+    /**
+     * Finds the first manifest service that mounts a volume.
+     *
+     * @param manifest Parsed manifest
+     * @param volumeName Volume name
+     * @returns Service name when found
+     */
+    function findServiceMountingVolume(manifest: Manifest, volumeName: string): string | undefined {
+        for (const [serviceName, service] of Object.entries(manifest.services)) {
+            if (!service.volumes) {
+                continue;
+            }
+
+            const mountsVolume = service.volumes.some((entry) => entry.split(":")[0] === volumeName);
+            if (mountsVolume) {
+                return serviceName;
+            }
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Resolves secret payloads for create operations before agent dispatch.
+     *
+     * @param operations Planner operations
+     * @param manifest Parsed manifest
+     * @param secretProvider Local secret provider
+     * @returns Operations with resolved secrets on create steps
+     */
+    async function enrichOperationsWithSecrets(
+        operations: ExecutionOperation[],
+        manifest: Manifest,
+        secretProvider: LocalSecretProvider
+    ): Promise<ExecutionOperation[]> {
+        const enriched: ExecutionOperation[] = [];
+
+        for (const operation of operations) {
+            if (operation.type !== "create") {
+                enriched.push(operation);
+                continue;
+            }
+
+            const manifestService = manifest.services[operation.serviceName];
+            const filter = buildSecretFilter(manifestService);
+
+            if (filter.secretNames.length === 0) {
+                enriched.push(operation);
+                continue;
+            }
+
+            console.debug(
+                "[apply] resolve secrets service=%s names=%o",
+                operation.serviceName,
+                filter.secretNames
+            );
+            const secrets = await secretProvider.resolveForAgent(filter);
+            enriched.push({
+                ...operation,
+                secrets
+            });
+        }
+
+        return enriched;
+    }
+
+    /**
+     * Builds the secret filter for a manifest service.
+     *
+     * @param manifestService Manifest service definition
+     * @returns Secret filter for agent delivery
+     */
+    function buildSecretFilter(manifestService: ManifestService | undefined): SecretFilter {
+        const secretNames: string[] = [];
+        const allowedKeys: Record<string, string[]> = {};
+
+        for (const reference of manifestService?.secrets ?? []) {
+            secretNames.push(reference.secretName);
+
+            if (reference.key) {
+                allowedKeys[reference.secretName] = [
+                    ...(allowedKeys[reference.secretName] ?? []),
+                    reference.key
+                ];
+            }
+        }
+
+        return {
+            secretNames: [...new Set(secretNames)],
+            allowedKeys: Object.keys(allowedKeys).length > 0 ? allowedKeys : undefined
+        };
+    }
+
+    /**
      * Inserts image pull operations before create operations.
      *
      * @param operations Planner operations
@@ -194,7 +353,11 @@ export namespace ApplyService {
         const pulledImages = new Set<string>();
 
         for (const operation of operations) {
-            if (operation.type === "create" && !pulledImages.has(operation.image)) {
+            if (
+                operation.type === "create"
+                && !operation.image.startsWith("build://")
+                && !pulledImages.has(operation.image)
+            ) {
                 output.push({
                     type: "pull",
                     image: operation.image
@@ -264,5 +427,121 @@ export namespace ApplyService {
                 return instanceNodes.get(instanceId) === nodeId;
             }
         }
+    }
+
+    /**
+     * Ensures NetBird groups, ACLs, and node peer membership for a manifest apply.
+     *
+     * @param manifest Applied manifest
+     * @param exposureEntries Internal exposure plan entries
+     * @param nodes Registered cluster nodes
+     * @returns Nothing.
+     */
+    async function provisionNetBirdResources(
+        manifest: Manifest,
+        exposureEntries: ReturnType<ControlPlaneContext["exposurePlanner"]["plan"]>["entries"],
+        nodes: Node[]
+    ): Promise<void> {
+        for (const [networkKey, network] of Object.entries(manifest.networks ?? {})) {
+            if (network.local) {
+                continue;
+            }
+
+            const groupName = NetworkGroupId.build(manifest.name, networkKey);
+            const group = await ControlPlaneService.NetBird.ensureInternalGroup(groupName);
+            await ControlPlaneService.NetBird.ensureGroupAccessPolicy(
+                group.id,
+                `platform-network-${groupName}`
+            );
+        }
+
+        for (const entry of exposureEntries) {
+            const group = await ControlPlaneService.NetBird.ensureInternalGroup(entry.netbirdGroupName);
+            await ControlPlaneService.NetBird.ensureGroupAccessPolicy(
+                group.id,
+                `platform-exposure-${entry.netbirdGroupName}`,
+                [String(entry.exposure.port)]
+            );
+        }
+
+        const peerIds = nodes
+            .map((node) => node.netbirdDeviceId)
+            .filter((peerId): peerId is string => Boolean(peerId));
+
+        await ControlPlaneService.NetBird.syncPlatformNodePeers(peerIds);
+    }
+
+    /**
+     * Publishes public ingress routes through the gateway provider.
+     *
+     * @param manifest Applied manifest
+     * @param nodes Registered cluster nodes
+     * @param instanceNodes Instance id to node id map
+     * @returns Nothing.
+     */
+    async function provisionPublicIngressRoutes(
+        manifest: Manifest,
+        nodes: Node[],
+        instanceNodes: Map<string, string>
+    ): Promise<void> {
+        for (const [serviceName, service] of Object.entries(manifest.services)) {
+            if (!service.ingress || service.ingress.exposure !== "public") {
+                continue;
+            }
+
+            const target = resolveIngressTarget(manifest.name, serviceName, service, nodes, instanceNodes);
+            if (!target) {
+                console.debug(
+                    "[apply] skip public ingress service=%s reason=no-scheduled-instance",
+                    serviceName
+                );
+                continue;
+            }
+
+            const pathRule = service.ingress.paths[0];
+            await ControlPlaneService.Gateway.upsertRoute({
+                serviceName,
+                ingress: service.ingress,
+                targetHost: target.hostname,
+                targetPort: pathRule.port
+            });
+
+            if (service.ingress.tls?.enabled) {
+                await ControlPlaneService.Gateway.requestAutoTls(service.ingress.host);
+            }
+        }
+    }
+
+    /**
+     * Resolves the node hostname that should receive public ingress traffic.
+     *
+     * @param manifestName Manifest name
+     * @param serviceName Service name
+     * @param service Manifest service definition
+     * @param nodes Registered cluster nodes
+     * @param instanceNodes Instance id to node id map
+     * @returns Target hostname when an instance is scheduled
+     */
+    function resolveIngressTarget(
+        manifestName: string,
+        serviceName: string,
+        _service: ManifestService,
+        nodes: Node[],
+        instanceNodes: Map<string, string>
+    ): Node | undefined {
+        const serviceId = `${manifestName}:${serviceName}`;
+        const scheduledNodeId = [...instanceNodes.entries()].find(([instanceId]) => {
+            return instanceId.startsWith(`${serviceId}:`) || instanceId.startsWith(`${manifestName}:${serviceName}`);
+        })?.[1];
+
+        if (scheduledNodeId) {
+            return nodes.find((node) => node.id === scheduledNodeId);
+        }
+
+        if (nodes.length === 1) {
+            return nodes[0];
+        }
+
+        return nodes.find((node) => node.status === "online") ?? nodes[0];
     }
 }

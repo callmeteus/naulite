@@ -1,5 +1,6 @@
-import { AgentProxyService } from "../../../services/AgentProxyService";
 import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
+import { BackupCompletionService } from "../../../services/BackupCompletionService";
+import { BackupDispatchService } from "../../../services/BackupDispatchService";
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
@@ -36,7 +37,7 @@ export const POST = defineRoute({
         }
 
         const nodes = await ControlPlaneService.Store.listNodes();
-        const node = nodes.find((entry) => entry.id === volume.nodeId) ?? nodes[0];
+        const node = BackupDispatchService.resolveNodeForVolume(volume, nodes);
 
         if (!node?.agentUrl) {
             return res.status(503).send({
@@ -46,16 +47,31 @@ export const POST = defineRoute({
         }
 
         const run = await ControlPlaneService.Store.enqueueBackupRun(volumeName);
+        const taskPayload = BackupDispatchService.buildTaskPayload(volume, run.id);
+
+        let agentResponse: unknown;
 
         try {
-            await AgentProxyService.postTask(node.agentUrl, "/tasks/backup", {
-                taskId: run.id,
-                volumeName
-            });
+            agentResponse = await BackupDispatchService.dispatchBackupTask(node, taskPayload);
         } catch (err) {
             return AgentProxyRouteHelpers.respond(res, err);
         }
 
-        return run;
+        try {
+            const result = await BackupCompletionService.completeRun(
+                ControlPlaneService.requireContext().backupOrchestrator,
+                taskPayload,
+                agentResponse
+            );
+
+            return {
+                ...run,
+                status: "succeeded" as const,
+                completedAt: new Date().toISOString(),
+                destination: result.location
+            };
+        } catch (err) {
+            return AgentProxyRouteHelpers.respond(res, err);
+        }
     }
 });

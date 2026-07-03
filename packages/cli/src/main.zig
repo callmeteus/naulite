@@ -246,6 +246,30 @@ fn dispatch(
         }
         return try runVoid(commands.restoreBackup(allocator, client, argv[3]));
     }
+    if (matchesAction(argv, "gitops", "get")) {
+        return try runVoid(commands.getGitOpsRevisions(allocator, client));
+    }
+    if (std.mem.eql(u8, argv[1], "gitops") and std.mem.eql(u8, argv[2], "rollback")) {
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
+        return try runVoid(commands.rollbackGitOps(allocator, client, argv[3]));
+    }
+    if (matchesAction(argv, "netbird", "topology")) {
+        return try runVoid(commands.getNetBirdTopology(allocator, client));
+    }
+    if (matchesAction(argv, "netbird", "devices")) {
+        return try runVoid(commands.getNetBirdDevices(allocator, client));
+    }
+    if (matchesAction(argv, "netbird", "groups")) {
+        return try runVoid(commands.getNetBirdGroups(allocator, client));
+    }
+    if (matchesAction(argv, "netbird", "acls")) {
+        return try runVoid(commands.getNetBirdAcls(allocator, client));
+    }
+    if (matchesAction(argv, "metrics", "get")) {
+        return try runVoid(commands.getMetrics(allocator, client));
+    }
 
     try printUsage(io_output.stderrWriter());
     return error.InvalidArgument;
@@ -313,6 +337,9 @@ fn printUsage(writer: anytype) !void {
         \\  platform cluster volumes get|delete <name>
         \\  platform cluster secrets get|delete <name>
         \\  platform cluster backups get|run <volume>|restore <backupId>
+        \\  platform cluster gitops get|rollback <revisionId>
+        \\  platform cluster netbird topology|devices|groups|acls
+        \\  platform cluster metrics get
         \\  platform cluster status get
         \\  platform cluster manifests apply -f <manifest.yml>
         \\  platform cluster builds run --service <name> [--provider <name>] [--registry <name>]

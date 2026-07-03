@@ -10,7 +10,6 @@
         "lint": "eslint src/"
     },
     "dependencies": {
-        "@platform/control-plane": "0.1.0",
         "@platform/shared": "0.1.0"
     },
     "devDependencies": {

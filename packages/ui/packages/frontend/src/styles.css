@@ -125,3 +125,39 @@ button.danger {
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
 }
+
+.create-form label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.create-form textarea {
+  min-height: 120px;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.actions input {
+  flex: 1;
+  background: #0d1117;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.panel-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.apply-summary {
+  margin-top: 1rem;
+  color: #7a8a9b;
+}

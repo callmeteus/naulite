@@ -1,14 +1,20 @@
+import { execFile } from "node:child_process";
+import path from "node:path";
+import { promisify } from "node:util";
+
 import type {
     BuildResult,
+    BuilderProvider,
     DockerBuildOptions,
     KanikoBuildOptions
 } from "@platform/shared";
-import { BuilderProvider } from "@platform/control-plane";
+
+const execFileAsync = promisify(execFile);
 
 /**
- * Docker builder provider with stubbed build execution.
+ * Docker builder provider that runs local Docker CLI builds.
  */
-export class DockerBuilderProvider extends BuilderProvider {
+export class DockerBuilderProvider implements BuilderProvider {
     /**
      * Builds an image using the Docker engine on a builder node.
      *
@@ -18,19 +24,36 @@ export class DockerBuilderProvider extends BuilderProvider {
     async buildWithDocker(options: DockerBuildOptions): Promise<BuildResult> {
         const startedAt = Date.now();
         const imageRef = options.tags[0] ?? "local/build:latest";
+        const dockerfile = options.dockerfile ?? "Dockerfile";
+        const dockerfilePath = path.join(options.contextPath, dockerfile);
+
         console.debug(
             "[builders/docker] buildWithDocker contextPath=%s dockerfile=%s tags=%o",
             options.contextPath,
-            options.dockerfile ?? "Dockerfile",
+            dockerfile,
             options.tags
         );
 
+        const args = [
+            "build",
+            "-t",
+            imageRef,
+            "-f",
+            dockerfilePath,
+            options.contextPath
+        ];
+
+        for (const [key, value] of Object.entries(options.buildArgs ?? {})) {
+            args.push("--build-arg", `${key}=${value}`);
+        }
+
+        const { stdout, stderr } = await execFileAsync("docker", args, {
+            maxBuffer: 10 * 1024 * 1024
+        });
+
         return {
             imageRef,
-            logs: [
-                `[docker] building ${imageRef} from ${options.contextPath}`,
-                `[docker] stub build completed`
-            ],
+            logs: [stdout, stderr].filter((entry) => entry.length > 0),
             durationMs: Date.now() - startedAt
         };
     }
@@ -41,7 +64,8 @@ export class DockerBuilderProvider extends BuilderProvider {
      * @param options Kaniko build options
      * @returns Build result metadata
      */
-    async buildWithKaniko(_options: KanikoBuildOptions): Promise<BuildResult> {
+    async buildWithKaniko(options: KanikoBuildOptions): Promise<BuildResult> {
+        void options;
         throw new Error("Kaniko builds are not supported by @platform/builder-docker");
     }
 }

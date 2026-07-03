@@ -8,6 +8,20 @@
             "when": 1735689600000,
             "tag": "0000_initial",
             "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1735776000000,
+            "tag": "0001_api_keys",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1735862400000,
+            "tag": "0002_leader_election",
+            "breakpoints": true
         }
     ]
 }

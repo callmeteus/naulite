@@ -4,6 +4,8 @@ import { pathToFileURL } from "node:url";
 
 import { PluginRegistry, type PluginRegistration } from "@platform/shared";
 
+import type { LoadedPluginModule } from "./LoadedPluginRegistration";
+
 /**
  * Plugin loader that auto-discovers packages under packages/plugins/.
  */
@@ -37,16 +39,15 @@ export class PluginLoader {
             const pluginEntry = join(pluginsDir, directoryName, "dist", "index.js");
 
             try {
-                const module = await import(pathToFileURL(pluginEntry).href) as {
-                    default?: PluginRegistration;
-                    plugin?: PluginRegistration;
-                };
+                const module = await import(pathToFileURL(pluginEntry).href) as LoadedPluginModule;
                 const plugin = module.default ?? module.plugin;
 
                 if (plugin) {
-                    registry.register(directoryName, plugin);
+                    registry.register(directoryName, plugin as PluginRegistration);
+                    console.debug("[plugins] loaded id=%s type=%s dir=%s", plugin.id, plugin.type, directoryName);
                 }
-            } catch {
+            } catch (err) {
+                console.debug("[plugins] skipped dir=%s error=%o", directoryName, err);
                 continue;
             }
         }

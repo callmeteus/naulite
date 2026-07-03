@@ -276,6 +276,211 @@ pub const DockerApi = struct {
         return error.DockerVolumeFailed;
     }
 
+    /// Returns Docker Engine info JSON.
+    pub fn getInfo(self: *const DockerApi) !DockerResponse {
+        return self.request("GET", "/info", null);
+    }
+
+    /// Returns Docker disk usage summary JSON.
+    pub fn getSystemDf(self: *const DockerApi) !DockerResponse {
+        return self.request("GET", "/system/df", null);
+    }
+
+    /// Lists identifiers for running containers.
+    pub fn listRunningContainerIds(self: *const DockerApi) ![]const []const u8 {
+        var response = try self.request("GET", "/containers/json", null);
+        defer response.deinit(self.allocator);
+
+        if (response.status < 200 or response.status >= 300) {
+            return error.DockerListFailed;
+        }
+
+        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, response.body, .{});
+        errdefer parsed.deinit();
+
+        if (parsed.value != .array) {
+            return &[_][]const u8{};
+        }
+
+        var ids: std.ArrayList([]const u8) = .empty;
+        errdefer {
+            for (ids.items) |container_id| {
+                self.allocator.free(container_id);
+            }
+            ids.deinit(self.allocator);
+        }
+
+        for (parsed.value.array.items) |item| {
+            if (item != .object) {
+                continue;
+            }
+            const id_value = item.object.get("Id") orelse continue;
+            const id_text = switch (id_value) {
+                .string => |s| s,
+                else => continue,
+            };
+            try ids.append(self.allocator, try self.allocator.dupe(u8, id_text));
+        }
+
+        parsed.deinit();
+        return try ids.toOwnedSlice(self.allocator);
+    }
+
+    /// Returns one-shot stats JSON for a container.
+    pub fn getContainerStats(
+        self: *const DockerApi,
+        // Container identifier.
+        container_ref: []const u8,
+    ) !DockerResponse {
+        const path = try std.fmt.allocPrint(
+            self.allocator,
+            "/containers/{s}/stats?stream=false",
+            .{container_ref},
+        );
+        defer self.allocator.free(path);
+
+        return self.request("GET", path, null);
+    }
+
+    /// Connects a container to a Docker network.
+    pub fn connectNetwork(
+        self: *const DockerApi,
+        // Docker network name.
+        network_name: []const u8,
+        // Container name or id.
+        container_ref: []const u8,
+    ) !void {
+        const path = try std.fmt.allocPrint(self.allocator, "/networks/{s}/connect", .{network_name});
+        defer self.allocator.free(path);
+
+        const body = try std.fmt.allocPrint(
+            self.allocator,
+            "{{\"Container\":\"{s}\"}}",
+            .{container_ref},
+        );
+        defer self.allocator.free(body);
+
+        var response = try self.request("POST", path, body);
+        defer response.deinit(self.allocator);
+
+        if (response.status < 200 or response.status >= 300) {
+            std.log.err(
+                "[docker] connectNetwork failed status={d} network={s} container={s} body={s}",
+                .{ response.status, network_name, container_ref, response.body },
+            );
+            return error.DockerNetworkConnectFailed;
+        }
+    }
+
+    /// Disconnects a container from a Docker network.
+    pub fn disconnectNetwork(
+        self: *const DockerApi,
+        // Docker network name.
+        network_name: []const u8,
+        // Container name or id.
+        container_ref: []const u8,
+        // Whether to force disconnect.
+        force: bool,
+    ) !void {
+        const path = try std.fmt.allocPrint(self.allocator, "/networks/{s}/disconnect", .{network_name});
+        defer self.allocator.free(path);
+
+        const body = try std.fmt.allocPrint(
+            self.allocator,
+            "{{\"Container\":\"{s}\",\"Force\":{s}}}",
+            .{ container_ref, if (force) "true" else "false" },
+        );
+        defer self.allocator.free(body);
+
+        var response = try self.request("POST", path, body);
+        defer response.deinit(self.allocator);
+
+        if (response.status < 200 or response.status >= 300) {
+            std.log.err(
+                "[docker] disconnectNetwork failed status={d} network={s} container={s} body={s}",
+                .{ response.status, network_name, container_ref, response.body },
+            );
+            return error.DockerNetworkDisconnectFailed;
+        }
+    }
+
+    /// Executes a command inside a running container.
+    pub fn execContainer(
+        self: *const DockerApi,
+        // Container name or id.
+        container_ref: []const u8,
+        // Command argv to run inside the container.
+        command: []const []const u8,
+    ) !ExecResult {
+        const create_path = try std.fmt.allocPrint(self.allocator, "/containers/{s}/exec", .{container_ref});
+        defer self.allocator.free(create_path);
+
+        const cmd_json = try stringArrayToJson(self.allocator, command);
+        defer self.allocator.free(cmd_json);
+
+        const create_body = try std.fmt.allocPrint(
+            self.allocator,
+            "{{\"AttachStdout\":true,\"AttachStderr\":true,\"Cmd\":{s}}}",
+            .{cmd_json},
+        );
+        defer self.allocator.free(create_body);
+
+        var create_response = try self.request("POST", create_path, create_body);
+        defer create_response.deinit(self.allocator);
+
+        if (create_response.status < 200 or create_response.status >= 300) {
+            std.log.err("[docker] exec create failed status={d} ref={s} body={s}", .{
+                create_response.status,
+                container_ref,
+                create_response.body,
+            });
+            return error.DockerExecFailed;
+        }
+
+        const exec_id = try parseJsonStringField(self.allocator, create_response.body, "Id");
+        defer self.allocator.free(exec_id);
+
+        const start_path = try std.fmt.allocPrint(self.allocator, "/exec/{s}/start", .{exec_id});
+        defer self.allocator.free(start_path);
+
+        const start_body = "{\"Detach\":false,\"Tty\":false}";
+        var start_response = try self.request("POST", start_path, start_body);
+        defer start_response.deinit(self.allocator);
+
+        if (start_response.status < 200 or start_response.status >= 300) {
+            std.log.err("[docker] exec start failed status={d} execId={s} body={s}", .{
+                start_response.status,
+                exec_id,
+                start_response.body,
+            });
+            return error.DockerExecFailed;
+        }
+
+        var streams = try demuxDockerExecStream(self.allocator, start_response.body);
+        defer {
+            self.allocator.free(streams.stdout);
+            self.allocator.free(streams.stderr);
+        }
+
+        const inspect_path = try std.fmt.allocPrint(self.allocator, "/exec/{s}/json", .{exec_id});
+        defer self.allocator.free(inspect_path);
+
+        var inspect_response = try self.request("GET", inspect_path, null);
+        defer inspect_response.deinit(self.allocator);
+
+        if (inspect_response.status < 200 or inspect_response.status >= 300) {
+            return error.DockerExecFailed;
+        }
+
+        const exit_code = parseJsonIntField(inspect_response.body, "ExitCode") orelse 1;
+
+        return .{
+            .exit_code = @intCast(exit_code),
+            .stdout = try self.allocator.dupe(u8, streams.stdout),
+            .stderr = try self.allocator.dupe(u8, streams.stderr),
+        };
+    }
+
     /// Fetches container logs as plain text.
     pub fn containerLogs(
         self: *const DockerApi,
@@ -351,6 +556,69 @@ pub const DockerApi = struct {
         return try list.toOwnedSlice(allocator);
     }
 
+    /// Parses a signed integer field from a JSON object body.
+    fn parseJsonIntField(body: []const u8, field_name: []const u8) ?i64 {
+        const parsed = std.json.parseFromSlice(std.json.Value, std.heap.page_allocator, body, .{}) catch return null;
+        defer parsed.deinit();
+
+        const root = parsed.value;
+        if (root != .object) {
+            return null;
+        }
+
+        const value = root.object.get(field_name) orelse return null;
+        return switch (value) {
+            .integer => |n| n,
+            .float => |n| @intFromFloat(n),
+            else => null,
+        };
+    }
+
+    /// Demuxes Docker exec stdout and stderr streams.
+    fn demuxDockerExecStream(
+        allocator: std.mem.Allocator,
+        payload: []const u8,
+    ) !ExecStreamOutput {
+        var stdout_list: std.ArrayList(u8) = .empty;
+        errdefer stdout_list.deinit(allocator);
+        var stderr_list: std.ArrayList(u8) = .empty;
+        errdefer stderr_list.deinit(allocator);
+
+        var index: usize = 0;
+        while (index + 8 <= payload.len) {
+            const stream_type = payload[index];
+            const frame_size =
+                (@as(usize, payload[index + 4]) << 24) |
+                (@as(usize, payload[index + 5]) << 16) |
+                (@as(usize, payload[index + 6]) << 8) |
+                @as(usize, payload[index + 7]);
+
+            index += 8;
+
+            if (index + frame_size > payload.len) {
+                break;
+            }
+
+            const frame = payload[index .. index + frame_size];
+            index += frame_size;
+
+            switch (stream_type) {
+                1 => try stdout_list.appendSlice(allocator, frame),
+                2 => try stderr_list.appendSlice(allocator, frame),
+                else => {},
+            }
+        }
+
+        if (stdout_list.items.len == 0 and stderr_list.items.len == 0 and payload.len > 0) {
+            try stdout_list.appendSlice(allocator, payload);
+        }
+
+        return .{
+            .stdout = try stdout_list.toOwnedSlice(allocator),
+            .stderr = try stderr_list.toOwnedSlice(allocator),
+        };
+    }
+
     /// Parses a JSON string field from a response body.
     fn parseJsonStringField(
         // The allocator to use.
@@ -410,4 +678,21 @@ pub const DockerApi = struct {
 
         return try output.toOwnedSlice(allocator);
     }
+};
+
+/// Process output captured from a Docker exec session.
+pub const ExecResult = struct {
+    // Process exit code from the exec session.
+    exit_code: i32,
+
+    // Captured stdout text.
+    stdout: []const u8,
+
+    // Captured stderr text.
+    stderr: []const u8,
+};
+
+const ExecStreamOutput = struct {
+    stdout: []const u8,
+    stderr: []const u8,
 };

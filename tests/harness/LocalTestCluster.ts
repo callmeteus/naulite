@@ -97,6 +97,42 @@ export class LocalTestCluster {
     }
 
     /**
+     * Returns whether CI or the caller requires Docker to be available.
+     *
+     * @returns `true` when `REQUIRE_DOCKER=true`
+     */
+    static isDockerRequired(): boolean {
+        return process.env.REQUIRE_DOCKER === "true";
+    }
+
+    /**
+     * Fails fast when Docker is required but the daemon is unreachable.
+     *
+     * @param available Result of {@link isDockerAvailable}
+     * @returns Nothing.
+     */
+    static assertDockerAvailable(available: boolean): void {
+        if (!available && this.isDockerRequired()) {
+            throw new Error(
+                "Docker is required (REQUIRE_DOCKER=true) but the daemon is not reachable. " +
+                "Run `docker version` on the host to diagnose."
+            );
+        }
+    }
+
+    /**
+     * Re-throws bootstrap errors when Docker is required instead of skipping tests.
+     *
+     * @param err Error raised while starting or probing the test cluster
+     * @returns Nothing.
+     */
+    static rethrowIfDockerRequired(err: unknown): void {
+        if (this.isDockerRequired()) {
+            throw err;
+        }
+    }
+
+    /**
      * Returns whether Docker appears to be available on the host.
      * 
      * @returns `true` when `docker version` succeeds

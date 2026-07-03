@@ -11,9 +11,11 @@ export const PluginTypeSchema = z.enum([
     "secret",
     "volume",
     "backupDestination",
+    "containerRegistryBlob",
     "logRotation",
     "logRotationSink",
-    "database"
+    "database",
+    "nodeProvisioner"
 ]);
 
 /**

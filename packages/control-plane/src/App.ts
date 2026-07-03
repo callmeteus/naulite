@@ -4,6 +4,8 @@ import { ControlPlaneService } from "./ControlPlaneService";
 import { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
 import { DatabaseProvider } from "./database/DatabaseProvider";
 import { registerErrorHandler } from "./errors/RegisterErrorHandler";
+import { registerOpenApi } from "./openapi/RegisterOpenApi";
+import { registerRawBodyParser } from "./openapi/RegisterRawBodyParser";
 import { registerRoutes } from "./routes/index";
 
 /**
@@ -34,6 +36,8 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
 
     registerErrorHandler(app);
 
+    await registerRawBodyParser(app);
+    await registerOpenApi(app);
     await registerRoutes(app);
     return app;
 }

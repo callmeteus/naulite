@@ -9,6 +9,9 @@ import type {
     BuildResponse,
     ClusterHealth,
     ClusterStatus,
+    ContainerRegistryImage,
+    ContainerRegistryImageDeleteResult,
+    ContainerRegistryImageHead,
     CreatedApiKey,
     ExecResponse,
     GitOpsWebhookPayload,
@@ -17,12 +20,18 @@ import type {
     LogRotationRun,
     LogRotationTask,
     LogsResponse,
+    NetBirdAcl,
+    NodeProvision,
+    NetBirdDevice,
+    NetBirdGroup,
     NetBirdTopology,
     PlatformClientOptions,
     PlatformDiscovery,
+    ProvisionNodeInput,
     RegistryResponse,
     Secret,
     Service,
+    UpsertSecretInput,
     Volume
 } from "./types";
 import type { Node } from "./types";
@@ -130,6 +139,16 @@ export class PlatformClient {
     }
 
     /**
+     * Returns secret metadata by name.
+     *
+     * @param secretName Secret name
+     * @returns Secret metadata
+     */
+    async getSecret(secretName: string): Promise<Secret> {
+        return this.request<Secret>("GET", `/secrets/${encodeURIComponent(secretName)}`);
+    }
+
+    /**
      * Lists backup runs.
      * 
      * @returns Backup run summaries
@@ -189,6 +208,16 @@ export class PlatformClient {
     }
 
     /**
+     * Creates or updates a cluster secret.
+     *
+     * @param input Secret upsert payload
+     * @returns Stored secret metadata
+     */
+    async upsertSecret(input: UpsertSecretInput): Promise<Secret> {
+        return this.request<Secret>("POST", "/secrets", input);
+    }
+
+    /**
      * Streams or fetches logs for an instance.
      * 
      * @param instanceId Instance identifier
@@ -219,12 +248,32 @@ export class PlatformClient {
 
     /**
      * Triggers a service image build.
-     * 
+     *
+     * @param request Build request payload
+     * @returns Build response
+     */
+    async triggerBuild(request: BuildRequest): Promise<BuildResponse> {
+        return this.request<BuildResponse>("POST", "/build", request);
+    }
+
+    /**
+     * Triggers a service image build.
+     *
      * @param request Build request payload
      * @returns Build response
      */
     async build(request: BuildRequest): Promise<BuildResponse> {
-        return this.request<BuildResponse>("POST", "/build", request);
+        return this.triggerBuild(request);
+    }
+
+    /**
+     * Provisions a cloud node and bootstraps a platform agent.
+     *
+     * @param input Node provision request payload
+     * @returns Created node provision record
+     */
+    async provisionNode(input: ProvisionNodeInput): Promise<NodeProvision> {
+        return this.request<NodeProvision>("POST", "/nodes/provision", input);
     }
 
     /**
@@ -335,12 +384,62 @@ export class PlatformClient {
     }
 
     /**
-     * Returns NetBird topology summary (stub).
+     * Returns NetBird topology summary.
      * 
      * @returns Topology summary
      */
     async getNetBirdTopology(): Promise<NetBirdTopology> {
         return this.request<NetBirdTopology>("GET", "/netbird/topology");
+    }
+
+    /**
+     * Lists NetBird devices enrolled in the mesh.
+     *
+     * @returns NetBird device records
+     */
+    async listNetBirdDevices(): Promise<NetBirdDevice[]> {
+        const response = await this.request<{ devices: NetBirdDevice[] }>("GET", "/netbird/devices");
+        return response.devices;
+    }
+
+    /**
+     * Lists NetBird groups managed by the control plane.
+     *
+     * @returns NetBird group records
+     */
+    async listNetBirdGroups(): Promise<NetBirdGroup[]> {
+        const response = await this.request<{ groups: NetBirdGroup[] }>("GET", "/netbird/groups");
+        return response.groups;
+    }
+
+    /**
+     * Ensures a NetBird group exists by name.
+     *
+     * @param name Group name
+     * @returns Ensured group record
+     */
+    async ensureNetBirdGroup(name: string): Promise<NetBirdGroup> {
+        const response = await this.request<{ group: NetBirdGroup }>("POST", "/netbird/groups", { name });
+        return response.group;
+    }
+
+    /**
+     * Lists NetBird ACL rules.
+     *
+     * @returns NetBird ACL records
+     */
+    async listNetBirdAcls(): Promise<NetBirdAcl[]> {
+        const response = await this.request<{ acls: NetBirdAcl[] }>("GET", "/netbird/acls");
+        return response.acls;
+    }
+
+    /**
+     * Returns Prometheus metrics in text exposition format.
+     *
+     * @returns Prometheus metrics document
+     */
+    async getPrometheusMetrics(): Promise<string> {
+        return this.requestText("GET", "/metrics");
     }
 
     /**
@@ -379,6 +478,79 @@ export class PlatformClient {
      */
     async revokeApiKey(apiKeyId: string): Promise<void> {
         await this.request("DELETE", `/api-keys/${encodeURIComponent(apiKeyId)}`);
+    }
+
+    /**
+     * Lists container registry images.
+     *
+     * @returns Stored container image metadata
+     */
+    async listContainerRegistryImages(): Promise<ContainerRegistryImage[]> {
+        const response = await this.request<{ images: ContainerRegistryImage[] }>("GET", "/cr/images");
+        return response.images;
+    }
+
+    /**
+     * Returns metadata headers for a container registry image.
+     *
+     * @param name Image name
+     * @param tag Image tag
+     * @returns Image metadata derived from response headers
+     */
+    async headContainerRegistryImage(name: string, tag: string): Promise<ContainerRegistryImageHead> {
+        const headers: Record<string, string> = {
+            Accept: "application/json"
+        };
+
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+
+        const response = await this.fetchImpl(
+            `${this.baseUrl}/cr/images/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
+            {
+                method: "HEAD",
+                headers
+            }
+        );
+
+        if (!response.ok) {
+            throw new PlatformApiError(
+                response.status,
+                `Request failed with status ${response.status}`
+            );
+        }
+
+        const digest = response.headers.get("Digest");
+        const contentLength = response.headers.get("Content-Length");
+        const contentType = response.headers.get("Content-Type");
+
+        if (!digest || !contentLength || !contentType) {
+            throw new PlatformApiError(
+                response.status,
+                "Container registry HEAD response is missing required headers."
+            );
+        }
+
+        return {
+            digest,
+            sizeBytes: Number(contentLength),
+            contentType
+        };
+    }
+
+    /**
+     * Deletes a container registry image.
+     *
+     * @param name Image name
+     * @param tag Image tag
+     * @returns Deletion confirmation payload
+     */
+    async deleteContainerRegistryImage(name: string, tag: string): Promise<ContainerRegistryImageDeleteResult> {
+        return this.request<ContainerRegistryImageDeleteResult>(
+            "DELETE",
+            `/cr/images/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`
+        );
     }
 
     /**
@@ -424,6 +596,55 @@ export class PlatformClient {
         }
 
         return parsed as T;
+    }
+
+    /**
+     * Performs an HTTP request and returns the raw response body as text.
+     *
+     * @param method HTTP method
+     * @param path API path
+     * @returns Raw response body
+     */
+    private async requestText(method: string, path: string): Promise<string> {
+        const headers: Record<string, string> = {
+            Accept: "text/plain, application/json"
+        };
+
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+
+        const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+            method,
+            headers
+        });
+
+        const text = await response.text();
+
+        if (!response.ok) {
+            let message = `Request failed with status ${response.status}`;
+
+            try {
+                const parsed = text.length > 0 ? JSON.parse(text) as unknown : undefined;
+
+                if (
+                    typeof parsed === "object" &&
+                    parsed !== null &&
+                    "message" in parsed &&
+                    typeof parsed.message === "string"
+                ) {
+                    message = parsed.message;
+                }
+            } catch {
+                if (text.length > 0) {
+                    message = text;
+                }
+            }
+
+            throw new PlatformApiError(response.status, message);
+        }
+
+        return text;
     }
 }
 

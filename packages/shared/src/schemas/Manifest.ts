@@ -51,7 +51,10 @@ export const ManifestServiceSchema = z.object({
     buildOptions: BuildOptionsSchema.optional(),
     ingress: IngressSchema.optional(),
     logRotation: LogRotationPolicySchema.optional(),
-    secrets: z.array(SecretReferenceSchema).default([])
+    secrets: z.array(SecretReferenceSchema).default([]),
+    deploy: z.object({
+        replicas: z.number().int().positive().default(1)
+    }).optional()
 });
 
 /**

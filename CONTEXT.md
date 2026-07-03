@@ -23,8 +23,8 @@ Pods, ReplicaSets, DaemonSets, StatefulSets, CRDs, Operators, Admission Controll
 | `shared` | Zod schemas, domain types, provider interfaces, plugin registry |
 | `cli` | Zig CLI (`zig build`); NPM wrapper in `bin/platform.js`; strings in `src/i18n.zig` |
 | `sdk` | Typed HTTP client for control plane routes |
-| `ui` | Web dashboard (`ui-frontend` + `ui-backend` BFF); strings in `packages/ui/packages/frontend/src/ui/en.json` |
-| `control-plane` | Fastify API, database, orchestration, GitOps, schedulers |
+| `ui` | Web dashboard (`ui-frontend` + `ui-backend` BFF); cluster state via Vue `reactive()` (`stores/Cluster.ts`); strings in `packages/ui/packages/frontend/src/ui/en.json` |
+| `control-plane` | Fastify API, Sequelize ORM (`sequelize-typescript`), orchestration, GitOps, schedulers |
 | `agent` | Zig executor on each node |
 | `runtime-docker`, `runtime-podman`, `runtime-containerd` | Under `packages/runtimes/*` - container runtime providers |
 | `builders/docker`, `builders/kaniko` | Dedicated builder plugins extending `BuilderProvider` |
@@ -83,13 +83,13 @@ See `docs/backups.md` and `docs/log-rotation.md`.
 ## Communication and database
 
 - Control plane REST API for CLI, agents, GitOps, and the admin BFF.
-- SQLite for single-node dev; PostgreSQL for HA multi-control-plane deployments.
+- Sequelize ORM with SQLite for single-node dev; PostgreSQL for HA multi-control-plane deployments.
 - Multi-CP sync uses PostgreSQL events and shared state.
 
 ## Quality bar
 
 - English-only code and docs in V1
-- Unit tests (pure and Docker-backed) plus e2e smoke on `LocalTestCluster`
+- ~72 unit tests (pure and Docker-backed) plus e2e smoke on `LocalTestCluster`
 - CI gates: lint, unit, docker unit, e2e, build
 
 ## Related docs

@@ -19,6 +19,12 @@ export interface ControlPlaneSyncEvent {
  * Multi control-plane synchronization via PostgreSQL events.
  */
 export class ControlPlaneSync {
+    static readonly EVENTS = {
+        APPLY_REVISION_CHANGED: "apply.revision.changed",
+        SECRET_CHANGED: "secret.changed",
+        CLUSTER_INVALIDATED: "cluster.invalidated"
+    } as const;
+
     private pollHandle: NodeJS.Timeout | null = null;
     private lastEventId = 0;
     private readonly listeners = new Map<string, Set<(event: ControlPlaneSyncEvent) => void>>();
@@ -100,6 +106,28 @@ export class ControlPlaneSync {
      * @returns Nothing.
      */
     on(eventType: string, listener: (event: ControlPlaneSyncEvent) => void): void {
+        this.addListener(eventType, listener);
+    }
+
+    /**
+     * Subscribes to sync events by type.
+     *
+     * @param eventType Event type identifier
+     * @param listener Event listener callback
+     * @returns Nothing.
+     */
+    subscribe(eventType: string, listener: (event: ControlPlaneSyncEvent) => void): void {
+        this.addListener(eventType, listener);
+    }
+
+    /**
+     * Registers a sync event listener.
+     *
+     * @param eventType Event type identifier
+     * @param listener Event listener callback
+     * @returns Nothing.
+     */
+    private addListener(eventType: string, listener: (event: ControlPlaneSyncEvent) => void): void {
         const listeners = this.listeners.get(eventType) ?? new Set();
         listeners.add(listener);
         this.listeners.set(eventType, listeners);
@@ -136,9 +164,19 @@ export class ControlPlaneSync {
                 createdAt: row.createdAt
             };
             this.lastEventId = Math.max(this.lastEventId, row.id);
-            const listeners = this.listeners.get(event.eventType);
+            const listeners = new Set<(event: ControlPlaneSyncEvent) => void>();
 
-            if (listeners) {
+            for (const bucket of [event.eventType, "*"]) {
+                const bucketListeners = this.listeners.get(bucket);
+
+                if (bucketListeners) {
+                    for (const listener of bucketListeners) {
+                        listeners.add(listener);
+                    }
+                }
+            }
+
+            if (listeners.size > 0) {
                 for (const listener of listeners) {
                     listener(event);
                 }

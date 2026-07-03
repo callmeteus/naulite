@@ -31,6 +31,12 @@ pub fn main() !void {
         netbird_client.ensureConnected() catch |err| {
             std.log.warn("[netbird] ensure connected failed: {}", .{err});
         };
+
+        if (netbird_client.getDeviceId()) |device_id| {
+            agent_config.setNetbirdDeviceId(allocator, &agent_cfg, device_id) catch |err| {
+                std.log.warn("[agent-config] netbird device id persist failed: {}", .{err});
+            };
+        }
     } else |err| {
         std.log.warn("[netbird] skipped: {}", .{err});
     }
@@ -44,4 +50,11 @@ pub fn main() !void {
     };
 
     try http_server.serve(allocator, server_config);
+}
+
+test {
+    _ = @import("execution_plan.zig");
+    _ = @import("http_server.zig");
+    _ = @import("netbird.zig");
+    _ = @import("runtime/docker_stats.zig");
 }

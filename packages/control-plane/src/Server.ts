@@ -5,6 +5,9 @@ import { createApp } from "./App";
 import { createControlPlaneContext } from "./ControlPlaneContext";
 import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import { DatabaseProvider } from "./database/DatabaseProvider";
+import { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";
+import { ClusterStateService } from "./services/ClusterStateService";
+import { ControlPlaneSyncSubscribers } from "./services/ControlPlaneSyncSubscribers";
 import { NetBirdBootstrap } from "./services/NetBirdBootstrap";
 
 /**
@@ -48,10 +51,15 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
 
     const store = new ControlPlaneStore();
     const netBirdCredentials = await NetBirdBootstrap.ensureCredentials(store);
+    const applyRevision = await ClusterStateService.loadApplyRevision();
     const context = createControlPlaneContext(databaseProvider, packagesDir, {
-        netBirdCredentials
+        netBirdCredentials,
+        applyRevision
     });
     await context.pluginLoader.load(context.pluginRegistry);
+    PluginRegistryWiring.wire(context);
+    ControlPlaneSyncSubscribers.register(context);
+    context.leaderElection.start();
     context.backupScheduler.start();
     context.logRotationScheduler.start();
     context.controlPlaneSync.start();
@@ -69,6 +77,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
         port,
         databaseProvider,
         stop: async () => {
+            context.leaderElection.stop();
             context.backupScheduler.stop();
             context.logRotationScheduler.stop();
             context.controlPlaneSync.stop();

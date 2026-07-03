@@ -17,6 +17,7 @@ describe("apply minimal manifest via SDK", () => {
 
     beforeAll(async () => {
         dockerEnabled = await LocalTestCluster.isDockerAvailable();
+        LocalTestCluster.assertDockerAvailable(dockerEnabled);
         if (!dockerEnabled) {
             return;
         }
@@ -27,7 +28,8 @@ describe("apply minimal manifest via SDK", () => {
             client = new PlatformClient({
                 baseUrl: LocalTestCluster.getControlPlaneUrl()
             });
-        } catch {
+        } catch (err) {
+            LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
         }
     }, 300_000);
@@ -42,6 +44,9 @@ describe("apply minimal manifest via SDK", () => {
 
     it("applies the minimal compose fixture and exposes the web service", async (context) => {
         if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
             context.skip();
         }
 
@@ -77,6 +82,9 @@ describe("apply minimal manifest via SDK", () => {
 
     it("rejects apply requests with an empty manifest body", async (context) => {
         if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
             context.skip();
         }
 

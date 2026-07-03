@@ -1,10 +1,12 @@
 import type {
     ApiKey,
     BackupTask,
+    ContainerRegistryImage,
     CreatedApiKey,
     Instance,
     LogRotationTask,
     Node,
+    NodeProvision,
     Secret,
     Service,
     Volume
@@ -137,6 +139,23 @@ export interface BuildRequest {
 }
 
 /**
+ * Node provision request payload for POST /nodes/provision.
+ */
+export interface ProvisionNodeInput {
+    provider?: string;
+    instanceType: string;
+    amiId: string;
+    labels?: Record<string, string>;
+    capabilities?: string[];
+    count?: number;
+    region?: string;
+    subnetId?: string;
+    securityGroupIds?: string[];
+    iamInstanceProfile?: string;
+    keyName?: string;
+}
+
+/**
  * Build response payload.
  */
 export interface BuildResponse {
@@ -158,6 +177,24 @@ export interface IngressSummary {
     serviceName: string;
     hosts: string[];
     tlsEnabled: boolean;
+}
+
+/**
+ * Container registry image metadata returned by HEAD /cr/images/:name/:tag.
+ */
+export interface ContainerRegistryImageHead {
+    digest: string;
+    sizeBytes: number;
+    contentType: string;
+}
+
+/**
+ * Container registry image deletion response.
+ */
+export interface ContainerRegistryImageDeleteResult {
+    deleted: true;
+    name: string;
+    tag: string;
 }
 
 /**
@@ -187,20 +224,62 @@ export interface GitOpsWebhookPayload {
 }
 
 /**
- * NetBird topology summary (stub).
+ * NetBird topology summary.
  */
 export interface NetBirdTopology {
     groups: string[];
     devices: string[];
 }
 
+/**
+ * NetBird device record returned by the control plane.
+ */
+export interface NetBirdDevice {
+    id: string;
+    name: string;
+    hostname?: string;
+    connected?: boolean;
+    [key: string]: unknown;
+}
+
+/**
+ * NetBird group record returned by the control plane.
+ */
+export interface NetBirdGroup {
+    id: string;
+    name: string;
+    [key: string]: unknown;
+}
+
+/**
+ * NetBird ACL record returned by the control plane.
+ */
+export interface NetBirdAcl {
+    id: string;
+    name?: string;
+    [key: string]: unknown;
+}
+
+/**
+ * Secret upsert payload for cluster secrets API.
+ */
+export interface UpsertSecretInput {
+    name: string;
+    data: Record<string, string>;
+    scope?: "cluster" | "service";
+    serviceName?: string;
+    description?: string;
+}
+
 export type {
     ApiKey,
     BackupTask,
+    ContainerRegistryImage,
     CreatedApiKey,
     Instance,
     LogRotationTask,
     Node,
+    NodeProvision,
     Secret,
     Service,
     Volume

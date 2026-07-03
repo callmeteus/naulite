@@ -1,7 +1,7 @@
-import { AgentProxyError, AgentProxyService } from "../services/AgentProxyService";
 import { ControlPlaneService } from "../ControlPlaneService";
 import { AuthPreHandlers } from "../auth/AuthPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
+import { BuildService, BuildServiceError } from "../services/BuildService";
 import {
     BuildServiceBodySchema,
     LooseObjectSchema,
@@ -34,26 +34,37 @@ export const POST = defineRoute({
             });
         }
 
+        const context = ControlPlaneService.requireContext();
         const nodes = await ControlPlaneService.Store.listNodes();
-        const builderNode = nodes.find((node) => node.capabilities.includes("builder")) ?? nodes[0];
+        const revisions = await ControlPlaneService.GitOps.listRevisions();
+        const latestRevision = revisions[0];
 
-        if (!builderNode?.agentUrl) {
+        if (!latestRevision?.manifestYaml) {
             return res.status(503).send({
                 error: "builder_not_configured",
-                message: "No builder is configured in the cluster."
+                message: "No manifest revision is available to resolve the service build."
             });
         }
 
-        try {
-            const response = await AgentProxyService.postTask(builderNode.agentUrl, "/tasks/build", {
-                serviceName,
-                provider,
-                registry
-            });
+        const manifest = ControlPlaneService.Orchestration.ComposeParser.parse(latestRevision.manifestYaml);
 
-            return response;
+        try {
+            const result = await BuildService.buildService(
+                context,
+                nodes,
+                serviceName,
+                manifest,
+                { provider, registry }
+            );
+
+            return {
+                serviceName,
+                imageRef: result.imageRef,
+                logs: result.logs,
+                durationMs: result.durationMs
+            };
         } catch (err) {
-            if (err instanceof AgentProxyError) {
+            if (err instanceof BuildServiceError) {
                 return res.status(err.statusCode).send({
                     error: err.code,
                     message: err.message
@@ -62,7 +73,7 @@ export const POST = defineRoute({
 
             return res.status(503).send({
                 error: "builder_not_configured",
-                message: "Remote build is not implemented on the agent yet."
+                message: err instanceof Error ? err.message : String(err)
             });
         }
     }

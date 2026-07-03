@@ -7,7 +7,7 @@ See [CONTEXT.md](../CONTEXT.md) for the canonical overview. This document summar
 ### Control plane
 
 - Fastify HTTP API
-- Drizzle ORM with SQLite (dev) or PostgreSQL (HA)
+- Sequelize ORM (`sequelize-typescript`) with SQLite (dev) or PostgreSQL (HA)
 - Compose parser, planner, and scheduler
 - Plugin loader for `packages/plugins/*`
 - Backup and log rotation schedulers
@@ -26,7 +26,7 @@ See [CONTEXT.md](../CONTEXT.md) for the canonical overview. This document summar
 
 - CLI is implemented in Zig (`packages/cli/src/`); NPM install via `bin/platform.js` spawning the native binary
 - Strings live in `src/i18n.zig`
-- UI uses Vue 3, Vite, Pinia, and the same SDK through a dev proxy
+- UI uses Vue 3, Vite, a `reactive()` cluster store (`packages/ui/packages/frontend/src/stores/Cluster.ts`), and the same SDK through a dev proxy
 
 ## Deploy flow
 

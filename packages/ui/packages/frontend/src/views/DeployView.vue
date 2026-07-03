@@ -10,7 +10,7 @@ const revision = ref("");
 
 /**
  * Submits the manifest editor contents to the control plane.
- * 
+ *
  * @returns Nothing.
  */
 async function applyManifest(): Promise<void> {
@@ -21,13 +21,19 @@ async function applyManifest(): Promise<void> {
 <template>
     <section>
         <h2>{{ t("deploy") }}</h2>
+        <p class="hint">{{ t("deployHint") }}</p>
         <p v-if="store.error" class="error">{{ store.error }}</p>
         <div class="panel">
             <textarea v-model="manifestYaml" />
             <p>
-                <button :disabled="store.loading" @click="applyManifest">Apply manifest</button>
+                <button :disabled="store.loading" @click="applyManifest">{{ t("applyManifest") }}</button>
             </p>
-            <p v-if="revision">Revision: {{ revision }}</p>
+            <p v-if="revision">{{ t("deployRevision") }}: {{ revision }}</p>
+            <div v-if="store.lastApplyResult" class="apply-summary">
+                <p>{{ t("deployCreated") }}: {{ store.lastApplyResult.servicesCreated }}</p>
+                <p>{{ t("deployUpdated") }}: {{ store.lastApplyResult.servicesUpdated }}</p>
+                <p>{{ t("deployDeleted") }}: {{ store.lastApplyResult.servicesDeleted }}</p>
+            </div>
         </div>
     </section>
 </template>

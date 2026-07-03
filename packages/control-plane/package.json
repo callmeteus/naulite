@@ -11,6 +11,11 @@
         "start": "node dist/Server.js"
     },
     "dependencies": {
+        "@fastify/swagger": "^9.4.2",
+        "@fastify/swagger-ui": "^5.2.1",
+        "@platform/builder-docker": "0.1.0",
+        "@platform/builder-kaniko": "0.1.0",
+        "@platform/gateway": "0.1.0",
         "@platform/shared": "0.1.0",
         "fastify": "^5.2.0",
         "pg": "^8.13.1",

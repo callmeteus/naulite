@@ -14,6 +14,10 @@ CONFIG_PATH="${CONFIG_PATH:-/var/lib/platform/agent.json}"
 CP_HOST=""
 SETUP_KEY=""
 NETBIRD_MANAGEMENT_URL=""
+PROVISION_ID=""
+NODE_ID=""
+LABELS_JSON=""
+CAPABILITIES_JSON=""
 DRY_RUN=0
 
 log() {
@@ -89,6 +93,16 @@ parse_args() {
     done
 
     if [[ -z "${CP_HOST}" || -z "${SETUP_KEY}" ]]; then
+        CP_HOST="${CP_HOST:-${PLATFORM_CP_URL:-}}"
+        SETUP_KEY="${SETUP_KEY:-${PLATFORM_SETUP_KEY:-}}"
+    fi
+
+    PROVISION_ID="${PROVISION_ID:-${PLATFORM_PROVISION_ID:-}}"
+    NODE_ID="${NODE_ID:-${PLATFORM_NODE_ID:-}}"
+    LABELS_JSON="${LABELS_JSON:-${PLATFORM_LABELS:-}}"
+    CAPABILITIES_JSON="${CAPABILITIES_JSON:-${PLATFORM_CAPABILITIES:-}}"
+
+    if [[ -z "${CP_HOST}" || -z "${SETUP_KEY}" ]]; then
         log "--host and --setup-key are required"
         usage
         exit 1
@@ -125,8 +139,16 @@ fetch_bootstrap_bundle() {
     fi
 
     log "fetching bootstrap settings from ${CP_HOST}/bootstrap/agent"
-    local response
-    response="$(curl -sf -H "X-Platform-Setup-Key: ${SETUP_KEY}" "${CP_HOST}/bootstrap/agent")"
+    local curl_args=(
+        -sf
+        -H "X-Platform-Setup-Key: ${SETUP_KEY}"
+    )
+
+    if [[ -n "${PROVISION_ID}" ]]; then
+        curl_args+=(-H "X-Platform-Provision-Id: ${PROVISION_ID}")
+    fi
+
+    response="$(curl "${curl_args[@]}" "${CP_HOST}/bootstrap/agent")"
 
     if command -v node >/dev/null 2>&1; then
         NETBIRD_MANAGEMENT_URL="$(printf '%s' "${response}" | node -e "
@@ -167,7 +189,11 @@ write_agent_config() {
   "agentPort": ${AGENT_PORT},
   "dockerSocket": "${docker_socket}",
   "netbirdManagementUrl": "${NETBIRD_MANAGEMENT_URL}",
-  "netbirdSetupKey": "${SETUP_KEY}"
+  "netbirdSetupKey": "${SETUP_KEY}"$( [[ -n "${PROVISION_ID}" ]] && printf ',
+  "provisionId": "%s"' "${PROVISION_ID}" )$( [[ -n "${NODE_ID}" ]] && printf ',
+  "nodeId": "%s"' "${NODE_ID}" )$( [[ -n "${LABELS_JSON}" ]] && printf ',
+  "labels": %s' "${LABELS_JSON}" )$( [[ -n "${CAPABILITIES_JSON}" ]] && printf ',
+  "capabilities": %s' "${CAPABILITIES_JSON}" )
 }
 EOF
 

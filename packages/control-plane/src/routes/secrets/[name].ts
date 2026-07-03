@@ -1,14 +1,81 @@
-import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
-import { defineRoute } from "../../routing/DefineRoute";
 import {
     DeletedByNameResponseSchema,
     NameParamsSchema,
-    RouteErrorResponseSchema
+    RouteErrorResponseSchema,
+    SecretSchema,
+    UpsertSecretBodySchema
 } from "@platform/shared";
 
-export const DELETE = defineRoute({
+import { ControlPlaneService } from "../../ControlPlaneService";
+import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { LeaderPreHandlers } from "../../auth/LeaderPreHandlers";
+import { HTTP404Error } from "../../errors/TreatedError";
+import { defineRoute } from "../../routing/DefineRoute";
+
+export const GET = defineRoute({
     preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    schema: {
+        summary: "Get secret metadata",
+        description: "Returns secret metadata by name without exposing secret values.",
+        tags: ["secrets"],
+        operationId: "getSecretByName",
+        params: NameParamsSchema,
+        response: {
+            200: SecretSchema,
+            404: RouteErrorResponseSchema
+        }
+    },
+    async handler(req) {
+        const { name } = req.params;
+        const secret = await ControlPlaneService.Secrets.getByName(name);
+
+        if (!secret) {
+            throw new HTTP404Error(`Secret ${name} not found.`, {
+                error: "not_found"
+            });
+        }
+
+        return secret;
+    }
+});
+
+export const PUT = defineRoute({
+    preHandler: [AuthPreHandlers.authorizedLocalOrApiKey, LeaderPreHandlers.requireLeader()],
+    schema: {
+        summary: "Update secret",
+        description: "Updates a cluster secret with encrypted values at rest.",
+        tags: ["secrets"],
+        operationId: "updateSecretByName",
+        params: NameParamsSchema,
+        body: UpsertSecretBodySchema,
+        response: {
+            200: SecretSchema,
+            404: RouteErrorResponseSchema
+        }
+    },
+    async handler(req) {
+        const { name } = req.params;
+        const existing = await ControlPlaneService.Secrets.getByName(name);
+
+        if (!existing) {
+            throw new HTTP404Error(`Secret ${name} not found.`, {
+                error: "not_found"
+            });
+        }
+
+        const body = req.body;
+        return ControlPlaneService.Secrets.upsert({
+            name,
+            data: body.data,
+            scope: body.scope ?? existing.scope,
+            serviceName: body.serviceName ?? existing.serviceName,
+            description: body.description ?? existing.description
+        });
+    }
+});
+
+export const DELETE = defineRoute({
+    preHandler: [AuthPreHandlers.authorizedLocalOrApiKey, LeaderPreHandlers.requireLeader()],
     schema: {
         summary: "Delete secret",
         description: "Deletes a cluster secret by name.",
@@ -22,7 +89,7 @@ export const DELETE = defineRoute({
     },
     async handler(req, res) {
         const { name } = req.params;
-        const deleted = await ControlPlaneService.Store.deleteSecretByName(name);
+        const deleted = await ControlPlaneService.Secrets.deleteByName(name);
 
         if (!deleted) {
             return res.status(404).send({

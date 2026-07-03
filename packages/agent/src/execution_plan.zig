@@ -143,6 +143,19 @@ pub fn parseExecutionPlan(
     };
 }
 
+test "parse connectNetwork operation" {
+    const allocator = std.testing.allocator;
+    const body =
+        \\{"planId":"p1","revision":1,"nodeId":"n1","manifestName":"demo","createdAt":"2026-07-02T00:00:00.000Z","operations":[{"type":"connectNetwork","instanceId":"svc-1","networkName":"internal"}]}
+    ;
+
+    var plan = try parseExecutionPlan(allocator, body);
+    defer plan.deinit(allocator);
+
+    try std.testing.expectEqual(@as(usize, 1), plan.operations.len);
+    try std.testing.expectEqual(OperationType.connectNetwork, plan.operations[0].op_type);
+}
+
 fn duplicateRequiredString(
     allocator: std.mem.Allocator,
     // Parsed JSON root value.

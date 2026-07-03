@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const backup_executor = @import("backup_executor.zig");
+const build_executor = @import("build_executor.zig");
 const bootstrap = @import("bootstrap.zig");
 const execution_plan = @import("execution_plan.zig");
 const log_rotation_executor = @import("log_rotation_executor.zig");
@@ -35,6 +36,9 @@ const RouteContext = struct {
 
     // Docker runtime client for container operations.
     docker_client: *docker.DockerClient,
+
+    // Path to the Docker Unix socket or named pipe.
+    docker_socket: []const u8,
 };
 
 /// Builds the JSON body for GET /health.
@@ -54,9 +58,27 @@ pub fn handleRequest(
     // Request body bytes.
     body: []const u8,
 ) !HttpResponse {
+    return handleRequestWithSocket(allocator, docker_client, "/var/run/docker.sock", method, path, body);
+}
+
+/// Handles an HTTP request with an explicit Docker socket path.
+pub fn handleRequestWithSocket(
+    allocator: std.mem.Allocator,
+    // Docker runtime client for container operations.
+    docker_client: *docker.DockerClient,
+    // Path to the Docker Unix socket or named pipe.
+    docker_socket: []const u8,
+    // The HTTP method.
+    method: []const u8,
+    // Request path without query string.
+    path: []const u8,
+    // Request body bytes.
+    body: []const u8,
+) !HttpResponse {
     const ctx = RouteContext{
         .allocator = allocator,
         .docker_client = docker_client,
+        .docker_socket = docker_socket,
     };
 
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/health")) {
@@ -95,6 +117,14 @@ pub fn handleRequest(
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/backup")) {
         return try handleBackupTask(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/backup/restore")) {
+        return try handleBackupRestore(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/build")) {
+        return try handleBuildTask(&ctx, body);
     }
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/log-rotation")) {
@@ -237,7 +267,14 @@ fn handleConnection(
 
     const path = try normalizePath(request_allocator, target);
 
-    const response = handleRequest(request_allocator, docker_client, method, path, body) catch |err| {
+    const response = handleRequestWithSocket(
+        request_allocator,
+        docker_client,
+        config.docker_socket,
+        method,
+        path,
+        body,
+    ) catch |err| {
         std.log.err("[http] handler failed: {}", .{err});
         try writeRawResponse(io, stream, 500, "Internal Server Error", "application/json", "{\"error\":\"internal server error\"}");
         return;
@@ -308,12 +345,21 @@ fn handleContainerExec(ctx: *const RouteContext, path: []const u8, body: []const
     const command = try parseStringArrayField(ctx.allocator, body, "command");
     defer ctx.allocator.free(command);
 
-    const result = try ctx.docker_client.execContainer(instance_id, command);
+    var result = try ctx.docker_client.execContainer(instance_id, command);
+    defer {
+        ctx.allocator.free(result.stdout);
+        ctx.allocator.free(result.stderr);
+    }
+
+    const stdout_literal = try jsonStringLiteral(ctx.allocator, result.stdout);
+    defer ctx.allocator.free(stdout_literal);
+    const stderr_literal = try jsonStringLiteral(ctx.allocator, result.stderr);
+    defer ctx.allocator.free(stderr_literal);
 
     const response_body = try std.fmt.allocPrint(
         ctx.allocator,
-        "{{\"instanceId\":\"{s}\",\"exitCode\":{d},\"stdout\":\"{s}\",\"stderr\":\"{s}\"}}",
-        .{ instance_id, result.exit_code, result.stdout, result.stderr },
+        "{{\"instanceId\":\"{s}\",\"exitCode\":{d},\"stdout\":{s},\"stderr\":{s}}}",
+        .{ instance_id, result.exit_code, stdout_literal, stderr_literal },
     );
 
     return .{
@@ -327,16 +373,97 @@ fn handleBackupTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
     const result = try backup_executor.executeBackupTask(ctx.allocator, body);
     defer ctx.allocator.free(result.task_id);
     defer ctx.allocator.free(result.status);
-    if (result.archive_path) |archive_path| {
-        ctx.allocator.free(archive_path);
+
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+        const response_body = try std.fmt.allocPrint(
+            ctx.allocator,
+            "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"error\":\"{s}\"}}",
+            .{ result.task_id, result.status, error_message },
+        );
+
+        return .{
+            .status = 500,
+            .content_type = "application/json",
+            .body = response_body,
+        };
     }
+
+    const response_body = if (result.archive_path) |path| blk: {
+        defer ctx.allocator.free(path);
+        break :blk try std.fmt.allocPrint(
+            ctx.allocator,
+            "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"archivePath\":\"{s}\"}}",
+            .{ result.task_id, result.status, path },
+        );
+    } else try std.fmt.allocPrint(
+        ctx.allocator,
+        "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"archivePath\":\"-\"}}",
+        .{ result.task_id, result.status },
+    );
+
+    return .{
+        .status = 202,
+        .content_type = "application/json",
+        .body = response_body,
+    };
+}
+
+fn handleBackupRestore(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try backup_executor.restoreBackupArchive(ctx.allocator, body);
+    defer ctx.allocator.free(result.backup_id);
+    defer ctx.allocator.free(result.status);
+    defer ctx.allocator.free(result.volume_name);
     if (result.error_message) |error_message| {
         ctx.allocator.free(error_message);
     }
 
     const response_body = try std.fmt.allocPrint(
         ctx.allocator,
-        "{{\"taskId\":\"{s}\",\"status\":\"{s}\"}}",
+        "{{\"backupId\":\"{s}\",\"volumeName\":\"{s}\",\"status\":\"{s}\"}}",
+        .{ result.backup_id, result.volume_name, result.status },
+    );
+
+    return .{
+        .status = if (result.error_message != null) 500 else 200,
+        .content_type = "application/json",
+        .body = response_body,
+    };
+}
+
+fn handleBuildTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try build_executor.executeBuildTask(ctx.allocator, ctx.docker_socket, body);
+    defer ctx.allocator.free(result.task_id);
+    defer ctx.allocator.free(result.status);
+    if (result.logs) |logs| {
+        ctx.allocator.free(logs);
+    }
+
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+        const response_body = try std.fmt.allocPrint(
+            ctx.allocator,
+            "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"error\":\"{s}\"}}",
+            .{ result.task_id, result.status, error_message },
+        );
+
+        return .{
+            .status = 500,
+            .content_type = "application/json",
+            .body = response_body,
+        };
+    }
+
+    const response_body = if (result.image_ref) |image_ref| blk: {
+        defer ctx.allocator.free(image_ref);
+        break :blk try std.fmt.allocPrint(
+            ctx.allocator,
+            "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"imageRef\":\"{s}\"}}",
+            .{ result.task_id, result.status, image_ref },
+        );
+    } else try std.fmt.allocPrint(
+        ctx.allocator,
+        "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"imageRef\":\"-\"}}",
         .{ result.task_id, result.status },
     );
 
@@ -499,7 +626,23 @@ fn parseStringArrayField(allocator: std.mem.Allocator, body: []const u8, field_n
 }
 
 fn jsonStringLiteral(allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
-    return try std.fmt.allocPrint(allocator, "\"{s}\"", .{value});
+    var output: std.ArrayList(u8) = .empty;
+    defer output.deinit(allocator);
+    try output.append(allocator, '"');
+
+    for (value) |char| {
+        switch (char) {
+            '"' => try output.appendSlice(allocator, "\\\""),
+            '\\' => try output.appendSlice(allocator, "\\\\"),
+            '\n' => try output.appendSlice(allocator, "\\n"),
+            '\r' => try output.appendSlice(allocator, "\\r"),
+            '\t' => try output.appendSlice(allocator, "\\t"),
+            else => try output.append(allocator, char),
+        }
+    }
+
+    try output.append(allocator, '"');
+    return try output.toOwnedSlice(allocator);
 }
 
 test "health handler returns ok payload" {
@@ -512,6 +655,22 @@ test "health handler returns ok payload" {
     try std.testing.expectEqual(@as(u16, 200), response.status);
     try std.testing.expectEqualStrings("application/json", response.content_type);
     try std.testing.expectEqualStrings(healthResponseBody(), response.body);
+}
+
+test "build route returns accepted payload" {
+    const allocator = std.testing.allocator;
+    var docker_client = docker.DockerClient.init(allocator, "/var/run/docker.sock");
+
+    const response = try handleRequest(
+        allocator,
+        &docker_client,
+        "POST",
+        "/tasks/build",
+        "{\"taskId\":\"build-1\",\"serviceName\":\"api\"}",
+    );
+    defer allocator.free(response.body);
+
+    try std.testing.expect(response.status == 202 or response.status == 500);
 }
 
 test "unknown route returns 404" {

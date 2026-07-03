@@ -3,7 +3,7 @@ export { ControlPlaneService } from "./ControlPlaneService";
 export { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
 export { DatabaseProvider } from "./database/index";
 export { GitOpsService } from "./services/GitOpsService";
-export { createNetBirdService } from "./services/CreateNetBirdService";
+export { createNetBirdService, createNetBirdAdapter } from "./services/CreateNetBirdService";
 export { NetBirdConfig } from "./services/NetBirdConfig";
 export { MockNetBirdAdapter, NetBirdService } from "./services/NetBirdService";
 export { SelfHostedNetBirdAdapter } from "./services/SelfHostedNetBirdAdapter";
@@ -17,9 +17,12 @@ export { NetworkGroupId } from "./orchestration/NetworkGroupId";
 export { Planner, type ClusterActualState, type PlannerDiff } from "./orchestration/Planner";
 export { Scheduler, type NodeScore, type ScheduleResult } from "./orchestration/Scheduler";
 export { PluginLoader } from "./plugins/PluginLoader";
+export { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";
 export { BackupScheduler, LogRotationScheduler } from "./modules";
 export { startServer, type ControlPlaneServer, type StartServerOptions } from "./Server";
 export { ControlPlaneSync } from "./services/ControlPlaneSync";
+export { LeaderElection } from "./services/LeaderElection";
+export { SecretsService, resolveSecretMasterKey } from "./services/SecretsService";
 export {
     BackupDestinationProvider,
     BackupOrchestrator,
@@ -35,5 +38,9 @@ export {
     createLocalSecretProvider,
     VolumeProvider,
     LocalVolumeProvider,
-    createLocalVolumeProvider
+    createLocalVolumeProvider,
+    ContainerRegistryBlobProvider,
+    ContainerRegistryService,
+    createContainerRegistryService,
+    LocalContainerRegistryBlobProvider
 } from "./modules";

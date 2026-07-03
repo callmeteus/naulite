@@ -34,11 +34,12 @@ export const GET = defineRoute({
         return {
             health: {
                 status: healthStatus,
-                controlPlaneId: process.env.CP_INSTANCE_ID ?? "control-plane",
+                controlPlaneId: ControlPlaneService.Instance.getId(),
                 nodeCount: nodes.length,
                 serviceCount: services.length
             },
-            leaderId: process.env.CP_INSTANCE_ID ?? "control-plane",
+            leaderId: ControlPlaneService.Leader.getLeaderId(),
+            isLeader: ControlPlaneService.Leader.isLeader(),
             revision: String(ControlPlaneService.Apply.getRevision()),
             summary: {
                 nodes: nodes.length,

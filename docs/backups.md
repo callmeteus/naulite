@@ -28,7 +28,7 @@ volumes:
 |----------|---------|-------|
 | `local` | `backups` | Path on the same node |
 | `node` | `backups` | Copy to a peer agent via `/backups/receive` |
-| `s3` | `plugin-s3` | S3-compatible storage (MinIO in dev) |
+| `s3` | `s3-storage-provider` | S3-compatible storage (MinIO in dev) |
 | future | `plugin-*` | Azure, GCS, Vault, etc. |
   
 ## Execution flow

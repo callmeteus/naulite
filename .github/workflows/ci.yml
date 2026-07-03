@@ -1,54 +1,61 @@
 name: CI
-  
+
 on:
     push:
         branches: [main, master]
     pull_request:
-  
+
 jobs:
     verify:
         runs-on: ubuntu-latest
-  
+
         steps:
             - name: Checkout
-                uses: actions/checkout@v4
-  
+              uses: actions/checkout@v4
+
             - name: Setup Node.js
-                uses: actions/setup-node@v4
-                with:
-                    node-version: "22"
-                    cache: yarn
-                    cache-dependency-path: platform/yarn.lock
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: yarn
+                  cache-dependency-path: yarn.lock
 
             - name: Setup Zig
-                uses: goto-bus-stop/setup-zig@v2
-                with:
-                    version: master
+              uses: goto-bus-stop/setup-zig@v2
+              with:
+                  version: 0.14.0
 
             - name: Build Zig agent
-                working-directory: platform/packages/agent
-                run: zig build -Doptimize=ReleaseSafe
-  
+              working-directory: packages/agent
+              run: zig build -Doptimize=ReleaseSafe
+
+            - name: Test Zig agent
+              working-directory: packages/agent
+              run: zig build test
+
             - name: Install dependencies
-                working-directory: platform
-                run: yarn install --frozen-lockfile
-  
+              run: yarn install --frozen-lockfile
+
             - name: Lint
-                working-directory: platform
-                run: yarn lint
-  
+              run: yarn lint
+
             - name: Unit tests
-                working-directory: platform
-                run: yarn test:unit
-  
+              run: yarn test:unit
+
+            - name: Verify Docker
+              run: |
+                  docker version
+                  docker info
+
             - name: Docker unit tests
-                working-directory: platform
-                run: yarn test:unit:docker
-  
+              env:
+                  REQUIRE_DOCKER: "true"
+              run: yarn test:unit:docker
+
             - name: E2E tests
-                working-directory: platform
-                run: yarn test:e2e
-  
+              env:
+                  REQUIRE_DOCKER: "true"
+              run: yarn test:e2e
+
             - name: Build
-                working-directory: platform
-                run: yarn build
+              run: yarn build

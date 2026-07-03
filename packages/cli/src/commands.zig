@@ -258,3 +258,63 @@ pub fn restoreBackup(allocator: std.mem.Allocator, client: *Client, backup_id: [
     defer allocator.free(response.body);
     try printJson(stdout, response.body);
 }
+
+/// Lists GitOps revisions.
+pub fn getGitOpsRevisions(allocator: std.mem.Allocator, client: *Client) !void {
+    const stdout = io_output.stdoutWriter();
+    const response = try client.get("/gitops/revisions");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Rolls back to a GitOps revision.
+pub fn rollbackGitOps(allocator: std.mem.Allocator, client: *Client, revision_id: []const u8) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/gitops/rollback/{s}", .{revision_id});
+    defer allocator.free(path);
+
+    const response = try client.postJson(path, "{}");
+    defer allocator.free(response.body);
+    try stdout.print("{s}\n", .{i18n.t("rollbackSuccess")});
+    try printJson(stdout, response.body);
+}
+
+/// Returns NetBird topology summary.
+pub fn getNetBirdTopology(allocator: std.mem.Allocator, client: *Client) !void {
+    const stdout = io_output.stdoutWriter();
+    const response = try client.get("/netbird/topology");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Lists NetBird devices.
+pub fn getNetBirdDevices(allocator: std.mem.Allocator, client: *Client) !void {
+    const stdout = io_output.stdoutWriter();
+    const response = try client.get("/netbird/devices");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Lists NetBird groups.
+pub fn getNetBirdGroups(allocator: std.mem.Allocator, client: *Client) !void {
+    const stdout = io_output.stdoutWriter();
+    const response = try client.get("/netbird/groups");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Lists NetBird ACL rules.
+pub fn getNetBirdAcls(allocator: std.mem.Allocator, client: *Client) !void {
+    const stdout = io_output.stdoutWriter();
+    const response = try client.get("/netbird/acls");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Returns Prometheus metrics in text format.
+pub fn getMetrics(allocator: std.mem.Allocator, client: *Client) !void {
+    const stdout = io_output.stdoutWriter();
+    const response = try client.get("/metrics");
+    defer allocator.free(response.body);
+    try stdout.writeAll(response.body);
+}

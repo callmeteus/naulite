@@ -4,21 +4,31 @@ import type { NetBirdCredentials } from "./NetBirdBootstrap";
 import { SelfHostedNetBirdAdapter } from "./SelfHostedNetBirdAdapter";
 
 /**
- * Creates the NetBird service for the control plane.
- * 
+ * Creates the NetBird adapter for the control plane.
+ *
  * @param credentials Optional bootstrapped NetBird credentials
- * @returns NetBird service wired to self-hosted API or test mock
+ * @returns NetBird adapter wired to self-hosted API or test mock
  */
-export function createNetBirdService(credentials?: NetBirdCredentials): NetBirdService {
+export function createNetBirdAdapter(credentials?: NetBirdCredentials) {
     if (NetBirdConfig.useMockAdapter()) {
-        return new NetBirdService(new MockNetBirdAdapter());
+        return new MockNetBirdAdapter();
     }
 
     const apiUrl = NetBirdConfig.resolveApiUrl();
     const token = credentials?.apiToken ?? process.env.NETBIRD_TOKEN;
 
-    return new NetBirdService(new SelfHostedNetBirdAdapter({
+    return new SelfHostedNetBirdAdapter({
         apiUrl,
         token
-    }));
+    });
+}
+
+/**
+ * Creates the NetBird service for the control plane.
+ *
+ * @param credentials Optional bootstrapped NetBird credentials
+ * @returns NetBird service wired to self-hosted API or test mock
+ */
+export function createNetBirdService(credentials?: NetBirdCredentials): NetBirdService {
+    return new NetBirdService(createNetBirdAdapter(credentials));
 }

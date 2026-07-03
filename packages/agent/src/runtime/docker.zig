@@ -2,6 +2,9 @@ const std = @import("std");
 const execution_plan = @import("../execution_plan.zig");
 const cp_client = @import("../cp_client.zig");
 const docker_api = @import("docker_api.zig");
+const docker_stats = @import("docker_stats.zig");
+
+pub const ResourceSnapshot = docker_stats.Snapshot;
 
 pub const DockerClient = struct {
     // Path to the Docker Unix socket or named pipe.
@@ -67,14 +70,21 @@ pub const DockerClient = struct {
         // Command argv to run inside the container.
         command: []const []const u8,
     ) !ExecResult {
-        _ = self;
-        _ = instance_id;
-        _ = command;
+        const api = docker_api.DockerApi.init(self.allocator, self.socket_path);
+        const container_name = try sanitizeContainerName(self.allocator, instance_id);
+        defer self.allocator.free(container_name);
+
+        const result = try api.execContainer(container_name, command);
         return .{
-            .exit_code = 0,
-            .stdout = "exec not fully implemented",
-            .stderr = "",
+            .exit_code = result.exit_code,
+            .stdout = result.stdout,
+            .stderr = result.stderr,
         };
+    }
+
+    /// Collects node resource telemetry from Docker.
+    pub fn collectNodeResources(self: *const DockerClient) !ResourceSnapshot {
+        return docker_stats.collect(self.allocator, self.socket_path);
     }
 
     fn dispatchOperation(
@@ -91,7 +101,8 @@ pub const DockerClient = struct {
             .stop => try self.handleStop(api, op.raw_json),
             .remove => try self.handleRemove(api, op.raw_json),
             .ensureVolume => try self.handleEnsureVolume(api, op.raw_json),
-            .connectNetwork, .disconnectNetwork => {},
+            .connectNetwork => try self.handleConnectNetwork(api, op.raw_json),
+            .disconnectNetwork => try self.handleDisconnectNetwork(api, op.raw_json),
         }
     }
 
@@ -181,6 +192,35 @@ pub const DockerClient = struct {
         const volume_name = try readStringField(self.allocator, raw_json, "volumeName");
         defer self.allocator.free(volume_name);
         try api.ensureVolume(volume_name);
+    }
+
+    fn handleConnectNetwork(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
+        const instance_id = try readStringField(self.allocator, raw_json, "instanceId");
+        defer self.allocator.free(instance_id);
+
+        const network_name = try readStringField(self.allocator, raw_json, "networkName");
+        defer self.allocator.free(network_name);
+
+        const container_name = try sanitizeContainerName(self.allocator, instance_id);
+        defer self.allocator.free(container_name);
+
+        try api.connectNetwork(network_name, container_name);
+        std.log.info("[docker] connected container={s} network={s}", .{ container_name, network_name });
+    }
+
+    fn handleDisconnectNetwork(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
+        const instance_id = try readStringField(self.allocator, raw_json, "instanceId");
+        defer self.allocator.free(instance_id);
+
+        const network_name = try readStringField(self.allocator, raw_json, "networkName");
+        defer self.allocator.free(network_name);
+
+        const force = try readBoolField(raw_json, "force", true);
+        const container_name = try sanitizeContainerName(self.allocator, instance_id);
+        defer self.allocator.free(container_name);
+
+        try api.disconnectNetwork(network_name, container_name, force);
+        std.log.info("[docker] disconnected container={s} network={s}", .{ container_name, network_name });
     }
 
     fn sanitizeContainerName(allocator: std.mem.Allocator, instance_id: []const u8) ![]u8 {
@@ -417,13 +457,4 @@ pub const DockerClient = struct {
     }
 };
 
-pub const ExecResult = struct {
-    // Process exit code from the exec session.
-    exit_code: i32,
-
-    // Captured stdout text.
-    stdout: []const u8,
-
-    // Captured stderr text.
-    stderr: []const u8,
-};
+pub const ExecResult = docker_api.ExecResult;

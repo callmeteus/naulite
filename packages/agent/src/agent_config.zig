@@ -394,3 +394,14 @@ pub fn applyRegistrationResponse(
         .{ config.node_id, config.hostname },
     );
 }
+
+/// Updates the persisted NetBird device identifier.
+pub fn setNetbirdDeviceId(
+    allocator: std.mem.Allocator,
+    // Configuration to update.
+    config: *AgentConfig,
+    // NetBird device identifier.
+    device_id: []const u8,
+) !void {
+    try replaceOptionalString(allocator, &config.netbird_device_id, device_id);
+}

@@ -1,21 +1,22 @@
 import type {
     BuildResult,
+    BuilderProvider,
     DockerBuildOptions,
     KanikoBuildOptions
 } from "@platform/shared";
-import { BuilderProvider } from "@platform/control-plane";
 
 /**
  * Kaniko builder provider with stubbed build execution.
  */
-export class KanikoBuilderProvider extends BuilderProvider {
+export class KanikoBuilderProvider implements BuilderProvider {
     /**
      * Builds an image using the Docker engine on a builder node.
      *
      * @param options Docker build options
      * @returns Build result metadata
      */
-    async buildWithDocker(_options: DockerBuildOptions): Promise<BuildResult> {
+    async buildWithDocker(options: DockerBuildOptions): Promise<BuildResult> {
+        void options;
         throw new Error("Docker engine builds are not supported by @platform/builder-kaniko");
     }
 

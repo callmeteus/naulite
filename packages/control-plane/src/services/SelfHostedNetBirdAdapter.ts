@@ -2,7 +2,8 @@ import type {
     NetBirdAclRule,
     NetBirdAdapter,
     NetBirdDevice,
-    NetBirdGroup
+    NetBirdGroup,
+    NetBirdPolicyEnsureInput
 } from "./NetBirdService";
 
 /**
@@ -12,6 +13,28 @@ export interface SelfHostedNetBirdAdapterOptions {
     apiUrl: string;
     token?: string;
     fetchImpl?: typeof fetch;
+}
+
+interface RawNetBirdPolicy {
+    id?: string;
+    name?: string;
+    rules?: Array<{
+        id?: string;
+        name?: string;
+        enabled?: boolean;
+        action?: string;
+        bidirectional?: boolean;
+        protocol?: string;
+        ports?: string[];
+        sources?: string[];
+        destinations?: string[];
+    }>;
+}
+
+interface RawNetBirdGroup {
+    id?: string;
+    name?: string;
+    peers?: string[];
 }
 
 /**
@@ -24,7 +47,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
 
     /**
      * Creates a self-hosted NetBird adapter.
-     * 
+     *
      * @param options API URL, token, and optional fetch implementation
      */
     constructor(options: SelfHostedNetBirdAdapterOptions) {
@@ -35,7 +58,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
 
     /**
      * Lists NetBird groups from the self-hosted API.
-     * 
+     *
      * @returns NetBird groups
      */
     async listGroups(): Promise<NetBirdGroup[]> {
@@ -45,7 +68,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
 
     /**
      * Lists NetBird devices from the self-hosted API.
-     * 
+     *
      * @returns NetBird devices
      */
     async listDevices(): Promise<NetBirdDevice[]> {
@@ -55,17 +78,18 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
 
     /**
      * Lists NetBird ACL rules from the self-hosted API.
-     * 
+     *
      * @returns NetBird ACL rules
      */
     async listAcls(): Promise<NetBirdAclRule[]> {
-        const payload = await this.request<{ items?: NetBirdAclRule[]; rules?: NetBirdAclRule[] }>("/policies");
-        return payload.items ?? payload.rules ?? [];
+        const payload = await this.request<{ items?: RawNetBirdPolicy[]; rules?: RawNetBirdPolicy[] }>("/policies");
+        const policies = payload.items ?? payload.rules ?? [];
+        return policies.flatMap((policy) => SelfHostedNetBirdAdapter.mapPolicy(policy));
     }
 
     /**
      * Ensures a NetBird group exists on the self-hosted API.
-     * 
+     *
      * @param name Group name
      * @returns Created or existing group
      */
@@ -77,10 +101,89 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
 
         const created = await this.request<NetBirdGroup>("/groups", {
             method: "POST",
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, peers: [] })
         });
 
         return created;
+    }
+
+    /**
+     * Ensures an access policy exists for the provided groups.
+     *
+     * @param input Policy definition
+     * @returns Created or existing ACL metadata
+     */
+    async ensurePolicy(input: NetBirdPolicyEnsureInput): Promise<NetBirdAclRule> {
+        const existingPolicies = await this.request<{ items?: RawNetBirdPolicy[] }>("/policies");
+        const policies = existingPolicies.items ?? [];
+        const existing = policies.find((policy) => policy.name === input.name);
+
+        if (existing) {
+            const mapped = SelfHostedNetBirdAdapter.mapPolicy(existing);
+            if (mapped[0]) {
+                return mapped[0];
+            }
+        }
+
+        const created = await this.request<RawNetBirdPolicy>("/policies", {
+            method: "POST",
+            body: JSON.stringify({
+                name: input.name,
+                description: `Managed by Platform for ${input.name}`,
+                enabled: true,
+                source_posture_checks: [],
+                rules: [{
+                    name: `${input.name}-rule`,
+                    description: `Allow traffic for ${input.name}`,
+                    enabled: true,
+                    action: "accept",
+                    bidirectional: input.bidirectional ?? true,
+                    protocol: input.protocol ?? "tcp",
+                    ports: input.ports ?? [],
+                    sources: input.sourceGroupIds,
+                    destinations: input.destinationGroupIds
+                }]
+            })
+        });
+
+        const mapped = SelfHostedNetBirdAdapter.mapPolicy(created);
+        if (!mapped[0]) {
+            throw new Error(`NetBird policy ${input.name} was created without rules.`);
+        }
+
+        return mapped[0];
+    }
+
+    /**
+     * Assigns peers to a NetBird group.
+     *
+     * @param groupId NetBird group identifier
+     * @param peerIds Peer identifiers to assign
+     * @returns Updated group metadata
+     */
+    async assignPeersToGroup(groupId: string, peerIds: string[]): Promise<NetBirdGroup> {
+        const groups = await this.listGroups();
+        const existing = groups.find((group) => group.id === groupId);
+
+        if (!existing) {
+            throw new Error(`NetBird group ${groupId} was not found.`);
+        }
+
+        const mergedPeers = [...new Set([...existing.peers, ...peerIds])];
+        const updated = await this.request<RawNetBirdGroup>(`/groups/${encodeURIComponent(groupId)}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                id: groupId,
+                name: existing.name,
+                peers: mergedPeers
+            })
+        });
+
+        return {
+            id: updated.id ?? groupId,
+            name: updated.name ?? existing.name,
+            peers: updated.peers ?? mergedPeers
+        };
     }
 
     /**
@@ -125,8 +228,27 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
     }
 
     /**
+     * Maps a raw NetBird policy payload into ACL metadata.
+     *
+     * @param policy Raw policy payload
+     * @returns ACL metadata entries
+     */
+    private static mapPolicy(policy: RawNetBirdPolicy): NetBirdAclRule[] {
+        const rules = policy.rules ?? [];
+
+        return rules.map((rule, index) => ({
+            id: rule.id ?? `${policy.id ?? policy.name ?? "policy"}-${index}`,
+            name: policy.name ?? rule.name ?? `policy-${index}`,
+            sourceGroups: rule.sources ?? [],
+            destinationGroups: rule.destinations ?? [],
+            ports: (rule.ports ?? []).map((port) => Number(port)).filter((port) => Number.isFinite(port)),
+            protocol: rule.protocol === "udp" ? "udp" : "tcp"
+        }));
+    }
+
+    /**
      * Performs an authenticated request against the self-hosted NetBird API.
-     * 
+     *
      * @param path API path relative to the configured base URL
      * @param init Optional fetch init overrides
      * @returns Parsed JSON response body

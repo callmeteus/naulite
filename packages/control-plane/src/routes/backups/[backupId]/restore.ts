@@ -1,5 +1,5 @@
-import { AgentProxyService } from "../../../services/AgentProxyService";
 import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
+import { BackupDispatchService } from "../../../services/BackupDispatchService";
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
@@ -35,8 +35,14 @@ export const POST = defineRoute({
             });
         }
 
-        const nodes = await ControlPlaneService.Store.listNodes();
-        const node = nodes[0];
+        const [volumes, nodes] = await Promise.all([
+            ControlPlaneService.Store.listVolumes(),
+            ControlPlaneService.Store.listNodes()
+        ]);
+        const volume = volumes.find((entry) => entry.name === run.volumeName);
+        const node = volume
+            ? BackupDispatchService.resolveNodeForVolume(volume, nodes)
+            : nodes.find((entry) => entry.agentUrl);
 
         if (!node?.agentUrl) {
             return res.status(503).send({
@@ -46,9 +52,16 @@ export const POST = defineRoute({
         }
 
         try {
-            return await AgentProxyService.postTask(node.agentUrl, "/backups/receive", {
+            const archivePath =
+                typeof run.archivePath === "string" && run.archivePath.length > 0
+                    ? run.archivePath
+                    : undefined;
+
+            return await BackupDispatchService.dispatchRestoreTask(node, {
                 backupId,
-                volumeName: run.volumeName
+                volumeName: run.volumeName,
+                archivePath,
+                mountPath: volume?.mountPath
             });
         } catch (err) {
             return AgentProxyRouteHelpers.respond(res, err);

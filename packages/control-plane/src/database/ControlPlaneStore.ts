@@ -3,6 +3,7 @@ import type {
     CreatedApiKey,
     Instance,
     Node,
+    NodeProvision,
     Secret,
     Service,
     Volume
@@ -18,6 +19,7 @@ import {
     BackupRunModel,
     InstanceModel,
     NodeModel,
+    NodeProvisionModel,
     SecretModel,
     ServiceModel,
     VolumeModel
@@ -132,6 +134,7 @@ export class ControlPlaneStore {
         startedAt?: string;
         completedAt?: string;
         destination?: string;
+        archivePath?: string;
     }>> {
         const rows = await BackupRunModel.findAll({
             order: [["createdAt", "DESC"]]
@@ -155,7 +158,14 @@ export class ControlPlaneStore {
                 completedAt: plain.completedAt ?? undefined,
                 destination: typeof plain.payload.destination === "string"
                     ? plain.payload.destination
-                    : undefined
+                    : typeof plain.payload.location === "string"
+                        ? plain.payload.location
+                        : undefined,
+                archivePath: typeof plain.payload.location === "string"
+                    ? plain.payload.location
+                    : typeof plain.payload.archivePath === "string"
+                        ? plain.payload.archivePath
+                        : undefined
             };
         });
     }
@@ -234,7 +244,7 @@ export class ControlPlaneStore {
         keys: string[];
         value: Record<string, string>;
         description?: string;
-    }): Promise<void> {
+    }): Promise<Secret> {
         const now = new Date().toISOString();
         const existing = await SecretModel.findOne({ where: { name: input.name } });
         const id = existing?.id ?? `secret:${input.name}`;
@@ -250,6 +260,14 @@ export class ControlPlaneStore {
             createdAt: existing?.createdAt ?? now,
             updatedAt: now
         });
+
+        const row = await SecretModel.findOne({ where: { name: input.name } });
+
+        if (!row) {
+            throw new Error(`Secret ${input.name} was not found after upsert.`);
+        }
+
+        return RowMapper.secret(row.get({ plain: true }));
     }
 
     /**
@@ -273,6 +291,7 @@ export class ControlPlaneStore {
             networks: service.networks,
             ingress: service.ingress ?? null,
             logRotation: service.logRotation ?? null,
+            deploySpec: service.deploySpec ?? null,
             lifecycleStatus: service.lifecycleStatus ?? null,
             createdAt: service.createdAt,
             updatedAt
@@ -322,6 +341,72 @@ export class ControlPlaneStore {
             createdAt: volume.createdAt,
             updatedAt: volume.updatedAt
         });
+    }
+
+    /**
+     * Deletes instances by id list.
+     *
+     * @param instanceIds Instance identifiers to remove
+     * @returns Nothing.
+     */
+    async deleteInstances(instanceIds: string[]): Promise<void> {
+        if (instanceIds.length === 0) {
+            return;
+        }
+
+        await InstanceModel.destroy({
+            where: {
+                id: { [Op.in]: instanceIds }
+            }
+        });
+    }
+
+    /**
+     * Deletes an instance by id.
+     *
+     * @param instanceId Instance identifier
+     * @returns Nothing.
+     */
+    async deleteInstance(instanceId: string): Promise<void> {
+        await InstanceModel.destroy({
+            where: { id: instanceId }
+        });
+    }
+
+    /**
+     * Updates a volume record.
+     *
+     * @param volumeId Volume identifier
+     * @param patch Fields to update
+     * @returns Nothing.
+     */
+    async updateVolume(
+        volumeId: string,
+        patch: {
+            nodeId?: string;
+            status?: Volume["status"];
+        }
+    ): Promise<void> {
+        const row = await VolumeModel.findByPk(volumeId);
+
+        if (!row) {
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const updates: Partial<VolumeModel> = {
+            updatedAt: now
+        };
+
+        if (patch.nodeId) {
+            updates.nodeId = patch.nodeId;
+        }
+
+        if (patch.status) {
+            updates.status = patch.status;
+        }
+
+        await row.update(updates);
     }
 
     /**
@@ -545,5 +630,52 @@ export class ControlPlaneStore {
 
         await row.update({ lastUsedAt: now });
         return true;
+    }
+
+    /**
+     * Lists all node provision requests.
+     *
+     * @returns Node provision records
+     */
+    async listNodeProvisions(): Promise<NodeProvision[]> {
+        const rows = await NodeProvisionModel.findAll({
+            order: [["createdAt", "DESC"]]
+        });
+        return rows.map((row) => RowMapper.nodeProvision(row.get({ plain: true })));
+    }
+
+    /**
+     * Finds a node provision request by id.
+     *
+     * @param id Provision identifier
+     * @returns Node provision when found
+     */
+    async getNodeProvision(id: string): Promise<NodeProvision | null> {
+        const row = await NodeProvisionModel.findByPk(id);
+        return row ? RowMapper.nodeProvision(row.get({ plain: true })) : null;
+    }
+
+    /**
+     * Persists a node provision request.
+     *
+     * @param provision Node provision payload
+     * @returns Nothing.
+     */
+    async saveNodeProvision(provision: NodeProvision): Promise<void> {
+        await NodeProvisionModel.upsert({
+            id: provision.id,
+            provider: provision.provider,
+            cloudInstanceId: provision.cloudInstanceId ?? null,
+            status: provision.status,
+            nodeId: provision.nodeId ?? null,
+            instanceType: provision.instanceType,
+            amiId: provision.amiId,
+            labels: provision.labels,
+            capabilities: provision.capabilities,
+            region: provision.region ?? null,
+            error: provision.error ?? null,
+            createdAt: provision.createdAt,
+            updatedAt: provision.updatedAt
+        });
     }
 }

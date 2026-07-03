@@ -44,6 +44,64 @@ describe("Planner", () => {
         expect(diff.operations.some((operation) => operation.type === "ensureVolume")).toBe(true);
     });
 
+    it("creates multiple instances when deploy.replicas is greater than one", () => {
+        const manifest = buildManifest({
+            services: {
+                web: {
+                    image: "nginx:1.27-alpine",
+                    capabilities: [],
+                    deploy: { replicas: 3 }
+                }
+            }
+        });
+        const diff = planner.diff(manifest, {
+            services: [],
+            instances: [],
+            volumes: []
+        });
+
+        expect(diff.servicesToCreate[0]?.desiredReplicas).toBe(3);
+        expect(diff.instancesToCreate).toHaveLength(3);
+    });
+
+    it("includes connectNetwork operations for declared service networks", () => {
+        const manifest = buildManifest({
+            services: {
+                web: {
+                    image: "nginx:1.27-alpine",
+                    capabilities: [],
+                    networks: ["backend"]
+                }
+            }
+        });
+        const diff = planner.diff(manifest, {
+            services: [],
+            instances: [],
+            volumes: []
+        });
+
+        expect(diff.operations.some((operation) => operation.type === "connectNetwork")).toBe(true);
+    });
+
+    it("uses build placeholders for services that declare build blocks", () => {
+        const manifest = buildManifest({
+            services: {
+                api: {
+                    build: "./api",
+                    capabilities: []
+                }
+            },
+            volumes: {}
+        });
+        const diff = planner.diff(manifest, {
+            services: [],
+            instances: [],
+            volumes: []
+        });
+
+        expect(diff.servicesToCreate[0]?.image).toBe("build://./api");
+    });
+
     it("removes services and instances that are no longer in the manifest", () => {
         const manifest = buildManifest({ services: {}, volumes: {} });
         const now = new Date().toISOString();

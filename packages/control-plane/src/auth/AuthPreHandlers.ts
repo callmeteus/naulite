@@ -62,6 +62,20 @@ export namespace AuthPreHandlers {
                 throw new HTTP401Error("Missing setup key.");
             }
 
+            const provisionHeader = request.headers["x-platform-provision-id"];
+            const provisionId = typeof provisionHeader === "string" ? provisionHeader.trim() : "";
+
+            if (provisionId) {
+                const validProvisionKey = await ControlPlaneService.NodeProvision.validateProvisionSetupKey(
+                    provisionId,
+                    setupKey
+                );
+
+                if (validProvisionKey) {
+                    return;
+                }
+            }
+
             const stored = await ControlPlaneService.Store.getClusterSecretValues(secretName);
 
             if (!stored?.key || stored.key !== setupKey) {

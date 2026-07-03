@@ -18,6 +18,7 @@ describe("gitops rollback", () => {
 
     beforeAll(async () => {
         dockerEnabled = await LocalTestCluster.isDockerAvailable();
+        LocalTestCluster.assertDockerAvailable(dockerEnabled);
         if (!dockerEnabled) {
             return;
         }
@@ -27,7 +28,8 @@ describe("gitops rollback", () => {
             await LocalTestCluster.waitHealthy();
             controlPlaneUrl = LocalTestCluster.getControlPlaneUrl();
             client = new PlatformClient({ baseUrl: controlPlaneUrl });
-        } catch {
+        } catch (err) {
+            LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
         }
     }, 300_000);
@@ -42,6 +44,9 @@ describe("gitops rollback", () => {
 
     it("records revisions and rolls back to a previous manifest", async (context) => {
         if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
             context.skip();
         }
 
@@ -103,6 +108,9 @@ describe("gitops rollback", () => {
 
     it("returns an error when rolling back to an unknown revision id", async (context) => {
         if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
             context.skip();
         }
 

@@ -2,6 +2,8 @@ const std = @import("std");
 
 const agent_config = @import("agent_config.zig");
 const bootstrap = @import("bootstrap.zig");
+const docker = @import("runtime/docker.zig");
+const env_util = @import("env_util.zig");
 
 /// Control plane client configuration (persisted agent identity and connectivity).
 pub const Config = agent_config.AgentConfig;
@@ -74,10 +76,39 @@ fn registerNode(
     io: std.Io,
     config: *Config,
 ) !void {
+    const resources = collectResources(allocator, config.docker_socket);
+    const labels_json = buildLabelsJson(allocator) catch "{}";
+    defer allocator.free(labels_json);
+
+    const capabilities_json = if (bootstrap.probeDockerSocket())
+        "[\"docker\"]"
+    else
+        "[]";
+
+    const netbird_device_json = if (config.netbird_device_id) |device_id|
+        try std.fmt.allocPrint(allocator, ",\"netbirdDeviceId\":\"{s}\"", .{device_id})
+    else
+        try allocator.dupe(u8, "");
+    defer allocator.free(netbird_device_json);
+
     const body = try std.fmt.allocPrint(
         allocator,
-        "{{\"id\":\"{s}\",\"hostname\":\"{s}\",\"agentVersion\":\"{s}\",\"agentUrl\":\"{s}\",\"labels\":{{\"role\":\"dogfood\"}},\"capabilities\":[\"docker\"],\"resources\":{{\"cpuMillisTotal\":4000,\"cpuMillisUsed\":0,\"memoryMbTotal\":8192,\"memoryMbUsed\":0,\"diskMbTotal\":102400,\"diskMbUsed\":0}}}}",
-        .{ config.node_id, config.hostname, config.agent_version, config.agent_url },
+        "{{\"id\":\"{s}\",\"hostname\":\"{s}\",\"agentVersion\":\"{s}\",\"agentUrl\":\"{s}\",\"labels\":{s},\"capabilities\":{s},\"resources\":{{\"cpuMillisTotal\":{d},\"cpuMillisUsed\":{d},\"memoryMbTotal\":{d},\"memoryMbUsed\":{d},\"diskMbTotal\":{d},\"diskMbUsed\":{d}}}}{s}}}",
+        .{
+            config.node_id,
+            config.hostname,
+            config.agent_version,
+            config.agent_url,
+            labels_json,
+            capabilities_json,
+            resources.cpu_millis_total,
+            resources.cpu_millis_used,
+            resources.memory_mb_total,
+            resources.memory_mb_used,
+            resources.disk_mb_total,
+            resources.disk_mb_used,
+            netbird_device_json,
+        },
     );
     defer allocator.free(body);
 
@@ -98,8 +129,21 @@ fn sendHeartbeat(
     io: std.Io,
     config: Config,
 ) !void {
-    const body =
-        "{\"status\":\"online\",\"resources\":{\"cpuMillisTotal\":4000,\"cpuMillisUsed\":500,\"memoryMbTotal\":8192,\"memoryMbUsed\":1024,\"diskMbTotal\":102400,\"diskMbUsed\":2048}}";
+    const resources = collectResources(allocator, config.docker_socket);
+
+    const body = try std.fmt.allocPrint(
+        allocator,
+        "{{\"status\":\"online\",\"resources\":{{\"cpuMillisTotal\":{d},\"cpuMillisUsed\":{d},\"memoryMbTotal\":{d},\"memoryMbUsed\":{d},\"diskMbTotal\":{d},\"diskMbUsed\":{d}}}}}}",
+        .{
+            resources.cpu_millis_total,
+            resources.cpu_millis_used,
+            resources.memory_mb_total,
+            resources.memory_mb_used,
+            resources.disk_mb_total,
+            resources.disk_mb_used,
+        },
+    );
+    defer allocator.free(body);
 
     const path = try std.fmt.allocPrint(
         allocator,
@@ -110,6 +154,37 @@ fn sendHeartbeat(
 
     const response_body = try postJson(allocator, io, path, body);
     defer allocator.free(response_body);
+}
+
+fn collectResources(
+    allocator: std.mem.Allocator,
+    docker_socket: []const u8,
+) docker.ResourceSnapshot {
+    var docker_client = docker.DockerClient.init(allocator, docker_socket);
+    return docker_client.collectNodeResources() catch {
+        std.log.debug("[cp] docker stats unavailable socket={s} using fallback", .{docker_socket});
+        return fallbackResources();
+    };
+}
+
+fn fallbackResources() docker.ResourceSnapshot {
+    return .{
+        .cpu_millis_total = 1000,
+        .cpu_millis_used = 0,
+        .memory_mb_total = 1024,
+        .memory_mb_used = 0,
+        .disk_mb_total = 102_400,
+        .disk_mb_used = 0,
+    };
+}
+
+fn buildLabelsJson(allocator: std.mem.Allocator) ![]const u8 {
+    if (env_util.readEnvOptional(allocator, "PLATFORM_NODE_LABELS")) |raw| {
+        defer allocator.free(raw);
+        return try allocator.dupe(u8, raw);
+    }
+
+    return try allocator.dupe(u8, "{}");
 }
 
 fn reportInstanceStatus(

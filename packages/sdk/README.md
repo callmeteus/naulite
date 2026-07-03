@@ -20,4 +20,6 @@ const nodes = await client.listNodes();
 - Manifest apply and resource delete
 - Logs, exec, build, registry, ingress
 - Backup and log rotation operations
-- GitOps webhook and NetBird proxy stubs
+- GitOps revisions, rollback, and webhook
+- NetBird topology, devices, groups, and ACLs
+- Prometheus metrics endpoint

@@ -1,6 +1,7 @@
 import { ApplyService } from "../../../services/ApplyService";
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+import { LeaderPreHandlers } from "../../../auth/LeaderPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 import {
     LooseObjectSchema,
@@ -9,7 +10,7 @@ import {
 } from "@platform/shared";
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: [AuthPreHandlers.authorizedLocalOrApiKey, LeaderPreHandlers.requireLeader()],
     schema: {
         summary: "Rollback GitOps revision",
         description: "Reapplies a previous manifest revision in the cluster.",

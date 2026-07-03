@@ -42,6 +42,9 @@ export class ServiceModel extends Model {
     @Column({ type: DataType.JSON, field: "log_rotation" })
     declare logRotation: Record<string, unknown> | null;
 
+    @Column({ type: DataType.JSON, field: "deploy_spec" })
+    declare deploySpec: Record<string, unknown> | null;
+
     @Column({ type: DataType.STRING, field: "lifecycle_status" })
     declare lifecycleStatus: string | null;
 
