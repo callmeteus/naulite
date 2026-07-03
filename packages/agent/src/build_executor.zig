@@ -3,7 +3,7 @@ const std = @import("std");
 const cp_client = @import("cp_client.zig");
 const dockerfile_parser = @import("dockerfile_parser.zig");
 const process_cmd = @import("process_cmd.zig");
-const threaded_io = @import("threaded_io.zig");
+const blocking_io = @import("blocking_io.zig");
 
 /// Result of a build task executed on the agent.
 pub const BuildTaskResult = struct {
@@ -35,10 +35,6 @@ pub fn executeBuildTask(
     // The build task JSON payload.
     body: []const u8,
 ) !BuildTaskResult {
-    var io_scope = threaded_io.Scope.init(allocator);
-    defer io_scope.deinit();
-    const io = io_scope.io;
-
     const parsed = try std.json.parseFromSlice(
         std.json.Value,
         allocator,
@@ -58,7 +54,7 @@ pub fn executeBuildTask(
     const service_name = try readStringField(allocator, root.object, "serviceName", "service");
     errdefer allocator.free(service_name);
 
-    const context_path = try resolveContextPath(allocator, io, root.object, service_name);
+    const context_path = try resolveContextPath(allocator, root.object, service_name);
     errdefer allocator.free(context_path);
 
     const dockerfile = try readOptionalStringField(allocator, root.object, "dockerfile");
@@ -89,7 +85,6 @@ pub fn executeBuildTask(
 
     const steps = try loadDockerfileSteps(
         allocator,
-        io,
         context_path,
         dockerfile,
     );
@@ -178,7 +173,6 @@ pub fn executeBuildTask(
             if (cr_tag) |tag| {
                 pushImageToRegistry(
                     allocator,
-                    io,
                     docker_socket,
                     image_ref,
                     url,
@@ -268,8 +262,6 @@ fn runDockerBuild(
 fn pushImageToRegistry(
     // The allocator to use.
     allocator: std.mem.Allocator,
-    // The I/O scope to use.
-    io: std.Io,
     // Path to the Docker Unix socket or named pipe.
     docker_socket: []const u8,
     image_ref: []const u8,
@@ -282,6 +274,7 @@ fn pushImageToRegistry(
     // The API key to use.
     api_key: ?[]const u8,
 ) !void {
+    const io = blocking_io.io();
     const archive_path = try std.fmt.allocPrint(allocator, "/tmp/platform-build-{s}-{s}.tar", .{ cr_name, cr_tag });
     defer allocator.free(archive_path);
 
@@ -307,8 +300,6 @@ fn pushImageToRegistry(
 fn resolveContextPath(
     // The allocator to use.
     allocator: std.mem.Allocator,
-    // The I/O scope to use.
-    io: std.Io,
     // The JSON object to use.
     object: std.json.ObjectMap,
     // The name of the service.
@@ -318,7 +309,7 @@ fn resolveContextPath(
     errdefer allocator.free(synced_path);
 
     // Prefer synced build context when the control plane already pushed an archive.
-    if (directoryExists(io, synced_path)) {
+    if (directoryExists(synced_path)) {
         return synced_path;
     }
 
@@ -337,11 +328,10 @@ fn resolveContextPath(
 
 /// Checks if a directory exists.
 fn directoryExists(
-    // The I/O scope to use.
-    io: std.Io,
     // The path to check.
     path: []const u8,
 ) bool {
+    const io = blocking_io.io();
     var dir = std.Io.Dir.cwd().openDir(io, path, .{}) catch return false;
     dir.close(io);
     return true;
@@ -419,13 +409,12 @@ fn readOptionalStringField(
 fn loadDockerfileSteps(
     // The allocator to use.
     allocator: std.mem.Allocator,
-    // The I/O scope to use.
-    io: std.Io,
     // The path to the build context.
     context_path: []const u8,
     // The name of the Dockerfile to use.
     dockerfile: ?[]const u8,
 ) ![]dockerfile_parser.StepMarker {
+    const io = blocking_io.io();
     const file_name = dockerfile orelse "Dockerfile";
     const dockerfile_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ context_path, file_name });
     defer allocator.free(dockerfile_path);
@@ -460,8 +449,8 @@ fn freeSteps(
 
 test "resolveImageRef defaults to platform tag" {
     const allocator = std.testing.allocator;
-    var object = std.json.ObjectMap.init(allocator);
-    defer object.deinit();
+    var object: std.json.ObjectMap = .empty;
+    defer object.deinit(allocator);
 
     const image_ref = try resolveImageRef(allocator, object, "api");
     defer allocator.free(image_ref);
@@ -471,8 +460,8 @@ test "resolveImageRef defaults to platform tag" {
 
 test "resolveContextPath defaults to service build directory" {
     const allocator = std.testing.allocator;
-    var object = std.json.ObjectMap.init(allocator);
-    defer object.deinit();
+    var object: std.json.ObjectMap = .empty;
+    defer object.deinit(allocator);
 
     const context_path = try resolveContextPath(allocator, object, "api");
     defer allocator.free(context_path);

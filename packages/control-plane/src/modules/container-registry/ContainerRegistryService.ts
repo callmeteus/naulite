@@ -5,8 +5,11 @@ import { pipeline } from "node:stream/promises";
 
 import type {
     ContainerRegistryDestination,
-    ContainerRegistryImage
+    ContainerRegistryImage,
+    PaginatedList,
+    PaginationQuery
 } from "@platform/shared";
+import { buildPaginatedList, paginationOffset } from "@platform/shared";
 
 import { ContainerRegistryImageModel } from "../../database/models/ContainerRegistryImageModel";
 import { ContainerRegistryBlobProvider } from "./ContainerRegistryBlobProvider";
@@ -53,14 +56,24 @@ export class ContainerRegistryService {
     /**
      * Lists stored container images ordered by push time descending.
      *
-     * @returns Container image metadata entries
+     * @param pagination Pagination query parameters
+     * @returns Paginated container image metadata entries
      */
-    async listImages(): Promise<ContainerRegistryImage[]> {
-        const rows = await ContainerRegistryImageModel.findAll({
-            order: [["pushedAt", "DESC"]]
+    async listImages(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<ContainerRegistryImage>> {
+        const page = pagination.page;
+        const limit = pagination.limit;
+        const { count, rows } = await ContainerRegistryImageModel.findAndCountAll({
+            order: [["pushedAt", "DESC"]],
+            limit,
+            offset: paginationOffset(page, limit)
         });
 
-        return rows.map((row) => ContainerRegistryService.mapModel(row));
+        return buildPaginatedList(
+            rows.map((row) => ContainerRegistryService.mapModel(row)),
+            count,
+            page,
+            limit
+        );
     }
 
     /**

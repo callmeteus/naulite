@@ -134,7 +134,7 @@ describe("container registry routes", () => {
         });
 
         expect(listResponse.statusCode).toBe(200);
-        expect(listResponse.json().images).toHaveLength(1);
+        expect(listResponse.json().items).toHaveLength(1);
 
         const deleteResponse = await app.inject({
             method: "DELETE",

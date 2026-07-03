@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const process_cmd = @import("process_cmd.zig");
-const threaded_io = @import("threaded_io.zig");
+const blocking_io = @import("blocking_io.zig");
 
 const default_build_root = "/var/lib/platform/builds";
 
@@ -26,9 +26,7 @@ pub fn receiveBuildContext(
     // Optional service name from a query parameter or request header.
     service_name_hint: ?[]const u8,
 ) !BuildContextResult {
-    var io_scope = threaded_io.Scope.init(allocator);
-    defer io_scope.deinit();
-    const io = io_scope.io;
+    const io = blocking_io.io();
 
     const service_name_owned = try resolveServiceName(allocator, body, service_name_hint);
     errdefer allocator.free(service_name_owned);

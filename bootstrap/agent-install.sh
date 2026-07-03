@@ -33,6 +33,8 @@ Options:
   --host <url>                     Public control plane base URL (required)
   --setup-key <key>                NetBird setup key from control plane bootstrap (required)
   --netbird-management-url <url>   Self-hosted NetBird management URL (optional; fetched from CP when omitted)
+  --management-url <url>           Alias for --netbird-management-url
+  --url <url>                      Alias for --netbird-management-url
   --agent-port <port>              Agent HTTP listen port (default: 9470)
   --install-dir <path>             Install directory (default: /opt/platform-agent)
   --config-path <path>             Agent JSON config path (default: /var/lib/platform/agent.json)
@@ -59,7 +61,7 @@ parse_args() {
                 SETUP_KEY="${2:-}"
                 shift 2
                 ;;
-            --netbird-management-url)
+            --netbird-management-url|--management-url|--url)
                 NETBIRD_MANAGEMENT_URL="${2:-}"
                 shift 2
                 ;;

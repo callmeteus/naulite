@@ -1,5 +1,9 @@
 import { PlatformApiError } from "./PlatformApiError";
 import type {
+    AdminLoginInput,
+    AdminLoginResponse,
+    AdminSession,
+    AdminUser,
     ApiKey,
     ApplyResponse,
     ApplyResultPayload,
@@ -12,7 +16,9 @@ import type {
     ContainerRegistryImage,
     ContainerRegistryImageDeleteResult,
     ContainerRegistryImageHead,
+    CreateAdminUserInput,
     CreatedApiKey,
+    DisableAdminUserInput,
     ExecResponse,
     GatewayRouteSummary,
     GitOpsWebhookPayload,
@@ -20,6 +26,8 @@ import type {
     Instance,
     LogRotationRun,
     LogRotationTask,
+    PaginatedResponse,
+    PaginationQuery,
     PipelineEvent,
     PipelineRun,
     ListPipelineRunsQuery,
@@ -31,6 +39,8 @@ import type {
     NetBirdTopology,
     PlatformClientOptions,
     PlatformDiscovery,
+    PromQLInstantResponse,
+    PromQLRangeResponse,
     ProvisionNodeInput,
     RegistryResponse,
     Secret,
@@ -46,6 +56,8 @@ import type { Node } from "./types";
 export class PlatformClient {
     private readonly baseUrl: string;
     private readonly token?: string;
+    private readonly sessionToken?: string;
+    private readonly credentials?: "omit" | "same-origin" | "include";
     private readonly fetchImpl: typeof fetch;
 
     /**
@@ -56,7 +68,25 @@ export class PlatformClient {
     constructor(options: PlatformClientOptions) {
         this.baseUrl = options.baseUrl.replace(/\/$/, "");
         this.token = options.token;
+        this.sessionToken = options.sessionToken;
+        this.credentials = options.credentials;
         this.fetchImpl = options.fetchImpl ?? fetch;
+    }
+
+    /**
+     * Returns a client clone that forwards the given session token to the control plane.
+     *
+     * @param sessionToken Opaque platform session token
+     * @returns Cloned client with session forwarding enabled
+     */
+    withSession(sessionToken: string): PlatformClient {
+        return new PlatformClient({
+            baseUrl: this.baseUrl,
+            token: this.token,
+            sessionToken,
+            credentials: this.credentials,
+            fetchImpl: this.fetchImpl
+        });
     }
 
     /**
@@ -66,6 +96,96 @@ export class PlatformClient {
      */
     async getHealth(): Promise<ClusterHealth> {
         return this.request<ClusterHealth>("GET", "/health");
+    }
+
+    /**
+     * Authenticates against the admin BFF and sets the session cookie in the browser.
+     *
+     * @param input Login credentials
+     * @returns Authenticated user profile
+     */
+    async login(input: AdminLoginInput): Promise<{ user: AdminUser }> {
+        return this.request<{ user: AdminUser }>("POST", "/auth/login", input);
+    }
+
+    /**
+     * Clears the browser session through the admin BFF.
+     *
+     * @returns Nothing.
+     */
+    async logout(): Promise<void> {
+        await this.request<void>("POST", "/auth/logout");
+    }
+
+    /**
+     * Returns the current browser session user from the admin BFF.
+     *
+     * @returns Session user or null when unauthenticated
+     */
+    async getSession(): Promise<{ user: AdminUser | null }> {
+        return this.request<{ user: AdminUser | null }>("GET", "/auth/me");
+    }
+
+    /**
+     * Authenticates an admin user and returns a session token.
+     *
+     * @param input Login credentials
+     * @returns Session token and user profile
+     */
+    async adminLogin(input: AdminLoginInput): Promise<AdminLoginResponse> {
+        return this.request<AdminLoginResponse>("POST", "/admin/login", input);
+    }
+
+    /**
+     * Invalidates the current admin session on the control plane.
+     *
+     * @returns Nothing.
+     */
+    async adminLogout(): Promise<void> {
+        await this.request<void>("POST", "/admin/logout");
+    }
+
+    /**
+     * Returns the authenticated admin user for the current session.
+     *
+     * @returns Active admin session
+     */
+    async getAdminMe(): Promise<AdminSession> {
+        return this.request<AdminSession>("GET", "/admin/me");
+    }
+
+    /**
+     * Lists admin users (admin role required).
+     *
+     * @returns Admin user records
+     */
+    async listAdminUsers(): Promise<AdminUser[]> {
+        return this.request<AdminUser[]>("GET", "/admin/users");
+    }
+
+    /**
+     * Creates a new admin user (admin role required).
+     *
+     * @param input User creation payload
+     * @returns Created admin user
+     */
+    async createAdminUser(input: CreateAdminUserInput): Promise<AdminUser> {
+        return this.request<AdminUser>("POST", "/admin/users", input);
+    }
+
+    /**
+     * Disables an admin user by identifier (admin role required).
+     *
+     * @param userId Admin user identifier
+     * @param input Optional disable reason
+     * @returns Updated admin user
+     */
+    async disableAdminUser(userId: string, input: DisableAdminUserInput = {}): Promise<AdminUser> {
+        return this.request<AdminUser>(
+            "POST",
+            `/admin/users/${encodeURIComponent(userId)}/disable`,
+            input
+        );
     }
 
     /**
@@ -159,6 +279,16 @@ export class PlatformClient {
      */
     async listBackups(): Promise<BackupRun[]> {
         return this.request<BackupRun[]>("GET", "/backups");
+    }
+
+    /**
+     * Lists backup runs with server-side pagination.
+     *
+     * @param query Pagination and filter parameters
+     * @returns Paginated backup runs
+     */
+    async listBackupsPaginated(query: PaginationQuery = {}): Promise<PaginatedResponse<BackupRun>> {
+        return this.requestPaginated<BackupRun>("GET", "/backups", query);
     }
 
     /**
@@ -300,9 +430,49 @@ export class PlatformClient {
         if (query.limit !== undefined) {
             params.set("limit", String(query.limit));
         }
+        if (query.page !== undefined) {
+            params.set("page", String(query.page));
+        }
 
         const suffix = params.size > 0 ? `?${params.toString()}` : "";
         return this.request<PipelineRun[]>("GET", `/runs${suffix}`);
+    }
+
+    /**
+     * Lists pipeline runs with server-side pagination.
+     *
+     * @param query Optional list filters and pagination
+     * @returns Paginated pipeline runs
+     */
+    async listRunsPaginated(
+        query: ListPipelineRunsQuery & PaginationQuery = {}
+    ): Promise<PaginatedResponse<PipelineRun>> {
+        const params = new URLSearchParams();
+
+        if (query.kind) {
+            params.set("kind", query.kind);
+        }
+        if (query.status) {
+            params.set("status", query.status);
+        }
+        if (query.service) {
+            params.set("service", query.service);
+        }
+        if (query.pool) {
+            params.set("pool", query.pool);
+        }
+        if (query.since) {
+            params.set("since", query.since);
+        }
+        if (query.limit !== undefined) {
+            params.set("limit", String(query.limit));
+        }
+        if (query.page !== undefined) {
+            params.set("page", String(query.page));
+        }
+
+        const suffix = params.size > 0 ? `?${params.toString()}` : "";
+        return this.request<PaginatedResponse<PipelineRun>>("GET", `/runs${suffix}`);
     }
 
     /**
@@ -341,13 +511,17 @@ export class PlatformClient {
             Accept: "text/event-stream"
         };
 
+        if (this.sessionToken) {
+            headers["X-Platform-Session"] = this.sessionToken;
+        }
+
         if (this.token) {
             headers.Authorization = `Bearer ${this.token}`;
         }
 
         return this.fetchImpl(
             `${this.baseUrl}/runs/${encodeURIComponent(runId)}/stream`,
-            { headers }
+            { headers, credentials: this.credentials }
         );
     }
 
@@ -362,13 +536,17 @@ export class PlatformClient {
             Accept: "text/event-stream"
         };
 
+        if (this.sessionToken) {
+            headers["X-Platform-Session"] = this.sessionToken;
+        }
+
         if (this.token) {
             headers.Authorization = `Bearer ${this.token}`;
         }
 
         const response = await this.fetchImpl(
             `${this.baseUrl}/runs/${encodeURIComponent(runId)}/stream`,
-            { headers }
+            { headers, credentials: this.credentials }
         );
 
         if (!response.ok || !response.body) {
@@ -440,12 +618,47 @@ export class PlatformClient {
     }
 
     /**
+     * Lists node provision requests with server-side pagination.
+     *
+     * @param query Pagination parameters
+     * @returns Paginated node provision records
+     */
+    async listNodeProvisions(query: PaginationQuery = {}): Promise<PaginatedResponse<NodeProvision>> {
+        return this.requestPaginated<NodeProvision>("GET", "/nodes/provisions", query);
+    }
+
+    /**
+     * Terminates a cloud instance for a node provision request.
+     *
+     * @param provisionId Node provision identifier
+     * @returns Updated node provision record
+     */
+    async terminateNodeProvision(provisionId: string): Promise<NodeProvision> {
+        return this.request<NodeProvision>(
+            "POST",
+            `/nodes/provisions/${encodeURIComponent(provisionId)}/terminate`
+        );
+    }
+
+    /**
      * Lists Traefik gateway routes persisted by the control plane.
      *
      * @returns Gateway route summaries
      */
     async listGatewayRoutes(): Promise<GatewayRouteSummary[]> {
         return this.request<GatewayRouteSummary[]>("GET", "/gateway/routes");
+    }
+
+    /**
+     * Lists gateway routes with server-side pagination.
+     *
+     * @param query Pagination parameters
+     * @returns Paginated gateway routes
+     */
+    async listGatewayRoutesPaginated(
+        query: PaginationQuery = {}
+    ): Promise<PaginatedResponse<GatewayRouteSummary>> {
+        return this.requestPaginated<GatewayRouteSummary>("GET", "/gateway/routes", query);
     }
 
     /**
@@ -615,6 +828,48 @@ export class PlatformClient {
     }
 
     /**
+     * Executes an instant PromQL query against the platform metrics API.
+     *
+     * @param query PromQL expression
+     * @param time Optional evaluation timestamp (RFC3339 or unix)
+     * @returns Instant query response
+     */
+    async queryMetrics(query: string, time?: string): Promise<PromQLInstantResponse> {
+        const params = new URLSearchParams({ query });
+
+        if (time) {
+            params.set("time", time);
+        }
+
+        return this.request<PromQLInstantResponse>("GET", `/metrics/query?${params.toString()}`);
+    }
+
+    /**
+     * Executes a range PromQL query against the platform metrics API.
+     *
+     * @param query PromQL expression
+     * @param start Range start timestamp
+     * @param end Range end timestamp
+     * @param step Optional step width (e.g. 60s)
+     * @returns Range query response
+     */
+    async queryMetricsRange(
+        query: string,
+        start: string,
+        end: string,
+        step = "60s"
+    ): Promise<PromQLRangeResponse> {
+        const params = new URLSearchParams({
+            query,
+            start,
+            end,
+            step
+        });
+
+        return this.request<PromQLRangeResponse>("GET", `/metrics/query_range?${params.toString()}`);
+    }
+
+    /**
      * Returns platform discovery metadata for CLI auto-configuration.
      * 
      * @returns Well-known platform metadata
@@ -663,6 +918,29 @@ export class PlatformClient {
     }
 
     /**
+     * Lists container registry images with server-side pagination.
+     *
+     * @param query Pagination parameters
+     * @returns Paginated container registry images
+     */
+    async listContainerRegistryImagesPaginated(
+        query: PaginationQuery = {}
+    ): Promise<PaginatedResponse<ContainerRegistryImage>> {
+        const suffix = this.buildPaginationQuery(query);
+        const response = await this.request<PaginatedResponse<ContainerRegistryImage>>(
+            "GET",
+            `/cr/images${suffix}`
+        );
+
+        if (Array.isArray((response as unknown as { images?: ContainerRegistryImage[] }).images)) {
+            const wrapped = response as unknown as { images: ContainerRegistryImage[] };
+            return this.wrapArrayAsPaginated(wrapped.images, query);
+        }
+
+        return response;
+    }
+
+    /**
      * Returns metadata headers for a container registry image.
      *
      * @param name Image name
@@ -674,6 +952,10 @@ export class PlatformClient {
             Accept: "application/json"
         };
 
+        if (this.sessionToken) {
+            headers["X-Platform-Session"] = this.sessionToken;
+        }
+
         if (this.token) {
             headers.Authorization = `Bearer ${this.token}`;
         }
@@ -682,7 +964,8 @@ export class PlatformClient {
             `${this.baseUrl}/cr/images/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
             {
                 method: "HEAD",
-                headers
+                headers,
+                credentials: this.credentials
             }
         );
 
@@ -734,21 +1017,12 @@ export class PlatformClient {
      * @returns Parsed JSON response
      */
     private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-        const headers: Record<string, string> = {
-            Accept: "application/json"
-        };
-
-        if (body !== undefined) {
-            headers["Content-Type"] = "application/json";
-        }
-
-        if (this.token) {
-            headers.Authorization = `Bearer ${this.token}`;
-        }
+        const headers = this.buildAuthHeaders(body !== undefined);
 
         const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
             method,
             headers,
+            credentials: this.credentials,
             body: body === undefined ? undefined : JSON.stringify(body)
         });
 
@@ -771,6 +1045,102 @@ export class PlatformClient {
     }
 
     /**
+     * Performs a paginated list request against the control plane.
+     *
+     * @param method HTTP method
+     * @param path API path
+     * @param query Pagination query parameters
+     * @returns Paginated response envelope
+     */
+    private async requestPaginated<T>(
+        method: string,
+        path: string,
+        query: PaginationQuery
+    ): Promise<PaginatedResponse<T>> {
+        const suffix = this.buildPaginationQuery(query);
+        const response = await this.request<PaginatedResponse<T> | T[]>(method, `${path}${suffix}`);
+
+        if (Array.isArray(response)) {
+            return this.wrapArrayAsPaginated(response, query);
+        }
+
+        return response;
+    }
+
+    /**
+     * Builds query string parameters for paginated list endpoints.
+     *
+     * @param query Pagination query parameters
+     * @returns Query string including leading question mark when non-empty
+     */
+    private buildPaginationQuery(query: PaginationQuery): string {
+        const params = new URLSearchParams();
+
+        if (query.page !== undefined) {
+            params.set("page", String(query.page));
+        }
+        if (query.limit !== undefined) {
+            params.set("limit", String(query.limit));
+        }
+        if (query.cursor) {
+            params.set("cursor", query.cursor);
+        }
+        if (query.sort) {
+            params.set("sort", query.sort);
+        }
+
+        return params.size > 0 ? `?${params.toString()}` : "";
+    }
+
+    /**
+     * Wraps a plain array response as a paginated envelope for legacy endpoints.
+     *
+     * @param items Full item list
+     * @param query Requested pagination parameters
+     * @returns Paginated response envelope
+     */
+    private wrapArrayAsPaginated<T>(items: T[], query: PaginationQuery): PaginatedResponse<T> {
+        const limit = query.limit ?? 20;
+        const page = query.page ?? 1;
+        const start = (page - 1) * limit;
+        const slice = items.slice(start, start + limit);
+
+        return {
+            items: slice,
+            total: items.length,
+            page,
+            limit,
+            hasMore: start + limit < items.length
+        };
+    }
+
+    /**
+     * Builds authorization headers for control plane requests.
+     *
+     * @param hasJsonBody Whether the request includes a JSON body
+     * @returns Header map
+     */
+    private buildAuthHeaders(hasJsonBody: boolean): Record<string, string> {
+        const headers: Record<string, string> = {
+            Accept: "application/json"
+        };
+
+        if (hasJsonBody) {
+            headers["Content-Type"] = "application/json";
+        }
+
+        if (this.sessionToken) {
+            headers["X-Platform-Session"] = this.sessionToken;
+        }
+
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+
+        return headers;
+    }
+
+    /**
      * Performs an HTTP request and returns the raw response body as text.
      *
      * @param method HTTP method
@@ -782,13 +1152,18 @@ export class PlatformClient {
             Accept: "text/plain, application/json"
         };
 
+        if (this.sessionToken) {
+            headers["X-Platform-Session"] = this.sessionToken;
+        }
+
         if (this.token) {
             headers.Authorization = `Bearer ${this.token}`;
         }
 
         const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
             method,
-            headers
+            headers,
+            credentials: this.credentials
         });
 
         const text = await response.text();

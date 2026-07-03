@@ -23,6 +23,28 @@ pub const Snapshot = struct {
     disk_mb_used: i64,
 };
 
+/// Returns a conservative fallback snapshot when Docker stats are unavailable.
+pub fn fallbackSnapshot() Snapshot {
+    return .{
+        .cpu_millis_total = 1000,
+        .cpu_millis_used = 0,
+        .memory_mb_total = 1024,
+        .memory_mb_used = 0,
+        .disk_mb_total = 102_400,
+        .disk_mb_used = 0,
+    };
+}
+
+/// Reads container memory usage bytes from a Docker stats JSON payload.
+pub fn readMemoryUsageBytesPublic(body: []const u8) i64 {
+    return readMemoryUsageBytes(body);
+}
+
+/// Reads container CPU utilization percent from a Docker stats JSON payload.
+pub fn readCpuPercentPublic(body: []const u8) f64 {
+    return readCpuPercent(body);
+}
+
 /// Collects node resource telemetry from the Docker Engine API.
 pub fn collect(
     // The allocator to use.

@@ -1,7 +1,11 @@
+import {
+    ContainerRegistryImageSchema,
+    PaginatedListSchema,
+    PaginationQuerySchema
+} from "@platform/shared";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
-import { CrImageListResponseSchema } from "@platform/shared";
 
 export const GET = defineRoute({
     preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
@@ -10,12 +14,12 @@ export const GET = defineRoute({
         description: "Lists docker save tarballs stored in the platform container registry.",
         tags: ["container-registry"],
         operationId: "listContainerRegistryImages",
+        querystring: PaginationQuerySchema,
         response: {
-            200: CrImageListResponseSchema
+            200: PaginatedListSchema(ContainerRegistryImageSchema)
         }
     },
-    async handler() {
-        const images = await ControlPlaneService.ContainerRegistry.listImages();
-        return { images };
+    async handler(req) {
+        return ControlPlaneService.ContainerRegistry.listImages(req.query);
     }
 });

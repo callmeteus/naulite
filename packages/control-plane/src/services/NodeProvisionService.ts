@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import {
     NodeProvisionSchema,
     type NodeProvision,
+    type PaginatedList,
+    type PaginationQuery,
     type ProvisionNodeBodySchema
 } from "@platform/shared";
 import type { z } from "zod";
@@ -136,12 +138,13 @@ export class NodeProvisionService {
     }
 
     /**
-     * Lists all node provision requests.
+     * Lists node provision requests with server-side pagination.
      *
-     * @returns Node provision records
+     * @param pagination Pagination query parameters
+     * @returns Paginated node provision records
      */
-    async listProvisions(): Promise<NodeProvision[]> {
-        return this.store.listNodeProvisions();
+    async listProvisions(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<NodeProvision>> {
+        return this.store.listNodeProvisions(pagination);
     }
 
     /**

@@ -245,3 +245,68 @@ button.danger {
   color: #7a8a9b;
   margin-top: 1rem;
 }
+
+.boot-loading,
+.public-layout,
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.login-panel {
+  width: min(100%, 420px);
+}
+
+.sidebar-user {
+  font-size: 0.85rem;
+  color: #7a8a9b;
+  margin: -0.75rem 0 1rem;
+  word-break: break-all;
+}
+
+.logout-button {
+  margin-top: 1.5rem;
+  width: 100%;
+  background: #21262d;
+}
+
+.metrics-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.chart-panel {
+  min-height: 240px;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.stepper-step {
+  padding: 0.75rem;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #21262d;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.stepper-step.active {
+  border-color: #7cc4ff;
+}
+
+.stepper-step.done {
+  border-color: #3fb950;
+}
+
+.stepper-step.failed {
+  border-color: #ff7b72;
+}
+

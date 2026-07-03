@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import type { GatewayRoute, Ingress } from "@platform/shared";
+import type { GatewayRoute, Ingress, PaginatedList, PaginationQuery } from "@platform/shared";
+import { buildPaginatedList, paginationOffset } from "@platform/shared";
 import type { TraefikNetBirdGatewayProvider } from "@platform/gateway";
 
 import { GatewayRouteModel } from "../database/models/index";
@@ -40,16 +41,26 @@ export class GatewayRouteService {
     ) {}
 
     /**
-     * Lists all persisted gateway routes.
+     * Lists persisted gateway routes with server-side pagination.
      *
-     * @returns Stored gateway routes
+     * @param pagination Pagination query parameters
+     * @returns Paginated stored gateway routes
      */
-    async listRoutes(): Promise<StoredGatewayRoute[]> {
-        const rows = await GatewayRouteModel.findAll({
-            order: [["updatedAt", "DESC"]]
+    async listRoutes(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<StoredGatewayRoute>> {
+        const page = pagination.page;
+        const limit = pagination.limit;
+        const { count, rows } = await GatewayRouteModel.findAndCountAll({
+            order: [["updatedAt", "DESC"]],
+            limit,
+            offset: paginationOffset(page, limit)
         });
 
-        return rows.map((row) => this.mapRow(row.get({ plain: true }) as GatewayRouteModel));
+        return buildPaginatedList(
+            rows.map((row) => this.mapRow(row.get({ plain: true }) as GatewayRouteModel)),
+            count,
+            page,
+            limit
+        );
     }
 
     /**
@@ -185,7 +196,8 @@ export class GatewayRouteService {
             return;
         }
 
-        const routes = await this.listRoutes();
+        const paginatedRoutes = await this.listRoutes({ page: 1, limit: 10_000 });
+        const routes = paginatedRoutes.items;
         const gatewayRoutes = routes.map((route) => ({
             serviceName: route.serviceName,
             ingress: route.ingress,

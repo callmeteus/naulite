@@ -12,9 +12,9 @@
         "zig-out/bin"
     ],
     "scripts": {
-        "build": "zig build",
+        "build": "node ../../scripts/zig-build.mjs",
         "copy:native": "node scripts/copy-native.mjs",
-        "build:all": "zig build && yarn copy:native",
+        "build:all": "node ../../scripts/zig-build.mjs && yarn copy:native",
         "lint": "eslint bin/"
     }
 }

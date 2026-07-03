@@ -7,8 +7,10 @@ import type {
     PipelineRun,
     PipelineRunKind,
     PipelineRunStatus,
-    PipelineStep
+    PipelineStep,
+    PaginatedList
 } from "@platform/shared";
+import { buildPaginatedList, paginationOffset } from "@platform/shared";
 import { Op } from "sequelize";
 
 import {
@@ -47,6 +49,7 @@ export interface ListPipelineRunsFilters {
     service?: string;
     pool?: string;
     since?: string;
+    page?: number;
     limit?: number;
 }
 
@@ -343,8 +346,10 @@ export namespace PipelineRunService {
      * @param filters List filters
      * @returns Matching pipeline runs
      */
-    export async function listRuns(filters: ListPipelineRunsFilters = {}): Promise<PipelineRun[]> {
+    export async function listRuns(filters: ListPipelineRunsFilters = {}): Promise<PaginatedList<PipelineRun>> {
         const where: Record<string, unknown> = {};
+        const page = filters.page ?? 1;
+        const limit = filters.limit ?? 50;
 
         if (filters.kind) {
             where.kind = filters.kind;
@@ -366,13 +371,19 @@ export namespace PipelineRunService {
             where.createdAt = { [Op.gte]: filters.since };
         }
 
-        const rows = await PipelineRunModel.findAll({
+        const { count, rows } = await PipelineRunModel.findAndCountAll({
             where,
             order: [["createdAt", "DESC"]],
-            limit: filters.limit ?? 50
+            limit,
+            offset: paginationOffset(page, limit)
         });
 
-        return rows.map((row) => mapRun(row.get({ plain: true })));
+        return buildPaginatedList(
+            rows.map((row) => mapRun(row.get({ plain: true }))),
+            count,
+            page,
+            limit
+        );
     }
 
     /**

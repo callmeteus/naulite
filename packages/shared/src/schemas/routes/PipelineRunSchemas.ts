@@ -6,17 +6,17 @@ import {
     PipelineRunSchema,
     PipelineRunStatusSchema
 } from "../PipelineRun";
+import { PaginationQuerySchema } from "../Pagination";
 
 /**
  * Query filters for listing pipeline runs.
  */
-export const PipelineRunListQuerySchema = z.object({
+export const PipelineRunListQuerySchema = PaginationQuerySchema.extend({
     kind: PipelineRunKindSchema.optional(),
     status: PipelineRunStatusSchema.optional(),
     service: z.string().min(1).optional(),
     pool: z.string().min(1).optional(),
-    since: z.string().optional(),
-    limit: z.coerce.number().int().positive().max(200).default(50)
+    since: z.string().optional()
 });
 
 /**

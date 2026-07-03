@@ -1,25 +1,28 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 
-import { useClientPagination } from "../composables/useClientPagination";
+import { platformClient } from "../api/Client";
+import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
 const store = useClusterStore();
 const volumeName = ref("");
 
-const backupsRef = computed(() => store.backups);
 const {
-    paginatedItems: paginatedBackups,
+    items: paginatedBackups,
     pageLabel,
     canGoPrevious,
     canGoNext,
     previousPage,
-    nextPage
-} = useClientPagination(backupsRef, 20);
+    nextPage,
+    refresh,
+    loading,
+    error
+} = useServerPagination((page, limit) => platformClient.listBackupsPaginated({ page, limit }), 20);
 
 onMounted(() => {
-    void store.refreshBackups();
+    void refresh();
 });
 
 /**
@@ -35,6 +38,7 @@ async function runBackup(): Promise<void> {
 
     await store.runBackup(trimmed);
     volumeName.value = "";
+    await refresh();
 }
 
 /**
@@ -45,14 +49,15 @@ async function runBackup(): Promise<void> {
  */
 async function restoreBackup(backupId: string): Promise<void> {
     await store.restoreBackup(backupId);
+    await refresh();
 }
 </script>
 
 <template>
     <section>
         <h2>{{ t("backups") }}</h2>
-        <p v-if="store.loading">{{ t("loading") }}</p>
-        <p v-else-if="store.error" class="error">{{ store.error }}</p>
+        <p v-if="loading || store.loading">{{ t("loading") }}</p>
+        <p v-else-if="store.error || error" class="error">{{ store.error || error }}</p>
         <div v-else class="panel">
             <form class="actions" @submit.prevent="runBackup">
                 <input
@@ -92,7 +97,7 @@ async function restoreBackup(backupId: string): Promise<void> {
                     </tr>
                 </tbody>
             </table>
-            <div v-if="store.backups.length > 0" class="pagination">
+            <div v-if="paginatedBackups.length > 0" class="pagination">
                 <button type="button" :disabled="!canGoPrevious" @click="previousPage">
                     {{ t("paginationPrevious") }}
                 </button>

@@ -1,0 +1,6 @@
+{
+    "name": "@platform/metrics",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Platform Prometheus metrics stack configuration and compose fragments."
+}

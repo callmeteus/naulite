@@ -3,6 +3,8 @@ name: platform
 include:
     - path: infra/netbird/docker-compose.yml
       project_directory: infra/netbird
+    - path: ../packages/metrics/compose/metrics-stack.yml
+      project_directory: ../packages/metrics/compose
 
 platform:
     version: 0.1.0
@@ -69,7 +71,7 @@ services:
 
     control-plane-1:
         build:
-            context: .
+            context: ..
             dockerfile: packages/control-plane/Dockerfile
         restart: unless-stopped
         depends_on:
@@ -93,17 +95,21 @@ services:
             CP_PLUGINS: s3
             S3_ENDPOINT: http://minio:9000
             S3_FORCE_PATH_STYLE: "true"
+            PROMETHEUS_URL: ${PROMETHEUS_URL:-http://platform-prometheus:9090}
+            PLATFORM_PROMETHEUS_FILE_SD_DIR: ${PLATFORM_PROMETHEUS_FILE_SD_DIR:-/var/lib/platform/prometheus/file_sd}
+            PLATFORM_METRICS_SYNC_ENABLED: ${PLATFORM_METRICS_SYNC_ENABLED:-true}
         ports:
             - "8080:8080"
         volumes:
             - cp-data-1:/var/lib/platform
+            - platform-prometheus-file-sd:/var/lib/platform/prometheus/file_sd
         networks:
             - default
             - netbird
 
     control-plane-2:
         build:
-            context: .
+            context: ..
             dockerfile: packages/control-plane/Dockerfile
         restart: unless-stopped
         depends_on:
@@ -127,17 +133,21 @@ services:
             CP_PLUGINS: s3
             S3_ENDPOINT: http://minio:9000
             S3_FORCE_PATH_STYLE: "true"
+            PROMETHEUS_URL: ${PROMETHEUS_URL:-http://platform-prometheus:9090}
+            PLATFORM_PROMETHEUS_FILE_SD_DIR: ${PLATFORM_PROMETHEUS_FILE_SD_DIR:-/var/lib/platform/prometheus/file_sd}
+            PLATFORM_METRICS_SYNC_ENABLED: ${PLATFORM_METRICS_SYNC_ENABLED:-true}
         ports:
             - "8081:8080"
         volumes:
             - cp-data-2:/var/lib/platform
+            - platform-prometheus-file-sd:/var/lib/platform/prometheus/file_sd
         networks:
             - default
             - netbird
 
     ui-backend:
         build:
-            context: .
+            context: ..
             dockerfile: packages/ui/packages/backend/Dockerfile
         restart: unless-stopped
         depends_on:
@@ -149,7 +159,7 @@ services:
 
     ui:
         build:
-            context: .
+            context: ..
             dockerfile: packages/ui/Dockerfile
             args:
                 VITE_ADMIN_API_URL: /api
@@ -161,7 +171,7 @@ services:
 
     agent-1:
         build:
-            context: .
+            context: ..
             dockerfile: packages/agent/Dockerfile
         restart: unless-stopped
         environment:
@@ -171,13 +181,20 @@ services:
             AGENT_URL: http://agent-1:9470
             AGENT_PORT: "9470"
             AGENT_VERSION: zig-0.1.0
+            PLATFORM_AGENT_CONFIG: /var/lib/platform/agent.json
+            NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
+            NETBIRD_SETUP_KEY: ${NETBIRD_SETUP_KEY:-}
         volumes:
+            - agent-data-1:/var/lib/platform
             - /var/run/docker.sock:/var/run/docker.sock
         depends_on:
             control-plane-1:
                 condition: service_started
         ports:
             - "9470:9470"
+        networks:
+            - default
+            - netbird
 
 volumes:
     pgdata:
@@ -185,3 +202,5 @@ volumes:
     cp-data-1:
     cp-data-2:
     traefik-acme:
+    agent-data-1:
+    platform-prometheus-file-sd:

@@ -101,7 +101,7 @@ pub const Client = struct {
         const uri = try std.Uri.parse(url);
         const method_enum = std.meta.stringToEnum(std.http.Method, method) orelse return ApiError.HttpRequestFailed;
 
-        var extra_headers: [4]std.http.Header = undefined;
+        var extra_headers: [5]std.http.Header = undefined;
         var header_count: usize = 0;
 
         extra_headers[header_count] = .{ .name = "Accept", .value = "application/json" };
@@ -121,12 +121,17 @@ pub const Client = struct {
             header_count += 1;
         }
 
+        if (self.config.tenant_slug) |tenant_slug| {
+            extra_headers[header_count] = .{ .name = "X-Platform-Tenant", .value = tenant_slug };
+            header_count += 1;
+        }
+
         const response_buffer = try self.allocator.alloc(u8, 16 * 1024 * 1024);
         defer self.allocator.free(response_buffer);
 
         var response_writer = std.Io.Writer.fixed(response_buffer);
 
-        const result = std.http.Client.fetch(&self.http, .{
+        const result = self.http.fetch(.{
             .location = .{ .uri = uri },
             .method = method_enum,
             .payload = body,

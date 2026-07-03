@@ -6,8 +6,8 @@ RUN apt-get update \
 
 # Must match infra/zig-toolchain.env and .github/workflows/ci.yml env.ZIG_VERSION
 # URL format: https://ziglang.org/builds/zig-x86_64-linux-{version}.tar.xz (see download/index.json master)
-ARG ZIG_VERSION=0.17.0-dev.1158+1d1193aa7
-ARG ZIG_URL=https://ziglang.org/builds/zig-x86_64-linux-${ZIG_VERSION}.tar.xz
+ARG ZIG_VERSION=0.16.0
+ARG ZIG_URL=https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz
 
 RUN curl -fsSL "${ZIG_URL}" -o /tmp/zig.tar.xz \
     && tar -xJf /tmp/zig.tar.xz -C /opt \

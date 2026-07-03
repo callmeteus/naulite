@@ -29,6 +29,10 @@ function createMetricsTestContext(): ControlPlaneContext {
             healthCheck: vi.fn(async () => true)
         },
         applyRevision: 3,
+        leaderElection: {
+            isLeader: () => true,
+            getLeaderId: () => "cp-test"
+        },
         netBirdEnrollment: {
             ensureSetupKey: vi.fn(async () => "setup-key")
         }
@@ -58,7 +62,7 @@ describe("metrics route", () => {
         expect(response.body).toContain("platform_nodes_online 1");
         expect(response.body).toContain("platform_instances_running 1");
         expect(response.body).toContain("platform_apply_revision 3");
-        expect(response.body).toContain("platform_database_healthy 1");
+        expect(response.body).toContain("platform_control_plane_leader");
 
         await app.close();
     });

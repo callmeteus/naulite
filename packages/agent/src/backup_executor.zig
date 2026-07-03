@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const process_cmd = @import("process_cmd.zig");
-const threaded_io = @import("threaded_io.zig");
+const blocking_io = @import("blocking_io.zig");
 
 /// Result of a backup task executed on the agent.
 pub const BackupTaskResult = struct {
@@ -42,10 +42,7 @@ pub fn executeBackupTask(
     // The backup task JSON payload.
     body: []const u8,
 ) !BackupTaskResult {
-    var io_scope = threaded_io.Scope.init(allocator);
-    defer io_scope.deinit();
-    const io = io_scope.io;
-
+    const io = blocking_io.io();
     const parsed = try std.json.parseFromSlice(
         std.json.Value,
         allocator,
@@ -109,10 +106,7 @@ pub fn restoreBackupArchive(
     // The restore task JSON payload.
     body: []const u8,
 ) !BackupRestoreResult {
-    var io_scope = threaded_io.Scope.init(allocator);
-    defer io_scope.deinit();
-    const io = io_scope.io;
-
+    const io = blocking_io.io();
     const parsed = try std.json.parseFromSlice(
         std.json.Value,
         allocator,
@@ -175,10 +169,7 @@ pub fn receiveBackupArchive(
     // The backup archive bytes.
     body: []const u8,
 ) ![]const u8 {
-    var io_scope = threaded_io.Scope.init(allocator);
-    defer io_scope.deinit();
-    const io = io_scope.io;
-
+    const io = blocking_io.io();
     std.log.debug("[backup] receive archive bytes={d} backupId={s}", .{
         body.len,
         backup_id orelse "-",
@@ -212,9 +203,7 @@ pub fn exportBackupArchive(
     // Absolute archive path on the agent.
     archive_path: []const u8,
 ) ![]u8 {
-    var io_scope = threaded_io.Scope.init(allocator);
-    defer io_scope.deinit();
-    const io = io_scope.io;
+    const io = blocking_io.io();
 
     if (!isPathWithinBackupRoot(archive_path)) {
         return error.InvalidBackupArchivePath;
@@ -353,8 +342,8 @@ fn freeStringArray(allocator: std.mem.Allocator, values: []const []const u8) voi
 
 test "resolveMountPath defaults to volume directory" {
     const allocator = std.testing.allocator;
-    var object = std.json.ObjectMap.init(allocator);
-    defer object.deinit();
+    var object: std.json.ObjectMap = .empty;
+    defer object.deinit(allocator);
 
     const mount_path = try resolveMountPath(allocator, object, "postgres-data");
     defer allocator.free(mount_path);
@@ -364,8 +353,8 @@ test "resolveMountPath defaults to volume directory" {
 
 test "resolveArchivePath defaults to backup root" {
     const allocator = std.testing.allocator;
-    var object = std.json.ObjectMap.init(allocator);
-    defer object.deinit();
+    var object: std.json.ObjectMap = .empty;
+    defer object.deinit(allocator);
 
     const archive_path = try resolveArchivePath(allocator, object, "run-123");
     defer allocator.free(archive_path);

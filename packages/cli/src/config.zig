@@ -8,6 +8,9 @@ pub const Config = struct {
     // Optional bearer token for remote access.
     token: ?[]const u8,
 
+    // Optional tenant slug for multi-tenant control planes.
+    tenant_slug: ?[]const u8 = null,
+
     /// Releases owned configuration strings.
     pub fn deinit(
         self: Config,

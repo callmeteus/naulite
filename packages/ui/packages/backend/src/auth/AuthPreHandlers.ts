@@ -1,44 +1,73 @@
-import type { FastifyRequest, preHandlerHookHandler } from "fastify";
+import type { FastifyRequest } from "fastify";
+
+import { RolePreHandlers, SERVICE_ADMIN_USER } from "./RolePreHandlers";
 
 /**
  * Route-level authentication pre-handlers for the admin BFF.
  */
 export namespace AuthPreHandlers {
     /**
-     * Builds a preHandler that validates the admin API key on incoming requests.
+     * Validates the incoming request and attaches adminUser when authenticated.
      *
-     * @param adminApiKey Expected bearer token; when unset, all requests are rejected
-     * @returns Fastify preHandler
+     * @param request Incoming Fastify request
+     * @param adminApiKey Optional legacy service token for automation
+     * @returns Nothing.
      */
-    export function requireAdminApiKey(adminApiKey: string | undefined): preHandlerHookHandler {
-        return async (request) => {
-            enforceAdminApiKey(request, adminApiKey);
-        };
+    export async function authenticateRequest(
+        request: FastifyRequest,
+        adminApiKey: string | undefined
+    ): Promise<void> {
+        const sessionToken = RolePreHandlers.readSessionToken(request);
+
+        if (sessionToken) {
+            request.sessionToken = sessionToken;
+
+            try {
+                const session = await request.server.controlPlane
+                    .withSession(sessionToken)
+                    .getAdminMe();
+                request.adminUser = session.user;
+                return;
+            } catch {
+                throw createUnauthorizedError("Sessão expirada ou inválida.");
+            }
+        }
+
+        if (adminApiKey) {
+            const authHeader = request.headers.authorization;
+
+            if (authHeader?.startsWith("Bearer ")) {
+                const token = authHeader.slice("Bearer ".length).trim();
+
+                if (token === adminApiKey) {
+                    request.adminUser = SERVICE_ADMIN_USER;
+                    return;
+                }
+            }
+        }
+
+        throw createUnauthorizedError("Não autorizado.");
     }
 
     /**
-     * Validates the Authorization bearer token against the configured admin API key.
+     * Returns true when the request path is publicly accessible without a session.
      *
-     * @param request Incoming Fastify request
-     * @param adminApiKey Expected bearer token
-     * @returns Nothing.
+     * @param url Request URL
+     * @param method HTTP method
+     * @returns Whether authentication can be skipped
      */
-    export function enforceAdminApiKey(request: FastifyRequest, adminApiKey: string | undefined): void {
-        if (!adminApiKey) {
-            throw createUnauthorizedError("Admin API key is not configured.");
+    export function isPublicRoute(url: string, method: string): boolean {
+        const path = url.split("?")[0] ?? url;
+
+        if (path === "/health") {
+            return true;
         }
 
-        const authHeader = request.headers.authorization;
-
-        if (!authHeader?.startsWith("Bearer ")) {
-            throw createUnauthorizedError("Unauthorized.");
+        if (path === "/auth/login" && method === "POST") {
+            return true;
         }
 
-        const token = authHeader.slice("Bearer ".length).trim();
-
-        if (token !== adminApiKey) {
-            throw createUnauthorizedError("Unauthorized.");
-        }
+        return false;
     }
 }
 

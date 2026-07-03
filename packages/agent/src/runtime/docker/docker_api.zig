@@ -1,7 +1,21 @@
 const std = @import("std");
 
+const blocking_io = @import("../../blocking_io.zig");
+
 /// Minimum Docker Engine API version supported by current daemons.
 const docker_api_version = "v1.44";
+
+/// Platform-managed container metadata used for metrics collection.
+pub const ManagedContainer = struct {
+    // Docker container identifier.
+    docker_id: []const u8,
+
+    // Control plane instance identifier.
+    instance_id: []const u8,
+
+    // Manifest service name.
+    service_name: []const u8,
+};
 
 /// HTTP response from the Docker Engine API.
 pub const DockerResponse = struct {
@@ -51,10 +65,7 @@ pub const DockerApi = struct {
         // The request body.
         body: ?[]const u8,
     ) !DockerResponse {
-        var threaded = std.Io.Threaded.init(self.allocator, .{});
-
-        defer threaded.deinit();
-        const io = threaded.io();
+        const io = blocking_io.io();
 
         const unix_address = try std.Io.net.UnixAddress.init(self.socket_path);
         var stream = try unix_address.connect(io);
@@ -84,12 +95,9 @@ pub const DockerApi = struct {
 
         var read_buffer: [4096]u8 = undefined;
         while (true) {
-            var chunk = [_][]u8{read_buffer[0..]};
+            var net_reader = stream.reader(io, &read_buffer);
 
-            const read_count = stream.read(io, &chunk) catch |err| switch (err) {
-                error.ConnectionResetByPeer => break,
-                else => return err,
-            };
+            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch break;
 
             if (read_count == 0) {
                 break;
@@ -157,6 +165,8 @@ pub const DockerApi = struct {
         port_bindings_json: []const u8,
         // The binds to set in the container.
         binds_json: []const u8,
+        // Docker labels JSON object for platform metadata.
+        labels_json: []const u8,
     ) ![]u8 {
         const path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/create?name={s}", .{container_name});
         defer self.allocator.free(path);
@@ -169,8 +179,8 @@ pub const DockerApi = struct {
 
         const body = try std.fmt.allocPrint(
             self.allocator,
-            "{{\"Image\":\"{s}\",\"Cmd\":{s},\"Env\":{s},\"HostConfig\":{{\"PortBindings\":{s},\"Binds\":{s}}}}}",
-            .{ image, cmd_json, env_json, port_bindings_json, binds_json },
+            "{{\"Image\":\"{s}\",\"Cmd\":{s},\"Env\":{s},\"Labels\":{s},\"HostConfig\":{{\"PortBindings\":{s},\"Binds\":{s}}}}}",
+            .{ image, cmd_json, env_json, labels_json, port_bindings_json, binds_json },
         );
 
         defer self.allocator.free(body);
@@ -336,6 +346,79 @@ pub const DockerApi = struct {
     /// Returns Docker disk usage summary JSON.
     pub fn getSystemDf(self: *const DockerApi) !DockerResponse {
         return self.request("GET", "/v1.44/system/df", null);
+    }
+
+    /// Lists platform-managed running containers with instance metadata.
+    pub fn listManagedContainers(self: *const DockerApi) ![]ManagedContainer {
+        var response = try self.request("GET", "/v1.44/containers/json", null);
+        defer response.deinit(self.allocator);
+
+        if (response.status < 200 or response.status >= 300) {
+            return error.DockerListFailed;
+        }
+
+        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, response.body, .{});
+        errdefer parsed.deinit();
+
+        if (parsed.value != .array) {
+            parsed.deinit();
+            return &[_]ManagedContainer{};
+        }
+
+        var containers: std.ArrayList(ManagedContainer) = .empty;
+        errdefer {
+            for (containers.items) |container| {
+                self.allocator.free(container.docker_id);
+                self.allocator.free(container.instance_id);
+                self.allocator.free(container.service_name);
+            }
+            containers.deinit(self.allocator);
+        }
+
+        for (parsed.value.array.items) |item| {
+            if (item != .object) {
+                continue;
+            }
+
+            const id_value = item.object.get("Id") orelse continue;
+            const docker_id = switch (id_value) {
+                .string => |s| s,
+                else => continue,
+            };
+
+            const names_value = item.object.get("Names") orelse continue;
+            if (names_value != .array or names_value.array.items.len == 0) {
+                continue;
+            }
+
+            const first_name = names_value.array.items[0];
+            const raw_name = switch (first_name) {
+                .string => |s| s,
+                else => continue,
+            };
+
+            const container_name = if (raw_name.len > 0 and raw_name[0] == '/')
+                raw_name[1..]
+            else
+                raw_name;
+
+            if (!isPlatformManagedContainer(container_name, item.object.get("Labels"))) {
+                continue;
+            }
+
+            const labels = item.object.get("Labels");
+            const instance_id = readLabelValue(labels, "platform.instance.id") orelse container_name;
+            const service_name = readLabelValue(labels, "platform.service.name") orelse "-";
+
+            try containers.append(self.allocator, .{
+                .docker_id = try self.allocator.dupe(u8, docker_id),
+                .instance_id = try self.allocator.dupe(u8, instance_id),
+                .service_name = try self.allocator.dupe(u8, service_name),
+            });
+        }
+
+        parsed.deinit();
+        return try containers.toOwnedSlice(self.allocator);
     }
 
     /// Lists identifiers for running containers.
@@ -818,6 +901,33 @@ pub const DockerApi = struct {
         }
 
         return try output.toOwnedSlice(allocator);
+    }
+
+    /// Returns whether a container should be included in platform metrics.
+    fn isPlatformManagedContainer(container_name: []const u8, labels: ?std.json.Value) bool {
+        if (readLabelValue(labels, "platform.managed")) |value| {
+            return std.mem.eql(u8, value, "true");
+        }
+
+        if (std.mem.startsWith(u8, container_name, "platform-")) {
+            return false;
+        }
+
+        return container_name.len > 0;
+    }
+
+    /// Reads a string label from a Docker labels object.
+    fn readLabelValue(labels: ?std.json.Value, key: []const u8) ?[]const u8 {
+        const root = labels orelse return null;
+        if (root != .object) {
+            return null;
+        }
+
+        const value = root.object.get(key) orelse return null;
+        return switch (value) {
+            .string => |text| text,
+            else => null,
+        };
     }
 };
 

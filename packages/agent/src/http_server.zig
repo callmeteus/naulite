@@ -1,11 +1,13 @@
 const std = @import("std");
 
 const backup_executor = @import("backup_executor.zig");
+const blocking_io = @import("blocking_io.zig");
 const bootstrap = @import("bootstrap.zig");
 const build_context = @import("build_context.zig");
 const build_executor = @import("build_executor.zig");
 const execution_plan = @import("execution_plan.zig");
 const log_rotation_executor = @import("log_rotation_executor.zig");
+const metrics_exporter = @import("runtime/docker/metrics_exporter.zig");
 const docker = @import("runtime/docker/docker.zig");
 
 pub const Config = struct {
@@ -95,11 +97,7 @@ pub fn handleRequestWithSocket(
     }
 
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/metrics")) {
-        const metrics_body = try std.fmt.allocPrint(
-            allocator,
-            "# HELP platform_agent_up Agent process is running.\n# TYPE platform_agent_up gauge\nplatform_agent_up 1\n",
-            .{},
-        );
+        const metrics_body = try metrics_exporter.formatPrometheusText(allocator);
 
         return .{
             .status = 200,
@@ -166,9 +164,7 @@ pub fn serve(
     // HTTP server and Docker client configuration.
     config: Config,
 ) !void {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    const io = threaded.io();
+    const io = blocking_io.io();
 
     var docker_client = docker.DockerClient.init(allocator, config.docker_socket);
 
@@ -208,8 +204,8 @@ fn handleConnection(
     var read_buffer: [4096]u8 = undefined;
 
     while (true) {
-        var chunk_slices = [_][]u8{read_buffer[0..]};
-        const read_count = stream.read(io, &chunk_slices) catch |err| {
+        var net_reader = stream.reader(io, &read_buffer);
+        const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch |err| {
             return err;
         };
 
@@ -274,8 +270,8 @@ fn handleConnection(
 
         var index = already_read;
         while (index < content_length) {
-            var chunk_slices = [_][]u8{read_buffer[0..]};
-            const read_count = stream.read(io, &chunk_slices) catch |err| {
+            var net_reader = stream.reader(io, &read_buffer);
+            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch |err| {
                 return err;
             };
 

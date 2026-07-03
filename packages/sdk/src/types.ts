@@ -27,12 +27,18 @@ export interface PlatformDiscovery {
     localBypass: boolean;
 }
 
+export type { AdminLoginInput, AdminLoginResponse, AdminRole, AdminSession, AdminUser, CreateAdminUserInput, DisableAdminUserInput } from "./auth-types";
+export type { PaginatedResponse, PaginationQuery } from "./pagination-types";
+export type { PromQLInstantResponse, PromQLRangeResponse, PromQLSample, PromQLSeries } from "./metrics-types";
+
 /**
  * Options for creating a platform HTTP client.
  */
 export interface PlatformClientOptions {
     baseUrl: string;
     token?: string;
+    sessionToken?: string;
+    credentials?: "omit" | "same-origin" | "include";
     fetchImpl?: typeof fetch;
 }
 /**
@@ -185,6 +191,7 @@ export interface ListPipelineRunsQuery {
     pool?: string;
     since?: string;
     limit?: number;
+    page?: number;
 }
 
 export type { PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus };

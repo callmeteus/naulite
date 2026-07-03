@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 
+import { registerAdminUserRoutes } from "./admin/users";
 import { registerApiKeyRoutes } from "./api-keys";
+import { registerAuthRoutes } from "./auth";
 import { registerBackupRoutes } from "./backups";
 import { registerBuildRoutes } from "./build";
 import { registerClusterRoutes } from "./cluster";
@@ -21,6 +23,7 @@ import { registerSecretRoutes } from "./secrets";
  */
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
     await registerHealthRoutes(app);
+    await registerAuthRoutes(app);
     await registerClusterRoutes(app);
     await registerApiKeyRoutes(app);
     await registerSecretRoutes(app);
@@ -32,4 +35,5 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     await registerGatewayRoutes(app);
     await registerNodeProvisionRoutes(app);
     await registerRunsRoutes(app);
+    await registerAdminUserRoutes(app);
 }

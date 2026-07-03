@@ -130,10 +130,19 @@ export async function assertBashSyntax(scriptName: string): Promise<void> {
  */
 export async function createTempPlatformRoot(): Promise<string> {
     const tempRoot = await mkdtemp(path.join(tmpdir(), "platform-bootstrap-"));
-    await copyFile(
-        path.join(platformRoot, ".env.example"),
-        path.join(tempRoot, ".env.example")
-    );
+    const dogfoodDir = path.join(tempRoot, "dogfood");
+    await import("node:fs/promises").then((fs) => fs.mkdir(dogfoodDir, { recursive: true }));
+
+    const dogfoodEnvExample = path.join(platformRoot, "dogfood", ".env.example");
+    const rootEnvExample = path.join(platformRoot, ".env.example");
+
+    try {
+        await access(dogfoodEnvExample);
+        await copyFile(dogfoodEnvExample, path.join(dogfoodDir, ".env.example"));
+    } catch {
+        await copyFile(rootEnvExample, path.join(dogfoodDir, ".env.example"));
+    }
+
     return tempRoot;
 }
 

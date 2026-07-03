@@ -1,4 +1,5 @@
 import { readdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname } from "node:path";
@@ -29,6 +30,24 @@ export namespace RouteFileLoader {
             const routeModule = await import(routeFileImportHref(routeFile));
             registerModuleRoutes(app, routePath, routeModule);
         }
+
+        const moduleRoutesRoot = join(
+            dirname(fileURLToPath(import.meta.url)),
+            "..",
+            "modules",
+            "admin",
+            "routes"
+        );
+
+        if (existsSync(moduleRoutesRoot)) {
+            const moduleRouteFiles = await listRouteFiles(moduleRoutesRoot);
+
+            for (const routeFile of moduleRouteFiles) {
+                const routePath = filePathToRoutePath(moduleRoutesRoot, routeFile, "admin");
+                const routeModule = await import(routeFileImportHref(routeFile));
+                registerModuleRoutes(app, routePath, routeModule);
+            }
+        }
     }
 
     /**
@@ -48,11 +67,15 @@ export namespace RouteFileLoader {
      * @param routeFile Absolute route file path
      * @returns Fastify route path
      */
-    export function filePathToRoutePath(routesRoot: string, routeFile: string): string {
+    export function filePathToRoutePath(
+        routesRoot: string,
+        routeFile: string,
+        urlPrefix?: string
+    ): string {
         const relativeFile = relative(routesRoot, routeFile).replace(/\.(ts|js)$/, "");
 
         if (relativeFile === "" || relativeFile === ".") {
-            return "/";
+            return urlPrefix ? `/${urlPrefix}` : "/";
         }
 
         const segments = relativeFile.split(sep).map((segment) => {
@@ -62,6 +85,10 @@ export namespace RouteFileLoader {
 
             return segment;
         });
+
+        if (urlPrefix) {
+            segments.unshift(urlPrefix);
+        }
 
         return `/${segments.join("/")}`;
     }

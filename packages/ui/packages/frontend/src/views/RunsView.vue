@@ -2,9 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import type { PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus } from "@platform/sdk";
+import type { ListPipelineRunsQuery, PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus } from "@platform/sdk";
 import { platformClient } from "../api/Client";
-import { useClientPagination } from "../composables/useClientPagination";
+import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
@@ -21,16 +21,26 @@ let streamAbort = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let activeStreamRunId: string | null = null;
 
-const runsRef = computed(() => store.runs);
 const {
-    paginatedItems: paginatedRuns,
+    items: paginatedRuns,
     pageLabel,
     canGoPrevious,
     canGoNext,
     previousPage,
     nextPage,
-    resetPage
-} = useClientPagination(runsRef, 15);
+    resetPage,
+    refresh: refreshListPage,
+    loading: listLoading,
+    error: listError
+} = useServerPagination(async (page, limit) => {
+    const query: ListPipelineRunsQuery = {
+        kind: kindFilter.value || undefined,
+        status: statusFilter.value || undefined,
+        page,
+        limit
+    };
+    return platformClient.listRunsPaginated(query);
+}, 15);
 
 const selectedStep = computed(() => {
     if (!selectedRun.value?.steps || !selectedStepId.value) {
@@ -55,7 +65,7 @@ onBeforeUnmount(() => {
 });
 
 watch([kindFilter, statusFilter], () => {
-    resetPage();
+    void resetPage();
 });
 
 watch(
@@ -82,10 +92,7 @@ watch(
  * @returns Nothing.
  */
 async function refreshList(): Promise<void> {
-    await store.refreshRuns({
-        kind: kindFilter.value || undefined,
-        status: statusFilter.value || undefined
-    });
+    await refreshListPage();
 }
 
 /**
@@ -240,12 +247,12 @@ function isActiveStatus(status: string): boolean {
     <section>
         <h2>{{ t("runs") }}</h2>
         <p class="hint">{{ t("runsHint") }}</p>
-        <p v-if="store.error" class="error">{{ store.error }}</p>
+        <p v-if="store.error || listError" class="error">{{ store.error || listError }}</p>
 
         <div class="panel filters">
             <label>
                 {{ t("runsKindFilter") }}
-                <select v-model="kindFilter" @change="refreshList">
+                <select v-model="kindFilter">
                     <option value="">{{ t("runsFilterAll") }}</option>
                     <option value="ci_build">ci_build</option>
                     <option value="apply">apply</option>
@@ -255,7 +262,7 @@ function isActiveStatus(status: string): boolean {
             </label>
             <label>
                 {{ t("runsStatusFilter") }}
-                <select v-model="statusFilter" @change="refreshList">
+                <select v-model="statusFilter">
                     <option value="">{{ t("runsFilterAll") }}</option>
                     <option value="pending">pending</option>
                     <option value="running">running</option>
@@ -263,13 +270,13 @@ function isActiveStatus(status: string): boolean {
                     <option value="failed">failed</option>
                 </select>
             </label>
-            <button type="button" :disabled="store.loading" @click="refreshList">
+            <button type="button" :disabled="listLoading" @click="refreshList">
                 {{ t("runsRefresh") }}
             </button>
         </div>
 
         <div class="panel">
-            <p v-if="store.loading">{{ t("loading") }}</p>
+            <p v-if="listLoading">{{ t("loading") }}</p>
             <table v-else>
                 <thead>
                     <tr>
@@ -296,7 +303,7 @@ function isActiveStatus(status: string): boolean {
                     </tr>
                 </tbody>
             </table>
-            <div v-if="store.runs.length > 0" class="pagination">
+            <div v-if="paginatedRuns.length > 0" class="pagination">
                 <button type="button" :disabled="!canGoPrevious" @click="previousPage">
                     {{ t("paginationPrevious") }}
                 </button>

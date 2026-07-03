@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import type { NodeProvision } from "@platform/sdk";
+import { platformClient } from "../api/Client";
+import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
@@ -14,6 +16,38 @@ const count = ref(1);
 const activeProvision = ref<NodeProvision | null>(null);
 const provisionMessage = ref("");
 let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+const {
+    items: provisionHistory,
+    pageLabel,
+    canGoPrevious,
+    canGoNext,
+    previousPage,
+    nextPage,
+    refresh: refreshHistory,
+    loading: historyLoading,
+    error: historyError
+} = useServerPagination((page, limit) => platformClient.listNodeProvisions({ page, limit }), 10);
+
+const stepStates = computed(() => {
+    const status = activeProvision.value?.status ?? "pending";
+
+    return [
+        { key: "pending", label: t("provisionStepPending"), active: status === "pending", done: status !== "pending" && status !== "failed", failed: status === "failed" },
+        { key: "launching", label: t("provisionStepLaunching"), active: status === "launching", done: ["bootstrapping", "registered", "terminated"].includes(status), failed: status === "failed" },
+        { key: "bootstrapping", label: t("provisionStepBootstrapping"), active: status === "bootstrapping", done: ["registered", "terminated"].includes(status), failed: status === "failed" },
+        { key: "registered", label: t("provisionStepRegistered"), active: status === "registered", done: status === "registered" || status === "terminated", failed: status === "failed" }
+    ];
+});
+
+const canTerminate = computed(() => {
+    const status = activeProvision.value?.status;
+    return Boolean(status && status !== "terminated" && status !== "failed" && status !== "pending");
+});
+
+onMounted(() => {
+    void refreshHistory();
+});
 
 onBeforeUnmount(() => {
     stopPolling();
@@ -50,6 +84,7 @@ function startPolling(provisionId: string): void {
                 provision.status === "terminated"
             ) {
                 stopPolling();
+                void refreshHistory();
             }
         });
     }, 3000);
@@ -82,6 +117,41 @@ async function submitProvision(): Promise<void> {
     activeProvision.value = provision;
     provisionMessage.value = t("provisionStarted");
     startPolling(provision.id);
+    await refreshHistory();
+}
+
+/**
+ * Terminates the active cloud instance for the current provision.
+ *
+ * @returns Nothing.
+ */
+async function terminateProvision(): Promise<void> {
+    if (!activeProvision.value) {
+        return;
+    }
+
+    const updated = await platformClient.terminateNodeProvision(activeProvision.value.id);
+    activeProvision.value = updated;
+    stopPolling();
+    await refreshHistory();
+}
+
+/**
+ * Loads a provision record from the history table.
+ *
+ * @param provisionId Node provision identifier
+ * @returns Nothing.
+ */
+async function selectProvision(provisionId: string): Promise<void> {
+    activeProvision.value = await store.getNodeProvision(provisionId);
+
+    if (
+        activeProvision.value.status !== "registered" &&
+        activeProvision.value.status !== "failed" &&
+        activeProvision.value.status !== "terminated"
+    ) {
+        startPolling(provisionId);
+    }
 }
 </script>
 
@@ -89,7 +159,7 @@ async function submitProvision(): Promise<void> {
     <section>
         <h2>{{ t("provision") }}</h2>
         <p class="hint">{{ t("provisionHint") }}</p>
-        <p v-if="store.error" class="error">{{ store.error }}</p>
+        <p v-if="store.error || historyError" class="error">{{ store.error || historyError }}</p>
 
         <div class="panel">
             <form class="create-form provision-form" @submit.prevent="submitProvision">
@@ -122,6 +192,17 @@ async function submitProvision(): Promise<void> {
 
             <div v-if="activeProvision" class="panel-grid">
                 <div>
+                    <div class="stepper">
+                        <div
+                            v-for="step in stepStates"
+                            :key="step.key"
+                            class="stepper-step"
+                            :class="{ active: step.active, done: step.done, failed: step.failed && activeProvision.status === 'failed' }"
+                        >
+                            {{ step.label }}
+                        </div>
+                    </div>
+
                     <p>ID: {{ activeProvision.id }}</p>
                     <p>{{ t("runsStatusFilter") }}: {{ activeProvision.status }}</p>
                     <p v-if="activeProvision.cloudInstanceId">
@@ -129,7 +210,55 @@ async function submitProvision(): Promise<void> {
                     </p>
                     <p v-if="activeProvision.nodeId">{{ t("provisionNodeId") }}: {{ activeProvision.nodeId }}</p>
                     <p v-if="activeProvision.error" class="error">{{ activeProvision.error }}</p>
+
+                    <button
+                        v-if="canTerminate"
+                        type="button"
+                        class="danger"
+                        :disabled="store.loading"
+                        @click="terminateProvision"
+                    >
+                        {{ t("provisionTerminate") }}
+                    </button>
                 </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>{{ t("provisionHistory") }}</h3>
+            <p v-if="historyLoading">{{ t("loading") }}</p>
+            <table v-else>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>{{ t("provisionProvider") }}</th>
+                        <th>{{ t("runsStatusFilter") }}</th>
+                        <th>{{ t("provisionInstanceType") }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="provision in provisionHistory" :key="provision.id">
+                        <td>{{ provision.id }}</td>
+                        <td>{{ provision.provider }}</td>
+                        <td>{{ provision.status }}</td>
+                        <td>{{ provision.instanceType }}</td>
+                        <td>
+                            <button type="button" @click="selectProvision(provision.id)">
+                                {{ t("runsViewDetails") }}
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div v-if="provisionHistory.length > 0" class="pagination">
+                <button type="button" :disabled="!canGoPrevious" @click="previousPage">
+                    {{ t("paginationPrevious") }}
+                </button>
+                <span>{{ pageLabel }}</span>
+                <button type="button" :disabled="!canGoNext" @click="nextPage">
+                    {{ t("paginationNext") }}
+                </button>
             </div>
         </div>
     </section>

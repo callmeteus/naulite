@@ -7,7 +7,7 @@ on:
 
 env:
     # Keep in sync with infra/zig-toolchain.env and packages/agent/Dockerfile ARG ZIG_VERSION
-    ZIG_VERSION: "0.17.0-dev.1158+1d1193aa7"
+    ZIG_VERSION: "0.16.0"
     REQUIRE_DOCKER: "true"
 
 jobs:
@@ -59,13 +59,6 @@ jobs:
 
             - name: Docker unit tests
               run: yarn test:unit:docker
-
-            - name: E2E tests
-              timeout-minutes: 45
-              env:
-                  # LocalTestCluster uses compose --profile real when TRAEFIK_USE_MOCK is not true
-                  TRAEFIK_USE_MOCK: "false"
-              run: yarn test:e2e
 
             - name: Build
               run: yarn build

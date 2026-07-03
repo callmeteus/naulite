@@ -95,6 +95,7 @@ fn handleLogin(
 ) !void {
     var cp_host: ?[]const u8 = null;
     var api_key: ?[]const u8 = null;
+    var tenant_slug: ?[]const u8 = null;
     var port: u16 = 8080;
     var index: usize = 1;
 
@@ -113,6 +114,14 @@ fn handleLogin(
                 return error.InvalidArgument;
             }
             api_key = argv[index];
+            continue;
+        }
+        if (std.mem.eql(u8, argv[index], "--tenant")) {
+            index += 1;
+            if (index >= argv.len) {
+                return error.InvalidArgument;
+            }
+            tenant_slug = argv[index];
             continue;
         }
         if (std.mem.eql(u8, argv[index], "--port")) {
@@ -134,11 +143,13 @@ fn handleLogin(
     defer if (existing) |*credentials| credentials.deinit(allocator);
 
     const resolved_host = cp_host orelse if (existing) |credentials| credentials.cp_host else null;
+    const resolved_tenant = tenant_slug orelse if (existing) |credentials| credentials.tenant_slug else null;
 
     try credentials_mod.save(allocator, io, environ_map, .{
         .api_key = api_key,
         .cp_host = resolved_host,
         .cp_port = port,
+        .tenant_slug = resolved_tenant,
     });
 
     const stdout = io_output.stdoutWriter();
@@ -371,7 +382,7 @@ fn printUsage(writer: anytype) !void {
         \\platform - kubectl-style CLI for the Platform control plane
         \\
         \\Usage:
-        \\  platform login --cp <netbird-ip> --key <secret> [--port <port>]
+        \\  platform login --cp <netbird-ip> --key <secret> [--port <port>] [--tenant <slug>]
         \\  platform [--url <url>] [--cp <host>] [--port <port>] cluster nodes get
         \\  platform cluster services get|delete <name>|rotate-logs <name>
         \\  platform cluster instances get|logs <id>|exec <id> -- <command...>

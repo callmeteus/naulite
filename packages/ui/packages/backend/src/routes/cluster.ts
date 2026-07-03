@@ -1,6 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
+import { controlPlaneForRequest } from "../util/controlPlaneForRequest";
+import { paginateArray, parsePaginationQuery } from "../util/paginateArray";
+
 const ApplyBodySchema = z.object({
     manifest: z.string().min(1)
 });
@@ -47,8 +50,21 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return app.controlPlane.rollbackGitOps(params.revisionId);
     });
 
-    app.get("/backups", async () => {
-        return app.controlPlane.listBackups();
+    app.get("/backups", async (request) => {
+        const rawQuery = request.query as Record<string, unknown>;
+        const pagination = parsePaginationQuery(rawQuery);
+        const client = controlPlaneForRequest(app, request);
+
+        if (!("page" in rawQuery)) {
+            return client.listBackups();
+        }
+
+        try {
+            return await client.listBackupsPaginated(pagination);
+        } catch {
+            const backups = await client.listBackups();
+            return paginateArray(backups, pagination.page, pagination.limit);
+        }
     });
 
     app.post("/apply", async (request) => {

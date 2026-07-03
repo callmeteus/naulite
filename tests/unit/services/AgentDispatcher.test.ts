@@ -30,7 +30,10 @@ const basePlan: ExecutionPlan = {
     revision: 1,
     nodeId: "node-1",
     manifestName: "demo",
-    operations: [],
+    operations: [{
+        type: "pull",
+        image: "nginx:alpine"
+    }],
     createdAt: new Date().toISOString()
 };
 

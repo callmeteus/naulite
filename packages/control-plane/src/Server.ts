@@ -6,6 +6,7 @@ import { createControlPlaneContext } from "./ControlPlaneContext";
 import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import { DatabaseProvider } from "./database/DatabaseProvider";
 import { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";
+import { AdminBootstrap } from "./modules/admin/AdminBootstrap";
 import { ClusterStateService } from "./services/ClusterStateService";
 import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { ControlPlaneSyncSubscribers } from "./services/ControlPlaneSyncSubscribers";
@@ -49,6 +50,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
 
     await databaseProvider.connect(DatabaseProvider.resolveOptionsFromEnv());
     await databaseProvider.migrate();
+    await AdminBootstrap.ensureFromEnv();
 
     const store = new ControlPlaneStore();
     const netBirdCredentials = await NetBirdBootstrap.ensureCredentials(store);
@@ -62,12 +64,14 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     ControlPlaneSyncSubscribers.register(context);
     context.leaderElection.setOnBecameLeader(async () => {
         await context.gatewayRouteService.hydrateFromDatabase();
+        await context.metricsSyncService.syncIfLeader();
         await context.controlPlaneSync.publish(ControlPlaneSync.EVENTS.LEADER_CHANGED, {
             leaderId: context.instanceId
         });
     });
     context.leaderElection.start();
     await context.gatewayRouteService.hydrateFromDatabase();
+    context.metricsSyncService.start();
     context.backupScheduler.start();
     context.logRotationScheduler.start();
     context.controlPlaneSync.start();
@@ -86,6 +90,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
         databaseProvider,
         stop: async () => {
             context.leaderElection.stop();
+            context.metricsSyncService.stop();
             context.backupScheduler.stop();
             context.logRotationScheduler.stop();
             context.controlPlaneSync.stop();

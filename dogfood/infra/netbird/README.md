@@ -12,10 +12,10 @@ Generates `config.yaml` and `dashboard.env` and uses the `docker-compose.yml` in
 export NETBIRD_DOMAIN=netbird.local
 export NETBIRD_HTTP_PROTOCOL=http
 export NETBIRD_SERVER_PORT=9081
-bash scripts/init-netbird-config.sh
+bash dogfood/scripts/init-netbird-config.sh
 ```
 
-Or use `./bin/dev.sh` / `./bin/dev.ps1` from the platform root (config + compose + admin API key).
+Or use `./dogfood/bin/dev.sh` / `./dogfood/bin/dev.ps1` from the platform root (config + compose + admin API key).
 
 ## Option B - production (official script + Traefik + TLS)
 
@@ -29,13 +29,14 @@ bash scripts/setup-netbird.sh
 
 ## Traefik gateway (dogfood profile)
 
-Real Traefik v3 with HTTP dynamic config and Let's Encrypt staging ACME lives in `infra/traefik/`. Enable it on the root compose stack:
+Real Traefik v3 with HTTP dynamic config and Let's Encrypt staging ACME lives in `dogfood/infra/traefik/`. Enable it on the dogfood compose stack:
 
 ```bash
+cd dogfood
 docker compose --profile traefik up -d --build
 ```
 
-The control plane pushes routes to `TRAEFIK_DYNAMIC_CONFIG_URL` (default `http://traefik-dynamic-config:8099/platform/dynamic-config`). Traefik polls the same endpoint via its HTTP provider (`infra/traefik/traefik.yml`).
+The control plane pushes routes to `TRAEFIK_DYNAMIC_CONFIG_URL` (default `http://traefik-dynamic-config:8099/platform/dynamic-config`). Traefik polls the same endpoint via its HTTP provider (`dogfood/infra/traefik/traefik.yml`).
 
 ### Smoke test (local ingress)
 
@@ -65,6 +66,7 @@ Expect an nginx welcome page when the `ingress-public` fixture is applied. Port 
 From the monorepo root:
 
 ```bash
+cd dogfood
 docker compose up -d --build
 ```
 

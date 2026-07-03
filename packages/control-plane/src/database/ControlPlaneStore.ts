@@ -4,14 +4,18 @@ import type {
     Instance,
     Node,
     NodeProvision,
+    PaginatedList,
+    PaginationQuery,
     Secret,
     Service,
     Volume
 } from "@platform/shared";
+import { buildPaginatedList, paginationOffset } from "@platform/shared";
 import { randomUUID } from "node:crypto";
 import { Op } from "sequelize";
 
 import { ApiKeyCrypto } from "../auth/ApiKeyCrypto";
+import { ApiKeyRotationConfig } from "../auth/ApiKeyRotationConfig";
 import { JsonField, RowMapper } from "../util/RowMapper";
 
 import {
@@ -123,11 +127,12 @@ export class ControlPlaneStore {
     }
 
     /**
-     * Lists backup run summaries.
+     * Lists backup run summaries with server-side pagination.
      *
-     * @returns Backup run records
+     * @param pagination Pagination query parameters
+     * @returns Paginated backup run records
      */
-    async listBackupRuns(): Promise<Array<{
+    async listBackupRuns(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<{
         id: string;
         volumeName: string;
         status: "pending" | "running" | "succeeded" | "failed";
@@ -137,11 +142,15 @@ export class ControlPlaneStore {
         location?: string;
         archivePath?: string;
     }>> {
-        const rows = await BackupRunModel.findAll({
-            order: [["createdAt", "DESC"]]
+        const page = pagination.page;
+        const limit = pagination.limit;
+        const { count, rows } = await BackupRunModel.findAndCountAll({
+            order: [["createdAt", "DESC"]],
+            limit,
+            offset: paginationOffset(page, limit)
         });
 
-        return rows.map((row) => {
+        const items = rows.map((row) => {
             const plain = row.get({ plain: true }) as {
                 id: string;
                 volumeName: string;
@@ -170,6 +179,8 @@ export class ControlPlaneStore {
                     : undefined
             };
         });
+
+        return buildPaginatedList(items, count, page, limit);
     }
 
     /**
@@ -650,6 +661,46 @@ export class ControlPlaneStore {
     }
 
     /**
+     * Rotates an API key and keeps the previous hash valid during the grace period.
+     *
+     * @param apiKeyId API key identifier
+     * @returns Rotated key metadata plus plaintext secret when found
+     */
+    async rotateApiKey(apiKeyId: string): Promise<CreatedApiKey | null> {
+        const row = await ApiKeyModel.findOne({
+            where: {
+                id: apiKeyId,
+                revokedAt: { [Op.is]: null }
+            }
+        });
+
+        if (!row) {
+            return null;
+        }
+
+        const generated = ApiKeyCrypto.generate();
+        const now = new Date();
+        const graceUntil = new Date(
+            now.getTime() + ApiKeyRotationConfig.gracePeriodSeconds() * 1000
+        ).toISOString();
+
+        await row.update({
+            previousKeyHash: row.keyHash,
+            keyHash: generated.keyHash,
+            prefix: generated.prefix,
+            rotationGraceUntil: graceUntil
+        });
+
+        return {
+            id: row.id,
+            name: row.name,
+            prefix: generated.prefix,
+            createdAt: row.createdAt,
+            secret: generated.secret
+        };
+    }
+
+    /**
      * Validates a plaintext API key secret and updates last-used metadata.
      *
      * @param secret Plaintext API key from Authorization header
@@ -664,12 +715,22 @@ export class ControlPlaneStore {
 
         const keyHash = ApiKeyCrypto.hashSecret(secret);
         const now = new Date().toISOString();
-        const row = await ApiKeyModel.findOne({
+        let row = await ApiKeyModel.findOne({
             where: {
                 keyHash,
                 revokedAt: { [Op.is]: null }
             }
         });
+
+        if (!row) {
+            row = await ApiKeyModel.findOne({
+                where: {
+                    previousKeyHash: keyHash,
+                    revokedAt: { [Op.is]: null },
+                    rotationGraceUntil: { [Op.gt]: now }
+                }
+            });
+        }
 
         if (!row) {
             return false;
@@ -680,15 +741,26 @@ export class ControlPlaneStore {
     }
 
     /**
-     * Lists all node provision requests.
+     * Lists node provision requests with server-side pagination.
      *
-     * @returns Node provision records
+     * @param pagination Pagination query parameters
+     * @returns Paginated node provision records
      */
-    async listNodeProvisions(): Promise<NodeProvision[]> {
-        const rows = await NodeProvisionModel.findAll({
-            order: [["createdAt", "DESC"]]
+    async listNodeProvisions(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<NodeProvision>> {
+        const page = pagination.page;
+        const limit = pagination.limit;
+        const { count, rows } = await NodeProvisionModel.findAndCountAll({
+            order: [["createdAt", "DESC"]],
+            limit,
+            offset: paginationOffset(page, limit)
         });
-        return rows.map((row) => RowMapper.nodeProvision(row.get({ plain: true })));
+
+        return buildPaginatedList(
+            rows.map((row) => RowMapper.nodeProvision(row.get({ plain: true }))),
+            count,
+            page,
+            limit
+        );
     }
 
     /**

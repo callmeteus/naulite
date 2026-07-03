@@ -13,6 +13,9 @@ pub const Credentials = struct {
     // Control plane HTTP port.
     cp_port: u16 = 8080,
 
+    // Optional tenant slug for multi-tenant control planes.
+    tenant_slug: ?[]const u8 = null,
+
     /// Releases owned credential strings.
     pub fn deinit(
         self: Credentials,
@@ -23,6 +26,9 @@ pub const Credentials = struct {
             allocator.free(value);
         }
         if (self.cp_host) |value| {
+            allocator.free(value);
+        }
+        if (self.tenant_slug) |value| {
             allocator.free(value);
         }
     }
@@ -49,12 +55,11 @@ pub fn load(
     const file_path = try credentialsPath(allocator, environ_map);
     defer allocator.free(file_path);
 
-    var read_buffer: [4096]u8 = undefined;
     const file = std.Io.Dir.cwd().openFile(io, file_path, .{}) catch return null;
     defer file.close(io);
 
-    var file_reader = file.reader(io, &read_buffer);
-    const contents = try file_reader.interface.readAlloc(allocator, std.math.maxInt(usize));
+    var file_reader = file.reader(io, &.{});
+    const contents = try file_reader.interface.allocRemaining(allocator, .unlimited);
     defer allocator.free(contents);
 
     var parsed = try std.json.parseFromSlice(
@@ -62,6 +67,7 @@ pub fn load(
             apiKey: ?[]const u8 = null,
             cpHost: ?[]const u8 = null,
             cpPort: ?u16 = null,
+            tenantSlug: ?[]const u8 = null,
         },
         allocator,
         contents,
@@ -73,6 +79,7 @@ pub fn load(
         .api_key = if (parsed.value.apiKey) |value| try allocator.dupe(u8, value) else null,
         .cp_host = if (parsed.value.cpHost) |value| try allocator.dupe(u8, value) else null,
         .cp_port = parsed.value.cpPort orelse 8080,
+        .tenant_slug = if (parsed.value.tenantSlug) |value| try allocator.dupe(u8, value) else null,
     };
 }
 
@@ -97,10 +104,11 @@ pub fn save(
         .apiKey = credentials.api_key,
         .cpHost = credentials.cp_host,
         .cpPort = credentials.cp_port,
+        .tenantSlug = credentials.tenant_slug,
     }, .{});
     defer allocator.free(json_body);
 
-    var payload: std.ArrayList(u8) = .empty;
+    var payload = try std.ArrayList(u8).initCapacity(allocator, json_body.len + 1);
     defer payload.deinit(allocator);
     try payload.appendSlice(allocator, json_body);
     try payload.append(allocator, '\n');

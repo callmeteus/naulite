@@ -1,26 +1,23 @@
 const std = @import("std");
 const agent_config = @import("agent_config.zig");
+const blocking_io = @import("blocking_io.zig");
 const bootstrap = @import("bootstrap.zig");
 const cp_client = @import("cp_client.zig");
 const http_server = @import("http_server.zig");
+const metrics_exporter = @import("runtime/docker/metrics_exporter.zig");
 const netbird = @import("netbird.zig");
 
 pub fn main() !void {
-    var safe_allocator: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
-    defer _ = safe_allocator.deinit();
-    const allocator = safe_allocator.allocator();
-
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    const io = threaded.io();
+    const allocator = std.heap.page_allocator;
+    const io = blocking_io.io();
 
     const os = bootstrap.detectOsFamily();
     std.log.info("[agent] starting os={s}", .{@tagName(os)});
 
-    var agent_cfg = try cp_client.loadConfig(allocator, io, os);
+    var agent_cfg = try cp_client.loadConfig(allocator, os);
     defer agent_cfg.deinit(allocator);
 
-    agent_config.save(allocator, io, &agent_cfg) catch |err| {
+    agent_config.save(allocator, &agent_cfg) catch |err| {
         std.log.warn("[agent-config] bootstrap persist failed: {}", .{err});
     };
 
@@ -42,6 +39,7 @@ pub fn main() !void {
     }
 
     try cp_client.startBackground(allocator, io, &agent_cfg);
+    try metrics_exporter.startBackground(allocator, agent_cfg.node_id, agent_cfg.docker_socket);
 
     const server_config = http_server.Config{
         .listen_address = "0.0.0.0",
@@ -58,4 +56,5 @@ test {
     _ = @import("http_server.zig");
     _ = @import("netbird.zig");
     _ = @import("runtime/docker/docker_stats.zig");
+    _ = @import("runtime/docker/metrics_exporter.zig");
 }

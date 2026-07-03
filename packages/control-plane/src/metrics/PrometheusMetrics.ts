@@ -23,16 +23,19 @@ export namespace PrometheusMetrics {
         const runningInstances = instances.filter((instance) => instance.status === "running").length;
         const applyRevision = ControlPlaneService.Apply.getRevision();
         const controlPlaneId = process.env.CP_INSTANCE_ID ?? "control-plane";
+        const isLeader = ControlPlaneService.Leader.isLeader() ? 1 : 0;
+        const leaderId = ControlPlaneService.Leader.getLeaderId();
 
         console.debug(
-            "[metrics] collect nodes=%d online=%d services=%d instances=%d running=%d dbHealthy=%s revision=%d",
+            "[metrics] collect nodes=%d online=%d services=%d instances=%d running=%d dbHealthy=%s revision=%d leader=%s",
             nodes.length,
             onlineNodes,
             services.length,
             instances.length,
             runningInstances,
             databaseHealthy,
-            applyRevision
+            applyRevision,
+            leaderId
         );
 
         const lines = [
@@ -63,6 +66,9 @@ export namespace PrometheusMetrics {
             "# HELP platform_database_healthy Database connectivity (1 healthy, 0 unhealthy).",
             "# TYPE platform_database_healthy gauge",
             `platform_database_healthy ${databaseHealthy ? 1 : 0}`,
+            "# HELP platform_control_plane_leader Whether this instance holds the leader lease (1 leader, 0 follower).",
+            "# TYPE platform_control_plane_leader gauge",
+            `platform_control_plane_leader{leader_id="${escapeLabelValue(leaderId)}"} ${isLeader}`,
             "# HELP platform_control_plane_info Control plane instance metadata.",
             "# TYPE platform_control_plane_info gauge",
             `platform_control_plane_info{instance_id="${escapeLabelValue(controlPlaneId)}"} 1`

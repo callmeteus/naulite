@@ -48,8 +48,8 @@ describe("GatewayRouteService", () => {
         });
 
         const routes = await service.listRoutes();
-        expect(routes).toHaveLength(1);
-        expect(routes[0]?.host).toBe("app.test.local");
+        expect(routes.items).toHaveLength(1);
+        expect(routes.items[0]?.host).toBe("app.test.local");
         expect(fetchImpl).toHaveBeenCalled();
     });
 });

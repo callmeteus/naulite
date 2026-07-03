@@ -57,8 +57,8 @@ describe("ContainerRegistryService", () => {
         expect(image.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
 
         const listed = await service.listImages();
-        expect(listed).toHaveLength(1);
-        expect(listed[0]?.location).toBe(image.location);
+        expect(listed.items).toHaveLength(1);
+        expect(listed.items[0]?.location).toBe(image.location);
 
         const stored = await readFile(image.location);
         expect(stored.equals(payload)).toBe(true);

@@ -35,6 +35,7 @@ import { NetBirdEnrollmentService } from "./services/NetBirdEnrollmentService";
 import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
 import { NetBirdService } from "./services/NetBirdService";
 import { createNodeProvisionService, type NodeProvisionService } from "./services/NodeProvisionService";
+import { createMetricsSyncService, type MetricsSyncService } from "./services/MetricsSyncService";
 import { SecretsService, resolveSecretMasterKey } from "./services/SecretsService";
 
 /**
@@ -66,6 +67,7 @@ export interface ControlPlaneContext {
     gatewayRouteService: GatewayRouteService;
     nodeProvisionerRegistry: NodeProvisionerRegistry;
     nodeProvisionService: NodeProvisionService;
+    metricsSyncService: MetricsSyncService;
     builderProviders: Map<string, BuilderProvider>;
     applyRevision: number;
 }
@@ -115,6 +117,7 @@ export function createControlPlaneContext(
         traefikDynamicConfigUrl: GatewayConfig.resolveTraefikDynamicConfigUrl()
     });
     const gatewayRouteService = new GatewayRouteService(gatewayProvider, leaderElection, controlPlaneSync);
+    const metricsSyncService = createMetricsSyncService(store, leaderElection);
 
     return {
         instanceId,
@@ -147,6 +150,7 @@ export function createControlPlaneContext(
         gatewayRouteService,
         nodeProvisionerRegistry,
         nodeProvisionService,
+        metricsSyncService,
         builderProviders,
         applyRevision: options.applyRevision ?? 0
     };

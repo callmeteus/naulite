@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 
 const netbird = @import("netbird.zig");
 const process_cmd = @import("process_cmd.zig");
-const threaded_io = @import("threaded_io.zig");
+const blocking_io = @import("blocking_io.zig");
 
 /// Host operating system family detected at runtime.
 pub const OsFamily = enum {
@@ -90,9 +90,7 @@ pub fn collectStatus(
 
 /// Probes whether the Docker socket is reachable.
 pub fn probeDockerSocket() bool {
-    var threaded = std.Io.Threaded.init(std.heap.page_allocator, .{});
-    defer threaded.deinit();
-    const io = threaded.io();
+    const io = blocking_io.io();
 
     const socket_path = switch (detectOsFamily()) {
         .linux, .macos => "/var/run/docker.sock",
@@ -111,10 +109,8 @@ fn detectLinuxOsVersion(
     // The allocator to use.
     allocator: std.mem.Allocator,
 ) ![]u8 {
-    var io_scope = threaded_io.Scope.init(allocator);
-    defer io_scope.deinit();
-
-    const content = std.Io.Dir.cwd().readFileAlloc(io_scope.io, "/etc/os-release", allocator, .limited(64 * 1024)) catch {
+    const io = blocking_io.io();
+    const content = std.Io.Dir.cwd().readFileAlloc(io, "/etc/os-release", allocator, .limited(64 * 1024)) catch {
         return try allocator.dupe(u8, "linux");
     };
     defer allocator.free(content);

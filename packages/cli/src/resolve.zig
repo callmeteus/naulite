@@ -71,6 +71,13 @@ fn resolveApiKey(
     return null;
 }
 
+fn resolveTenantSlug(credentials: ?credentials_mod.Credentials) ?[]const u8 {
+    if (credentials) |saved| {
+        return saved.tenant_slug;
+    }
+    return null;
+}
+
 /// Resolves the control plane URL and auth mode for CLI execution.
 pub fn resolve(
     allocator: std.mem.Allocator,
@@ -90,12 +97,14 @@ pub fn resolve(
 
     const port = port_override orelse if (saved) |credentials| credentials.cp_port else DEFAULT_PORT;
     const api_key = resolveApiKey(environ_map, saved);
+    const tenant_slug = resolveTenantSlug(saved);
 
     if (url_override) |url| {
         return .{
             .config = .{
                 .base_url = try Config.trimTrailingSlashOwned(allocator, url),
                 .token = api_key,
+                .tenant_slug = tenant_slug,
             },
             .mode = .remote,
         };
@@ -110,6 +119,7 @@ pub fn resolve(
             .config = .{
                 .base_url = try buildBaseUrl(allocator, host, port),
                 .token = api_key,
+                .tenant_slug = tenant_slug,
             },
             .mode = .remote,
         };
@@ -120,6 +130,7 @@ pub fn resolve(
             .config = .{
                 .base_url = try Config.trimTrailingSlashOwned(allocator, env_url),
                 .token = api_key,
+                .tenant_slug = tenant_slug,
             },
             .mode = .remote,
         };
@@ -130,6 +141,7 @@ pub fn resolve(
             .config = .{
                 .base_url = try buildBaseUrl(allocator, "127.0.0.1", port),
                 .token = null,
+                .tenant_slug = tenant_slug,
             },
             .mode = .local,
         };
@@ -145,6 +157,7 @@ pub fn resolve(
                 .config = .{
                     .base_url = try buildBaseUrl(allocator, host, port),
                     .token = api_key,
+                    .tenant_slug = tenant_slug,
                 },
                 .mode = .remote,
             };
@@ -155,6 +168,7 @@ pub fn resolve(
         .config = .{
             .base_url = try buildBaseUrl(allocator, "127.0.0.1", port),
             .token = null,
+            .tenant_slug = tenant_slug,
         },
         .mode = .local,
     };

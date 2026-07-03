@@ -72,12 +72,15 @@ describeBootstrap("control-plane-install.sh", () => {
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("dry-run complete");
 
-        const envContents = await readFile(path.join(tempRoot, ".env"), "utf8");
+        const envContents = await readFile(path.join(tempRoot, "dogfood", ".env"), "utf8");
         expect(envContents).toContain("PLATFORM_PUBLIC_URL=https://cp.example.com");
-        expect(envContents).toContain("NETBIRD_PUBLIC_MANAGEMENT_URL=https://vpn.example.com/");
+        expect(envContents).toContain("NETBIRD_PUBLIC_MANAGEMENT_URL=https://vpn.example.com");
         expect(envContents).toContain("NETBIRD_DOMAIN=vpn.example.com");
         expect(envContents).toContain("NETBIRD_HTTP_PROTOCOL=https");
         expect(envContents).toContain("NETBIRD_SERVER_PORT=9443");
+        expect(envContents).toContain("PROMETHEUS_URL=http://platform-prometheus:9090");
+        expect(envContents).toContain("PLATFORM_PROMETHEUS_FILE_SD_DIR=/var/lib/platform/prometheus/file_sd");
+        expect(envContents).toContain("PLATFORM_METRICS_SYNC_ENABLED=true");
     });
 
     it("creates .env from .env.example when missing", async () => {
@@ -97,9 +100,9 @@ describeBootstrap("control-plane-install.sh", () => {
         );
 
         expect(result.exitCode).toBe(0);
-        expect(result.stdout).toContain("created .env from .env.example");
+        expect(result.stdout).toContain("created dogfood/.env from dogfood/.env.example");
 
-        const envContents = await readFile(path.join(tempRoot, ".env"), "utf8");
+        const envContents = await readFile(path.join(tempRoot, "dogfood", ".env"), "utf8");
         expect(envContents).toContain("PLATFORM_PUBLIC_URL=http://localhost:8080");
     });
 });

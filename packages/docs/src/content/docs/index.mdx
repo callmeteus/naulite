@@ -1,0 +1,38 @@
+---
+title: Platform documentation
+description: Distributed orchestration platform for Compose-compatible workloads.
+template: splash
+hero:
+  tagline: Manifests in, scheduled workloads out. Control plane plans; agents execute on nodes.
+  actions:
+    - text: Alpha scope
+      link: /alpha-scope/
+      icon: right-arrow
+    - text: Dogfood quick start
+      link: /dogfood/readme/
+      icon: rocket
+    - text: Architecture
+      link: /architecture/
+      icon: document
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Start here
+
+<CardGrid>
+	<Card title="Alpha scope" icon="information">
+		What is in scope for the alpha integration wave - CI, dogfood, and documentation boundaries.
+	</Card>
+	<Card title="Operations" icon="setting">
+		Runbooks and metrics for day-two operations on a dogfood or staging cluster.
+	</Card>
+	<Card title="Manifest reference" icon="document">
+		Compose YAML plus platform extensions for ingress, backups, networks, and scheduling.
+	</Card>
+	<Card title="Bootstrap" icon="approve-check">
+		One-liner installers for control plane and agent nodes with NetBird enrollment.
+	</Card>
+</CardGrid>
+
+Canonical architecture narrative also lives in `CONTEXT.md` at the platform repository root.

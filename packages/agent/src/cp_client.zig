@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const agent_config = @import("agent_config.zig");
+const blocking_io = @import("blocking_io.zig");
 const bootstrap = @import("bootstrap.zig");
 const docker = @import("runtime/docker/docker.zig");
 const env_util = @import("env_util.zig");
@@ -11,20 +12,16 @@ pub const Config = agent_config.AgentConfig;
 /// Loads agent configuration from disk and environment variables.
 pub fn loadConfig(
     allocator: std.mem.Allocator,
-    // Process I/O handle.
-    io: std.Io,
     // Detected operating system family.
     os: bootstrap.OsFamily,
 ) !Config {
-    return agent_config.load(allocator, io, os);
+    return agent_config.load(allocator, os);
 }
 
 /// Loads agent configuration for call sites without an existing I/O handle.
 pub fn loadConfigSnapshot(allocator: std.mem.Allocator) ?Config {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
     const os = bootstrap.detectOsFamily();
-    return agent_config.load(allocator, threaded.io(), os) catch null;
+    return agent_config.load(allocator, os) catch null;
 }
 
 /// Starts background registration and heartbeat loop against the control plane.
@@ -47,12 +44,7 @@ fn backgroundLoop(
     while (true) {
         registerNode(allocator, io, config) catch |err| {
             std.log.warn("[cp] register failed: {}", .{err});
-            std.Io.Timeout.sleep(.{
-                .duration = .{
-                    .raw = std.Io.Duration.fromSeconds(2),
-                    .clock = .real,
-                },
-            }, io) catch {};
+            blocking_io.sleepSeconds(2);
             continue;
         };
 
@@ -61,12 +53,7 @@ fn backgroundLoop(
                 std.log.warn("[cp] heartbeat failed: {}", .{err});
                 break;
             };
-            std.Io.Timeout.sleep(.{
-                .duration = .{
-                    .raw = std.Io.Duration.fromSeconds(30),
-                    .clock = .real,
-                },
-            }, io) catch {};
+            blocking_io.sleepSeconds(30);
         }
     }
 }
@@ -118,7 +105,7 @@ fn registerNode(
     defer allocator.free(response_body);
 
     try agent_config.applyRegistrationResponse(allocator, config, response_body);
-    try agent_config.save(allocator, io, config);
+    try agent_config.save(allocator, config);
 
     std.log.info("[cp] registered node id={s} url={s}", .{ config.node_id, config.agent_url });
 }
@@ -249,11 +236,11 @@ fn buildCapabilitiesJson(allocator: std.mem.Allocator) ![]const u8 {
 
 fn reportInstanceStatus(
     allocator: std.mem.Allocator,
-    io: std.Io,
     config: Config,
     instance_id: []const u8,
     status: []const u8,
 ) void {
+    const io = blocking_io.io();
     const path = std.fmt.allocPrint(
         allocator,
         "{s}/instances/{s}/status",
@@ -289,9 +276,7 @@ pub fn reportInstanceRunning(
     // Instance identifier to report.
     instance_id: []const u8,
 ) void {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    reportInstanceStatus(allocator, threaded.io(), config, instance_id, "running");
+    reportInstanceStatus(allocator, config, instance_id, "running");
 }
 
 pub fn reportInstanceStopped(
@@ -301,9 +286,7 @@ pub fn reportInstanceStopped(
     // Instance identifier to report.
     instance_id: []const u8,
 ) void {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    reportInstanceStatus(allocator, threaded.io(), config, instance_id, "stopped");
+    reportInstanceStatus(allocator, config, instance_id, "stopped");
 }
 
 pub fn reportInstanceFailed(
@@ -313,9 +296,7 @@ pub fn reportInstanceFailed(
     // Instance identifier to report.
     instance_id: []const u8,
 ) void {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    reportInstanceStatus(allocator, threaded.io(), config, instance_id, "failed");
+    reportInstanceStatus(allocator, config, instance_id, "failed");
 }
 
 /// Reports a pipeline run event to the control plane.
@@ -357,9 +338,7 @@ pub fn reportRunEventUrl(
     log_text: ?[]const u8,
     api_key: ?[]const u8,
 ) void {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    reportRunEventIo(allocator, threaded.io(), cp_url, run_id, kind, step_name, message, log_text, api_key);
+    reportRunEventIo(allocator, blocking_io.io(), cp_url, run_id, kind, step_name, message, log_text, api_key);
 }
 
 fn reportRunEventIo(
@@ -476,10 +455,10 @@ fn readHttpBodyToSlice(
 }
 
 fn writeHttpBodyToFile(
-    io: std.Io,
     response: *std.http.Client.Response,
     archive_path: []const u8,
 ) !void {
+    const io = blocking_io.io();
     var transfer_buffer: [65536]u8 = undefined;
     const body_reader = response.reader(&transfer_buffer);
 
@@ -491,7 +470,7 @@ fn writeHttpBodyToFile(
 
     var chunk: [8192]u8 = undefined;
     while (true) {
-        const read_count = try std.Io.Reader.readSliceShort(body_reader, chunk[0..]);
+        const read_count = try std.Io.Reader.readSliceShort(body_reader, &chunk);
         if (read_count == 0) {
             break;
         }
@@ -557,9 +536,7 @@ pub fn putRegistryImage(
     body: []const u8,
     api_key: ?[]const u8,
 ) !void {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    try putRegistryImageIo(allocator, threaded.io(), cp_url, name, tag, body, api_key);
+    try putRegistryImageIo(allocator, blocking_io.io(), cp_url, name, tag, body, api_key);
 }
 
 /// Downloads a docker save tarball from the control plane container registry.
@@ -570,9 +547,7 @@ pub fn getRegistryImage(
     tag: []const u8,
     api_key: ?[]const u8,
 ) ![]u8 {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    return try getRegistryImageIo(allocator, threaded.io(), cp_url, name, tag, api_key);
+    return try getRegistryImageIo(allocator, blocking_io.io(), cp_url, name, tag, api_key);
 }
 
 fn putRegistryImageIo(
@@ -679,7 +654,7 @@ fn getRegistryImageIo(
         return error.ControlPlaneRequestFailed;
     }
 
-    try writeHttpBodyToFile(io, &response, archive_path);
+    try writeHttpBodyToFile(&response, archive_path);
 
     return try allocator.dupe(u8, archive_path);
 }

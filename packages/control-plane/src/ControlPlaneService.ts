@@ -330,10 +330,13 @@ export namespace ControlPlaneService {
         }
 
         /**
-         * @returns Backup runs
+         * @param pagination Pagination query parameters
+         * @returns Paginated backup runs
          */
-        export function listBackupRuns(): ReturnType<ControlPlaneStore["listBackupRuns"]> {
-            return backing().listBackupRuns();
+        export function listBackupRuns(
+            pagination?: Parameters<ControlPlaneStore["listBackupRuns"]>[0]
+        ): ReturnType<ControlPlaneStore["listBackupRuns"]> {
+            return backing().listBackupRuns(pagination);
         }
 
         /**
@@ -365,6 +368,14 @@ export namespace ControlPlaneService {
          */
         export function revokeApiKey(apiKeyId: string): ReturnType<ControlPlaneStore["revokeApiKey"]> {
             return backing().revokeApiKey(apiKeyId);
+        }
+
+        /**
+         * @param apiKeyId API key identifier
+         * @returns Rotated API key when found
+         */
+        export function rotateApiKey(apiKeyId: string): ReturnType<ControlPlaneStore["rotateApiKey"]> {
+            return backing().rotateApiKey(apiKeyId);
         }
 
         /**
@@ -572,10 +583,13 @@ export namespace ControlPlaneService {
         }
 
         /**
-         * @returns Persisted gateway routes
+         * @param pagination Pagination query parameters
+         * @returns Paginated persisted gateway routes
          */
-        export function listRoutes(): ReturnType<ControlPlaneContext["gatewayRouteService"]["listRoutes"]> {
-            return ControlPlaneService.requireContext().gatewayRouteService.listRoutes();
+        export function listRoutes(
+            pagination?: Parameters<ControlPlaneContext["gatewayRouteService"]["listRoutes"]>[0]
+        ): ReturnType<ControlPlaneContext["gatewayRouteService"]["listRoutes"]> {
+            return ControlPlaneService.requireContext().gatewayRouteService.listRoutes(pagination);
         }
 
         /**
@@ -614,10 +628,13 @@ export namespace ControlPlaneService {
         }
 
         /**
-         * @returns Node provision records
+         * @param pagination Pagination query parameters
+         * @returns Paginated node provision records
          */
-        export function listProvisions(): ReturnType<ControlPlaneContext["nodeProvisionService"]["listProvisions"]> {
-            return ControlPlaneService.requireContext().nodeProvisionService.listProvisions();
+        export function listProvisions(
+            pagination?: Parameters<ControlPlaneContext["nodeProvisionService"]["listProvisions"]>[0]
+        ): ReturnType<ControlPlaneContext["nodeProvisionService"]["listProvisions"]> {
+            return ControlPlaneService.requireContext().nodeProvisionService.listProvisions(pagination);
         }
 
         /**
@@ -729,10 +746,13 @@ export namespace ControlPlaneService {
      */
     export namespace ContainerRegistry {
         /**
-         * @returns Stored container images
+         * @param pagination Pagination query parameters
+         * @returns Paginated stored container images
          */
-        export function listImages(): ReturnType<ControlPlaneContext["containerRegistryService"]["listImages"]> {
-            return ControlPlaneService.requireContext().containerRegistryService.listImages();
+        export function listImages(
+            pagination?: Parameters<ControlPlaneContext["containerRegistryService"]["listImages"]>[0]
+        ): ReturnType<ControlPlaneContext["containerRegistryService"]["listImages"]> {
+            return ControlPlaneService.requireContext().containerRegistryService.listImages(pagination);
         }
 
         /**

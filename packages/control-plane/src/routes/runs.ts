@@ -1,6 +1,5 @@
-import { z } from "zod";
-
 import {
+    PaginatedListSchema,
     PipelineRunListQuerySchema,
     PipelineRunSummarySchema
 } from "@platform/shared";
@@ -17,7 +16,7 @@ export const GET = defineRoute({
         operationId: "listPipelineRuns",
         querystring: PipelineRunListQuerySchema,
         response: {
-            200: z.array(PipelineRunSummarySchema)
+            200: PaginatedListSchema(PipelineRunSummarySchema)
         }
     },
     async handler(req) {

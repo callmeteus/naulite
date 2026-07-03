@@ -1,6 +1,8 @@
-import { z } from "zod";
-
-import { BackupRunSummarySchema } from "@platform/shared";
+import {
+    BackupRunSummarySchema,
+    PaginatedListSchema,
+    PaginationQuerySchema
+} from "@platform/shared";
 import { ControlPlaneService } from "../ControlPlaneService";
 import { AuthPreHandlers } from "../auth/AuthPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
@@ -12,11 +14,12 @@ export const GET = defineRoute({
         description: "Lists backup runs recorded by the control plane.",
         tags: ["backups"],
         operationId: "listBackupRuns",
+        querystring: PaginationQuerySchema,
         response: {
-            200: z.array(BackupRunSummarySchema)
+            200: PaginatedListSchema(BackupRunSummarySchema)
         }
     },
-    async handler() {
-        return ControlPlaneService.Store.listBackupRuns();
+    async handler(req) {
+        return ControlPlaneService.Store.listBackupRuns(req.query);
     }
 });

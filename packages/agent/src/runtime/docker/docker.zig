@@ -2,7 +2,7 @@ const std = @import("std");
 const execution_plan = @import("../../execution_plan.zig");
 const cp_client = @import("../../cp_client.zig");
 const process_cmd = @import("../../process_cmd.zig");
-const threaded_io = @import("../../threaded_io.zig");
+const blocking_io = @import("../../blocking_io.zig");
 const docker_api = @import("docker_api.zig");
 const docker_stats = @import("docker_stats.zig");
 
@@ -222,9 +222,7 @@ pub const DockerClient = struct {
             config.api_key,
         );
         defer self.allocator.free(archive_path);
-        var io_scope = threaded_io.Scope.init(self.allocator);
-        defer io_scope.deinit();
-        defer std.Io.Dir.cwd().deleteFile(io_scope.io, archive_path) catch {};
+        defer std.Io.Dir.cwd().deleteFile(blocking_io.io(), archive_path) catch {};
 
         try runDockerLoad(self.allocator, self.socket_path, archive_path);
 
@@ -264,6 +262,13 @@ pub const DockerClient = struct {
         const binds_json = try buildBindsJson(self.allocator, raw_json);
         defer self.allocator.free(binds_json);
 
+        const service_name_owned = try readOptionalStringField(self.allocator, raw_json, "serviceName");
+        const service_name = service_name_owned orelse "-";
+        defer if (service_name_owned) |owned| self.allocator.free(owned);
+
+        const labels_json = try buildPlatformLabelsJson(self.allocator, instance_id, service_name);
+        defer self.allocator.free(labels_json);
+
         const container_id = try api.createContainer(
             container_name,
             runtime_image,
@@ -271,6 +276,7 @@ pub const DockerClient = struct {
             env_pairs,
             port_bindings_json,
             binds_json,
+            labels_json,
         );
         defer self.allocator.free(container_id);
 
@@ -384,6 +390,34 @@ pub const DockerClient = struct {
             .string => |s| try allocator.dupe(u8, s),
             else => error.InvalidOperationField,
         };
+    }
+
+    fn readOptionalStringField(allocator: std.mem.Allocator, raw_json: []const u8, field_name: []const u8) !?[]const u8 {
+        const parsed = try std.json.parseFromSlice(std.json.Value, allocator, raw_json, .{});
+        defer parsed.deinit();
+
+        const root = parsed.value;
+        if (root != .object) {
+            return null;
+        }
+
+        const value = root.object.get(field_name) orelse return null;
+        return switch (value) {
+            .string => |s| try allocator.dupe(u8, s),
+            else => null,
+        };
+    }
+
+    fn buildPlatformLabelsJson(
+        allocator: std.mem.Allocator,
+        instance_id: []const u8,
+        service_name: []const u8,
+    ) ![]u8 {
+        return std.fmt.allocPrint(
+            allocator,
+            "{{\"platform.managed\":\"true\",\"platform.instance.id\":\"{s}\",\"platform.service.name\":\"{s}\"}}",
+            .{ instance_id, service_name },
+        );
     }
 
     fn readBoolField(raw_json: []const u8, field_name: []const u8, default_value: bool) !bool {

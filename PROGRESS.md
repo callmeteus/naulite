@@ -1,6 +1,6 @@
 # Development Progress
 
-**Last updated:** 2026-07-02
+**Last updated:** 2026-07-03
 
 ## Overview
 
@@ -20,8 +20,37 @@
 | p3-ux-quality (partial) | completed | 2026-07-02 | 2026-07-02 |
 | Backlog M1-M7 (scaffold) | completed | 2026-07-02 | 2026-07-02 |
 | Gap items 1-6, 8-13 | completed | 2026-07-02 | 2026-07-02 |
+| Alpha wave - platform hardening | completed | 2026-07-03 | 2026-07-03 |
 
 ## Log
+
+### 2026-07-03 - Alpha wave: platform hardening (integration complete)
+
+- **Dogfood**: compose, dev scripts, NetBird/Traefik infra moved under `dogfood/`; Prometheus metrics stack wired with shared `platform-prometheus-file-sd` volume on both CP replicas
+- **Agent + CLI**: Zig **0.16.0** stable; Docker runtime under `packages/agent/src/runtime/docker/`; `metrics_exporter.zig`; `scripts/zig-build.mjs` for Windows cache dir
+- **Auth**: `admin_users` + `admin_sessions`; BFF login with session cookies; `PLATFORM_MULTI_TENANT=false` by default; `PLATFORM_API_KEY_ROTATION_ENABLED=false` by default; `POST /api-keys/:id/rotate` gated by rotation flag
+- **Pagination**: server-side list APIs (`items`, `total`, `page`, `limit`, `hasMore`) + UI `useServerPagination`
+- **Metrics**: `@platform/metrics` package; `MetricsSyncService` file_sd; PromQL proxy routes; `MetricsView` (uPlot)
+- **UI**: Build SSE, Provision stepper/history/terminate, AdminUsersView, role guards
+- **Docs**: `packages/docs` Astro + Starlight site; `alpha-scope.md`, operations runbook/metrics
+- **CI**: e2e removed from `ci.yml` (local only); Zig 0.16.0 pin in `infra/zig-toolchain.env`
+- **Dispatch fix**: Docker chunked HTTP body parsing in `docker_api.zig` (was causing `dispatch.status=failed`)
+- **Gates**: `yarn lint` 25/25, `yarn test:unit` 254/254, `yarn build` green
+
+### Post-alpha backlog
+
+- Agent NetBird CLI enrollment inside container image
+- Zig 0.16 leak checker noise on `zig build test` (tests pass)
+- Infisical, Kaniko, containerd runtime production paths
+- SLOs/alerting on top of Prometheus
+- Full multi-tenant scoping when `PLATFORM_MULTI_TENANT=true`
+
+### 2026-07-03 - Alpha wave: SA-ci (draft)
+
+- **CI scope**: removed `yarn test:e2e` from `verify` job; e2e remains local-only (`docs/ci.md`)
+- **Zig pin**: `0.16.0` in `infra/zig-toolchain.env` and `.github/workflows/ci.yml` (down from 0.17 dev)
+- **Docs**: `docs/ci.md` stub points to `packages/docs` for canonical CI docs after integration
+- **Pending integration**: align `packages/agent/Dockerfile` `ARG ZIG_VERSION`, agent Zig 0.16 API migration, consolidate docs into `packages/docs`
 
 ### 2026-07-02 - Gap items 1-6, 8-13 (integration)
 

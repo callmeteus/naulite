@@ -67,9 +67,9 @@ describe("NodeHealthWatcher", () => {
         }));
 
         const runs = await PipelineRunService.listRuns({ kind: "node_event" });
-        expect(runs.length).toBeGreaterThan(0);
+        expect(runs.items.length).toBeGreaterThan(0);
 
-        const events = await PipelineRunService.listEvents(runs[0].id);
+        const events = await PipelineRunService.listEvents(runs.items[0].id);
         expect(events.some((event) => event.kind === "node.disk_pressure")).toBe(true);
     });
 });

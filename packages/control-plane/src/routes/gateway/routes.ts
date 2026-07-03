@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { PaginatedListSchema, PaginationQuerySchema } from "@platform/shared";
+
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
@@ -21,21 +23,25 @@ export const GET = defineRoute({
         description: "Lists Traefik gateway routes persisted by the control plane.",
         tags: ["gateway"],
         operationId: "listGatewayRoutes",
+        querystring: PaginationQuerySchema,
         response: {
-            200: z.array(GatewayRouteSummarySchema)
+            200: PaginatedListSchema(GatewayRouteSummarySchema)
         }
     },
-    async handler() {
-        const routes = await ControlPlaneService.Gateway.listRoutes();
+    async handler(req) {
+        const paginated = await ControlPlaneService.Gateway.listRoutes(req.query);
 
-        return routes.map((route) => ({
-            id: route.id,
-            serviceName: route.serviceName,
-            host: route.host,
-            targetHost: route.targetHost,
-            targetPort: route.targetPort,
-            autoTls: route.autoTls,
-            updatedAt: route.updatedAt
-        }));
+        return {
+            ...paginated,
+            items: paginated.items.map((route) => ({
+                id: route.id,
+                serviceName: route.serviceName,
+                host: route.host,
+                targetHost: route.targetHost,
+                targetPort: route.targetPort,
+                autoTls: route.autoTls,
+                updatedAt: route.updatedAt
+            }))
+        };
     }
 });

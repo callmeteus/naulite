@@ -1,3 +1,5 @@
+import { AdminSessionModel } from "./AdminSessionModel";
+import { AdminUserModel } from "./AdminUserModel";
 import { ApiKeyModel } from "./ApiKeyModel";
 import { BackupRunModel } from "./BackupRunModel";
 import { ClusterStateModel } from "./ClusterStateModel";
@@ -16,9 +18,12 @@ import { PipelineStepModel } from "./PipelineStepModel";
 import { SchemaMigrationModel } from "./SchemaMigrationModel";
 import { SecretModel } from "./SecretModel";
 import { ServiceModel } from "./ServiceModel";
+import { TenantModel } from "./TenantModel";
 import { VolumeModel } from "./VolumeModel";
 
 export {
+    AdminSessionModel,
+    AdminUserModel,
     ApiKeyModel,
     BackupRunModel,
     ClusterStateModel,
@@ -37,6 +42,7 @@ export {
     SchemaMigrationModel,
     SecretModel,
     ServiceModel,
+    TenantModel,
     VolumeModel
 };
 
@@ -44,6 +50,9 @@ export {
  * Sequelize model registry for the control plane database.
  */
 export const controlPlaneModels = [
+    AdminUserModel,
+    AdminSessionModel,
+    TenantModel,
     NodeModel,
     NodeProvisionModel,
     ServiceModel,

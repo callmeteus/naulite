@@ -106,7 +106,7 @@ pub fn getRunLogs(
         return;
     }
 
-    var filtered = std.ArrayList(std.json.Value).empty;
+    var filtered = try std.ArrayList(std.json.Value).initCapacity(allocator, 16);
     defer filtered.deinit(allocator);
 
     for (parsed.value.array.items) |item| {
@@ -159,7 +159,7 @@ pub fn applyManifest(
     const manifest_buffer = try allocator.alloc(u8, 8 * 1024 * 1024);
     defer allocator.free(manifest_buffer);
 
-    const manifest_slice = try std.Io.Dir.cwd().readFile(client.io, manifest_path, manifest_buffer);
+    const manifest_slice = try std.Io.Dir.readFile(std.Io.Dir.cwd(), client.io, manifest_path, manifest_buffer);
     const manifest = try allocator.dupe(u8, manifest_slice);
     defer allocator.free(manifest);
 

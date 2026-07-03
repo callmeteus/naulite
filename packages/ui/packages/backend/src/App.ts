@@ -2,6 +2,7 @@ import { PlatformApiError, PlatformClient } from "@platform/sdk";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { AuthPreHandlers } from "./auth/AuthPreHandlers";
+import { RolePreHandlers } from "./auth/RolePreHandlers";
 import { resolveConfigFromEnv } from "./Config";
 import { registerRoutes } from "./routes/index";
 
@@ -34,19 +35,66 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     app.decorate("controlPlane", controlPlane);
 
     app.addHook("onRequest", async (request, reply) => {
-        if (request.url === "/health" || request.url.startsWith("/health?")) {
+        if (AuthPreHandlers.isPublicRoute(request.url, request.method)) {
             return;
         }
 
         try {
-            AuthPreHandlers.enforceAdminApiKey(request, options.adminApiKey ?? envConfig.adminApiKey);
+            await AuthPreHandlers.authenticateRequest(
+                request,
+                options.adminApiKey ?? envConfig.adminApiKey
+            );
         } catch (error) {
             const statusCode = error instanceof Error && "statusCode" in error
                 ? Number((error as Error & { statusCode: number }).statusCode)
                 : 401;
 
             return reply.code(statusCode).send({
-                message: error instanceof Error ? error.message : "Unauthorized."
+                message: error instanceof Error ? error.message : "Não autorizado."
+            });
+        }
+    });
+
+    app.addHook("preHandler", async (request, reply) => {
+        if (AuthPreHandlers.isPublicRoute(request.url, request.method)) {
+            return;
+        }
+
+        const path = request.url.split("?")[0] ?? request.url;
+        const method = request.method.toUpperCase();
+
+        try {
+            if (path.startsWith("/admin/users") || path.startsWith("/api-keys") || path.startsWith("/secrets")) {
+                if (!RolePreHandlers.canAdmin(request)) {
+                    throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
+                }
+                return;
+            }
+
+            if (
+                method === "POST" &&
+                (path === "/apply" ||
+                    path === "/build" ||
+                    path === "/nodes/provision" ||
+                    path.startsWith("/backups/") ||
+                    (path.startsWith("/nodes/provisions/") && path.endsWith("/terminate")))
+            ) {
+                if (!RolePreHandlers.canOperate(request)) {
+                    throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
+                }
+                return;
+            }
+
+            if (!RolePreHandlers.canView(request)) {
+                throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
+            }
+        } catch (error) {
+            const statusCode = error instanceof Error && "statusCode" in error
+                ? Number((error as Error & { statusCode: number }).statusCode)
+                : 403;
+
+            return reply.code(statusCode).send({
+                message: error instanceof Error ? error.message : "Permissão insuficiente."
             });
         }
     });
@@ -64,6 +112,14 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
             return {
                 message: "Validation failed.",
                 details: error
+            };
+        }
+
+        if (error instanceof Error && "statusCode" in error) {
+            const statusCode = Number((error as Error & { statusCode: number }).statusCode);
+            reply.code(statusCode);
+            return {
+                message: error.message
             };
         }
 

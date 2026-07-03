@@ -1,24 +1,27 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { onMounted } from "vue";
 
-import { useClientPagination } from "../composables/useClientPagination";
+import { platformClient } from "../api/Client";
+import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
 const store = useClusterStore();
 
-const imagesRef = computed(() => store.containerRegistryImages);
 const {
-    paginatedItems: paginatedImages,
+    items: paginatedImages,
     pageLabel,
     canGoPrevious,
     canGoNext,
     previousPage,
-    nextPage
-} = useClientPagination(imagesRef, 20);
+    nextPage,
+    refresh,
+    loading,
+    error
+} = useServerPagination((page, limit) => platformClient.listContainerRegistryImagesPaginated({ page, limit }), 20);
 
 onMounted(() => {
-    void store.refreshContainerRegistryImages();
+    void refresh();
 });
 
 /**
@@ -30,6 +33,7 @@ onMounted(() => {
  */
 async function deleteImage(name: string, tag: string): Promise<void> {
     await store.deleteContainerRegistryImage(name, tag);
+    await refresh();
 }
 
 /**
@@ -55,8 +59,8 @@ function formatSize(sizeBytes: number): string {
     <section>
         <h2>{{ t("containerRegistry") }}</h2>
         <p class="hint">{{ t("containerRegistryHint") }}</p>
-        <p v-if="store.loading">{{ t("loading") }}</p>
-        <p v-else-if="store.error" class="error">{{ store.error }}</p>
+        <p v-if="loading || store.loading">{{ t("loading") }}</p>
+        <p v-else-if="store.error || error" class="error">{{ store.error || error }}</p>
         <div v-else class="panel">
             <table>
                 <thead>
@@ -88,10 +92,10 @@ function formatSize(sizeBytes: number): string {
                     </tr>
                 </tbody>
             </table>
-            <p v-if="store.containerRegistryImages.length === 0" class="empty">
+            <p v-if="paginatedImages.length === 0" class="empty">
                 {{ t("containerRegistryEmpty") }}
             </p>
-            <div v-if="store.containerRegistryImages.length > 0" class="pagination">
+            <div v-if="paginatedImages.length > 0" class="pagination">
                 <button type="button" :disabled="!canGoPrevious" @click="previousPage">
                     {{ t("paginationPrevious") }}
                 </button>

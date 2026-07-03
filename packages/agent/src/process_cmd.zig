@@ -1,13 +1,5 @@
 const std = @import("std");
 
-/// Captured output from a subprocess invocation.
-pub const CaptureResult = struct {
-    stdout: []u8,
-    stderr: []u8,
-    exit_code: u8,
-    exited_normally: bool,
-};
-
 /// Runs a subprocess and fails when the exit code is non-zero.
 ///
 /// @param allocator Allocator for output buffers
@@ -61,9 +53,8 @@ pub fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) ![]u8 
 /// @param argv Command argv slice
 /// @returns Captured process output
 pub fn runCapture(allocator: std.mem.Allocator, argv: []const []const u8) !CaptureResult {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    const io = threaded.io();
+    const blocking_io = @import("blocking_io.zig");
+    const io = blocking_io.io();
 
     const result = try std.process.run(allocator, io, .{
         .argv = argv,
@@ -86,3 +77,11 @@ pub fn runCapture(allocator: std.mem.Allocator, argv: []const []const u8) !Captu
         .exited_normally = exited_normally,
     };
 }
+
+/// Captured output from a subprocess invocation.
+pub const CaptureResult = struct {
+    stdout: []u8,
+    stderr: []u8,
+    exit_code: u8,
+    exited_normally: bool,
+};

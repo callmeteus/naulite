@@ -105,6 +105,21 @@ export class HTTP404Error extends TreatedError {
 }
 
 /**
+ * 502 Bad Gateway treated error.
+ */
+export class HTTP502Error extends TreatedError {
+    /**
+     * Creates a 502 treated error.
+     *
+     * @param message Human-readable error message
+     * @param data Extra response body fields
+     */
+    constructor(message: string, data: TreatedErrorData = {}) {
+        super(message, { ...data, statusCode: 502 });
+    }
+}
+
+/**
  * 503 Service Unavailable treated error.
  */
 export class HTTP503Error extends TreatedError {

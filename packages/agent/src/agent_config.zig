@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const bootstrap = @import("bootstrap.zig");
+const blocking_io = @import("blocking_io.zig");
 const env_util = @import("env_util.zig");
 
 /// Persisted agent identity and connectivity settings (local "env" snapshot).
@@ -104,8 +105,6 @@ pub fn resolveConfigPath(
 /// Loads agent configuration from disk when present, then applies environment overrides.
 pub fn load(
     allocator: std.mem.Allocator,
-    // Process I/O handle.
-    io: std.Io,
     // Detected operating system family.
     os: bootstrap.OsFamily,
 ) !AgentConfig {
@@ -115,7 +114,7 @@ pub fn load(
     var base = try loadDefaults(allocator, os, config_path);
     errdefer base.deinit(allocator);
 
-    if (loadFromDisk(allocator, io, config_path, &base)) {
+    if (loadFromDisk(allocator, config_path, &base)) {
         std.log.debug("[agent-config] loaded path={s} nodeId={s}", .{ config_path, base.node_id });
     } else |_| {
         std.log.debug("[agent-config] no file at path={s} using defaults", .{config_path});
@@ -128,8 +127,6 @@ pub fn load(
 /// Persists the current agent configuration to disk.
 pub fn save(
     allocator: std.mem.Allocator,
-    // Process I/O handle.
-    io: std.Io,
     // Configuration to write.
     config: *const AgentConfig,
 ) !void {
@@ -153,6 +150,8 @@ pub fn save(
     defer output.deinit(allocator);
     try output.appendSlice(allocator, json_body);
     try output.append(allocator, '\n');
+
+    const io = blocking_io.io();
 
     if (std.fs.path.dirname(config.config_path)) |parent| {
         std.Io.Dir.cwd().createDirPath(io, parent) catch |err| switch (err) {
@@ -213,12 +212,12 @@ fn loadDefaults(
 
 fn loadFromDisk(
     allocator: std.mem.Allocator,
-    io: std.Io,
     // Absolute config file path.
     config_path: []const u8,
     // Configuration to merge into.
     config: *AgentConfig,
 ) !void {
+    const io = blocking_io.io();
     var read_buffer: [8192]u8 = undefined;
     const file = std.Io.Dir.cwd().openFile(io, config_path, .{}) catch return error.MissingConfigFile;
     defer file.close(io);

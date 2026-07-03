@@ -26,4 +26,13 @@ export class ApiKeyModel extends Model {
 
     @Column({ type: DataType.STRING, field: "revoked_at" })
     declare revokedAt: string | null;
+
+    @Column({ type: DataType.STRING, field: "tenant_id" })
+    declare tenantId: string | null;
+
+    @Column({ type: DataType.STRING, field: "previous_key_hash" })
+    declare previousKeyHash: string | null;
+
+    @Column({ type: DataType.STRING, field: "rotation_grace_until" })
+    declare rotationGraceUntil: string | null;
 }
