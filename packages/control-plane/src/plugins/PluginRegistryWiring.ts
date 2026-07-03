@@ -1,8 +1,12 @@
-import type { NotificationProvider, NodeProvisionerProvider } from "@platform/shared";
+import type { NotificationProvider, NodeProvisionerProvider, SecretProvider } from "@platform/shared";
 
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 import { BackupDestinationProvider } from "../modules/backup/BackupDestinationProvider";
 import { ContainerRegistryBlobProvider } from "../modules/container-registry/ContainerRegistryBlobProvider";
+import {
+    PluginSecretProviderAdapter,
+    resolveSecretBackendId
+} from "../modules/secrets/PluginSecretProviderAdapter";
 import { RunNotificationDispatcher } from "../services/RunNotificationDispatcher";
 import type { LoadedPluginRegistration } from "./LoadedPluginRegistration";
 
@@ -47,7 +51,46 @@ export namespace PluginRegistryWiring {
                 );
                 console.debug("[plugins] wired notification provider id=%s", plugin.id);
             }
+
+            if (plugin.type === "secret" && plugin.secretProvider) {
+                context.secretProviderRegistry.register(
+                    plugin.id,
+                    plugin.secretProvider as SecretProvider
+                );
+                console.debug("[plugins] wired secret provider id=%s", plugin.id);
+            }
         }
+
+        wireSecretProvider(context);
+    }
+
+    /**
+     * Selects the active secret provider based on environment configuration.
+     *
+     * @param context Control plane application context
+     * @returns Nothing.
+     */
+    export function wireSecretProvider(context: ControlPlaneContext): void {
+        if (!context.secretProviderRegistry) {
+            return;
+        }
+
+        const backendId = resolveSecretBackendId();
+        console.debug("[secrets] backend=%s available=%o", backendId, context.secretProviderRegistry.listIds());
+
+        if (backendId === "local") {
+            return;
+        }
+
+        const pluginProvider = context.secretProviderRegistry.get(backendId);
+
+        if (!pluginProvider) {
+            console.debug("[secrets] backend=%s not registered, keeping local provider", backendId);
+            return;
+        }
+
+        context.secretProvider = new PluginSecretProviderAdapter(pluginProvider);
+        console.debug("[secrets] active provider id=%s", backendId);
     }
 
     /**

@@ -87,4 +87,42 @@ describe("PipelineRunService", () => {
 
         expect(step?.status).toBe("succeeded");
     });
+
+    it("persists step log text on transitions", async () => {
+        await connectDatabase();
+
+        const run = await PipelineRunService.createRun({
+            kind: "ci_build",
+            serviceName: "api"
+        });
+
+        await PipelineRunService.transitionStep(run.id, "docker-build", "running", {
+            message: "build.step.started",
+            eventKind: "build.step.started"
+        });
+        await PipelineRunService.transitionStep(run.id, "docker-build", "succeeded", {
+            message: "build.step.finished",
+            eventKind: "build.step.finished",
+            logText: "Step 1/1 : RUN echo hello\n"
+        });
+
+        const detail = await PipelineRunService.getRun(run.id);
+        const step = detail?.steps?.find((entry) => entry.name === "docker-build");
+
+        expect(step?.logText).toBe("Step 1/1 : RUN echo hello\n");
+    });
+
+    it("links a gitops apply run to a revision id", async () => {
+        await connectDatabase();
+
+        const run = await PipelineRunService.createRun({
+            kind: "gitops_apply",
+            manifestName: "demo",
+            commitSha: "abc123"
+        });
+
+        const linked = await PipelineRunService.linkRevision(run.id, "revision-1");
+
+        expect(linked?.revisionId).toBe("revision-1");
+    });
 });

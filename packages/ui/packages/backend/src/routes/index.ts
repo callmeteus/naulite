@@ -4,11 +4,13 @@ import { registerApiKeyRoutes } from "./api-keys";
 import { registerBackupRoutes } from "./backups";
 import { registerBuildRoutes } from "./build";
 import { registerClusterRoutes } from "./cluster";
+import { registerGatewayRoutes } from "./gateway";
 import { registerContainerRegistryRoutes } from "./cr";
 import { registerHealthRoutes } from "./health";
 import { registerMetricsRoutes } from "./metrics";
 import { registerNetBirdRoutes } from "./netbird";
 import { registerNodeProvisionRoutes } from "./nodes-provision";
+import { registerRunsRoutes } from "./runs";
 import { registerSecretRoutes } from "./secrets";
 
 /**
@@ -27,5 +29,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     await registerMetricsRoutes(app);
     await registerBuildRoutes(app);
     await registerContainerRegistryRoutes(app);
+    await registerGatewayRoutes(app);
     await registerNodeProvisionRoutes(app);
+    await registerRunsRoutes(app);
 }

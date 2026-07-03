@@ -74,11 +74,20 @@ export const POST = defineRoute({
             manifestPath: body.manifestPath ?? "compose.yaml"
         });
 
+        const manifest = ControlPlaneService.Orchestration.ComposeParser.parse(checkout.manifestYaml);
+        const applyRun = await ControlPlaneService.GitOps.createApplyRun({
+            manifestName: manifest.name,
+            repositoryUrl: body.repositoryUrl,
+            branch: body.branch ?? "main",
+            commitSha: body.commitSha ?? body.revision ?? checkout.commitSha
+        });
+
         const applyResult = await ApplyService.execute(checkout.manifestYaml, {
             repositoryUrl: body.repositoryUrl,
             branch: body.branch ?? "main",
             commitSha: body.commitSha ?? body.revision ?? checkout.commitSha,
-            buildContextRoot: checkout.workDir
+            buildContextRoot: checkout.workDir,
+            runId: applyRun.id
         });
 
         await ControlPlaneService.Sync.publish("gitops.webhook", {

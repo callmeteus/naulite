@@ -6,6 +6,7 @@ import { BuildService } from "../../../packages/control-plane/src/services/Build
 import { LocalSecretProvider } from "../../../packages/control-plane/src/modules/secrets/LocalSecretProvider";
 import { ApplyService } from "../../../packages/control-plane/src/services/ApplyService";
 import { ClusterStateService } from "../../../packages/control-plane/src/services/ClusterStateService";
+import { PipelineRunService } from "../../../packages/control-plane/src/services/PipelineRunService";
 
 function createNetBirdApplyContext(): ControlPlaneContext {
     const ensureInternalGroup = vi.fn(async (name: string) => ({
@@ -170,6 +171,34 @@ function createNetBirdApplyContext(): ControlPlaneContext {
 
 function installNetBirdApplyContext(context: ControlPlaneContext): void {
     ControlPlaneService.install(context);
+    vi.spyOn(PipelineRunService, "createRun").mockResolvedValue({
+        id: "apply-run-netbird-1",
+        kind: "apply",
+        status: "pending",
+        manifestName: "demo",
+        createdAt: new Date().toISOString()
+    } as never);
+    vi.spyOn(PipelineRunService, "getRun").mockResolvedValue({
+        id: "apply-run-netbird-1",
+        kind: "apply",
+        status: "pending",
+        manifestName: "demo",
+        createdAt: new Date().toISOString()
+    } as never);
+    vi.spyOn(PipelineRunService, "markRunning").mockResolvedValue(undefined);
+    vi.spyOn(PipelineRunService, "emitEvent").mockResolvedValue({
+        id: "event-1",
+        runId: "apply-run-netbird-1",
+        kind: "gitops.sync.started",
+        createdAt: new Date().toISOString()
+    } as never);
+    vi.spyOn(PipelineRunService, "completeRun").mockResolvedValue({
+        id: "apply-run-netbird-1",
+        kind: "apply",
+        status: "succeeded",
+        manifestName: "demo",
+        createdAt: new Date().toISOString()
+    } as never);
     vi.spyOn(ClusterStateService, "saveApplyRevision").mockResolvedValue(undefined);
     vi.spyOn(ControlPlaneService.GitOps, "recordRevision").mockResolvedValue({
         id: "rev-1",

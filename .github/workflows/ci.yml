@@ -5,9 +5,15 @@ on:
         branches: [main, master]
     pull_request:
 
+env:
+    # Keep in sync with infra/zig-toolchain.env and packages/agent/Dockerfile ARG ZIG_VERSION
+    ZIG_VERSION: "0.17.0-dev.1158+1d1193aa7"
+    REQUIRE_DOCKER: "true"
+
 jobs:
     verify:
         runs-on: ubuntu-latest
+        timeout-minutes: 60
 
         steps:
             - name: Checkout
@@ -21,9 +27,9 @@ jobs:
                   cache-dependency-path: yarn.lock
 
             - name: Setup Zig
-              uses: goto-bus-stop/setup-zig@v2
+              uses: mlugg/setup-zig@v2
               with:
-                  version: 0.14.0
+                  version: ${{ env.ZIG_VERSION }}
 
             - name: Build Zig agent
               working-directory: packages/agent
@@ -32,6 +38,10 @@ jobs:
             - name: Test Zig agent
               working-directory: packages/agent
               run: zig build test
+
+            - name: Build Zig CLI
+              working-directory: packages/cli
+              run: zig build
 
             - name: Install dependencies
               run: yarn install --frozen-lockfile
@@ -48,14 +58,34 @@ jobs:
                   docker info
 
             - name: Docker unit tests
-              env:
-                  REQUIRE_DOCKER: "true"
               run: yarn test:unit:docker
 
             - name: E2E tests
+              timeout-minutes: 45
               env:
-                  REQUIRE_DOCKER: "true"
+                  # LocalTestCluster uses compose --profile real when TRAEFIK_USE_MOCK is not true
+                  TRAEFIK_USE_MOCK: "false"
               run: yarn test:e2e
 
             - name: Build
               run: yarn build
+
+    docker-smoke:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Build agent image
+              run: docker build -f packages/agent/Dockerfile .
+
+            - name: Build control-plane image
+              run: docker build -f packages/control-plane/Dockerfile .
+
+            - name: Build UI image
+              run: docker build -f packages/ui/Dockerfile .
+
+            - name: Build UI backend image
+              run: docker build -f packages/ui/packages/backend/Dockerfile .

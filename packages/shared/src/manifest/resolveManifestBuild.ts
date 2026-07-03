@@ -1,4 +1,6 @@
 import type { ManifestBuild, ManifestService } from "../types/Manifest";
+
+import { resolveContainerRegistryImageName, toContainerRegistryRef } from "./resolveContainerRegistryImageRef";
 /**
  * Resolves the normalized build block for a manifest service.
  *
@@ -43,5 +45,5 @@ export function resolveServiceImageRef(
         return build.image;
     }
 
-    return `platform/${manifestName}-${serviceName}:latest`;
+    return toContainerRegistryRef(resolveContainerRegistryImageName(manifestName, serviceName), "latest");
 }

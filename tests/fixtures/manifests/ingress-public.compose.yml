@@ -2,6 +2,8 @@ name: ingress-public
 services:
   web:
     image: nginx:1.27-alpine
+    ports:
+      - "80:80"
     ingress:
       exposure: public
       host: web.test.local

@@ -92,7 +92,8 @@ export {
     RemoveInstanceOperationSchema,
     ConnectNetworkOperationSchema,
     DisconnectNetworkOperationSchema,
-    EnsureVolumeOperationSchema
+    EnsureVolumeOperationSchema,
+    RemoveVolumeOperationSchema
 } from "./ExecutionPlan";
 
 export {

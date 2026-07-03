@@ -11,7 +11,8 @@ import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import type { DatabaseProvider } from "./database/DatabaseProvider";
 import { createBackupOrchestrator, type BackupOrchestrator } from "./modules/backup/BackupOrchestrator";
 import { createContainerRegistryService, type ContainerRegistryService } from "./modules/container-registry/ContainerRegistryService";
-import { createLocalSecretProvider, type LocalSecretProvider } from "./modules/secrets/LocalSecretProvider";
+import { createLocalSecretProvider } from "./modules/secrets/LocalSecretProvider";
+import type { SecretProvider } from "./modules/secrets/SecretProvider";
 import { ComposeParser } from "./orchestration/ComposeParser";
 import { ExposurePlanner } from "./orchestration/ExposurePlanner";
 import { Planner } from "./orchestration/Planner";
@@ -20,6 +21,9 @@ import { BackupScheduler } from "./modules/backup/BackupScheduler";
 import { LogRotationScheduler } from "./modules/log-rotation/LogRotationScheduler";
 import { NodeProvisionerRegistry } from "./plugins/NodeProvisionerRegistry";
 import { PluginLoader } from "./plugins/PluginLoader";
+import { SecretProviderRegistry } from "./plugins/SecretProviderRegistry";
+import { RuntimeLoader } from "./runtimes/RuntimeLoader";
+import { RuntimeRegistry } from "./runtimes/RuntimeRegistry";
 import { ControlPlaneInstanceId } from "./services/ControlPlaneInstanceId";
 import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { AgentProxyService } from "./services/AgentProxyService";
@@ -42,8 +46,10 @@ export interface ControlPlaneContext {
     store: ControlPlaneStore;
     pluginRegistry: PluginRegistry;
     pluginLoader: PluginLoader;
+    secretProviderRegistry: SecretProviderRegistry;
+    runtimeRegistry: RuntimeRegistry;
     backupOrchestrator: BackupOrchestrator;
-    secretProvider: LocalSecretProvider;
+    secretProvider: SecretProvider;
     secretsService: SecretsService;
     composeParser: ComposeParser;
     planner: Planner;
@@ -116,6 +122,8 @@ export function createControlPlaneContext(
         store,
         pluginRegistry: new PluginRegistry(),
         pluginLoader: new PluginLoader(packagesDir),
+        secretProviderRegistry: new SecretProviderRegistry(),
+        runtimeRegistry: RuntimeLoader.load(),
         backupOrchestrator,
         secretProvider: createLocalSecretProvider({ masterKey }),
         secretsService: new SecretsService(store, masterKey),

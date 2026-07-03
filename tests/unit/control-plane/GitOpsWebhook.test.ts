@@ -13,9 +13,17 @@ const mocks = vi.hoisted(() => ({
         commitSha: "abc123def456abc123def456abc123def456abcd",
         workDir: "/tmp/gitops-test"
     })),
+    createApplyRun: vi.fn(async () => ({
+        id: "gitops-apply-run-1",
+        kind: "gitops_apply",
+        status: "pending",
+        manifestName: "webhook-test",
+        createdAt: new Date().toISOString()
+    })),
     applyExecute: vi.fn(async () => ({
         revision: 1,
         manifestName: "webhook-test",
+        runId: "gitops-apply-run-1",
         diff: {
             servicesToCreate: 0,
             servicesToUpdate: 0,
@@ -27,7 +35,7 @@ const mocks = vi.hoisted(() => ({
         },
         exposurePlan: { entries: [] },
         plans: [],
-        dispatch: { accepted: 0, rejected: 0 }
+        dispatch: []
     }))
 }));
 
@@ -41,6 +49,7 @@ vi.mock("../../../packages/control-plane/src/services/GitOpsService", async () =
         GitOpsService: {
             ...actual.GitOpsService,
             checkoutAndMerge: mocks.checkoutAndMerge,
+            createApplyRun: mocks.createApplyRun,
             recordRevision: vi.fn(),
             listRevisions: vi.fn(async () => []),
             getRevision: vi.fn(),
@@ -108,6 +117,19 @@ function createWebhookTestContext(): ControlPlaneContext {
             validateApiKey: vi.fn(async () => false),
             getClusterSecretValues: vi.fn(async () => ({}))
         },
+        composeParser: {
+            parse: vi.fn((manifestYaml: string) => {
+                const nameMatch = manifestYaml.match(/^name:\s*(\S+)/m);
+                return {
+                    name: nameMatch?.[1] ?? "webhook-test",
+                    services: {},
+                    volumes: {},
+                    networks: {},
+                    registries: {}
+                };
+            }),
+            extractInternalExposures: vi.fn(() => [])
+        },
         controlPlaneSync: {
             publish: vi.fn(async () => undefined)
         },
@@ -126,6 +148,7 @@ describe("gitops webhook signature integration", () => {
     afterEach(() => {
         restoreEnv();
         mocks.checkoutAndMerge.mockClear();
+        mocks.createApplyRun.mockClear();
         mocks.applyExecute.mockClear();
     });
 
@@ -177,6 +200,7 @@ describe("gitops webhook signature integration", () => {
         process.env.GITOPS_WEBHOOK_PROVIDER = "github";
 
         mocks.checkoutAndMerge.mockClear();
+        mocks.createApplyRun.mockClear();
         mocks.applyExecute.mockClear();
 
         const app = await createApp({
@@ -217,7 +241,8 @@ describe("gitops webhook signature integration", () => {
                 repositoryUrl: payload.repositoryUrl,
                 branch: "main",
                 commitSha: "abc123def456abc123def456abc123def456abcd",
-                buildContextRoot: "/tmp/gitops-test"
+                buildContextRoot: "/tmp/gitops-test",
+                runId: "gitops-apply-run-1"
             }
         );
 
@@ -231,6 +256,7 @@ describe("gitops webhook signature integration", () => {
         process.env.GITOPS_WEBHOOK_PROVIDER = "generic";
 
         mocks.checkoutAndMerge.mockClear();
+        mocks.createApplyRun.mockClear();
         mocks.applyExecute.mockClear();
 
         const app = await createApp({

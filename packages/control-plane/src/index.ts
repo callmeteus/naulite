@@ -18,6 +18,9 @@ export { Planner, type ClusterActualState, type PlannerDiff } from "./orchestrat
 export { Scheduler, type NodeScore, type ScheduleResult } from "./orchestration/Scheduler";
 export { PluginLoader } from "./plugins/PluginLoader";
 export { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";
+export { SecretProviderRegistry } from "./plugins/SecretProviderRegistry";
+export { RuntimeLoader } from "./runtimes/RuntimeLoader";
+export { RuntimeRegistry } from "./runtimes/RuntimeRegistry";
 export { BackupScheduler, LogRotationScheduler } from "./modules";
 export { startServer, type ControlPlaneServer, type StartServerOptions } from "./Server";
 export { ControlPlaneSync } from "./services/ControlPlaneSync";
@@ -36,6 +39,8 @@ export {
     SecretProvider,
     LocalSecretProvider,
     createLocalSecretProvider,
+    PluginSecretProviderAdapter,
+    resolveSecretBackendId,
     VolumeProvider,
     LocalVolumeProvider,
     createLocalVolumeProvider,

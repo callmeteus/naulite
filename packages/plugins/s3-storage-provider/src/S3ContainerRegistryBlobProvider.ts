@@ -1,6 +1,6 @@
 import type { Readable } from "node:stream";
 
-import type { ContainerRegistryBlobWriteInput, S3ContainerRegistryDestination } from "@platform/shared";
+import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, S3ContainerRegistryDestination } from "@platform/shared";
 import { ContainerRegistryBlobProvider } from "@platform/control-plane";
 
 import { S3ObjectStore, type S3ObjectStoreOptions } from "./S3ObjectStore";
@@ -75,7 +75,7 @@ export class S3ContainerRegistryBlobProvider extends ContainerRegistryBlobProvid
      * @param location Destination-specific location identifier
      * @returns Blob metadata or null when missing
      */
-    async head(location: string): Promise<ReturnType<ContainerRegistryBlobProvider["head"]>> {
+    async head(location: string): Promise<ContainerRegistryBlobHeadResult | null> {
         const parsed = this.objectStore.parseLocation(location);
         const head = await this.objectStore.headObject(parsed.config, parsed.key);
 

@@ -206,6 +206,19 @@ export interface IngressSummary {
 }
 
 /**
+ * Gateway route summary persisted by the control plane.
+ */
+export interface GatewayRouteSummary {
+    id: string;
+    serviceName: string;
+    host: string;
+    targetHost: string;
+    targetPort: number;
+    autoTls: boolean;
+    updatedAt: string;
+}
+
+/**
  * Container registry image metadata returned by HEAD /cr/images/:name/:tag.
  */
 export interface ContainerRegistryImageHead {

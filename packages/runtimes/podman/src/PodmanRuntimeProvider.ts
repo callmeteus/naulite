@@ -1,3 +1,6 @@
+import type Dockerode from "dockerode";
+
+import { DockerRuntimeProvider, type DockerRuntimeProviderOptions } from "@platform/runtime-docker";
 import type {
     CreateInstanceSpec,
     ExecResult,
@@ -7,14 +10,33 @@ import type {
 } from "@platform/shared";
 import type { ExecutionPlan, InstanceHealth } from "@platform/shared";
 
-import { RuntimeNotConfiguredError } from "./RuntimeNotConfiguredError";
-
-const RUNTIME_ID = "podman";
+/**
+ * Options for constructing a Podman runtime provider.
+ */
+export interface PodmanRuntimeProviderOptions {
+    socketPath?: string;
+    client?: Dockerode;
+}
 
 /**
- * Podman runtime provider stub that reports the runtime as not configured.
+ * Podman runtime provider backed by the Docker-compatible Podman socket API.
  */
 export class PodmanRuntimeProvider implements RuntimeProvider {
+    private readonly delegate: DockerRuntimeProvider;
+
+    /**
+     * Creates a Podman runtime provider.
+     *
+     * @param options Podman socket path or injected dockerode client
+     */
+    constructor(options: PodmanRuntimeProviderOptions = {}) {
+        const dockerOptions: DockerRuntimeProviderOptions = {
+            client: options.client,
+            socketPath: options.socketPath ?? process.env.PODMAN_SOCKET ?? "/run/podman/podman.sock"
+        };
+        this.delegate = new DockerRuntimeProvider(dockerOptions);
+    }
+
     /**
      * Pulls a container image through Podman.
      * 
@@ -23,8 +45,8 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Nothing.
      */
     async pull(image: string, options?: PullImageOptions): Promise<void> {
-        console.debug("[runtime-podman] pull requested image=%s registryId=%s", image, options?.registryId ?? "-");
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] pull image=%s registryId=%s", image, options?.registryId ?? "-");
+        await this.delegate.pull(image, options);
     }
 
     /**
@@ -34,8 +56,8 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Created container identifier
      */
     async create(spec: CreateInstanceSpec): Promise<string> {
-        console.debug("[runtime-podman] create requested instanceId=%s", spec.instanceId);
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] create instanceId=%s image=%s", spec.instanceId, spec.image);
+        return this.delegate.create(spec);
     }
 
     /**
@@ -45,8 +67,8 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Nothing.
      */
     async start(instanceId: string): Promise<void> {
-        console.debug("[runtime-podman] start requested instanceId=%s", instanceId);
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] start instanceId=%s", instanceId);
+        await this.delegate.start(instanceId);
     }
 
     /**
@@ -56,8 +78,8 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Nothing.
      */
     async stop(instanceId: string): Promise<void> {
-        console.debug("[runtime-podman] stop requested instanceId=%s", instanceId);
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] stop instanceId=%s", instanceId);
+        await this.delegate.stop(instanceId);
     }
 
     /**
@@ -68,8 +90,8 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Nothing.
      */
     async remove(instanceId: string, force?: boolean): Promise<void> {
-        console.debug("[runtime-podman] remove requested instanceId=%s force=%s", instanceId, force ?? false);
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] remove instanceId=%s force=%s", instanceId, force ?? false);
+        await this.delegate.remove(instanceId, force);
     }
 
     /**
@@ -80,8 +102,8 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Log lines
      */
     async getLogs(instanceId: string, options?: LogStreamOptions): Promise<string[]> {
-        console.debug("[runtime-podman] getLogs requested instanceId=%s tail=%s", instanceId, options?.tail ?? "-");
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] getLogs instanceId=%s tail=%s", instanceId, options?.tail ?? "-");
+        return this.delegate.getLogs(instanceId, options);
     }
 
     /**
@@ -92,8 +114,8 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Exec result with exit code and output
      */
     async exec(instanceId: string, command: string[]): Promise<ExecResult> {
-        console.debug("[runtime-podman] exec requested instanceId=%s command=%o", instanceId, command);
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] exec instanceId=%s command=%o", instanceId, command);
+        return this.delegate.exec(instanceId, command);
     }
 
     /**
@@ -103,8 +125,8 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Instance health snapshot
      */
     async getHealth(instanceId: string): Promise<InstanceHealth> {
-        console.debug("[runtime-podman] getHealth requested instanceId=%s", instanceId);
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] getHealth instanceId=%s", instanceId);
+        return this.delegate.getHealth(instanceId);
     }
 
     /**
@@ -114,16 +136,17 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
      * @returns Nothing.
      */
     async applyPlan(plan: ExecutionPlan): Promise<void> {
-        console.debug("[runtime-podman] applyPlan requested nodeId=%s operations=%d", plan.nodeId, plan.operations.length);
-        throw new RuntimeNotConfiguredError(RUNTIME_ID);
+        console.debug("[runtime-podman] applyPlan nodeId=%s operations=%d", plan.nodeId, plan.operations.length);
+        await this.delegate.applyPlan(plan);
     }
 }
 
 /**
- * Creates a Podman runtime provider stub.
+ * Creates a Podman runtime provider.
  * 
+ * @param options Podman runtime provider options
  * @returns Podman runtime provider instance
  */
-export function createPodmanRuntimeProvider(): PodmanRuntimeProvider {
-    return new PodmanRuntimeProvider();
+export function createPodmanRuntimeProvider(options?: PodmanRuntimeProviderOptions): PodmanRuntimeProvider {
+    return new PodmanRuntimeProvider(options);
 }

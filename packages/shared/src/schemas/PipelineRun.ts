@@ -12,6 +12,7 @@ export const PipelineRunKindSchema = z.enum([
     "ci_build",
     "apply",
     "gitops_sync",
+    "gitops_apply",
     "infra",
     "node_event"
 ]);
@@ -89,6 +90,7 @@ export const PipelineRunSchema = z.object({
     imageRef: z.string().optional(),
     commitSha: z.string().optional(),
     branch: z.string().optional(),
+    revisionId: z.string().optional(),
     workflowId: z.string().optional(),
     pool: z.string().optional(),
     nodeId: z.string().optional(),

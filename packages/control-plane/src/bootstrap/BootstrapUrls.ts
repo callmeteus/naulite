@@ -8,7 +8,17 @@ import type { FastifyRequest } from "fastify";
  */
 export function isLocalBootstrapRequest(request: FastifyRequest): boolean {
     const ip = request.ip;
-    return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+
+    if (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1") {
+        return true;
+    }
+
+    // Docker Desktop publishes container ports to the host via the compose bridge gateway.
+    if (process.env.PLATFORM_E2E_ALLOW_BRIDGE === "1" && ip.startsWith("172.")) {
+        return true;
+    }
+
+    return false;
 }
 
 /**

@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const backup_executor = @import("backup_executor.zig");
+const bootstrap = @import("bootstrap.zig");
 const build_context = @import("build_context.zig");
 const build_executor = @import("build_executor.zig");
-const bootstrap = @import("bootstrap.zig");
 const execution_plan = @import("execution_plan.zig");
 const log_rotation_executor = @import("log_rotation_executor.zig");
 const docker = @import("runtime/docker.zig");
@@ -59,7 +59,7 @@ pub fn handleRequest(
     // Request body bytes.
     body: []const u8,
 ) !HttpResponse {
-    return handleRequestWithSocket(allocator, docker_client, "/var/run/docker.sock", method, path, body, null);
+    return handleRequestWithSocket(allocator, docker_client, "/var/run/docker.sock", method, path, body, null, path);
 }
 
 /// Handles an HTTP request with an explicit Docker socket path.
@@ -77,6 +77,8 @@ pub fn handleRequestWithSocket(
     body: []const u8,
     // Optional service name from query string or request header.
     service_name_hint: ?[]const u8,
+    // Raw request target including query string.
+    raw_target: []const u8,
 ) !HttpResponse {
     const ctx = RouteContext{
         .allocator = allocator,
@@ -139,7 +141,11 @@ pub fn handleRequestWithSocket(
     }
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/backups/receive")) {
-        return try handleBackupReceive(&ctx, body);
+        return try handleBackupReceive(&ctx, body, raw_target);
+    }
+
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/backups/archive")) {
+        return try handleBackupArchiveExport(&ctx, raw_target);
     }
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/bootstrap/status")) {
@@ -200,21 +206,25 @@ fn handleConnection(
     defer received.deinit(allocator);
 
     var read_buffer: [4096]u8 = undefined;
-    var net_reader = stream.reader(io, &read_buffer);
 
     while (true) {
-        var chunk: [1024]u8 = undefined;
-        const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, chunk[0..]) catch |err| {
+        var chunk_slices = [_][]u8{read_buffer[0..]};
+        const read_count = stream.read(io, &chunk_slices) catch |err| {
             return err;
         };
+
         if (read_count == 0) {
             break;
         }
-        try received.appendSlice(allocator, chunk[0..read_count]);
+
+        try received.appendSlice(allocator, read_buffer[0..read_count]);
+
         if (std.mem.indexOf(u8, received.items, "\r\n\r\n") != null) {
             break;
         }
+
         if (received.items.len >= 1024 * 1024) {
+            std.log.err("[http] request too large: {}", .{received.items.len});
             return error.RequestTooLarge;
         }
     }
@@ -236,6 +246,7 @@ fn handleConnection(
     const content_length = try parseContentLength(header_section);
     const body_start = header_end + 4;
     var body_owned: ?[]u8 = null;
+
     defer if (body_owned) |owned| allocator.free(owned);
 
     const body: []const u8 = blk: {
@@ -256,14 +267,16 @@ fn handleConnection(
 
         var index = already_read;
         while (index < content_length) {
-            var chunk: [1024]u8 = undefined;
-            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, chunk[0..]) catch |err| {
+            var chunk_slices = [_][]u8{read_buffer[0..]};
+            const read_count = stream.read(io, &chunk_slices) catch |err| {
                 return err;
             };
+
             if (read_count == 0) {
                 return error.EndOfStream;
             }
-            @memcpy(owned[index .. index + read_count], chunk[0..read_count]);
+
+            @memcpy(owned[index .. index + read_count], read_buffer[0..read_count]);
             index += read_count;
         }
 
@@ -285,11 +298,13 @@ fn handleConnection(
         path,
         body,
         service_name_hint,
+        target,
     ) catch |err| {
         std.log.err("[http] handler failed: {}", .{err});
         try writeRawResponse(io, stream, 500, "Internal Server Error", "application/json", "{\"error\":\"internal server error\"}");
         return;
     };
+
     defer request_allocator.free(response.body);
 
     try writeRawResponse(io, stream, response.status, statusText(response.status), response.content_type, response.body);
@@ -356,7 +371,7 @@ fn handleContainerExec(ctx: *const RouteContext, path: []const u8, body: []const
     const command = try parseStringArrayField(ctx.allocator, body, "command");
     defer ctx.allocator.free(command);
 
-    var result = try ctx.docker_client.execContainer(instance_id, command);
+    const result = try ctx.docker_client.execContainer(instance_id, command);
     defer {
         ctx.allocator.free(result.stdout);
         ctx.allocator.free(result.stderr);
@@ -488,13 +503,13 @@ fn handleBuildTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
         defer ctx.allocator.free(image_ref);
         break :blk try std.fmt.allocPrint(
             ctx.allocator,
-            "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"imageRef\":\"{s}\"}}",
-            .{ result.task_id, result.status, image_ref },
+            "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"imageRef\":\"{s}\",\"pushed\":{s}}}",
+            .{ result.task_id, result.status, image_ref, if (result.pushed) "true" else "false" },
         );
     } else try std.fmt.allocPrint(
         ctx.allocator,
-        "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"imageRef\":\"-\"}}",
-        .{ result.task_id, result.status },
+        "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"imageRef\":\"-\",\"pushed\":{s}}}",
+        .{ result.task_id, result.status, if (result.pushed) "true" else "false" },
     );
 
     return .{
@@ -526,8 +541,9 @@ fn handleLogRotationTask(ctx: *const RouteContext, body: []const u8) !HttpRespon
     };
 }
 
-fn handleBackupReceive(ctx: *const RouteContext, body: []const u8) !HttpResponse {
-    const stored_path = try backup_executor.receiveBackupArchive(ctx.allocator, null, body);
+fn handleBackupReceive(ctx: *const RouteContext, body: []const u8, raw_target: []const u8) !HttpResponse {
+    const backup_id = parseQueryParam(raw_target, "backupId");
+    const stored_path = try backup_executor.receiveBackupArchive(ctx.allocator, backup_id, body);
     defer ctx.allocator.free(stored_path);
 
     const response_body = try std.fmt.allocPrint(
@@ -543,8 +559,32 @@ fn handleBackupReceive(ctx: *const RouteContext, body: []const u8) !HttpResponse
     };
 }
 
+fn handleBackupArchiveExport(ctx: *const RouteContext, raw_target: []const u8) !HttpResponse {
+    const archive_path = parseQueryParam(raw_target, "archivePath") orelse {
+        const response_body = try std.fmt.allocPrint(
+            ctx.allocator,
+            "{{\"error\":\"missing archivePath\"}}",
+            .{},
+        );
+        return .{
+            .status = 400,
+            .content_type = "application/json",
+            .body = response_body,
+        };
+    };
+
+    const archive_bytes = try backup_executor.exportBackupArchive(ctx.allocator, archive_path);
+    defer ctx.allocator.free(archive_bytes);
+
+    return .{
+        .status = 200,
+        .content_type = "application/gzip",
+        .body = archive_bytes,
+    };
+}
+
 fn handleBootstrapStatus(ctx: *const RouteContext) !HttpResponse {
-    const status = try bootstrap.collectStatus(ctx.allocator);
+    const status = try bootstrap.collectStatus(ctx.allocator, null);
     defer ctx.allocator.free(status.os_version);
 
     const response_body = try std.fmt.allocPrint(

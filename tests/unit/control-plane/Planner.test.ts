@@ -246,6 +246,11 @@ describe("Planner phase 1.1", () => {
 
         expect(diff.volumesToRemove).toHaveLength(1);
         expect(diff.volumesToRemove[0]?.name).toBe("data");
+        expect(diff.operations).toContainEqual({
+            type: "removeVolume",
+            volumeName: "data",
+            force: false
+        });
     });
 
     it("resolves build placeholders without emitting pull operations downstream", () => {
@@ -271,6 +276,32 @@ describe("Planner phase 1.1", () => {
         expect(createOp?.type).toBe("create");
         if (createOp?.type === "create") {
             expect(createOp.image).toBe("build://./app");
+        }
+    });
+
+    it("keeps container-registry image refs on create operations", () => {
+        const manifest = buildManifest({
+            services: {
+                web: {
+                    image: "container-registry://minimal-web:v2",
+                    capabilities: [],
+                    deploy: {
+                        replicas: 1
+                    }
+                }
+            }
+        });
+
+        const diff = planner.diff(manifest, {
+            services: [],
+            instances: [],
+            volumes: []
+        });
+        const createOp = diff.operations.find((operation) => operation.type === "create");
+
+        expect(createOp?.type).toBe("create");
+        if (createOp?.type === "create") {
+            expect(createOp.image).toBe("container-registry://minimal-web:v2");
         }
     });
 });

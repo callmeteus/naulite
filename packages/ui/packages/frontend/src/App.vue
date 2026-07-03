@@ -15,7 +15,10 @@ import { t } from "./ui/Translate";
                 <router-link to="/cluster">{{ t("cluster") }}</router-link>
                 <router-link to="/gitops">{{ t("gitops") }}</router-link>
                 <router-link to="/deploy">{{ t("deploy") }}</router-link>
+                <router-link to="/build">{{ t("build") }}</router-link>
+                <router-link to="/provision">{{ t("provision") }}</router-link>
                 <router-link to="/runs">{{ t("runs") }}</router-link>
+                <router-link to="/gateway-routes">{{ t("gatewayRoutes") }}</router-link>
                 <router-link to="/container-registry">{{ t("containerRegistry") }}</router-link>
                 <router-link to="/backups">{{ t("backups") }}</router-link>
                 <router-link to="/netbird">{{ t("netbird") }}</router-link>

@@ -41,6 +41,32 @@ services:
             - "9000:9000"
             - "9001:9001"
 
+    traefik-dynamic-config:
+        profiles: [traefik]
+        image: node:22-alpine
+        restart: unless-stopped
+        working_dir: /app
+        command: ["node", "server.mjs"]
+        volumes:
+            - ./infra/traefik/dynamic-config-store:/app:ro
+
+    traefik:
+        profiles: [traefik]
+        image: traefik:v3.3
+        restart: unless-stopped
+        depends_on:
+            traefik-dynamic-config:
+                condition: service_started
+        volumes:
+            - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+            - traefik-acme:/acme
+        ports:
+            - "80:80"
+            - "443:443"
+            - "8088:8080"
+        command:
+            - --configFile=/etc/traefik/traefik.yml
+
     control-plane-1:
         build:
             context: .
@@ -51,6 +77,9 @@ services:
                 condition: service_healthy
             netbird-server:
                 condition: service_started
+            traefik-dynamic-config:
+                condition: service_started
+                required: false
         environment:
             NODE_ENV: production
             DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
@@ -58,6 +87,7 @@ services:
             NETBIRD_PUBLIC_MANAGEMENT_URL: ${NETBIRD_PUBLIC_MANAGEMENT_URL:-}
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
+            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
             CP_INSTANCE_ID: cp-1
             CP_PEER_URLS: http://control-plane-2:8080
             CP_PLUGINS: s3
@@ -81,6 +111,9 @@ services:
                 condition: service_healthy
             netbird-server:
                 condition: service_started
+            traefik-dynamic-config:
+                condition: service_started
+                required: false
         environment:
             NODE_ENV: production
             DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
@@ -88,6 +121,7 @@ services:
             NETBIRD_PUBLIC_MANAGEMENT_URL: ${NETBIRD_PUBLIC_MANAGEMENT_URL:-}
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
+            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
             CP_INSTANCE_ID: cp-2
             CP_PEER_URLS: http://control-plane-1:8080
             CP_PLUGINS: s3
@@ -150,3 +184,4 @@ volumes:
     minio-data:
     cp-data-1:
     cp-data-2:
+    traefik-acme:

@@ -1,4 +1,4 @@
-import type { BackupDestinationResult, BackupTask } from "@platform/shared";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask } from "@platform/shared";
 
 /**
  * Abstract backup destination provider contract for local and plugin backends.
@@ -17,6 +17,15 @@ export abstract class BackupDestinationProvider {
      * @returns Destination result metadata
      */
     abstract write(task: BackupTask, archivePath: string): Promise<BackupDestinationResult>;
+
+    /**
+     * Opens a readable stream for a stored backup archive.
+     *
+     * @param task Backup task containing destination configuration
+     * @param location Destination-specific location identifier
+     * @returns Readable backup archive stream
+     */
+    abstract read(task: BackupTask, location: string): Promise<BackupDestinationReadResult>;
 
     /**
      * Deletes a backup object according to retention policy.

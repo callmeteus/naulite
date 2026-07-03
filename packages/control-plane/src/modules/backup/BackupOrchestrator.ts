@@ -1,4 +1,4 @@
-import type { BackupDestinationResult, BackupTask } from "@platform/shared";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask } from "@platform/shared";
 
 import { BackupDestinationProvider } from "./BackupDestinationProvider";
 import { LocalBackupDestinationProvider } from "./LocalBackupDestinationProvider";
@@ -77,6 +77,23 @@ export class BackupOrchestrator {
             provider: provider.id,
             taskId: task.taskId
         };
+    }
+
+    /**
+     * Opens a readable stream for a stored backup archive.
+     *
+     * @param task Backup task resolved by the control plane
+     * @param location Destination-specific location identifier
+     * @returns Readable backup archive stream
+     */
+    async read(task: BackupTask, location: string): Promise<BackupDestinationReadResult> {
+        const provider = this.resolveProvider(task);
+        if (!provider) {
+            throw new Error(`No backup destination provider registered for ${task.destination.provider}`);
+        }
+
+        console.debug("[backups] read taskId=%s provider=%s location=%s", task.taskId, provider.id, location);
+        return provider.read(task, location);
     }
 
     /**

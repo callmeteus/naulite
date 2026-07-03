@@ -134,6 +134,7 @@ export class ControlPlaneStore {
         startedAt?: string;
         completedAt?: string;
         destination?: string;
+        location?: string;
         archivePath?: string;
     }>> {
         const rows = await BackupRunModel.findAll({
@@ -161,13 +162,53 @@ export class ControlPlaneStore {
                     : typeof plain.payload.location === "string"
                         ? plain.payload.location
                         : undefined,
-                archivePath: typeof plain.payload.location === "string"
+                location: typeof plain.payload.location === "string"
                     ? plain.payload.location
-                    : typeof plain.payload.archivePath === "string"
-                        ? plain.payload.archivePath
-                        : undefined
+                    : undefined,
+                archivePath: typeof plain.payload.archivePath === "string"
+                    ? plain.payload.archivePath
+                    : undefined
             };
         });
+    }
+
+    /**
+     * Finds a backup run by id with the full persisted payload.
+     *
+     * @param id Backup run identifier
+     * @returns Backup run record when found
+     */
+    async getBackupRun(id: string): Promise<{
+        id: string;
+        volumeName: string;
+        status: "pending" | "running" | "succeeded" | "failed";
+        startedAt?: string;
+        completedAt?: string;
+        payload: Record<string, unknown>;
+    } | null> {
+        const row = await BackupRunModel.findByPk(id);
+
+        if (!row) {
+            return null;
+        }
+
+        const plain = row.get({ plain: true }) as {
+            id: string;
+            volumeName: string;
+            status: string;
+            startedAt: string | null;
+            completedAt: string | null;
+            payload: Record<string, unknown>;
+        };
+
+        return {
+            id: plain.id,
+            volumeName: plain.volumeName,
+            status: plain.status as "pending" | "running" | "succeeded" | "failed",
+            startedAt: plain.startedAt ?? undefined,
+            completedAt: plain.completedAt ?? undefined,
+            payload: plain.payload ?? {}
+        };
     }
 
     /**
@@ -615,6 +656,12 @@ export class ControlPlaneStore {
      * @returns Whether the key is valid and active
      */
     async validateApiKey(secret: string): Promise<boolean> {
+        const agentApiKey = process.env.PLATFORM_AGENT_API_KEY?.trim();
+
+        if (agentApiKey && agentApiKey === secret) {
+            return true;
+        }
+
         const keyHash = ApiKeyCrypto.hashSecret(secret);
         const now = new Date().toISOString();
         const row = await ApiKeyModel.findOne({

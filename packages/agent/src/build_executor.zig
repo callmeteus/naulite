@@ -2,6 +2,8 @@ const std = @import("std");
 
 const cp_client = @import("cp_client.zig");
 const dockerfile_parser = @import("dockerfile_parser.zig");
+const process_cmd = @import("process_cmd.zig");
+const threaded_io = @import("threaded_io.zig");
 
 /// Result of a build task executed on the agent.
 pub const BuildTaskResult = struct {
@@ -13,6 +15,9 @@ pub const BuildTaskResult = struct {
 
     // Built image reference when the task succeeded.
     image_ref: ?[]const u8,
+
+    // Whether the image tarball was pushed to the control plane registry.
+    pushed: bool,
 
     // Build log lines joined for the response payload.
     logs: ?[]const u8,
@@ -30,6 +35,10 @@ pub fn executeBuildTask(
     // The build task JSON payload.
     body: []const u8,
 ) !BuildTaskResult {
+    var io_scope = threaded_io.Scope.init(allocator);
+    defer io_scope.deinit();
+    const io = io_scope.io;
+
     const parsed = try std.json.parseFromSlice(
         std.json.Value,
         allocator,
@@ -49,7 +58,7 @@ pub fn executeBuildTask(
     const service_name = try readStringField(allocator, root.object, "serviceName", "service");
     errdefer allocator.free(service_name);
 
-    const context_path = try resolveContextPath(allocator, root.object, service_name);
+    const context_path = try resolveContextPath(allocator, io, root.object, service_name);
     errdefer allocator.free(context_path);
 
     const dockerfile = try readOptionalStringField(allocator, root.object, "dockerfile");
@@ -64,13 +73,23 @@ pub fn executeBuildTask(
     const cp_url = try readOptionalStringField(allocator, root.object, "cpUrl");
     defer if (cp_url) |value| allocator.free(value);
 
+    const cr_name = try readOptionalStringField(allocator, root.object, "crName");
+    defer if (cr_name) |value| allocator.free(value);
+
+    const cr_tag = try readOptionalStringField(allocator, root.object, "crTag");
+    defer if (cr_tag) |value| allocator.free(value);
+
+    const api_key = try readOptionalStringField(allocator, root.object, "apiKey");
+    defer if (api_key) |value| allocator.free(value);
+
     std.log.debug(
-        "[build] execute taskId={s} service={s} context={s} image={s} runId={?s}",
-        .{ task_id, service_name, context_path, image_ref, run_id },
+        "[build] execute taskId={s} service={s} context={s} image={s} runId={?s} cr={?s}:{?s}",
+        .{ task_id, service_name, context_path, image_ref, run_id, cr_name, cr_tag },
     );
 
     const steps = try loadDockerfileSteps(
         allocator,
+        io,
         context_path,
         dockerfile,
     );
@@ -86,6 +105,8 @@ pub fn executeBuildTask(
                     "build.step.started",
                     step.name,
                     null,
+                    null,
+                    api_key,
                 );
             }
         }
@@ -109,6 +130,8 @@ pub fn executeBuildTask(
                     "build.step.failed",
                     failed_step,
                     message,
+                    null,
+                    api_key,
                 );
             }
         }
@@ -116,7 +139,8 @@ pub fn executeBuildTask(
             .task_id = task_id,
             .status = try allocator.dupe(u8, "failed"),
             .image_ref = null,
-            .logs = build_logs catch null,
+            .pushed = false,
+            .logs = null,
             .error_message = message,
         };
     };
@@ -132,25 +156,73 @@ pub fn executeBuildTask(
                     "build.step.finished",
                     step.name,
                     null,
+                    build_logs,
+                    api_key,
                 );
             }
         }
     }
 
+    const cr_image_ref = if (cr_name) |name| blk: {
+        if (cr_tag) |tag| {
+            break :blk try std.fmt.allocPrint(allocator, "container-registry://{s}:{s}", .{ name, tag });
+        }
+        break :blk null;
+    } else null;
+    defer if (cr_image_ref) |value| {
+        allocator.free(value);
+    };
+
+    if (cp_url) |url| {
+        if (cr_name) |name| {
+            if (cr_tag) |tag| {
+                pushImageToRegistry(
+                    allocator,
+                    io,
+                    docker_socket,
+                    image_ref,
+                    url,
+                    name,
+                    tag,
+                    api_key,
+                ) catch |err| {
+                    const message = try std.fmt.allocPrint(allocator, "container registry push failed: {}", .{err});
+                    return .{
+                        .task_id = task_id,
+                        .status = try allocator.dupe(u8, "failed"),
+                        .image_ref = null,
+                        .pushed = false,
+                        .logs = build_logs,
+                        .error_message = message,
+                    };
+                };
+            }
+        }
+    }
+
+    const final_image_ref = cr_image_ref orelse try allocator.dupe(u8, image_ref);
+
     return .{
         .task_id = task_id,
         .status = try allocator.dupe(u8, "completed"),
-        .image_ref = image_ref,
+        .image_ref = final_image_ref,
+        .pushed = cr_image_ref != null,
         .logs = build_logs,
         .error_message = null,
     };
 }
 
+/// Runs a Docker build and returns the logs.
 fn runDockerBuild(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // Path to the Docker Unix socket or named pipe.
     docker_socket: []const u8,
+    // Path to the build context.
     context_path: []const u8,
+    // Name of the Dockerfile to use.
     dockerfile: ?[]const u8,
+    // The image reference to use.
     image_ref: []const u8,
 ) ![]u8 {
     const docker_host = try std.fmt.allocPrint(allocator, "unix://{s}", .{docker_socket});
@@ -170,49 +242,83 @@ fn runDockerBuild(
 
     try args.append(allocator, context_path);
 
-    var child = std.process.Child.init(args.items, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-
-    try child.spawn();
-
-    const stdout = try child.stdout.?.readToEndAlloc(allocator, 1024 * 1024);
-    defer allocator.free(stdout);
-
-    const stderr = try child.stderr.?.readToEndAlloc(allocator, 1024 * 1024);
-    defer allocator.free(stderr);
-
-    const term = try child.wait();
+    const captured = try process_cmd.runCapture(allocator, args.items);
+    defer allocator.free(captured.stderr);
 
     const combined = try std.fmt.allocPrint(
         allocator,
         "{s}{s}",
-        .{ stdout, stderr },
+        .{ captured.stdout, captured.stderr },
     );
+    errdefer allocator.free(combined);
+    allocator.free(captured.stdout);
 
-    switch (term) {
-        .Exited => |code| {
-            if (code != 0) {
-                std.log.err("[build] docker build exit={d} image={s}", .{ code, image_ref });
-                return error.DockerBuildFailed;
-            }
+    switch (captured.exited_normally and captured.exit_code == 0) {
+        false => {
+            std.log.err("[build] docker build exit={d} image={s}", .{ captured.exit_code, image_ref });
+            return error.DockerBuildFailed;
         },
-        else => return error.DockerBuildFailed,
+        true => {},
     }
 
     return combined;
 }
 
-fn resolveContextPath(
+/// Pushes an image to a container registry.
+fn pushImageToRegistry(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The I/O scope to use.
+    io: std.Io,
+    // Path to the Docker Unix socket or named pipe.
+    docker_socket: []const u8,
+    image_ref: []const u8,
+    // The URL of the control plane.
+    cp_url: []const u8,
+    // The name of the container registry.
+    cr_name: []const u8,
+    // The tag of the container registry.
+    cr_tag: []const u8,
+    // The API key to use.
+    api_key: ?[]const u8,
+) !void {
+    const archive_path = try std.fmt.allocPrint(allocator, "/tmp/platform-build-{s}-{s}.tar", .{ cr_name, cr_tag });
+    defer allocator.free(archive_path);
+
+    if (std.Io.Dir.cwd().access(io, archive_path, .{})) |_| {
+        std.Io.Dir.cwd().deleteFile(io, archive_path) catch {};
+    } else |_| {}
+
+    const docker_host = try std.fmt.allocPrint(allocator, "unix://{s}", .{docker_socket});
+    defer allocator.free(docker_host);
+
+    const save_args = [_][]const u8{ "docker", "-H", docker_host, "save", "-o", archive_path, image_ref };
+    try process_cmd.runCommandVoid(allocator, &save_args);
+
+    const archive_bytes = try std.Io.Dir.cwd().readFileAlloc(io, archive_path, allocator, .limited(512 * 1024 * 1024));
+    defer allocator.free(archive_bytes);
+    defer std.Io.Dir.cwd().deleteFile(io, archive_path) catch {};
+
+    try cp_client.putRegistryImage(allocator, cp_url, cr_name, cr_tag, archive_bytes, api_key);
+    std.log.debug("[build] pushed image name={s} tag={s} bytes={d}", .{ cr_name, cr_tag, archive_bytes.len });
+}
+
+/// Resolves the context path for a build.
+fn resolveContextPath(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+    // The I/O scope to use.
+    io: std.Io,
+    // The JSON object to use.
     object: std.json.ObjectMap,
+    // The name of the service.
     service_name: []const u8,
 ) ![]u8 {
     const synced_path = try std.fmt.allocPrint(allocator, "/var/lib/platform/builds/{s}", .{service_name});
     errdefer allocator.free(synced_path);
 
     // Prefer synced build context when the control plane already pushed an archive.
-    if (directoryExists(synced_path)) {
+    if (directoryExists(io, synced_path)) {
         return synced_path;
     }
 
@@ -229,15 +335,25 @@ fn resolveContextPath(
     return synced_path;
 }
 
-fn directoryExists(path: []const u8) bool {
-    var dir = std.fs.cwd().openDir(path, .{}) catch return false;
-    dir.close();
+/// Checks if a directory exists.
+fn directoryExists(
+    // The I/O scope to use.
+    io: std.Io,
+    // The path to check.
+    path: []const u8,
+) bool {
+    var dir = std.Io.Dir.cwd().openDir(io, path, .{}) catch return false;
+    dir.close(io);
     return true;
 }
 
+/// Resolves the image reference for a build.
 fn resolveImageRef(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The JSON object to use.
     object: std.json.ObjectMap,
+    // The name of the service.
     service_name: []const u8,
 ) ![]u8 {
     if (object.get("tags")) |value| {
@@ -259,10 +375,15 @@ fn resolveImageRef(
     return try std.fmt.allocPrint(allocator, "platform/{s}:latest", .{service_name});
 }
 
+/// Reads a string field from a JSON object.
 fn readStringField(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The JSON object to use.
     object: std.json.ObjectMap,
+    // The name of the field to read.
     field_name: []const u8,
+    // The fallback value to use if the field is not present.
     fallback: []const u8,
 ) ![]u8 {
     if (object.get(field_name)) |value| {
@@ -275,9 +396,13 @@ fn readStringField(
     return try allocator.dupe(u8, fallback);
 }
 
+/// Reads an optional string field from a JSON object.
 fn readOptionalStringField(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The JSON object to use.
     object: std.json.ObjectMap,
+    // The name of the field to read.
     field_name: []const u8,
 ) !?[]u8 {
     if (object.get(field_name)) |value| {
@@ -290,16 +415,22 @@ fn readOptionalStringField(
     return null;
 }
 
+/// Loads the steps from a Dockerfile.
 fn loadDockerfileSteps(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The I/O scope to use.
+    io: std.Io,
+    // The path to the build context.
     context_path: []const u8,
+    // The name of the Dockerfile to use.
     dockerfile: ?[]const u8,
 ) ![]dockerfile_parser.StepMarker {
     const file_name = dockerfile orelse "Dockerfile";
     const dockerfile_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ context_path, file_name });
     defer allocator.free(dockerfile_path);
 
-    const content = std.fs.cwd().readFileAlloc(allocator, dockerfile_path, 1024 * 1024) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(io, dockerfile_path, allocator, .limited(1024 * 1024)) catch {
         const name = try allocator.dupe(u8, "docker-build");
         const marker = try allocator.alloc(dockerfile_parser.StepMarker, 1);
         marker[0] = .{
@@ -314,7 +445,13 @@ fn loadDockerfileSteps(
     return dockerfile_parser.DockerfileParser.parseSteps(allocator, content);
 }
 
-fn freeSteps(allocator: std.mem.Allocator, steps: []dockerfile_parser.StepMarker) void {
+/// Frees the steps from a Dockerfile.
+fn freeSteps(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+    // The steps to free.
+    steps: []dockerfile_parser.StepMarker,
+) void {
     for (steps) |step| {
         allocator.free(step.name);
     }

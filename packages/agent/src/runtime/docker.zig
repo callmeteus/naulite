@@ -1,6 +1,8 @@
 const std = @import("std");
 const execution_plan = @import("../execution_plan.zig");
 const cp_client = @import("../cp_client.zig");
+const process_cmd = @import("../process_cmd.zig");
+const threaded_io = @import("../threaded_io.zig");
 const docker_api = @import("docker_api.zig");
 const docker_stats = @import("docker_stats.zig");
 
@@ -51,6 +53,7 @@ pub const DockerClient = struct {
                     "rollout.started",
                     null,
                     null,
+                    null,
                 );
             }
         }
@@ -65,6 +68,7 @@ pub const DockerClient = struct {
                         run_id,
                         "deploy.step.started",
                         step_name,
+                        null,
                         null,
                     );
                 }
@@ -86,6 +90,7 @@ pub const DockerClient = struct {
                             "deploy.step.failed",
                             step_name,
                             message,
+                            null,
                         );
                     }
                 }
@@ -101,6 +106,7 @@ pub const DockerClient = struct {
                         "deploy.step.finished",
                         step_name,
                         null,
+                        null,
                     );
                 }
             }
@@ -113,6 +119,7 @@ pub const DockerClient = struct {
                     config,
                     run_id,
                     "rollout.finished",
+                    null,
                     null,
                     null,
                 );
@@ -174,6 +181,7 @@ pub const DockerClient = struct {
             .stop => try self.handleStop(api, op.raw_json),
             .remove => try self.handleRemove(api, op.raw_json),
             .ensureVolume => try self.handleEnsureVolume(api, op.raw_json),
+            .removeVolume => try self.handleRemoveVolume(api, op.raw_json),
             .connectNetwork => try self.handleConnectNetwork(api, op.raw_json),
             .disconnectNetwork => try self.handleDisconnectNetwork(api, op.raw_json),
         }
@@ -182,7 +190,49 @@ pub const DockerClient = struct {
     fn handlePull(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
         const image = try readStringField(self.allocator, raw_json, "image");
         defer self.allocator.free(image);
+
+        if (std.mem.startsWith(u8, image, "container-registry://")) {
+            try self.pullFromContainerRegistry(api, image);
+            return;
+        }
+
+        if (std.mem.startsWith(u8, image, "platform-cr/")) {
+            std.log.debug("[docker] skip pull for local platform-cr image={s}", .{image});
+            return;
+        }
+
         try api.pullImage(image);
+    }
+
+    fn pullFromContainerRegistry(self: *DockerClient, api: *const docker_api.DockerApi, image: []const u8) !void {
+        const config = self.cp_config orelse return error.MissingControlPlaneConfig;
+        const spec = parseContainerRegistryRef(self.allocator, image) orelse return error.InvalidContainerRegistryRef;
+        defer self.allocator.free(spec.name);
+        defer self.allocator.free(spec.tag);
+
+        const archive_path = try cp_client.getRegistryImage(
+            self.allocator,
+            config.cp_url,
+            spec.name,
+            spec.tag,
+            config.api_key,
+        );
+        defer self.allocator.free(archive_path);
+        var io_scope = threaded_io.Scope.init(self.allocator);
+        defer io_scope.deinit();
+        defer std.Io.Dir.cwd().deleteFile(io_scope.io, archive_path) catch {};
+
+        try runDockerLoad(self.allocator, self.socket_path, archive_path);
+
+        const source_tag = try std.fmt.allocPrint(self.allocator, "platform/{s}:{s}", .{ spec.name, spec.tag });
+        defer self.allocator.free(source_tag);
+
+        const target_tag = try std.fmt.allocPrint(self.allocator, "platform-cr/{s}:{s}", .{ spec.name, spec.tag });
+        defer self.allocator.free(target_tag);
+
+        try runDockerTag(self.allocator, self.socket_path, source_tag, target_tag);
+        std.log.info("[docker] loaded platform registry image source={s} target={s}", .{ source_tag, target_tag });
+        _ = api;
     }
 
     fn handleCreate(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
@@ -191,6 +241,9 @@ pub const DockerClient = struct {
 
         const image = try readStringField(self.allocator, raw_json, "image");
         defer self.allocator.free(image);
+
+        const runtime_image = try resolveRuntimeDockerImage(self.allocator, image);
+        defer self.allocator.free(runtime_image);
 
         const container_name = try sanitizeContainerName(self.allocator, instance_id);
         defer self.allocator.free(container_name);
@@ -209,7 +262,7 @@ pub const DockerClient = struct {
 
         const container_id = try api.createContainer(
             container_name,
-            image,
+            runtime_image,
             command,
             env_pairs,
             port_bindings_json,
@@ -265,6 +318,15 @@ pub const DockerClient = struct {
         const volume_name = try readStringField(self.allocator, raw_json, "volumeName");
         defer self.allocator.free(volume_name);
         try api.ensureVolume(volume_name);
+    }
+
+    fn handleRemoveVolume(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
+        const volume_name = try readStringField(self.allocator, raw_json, "volumeName");
+        defer self.allocator.free(volume_name);
+
+        const force = try readBoolField(raw_json, "force", false);
+        try api.removeVolume(volume_name, force);
+        std.log.info("[docker] removed volume name={s}", .{volume_name});
     }
 
     fn handleConnectNetwork(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
@@ -527,6 +589,64 @@ pub const DockerClient = struct {
             allocator.free(value);
         }
         allocator.free(values);
+    }
+
+    const ContainerRegistrySpec = struct {
+        name: []const u8,
+        tag: []const u8,
+    };
+
+    fn parseContainerRegistryRef(allocator: std.mem.Allocator, image: []const u8) ?ContainerRegistrySpec {
+        const prefix = "container-registry://";
+        if (!std.mem.startsWith(u8, image, prefix)) {
+            return null;
+        }
+
+        const remainder = image[prefix.len..];
+        const separator = std.mem.lastIndexOfScalar(u8, remainder, ':') orelse return null;
+        if (separator == 0 or separator >= remainder.len - 1) {
+            return null;
+        }
+
+        const name = allocator.dupe(u8, remainder[0..separator]) catch return null;
+        const tag = allocator.dupe(u8, remainder[separator + 1 ..]) catch {
+            allocator.free(name);
+            return null;
+        };
+
+        return .{ .name = name, .tag = tag };
+    }
+
+    fn resolveRuntimeDockerImage(allocator: std.mem.Allocator, image: []const u8) ![]const u8 {
+        if (std.mem.startsWith(u8, image, "container-registry://")) {
+            const spec = parseContainerRegistryRef(allocator, image) orelse return error.InvalidContainerRegistryRef;
+            defer allocator.free(spec.name);
+            defer allocator.free(spec.tag);
+            return std.fmt.allocPrint(allocator, "platform-cr/{s}:{s}", .{ spec.name, spec.tag });
+        }
+
+        return allocator.dupe(u8, image);
+    }
+
+    fn runDockerLoad(allocator: std.mem.Allocator, docker_socket: []const u8, archive_path: []const u8) !void {
+        const docker_host = try std.fmt.allocPrint(allocator, "unix://{s}", .{docker_socket});
+        defer allocator.free(docker_host);
+
+        const args = [_][]const u8{ "docker", "-H", docker_host, "load", "-i", archive_path };
+        process_cmd.runCommandVoid(allocator, &args) catch return error.DockerLoadFailed;
+    }
+
+    fn runDockerTag(
+        allocator: std.mem.Allocator,
+        docker_socket: []const u8,
+        source_image: []const u8,
+        target_image: []const u8,
+    ) !void {
+        const docker_host = try std.fmt.allocPrint(allocator, "unix://{s}", .{docker_socket});
+        defer allocator.free(docker_host);
+
+        const args = [_][]const u8{ "docker", "-H", docker_host, "tag", source_image, target_image };
+        process_cmd.runCommandVoid(allocator, &args) catch return error.DockerTagFailed;
     }
 };
 

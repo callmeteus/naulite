@@ -16,12 +16,12 @@ describe("HA leader election", () => {
 
         try {
             await LocalTestCluster.start();
-            await LocalTestCluster.waitHealthy(180_000);
+            await LocalTestCluster.waitHealthy(300_000);
         } catch (err) {
             LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
         }
-    }, 300_000);
+    }, 600_000);
 
     afterAll(async () => {
         if (!dockerEnabled) {

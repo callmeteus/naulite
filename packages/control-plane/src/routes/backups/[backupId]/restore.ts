@@ -1,5 +1,6 @@
 import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
 import { BackupDispatchService } from "../../../services/BackupDispatchService";
+import { BackupRestoreService } from "../../../services/BackupRestoreService";
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
@@ -25,8 +26,7 @@ export const POST = defineRoute({
     },
     async handler(req, res) {
         const { backupId } = req.params;
-        const runs = await ControlPlaneService.Store.listBackupRuns();
-        const run = runs.find((entry) => entry.id === backupId);
+        const run = await ControlPlaneService.Store.getBackupRun(backupId);
 
         if (!run) {
             return res.status(404).send({
@@ -52,16 +52,12 @@ export const POST = defineRoute({
         }
 
         try {
-            const archivePath =
-                typeof run.archivePath === "string" && run.archivePath.length > 0
-                    ? run.archivePath
-                    : undefined;
-
-            return await BackupDispatchService.dispatchRestoreTask(node, {
+            return await BackupRestoreService.restore({
                 backupId,
-                volumeName: run.volumeName,
-                archivePath,
-                mountPath: volume?.mountPath
+                run,
+                node,
+                volume,
+                orchestrator: ControlPlaneService.requireContext().backupOrchestrator
             });
         } catch (err) {
             return AgentProxyRouteHelpers.respond(res, err);

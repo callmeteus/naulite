@@ -1,7 +1,8 @@
 import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import path from "node:path";
 
-import type { BackupDestinationResult, BackupTask, LocalBackupDestination } from "@platform/shared";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, LocalBackupDestination } from "@platform/shared";
 
 import { BackupDestinationProvider } from "./BackupDestinationProvider";
 
@@ -34,6 +35,27 @@ export class LocalBackupDestinationProvider extends BackupDestinationProvider {
 
         return {
             location: destinationPath,
+            sizeBytes: fileStat.size
+        };
+    }
+
+    /**
+     * Opens a readable stream for a local backup archive.
+     *
+     * @param task Backup task containing destination configuration
+     * @param location Destination-specific location identifier
+     * @returns Readable backup archive stream
+     */
+    async read(task: BackupTask, location: string): Promise<BackupDestinationReadResult> {
+        if (task.destination.provider !== "local") {
+            throw new Error(`LocalBackupDestinationProvider cannot handle provider ${task.destination.provider}`);
+        }
+
+        console.debug("[backups] local read location=%s", location);
+        const fileStat = await stat(location);
+
+        return {
+            stream: createReadStream(location),
             sizeBytes: fileStat.size
         };
     }

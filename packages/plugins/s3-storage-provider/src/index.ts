@@ -3,6 +3,11 @@ import {
     createS3BackupDestinationProvider,
     s3BackupDestinationProvider
 } from "./S3BackupDestinationProvider";
+import {
+    S3ContainerRegistryBlobProvider,
+    createS3ContainerRegistryBlobProvider,
+    s3ContainerRegistryBlobProvider
+} from "./S3ContainerRegistryBlobProvider";
 export type { S3BackupDestinationProviderOptions } from "./S3BackupDestinationProvider";
 export {
     S3ObjectStore,
@@ -10,12 +15,12 @@ export {
     type S3ObjectStoreConfig,
     type S3ObjectStoreOptions
 } from "./S3ObjectStore";
+export type { S3ContainerRegistryBlobProviderOptions } from "./S3ContainerRegistryBlobProvider";
 export {
     S3ContainerRegistryBlobProvider,
     createS3ContainerRegistryBlobProvider,
     s3ContainerRegistryBlobProvider
-} from "./S3ContainerRegistryBlobProvider";
-export type { S3ContainerRegistryBlobProviderOptions } from "./S3ContainerRegistryBlobProvider";
+};
 
 /**
  * Plugin registration metadata for the S3 storage provider.

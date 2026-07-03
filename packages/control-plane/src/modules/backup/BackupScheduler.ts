@@ -195,7 +195,8 @@ export class BackupScheduler {
                 const result = await BackupCompletionService.completeRun(
                     this.backupOrchestrator,
                     task,
-                    agentResponse
+                    agentResponse,
+                    { agentUrl: node.agentUrl }
                 );
 
                 if (this.onComplete) {

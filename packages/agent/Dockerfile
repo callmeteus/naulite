@@ -4,11 +4,14 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
-ARG ZIG_URL=https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz
+# Must match infra/zig-toolchain.env and .github/workflows/ci.yml env.ZIG_VERSION
+# URL format: https://ziglang.org/builds/zig-x86_64-linux-{version}.tar.xz (see download/index.json master)
+ARG ZIG_VERSION=0.17.0-dev.1158+1d1193aa7
+ARG ZIG_URL=https://ziglang.org/builds/zig-x86_64-linux-${ZIG_VERSION}.tar.xz
 
 RUN curl -fsSL "${ZIG_URL}" -o /tmp/zig.tar.xz \
     && tar -xJf /tmp/zig.tar.xz -C /opt \
-    && ln -s /opt/zig-linux-x86_64-0.14.0 /opt/zig \
+    && ln -s /opt/zig-x86_64-linux-${ZIG_VERSION} /opt/zig \
     && rm /tmp/zig.tar.xz
 
 ENV PATH="/opt/zig:${PATH}"
@@ -23,19 +26,13 @@ COPY packages/agent/src packages/agent/src
 
 WORKDIR /build/packages/agent
 
-# Agent sources target Zig 0.17 APIs; install matching toolchain for release images.
-ARG ZIG_DEV_URL=https://ziglang.org/builds/zig-linux-x86_64-0.17.0-dev.tar.xz
+RUN zig build -Doptimize=ReleaseSafe
 
-RUN curl -fsSL "${ZIG_DEV_URL}" -o /tmp/zig-dev.tar.xz \
-    && rm -rf /opt/zig \
-    && tar -xJf /tmp/zig-dev.tar.xz -C /opt \
-    && ln -s /opt/zig-linux-x86_64-0.17.0-dev /opt/zig \
-    && rm /tmp/zig-dev.tar.xz \
-    && zig build -Doptimize=ReleaseSafe
+FROM debian:bookworm-slim
 
-FROM alpine:3.20
-
-RUN apk add --no-cache ca-certificates
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates docker.io \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build/packages/agent/zig-out/bin/platform-agent /usr/local/bin/platform-agent
 

@@ -27,6 +27,39 @@ export NETBIRD_LETSENCRYPT_EMAIL=admin@example.com
 bash scripts/setup-netbird.sh
 ```
 
+## Traefik gateway (dogfood profile)
+
+Real Traefik v3 with HTTP dynamic config and Let's Encrypt staging ACME lives in `infra/traefik/`. Enable it on the root compose stack:
+
+```bash
+docker compose --profile traefik up -d --build
+```
+
+The control plane pushes routes to `TRAEFIK_DYNAMIC_CONFIG_URL` (default `http://traefik-dynamic-config:8099/platform/dynamic-config`). Traefik polls the same endpoint via its HTTP provider (`infra/traefik/traefik.yml`).
+
+### Smoke test (local ingress)
+
+1. Start the test cluster (real Traefik is the default; set `TRAEFIK_USE_MOCK=true` for the lightweight mock):
+
+```bash
+docker compose -f tests/fixtures/docker-compose.test-cluster.yml -p platform-test-cluster --profile real up -d --build
+```
+
+2. Apply a public ingress manifest and confirm the route:
+
+```bash
+curl -s http://127.0.0.1:18080/gateway/routes | jq .
+curl -s http://127.0.0.1:19099/last-config | jq '.http.routers | keys'
+```
+
+3. Request the service through Traefik (Host header must match the ingress host):
+
+```bash
+curl -s -H "Host: web.test.local" http://127.0.0.1:19080/
+```
+
+Expect an nginx welcome page when the `ingress-public` fixture is applied. Port `19443` is mapped for TLS challenge / HTTPS entrypoint checks.
+
 ## Run with Platform
 
 From the monorepo root:

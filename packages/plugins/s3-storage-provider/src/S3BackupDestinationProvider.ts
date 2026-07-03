@@ -1,4 +1,4 @@
-import type { BackupDestinationResult, BackupTask, S3BackupDestination } from "@platform/shared";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, S3BackupDestination } from "@platform/shared";
 import { BackupDestinationProvider } from "@platform/control-plane";
 
 import { S3ObjectStore, type S3ObjectStoreOptions } from "./S3ObjectStore";
@@ -53,6 +53,31 @@ export class S3BackupDestinationProvider extends BackupDestinationProvider {
         return {
             location: this.objectStore.buildLocation(destination.bucket, key),
             sizeBytes
+        };
+    }
+
+    /**
+     * Opens a readable stream for a backup archive stored in S3.
+     *
+     * @param task Backup task containing destination configuration
+     * @param location Destination-specific location identifier
+     * @returns Readable backup archive stream
+     */
+    async read(task: BackupTask, location: string): Promise<BackupDestinationReadResult> {
+        if (task.destination.provider !== "s3") {
+            throw new Error(`S3BackupDestinationProvider cannot handle provider ${task.destination.provider}`);
+        }
+        const destination = task.destination as S3BackupDestination;
+        const parsed = this.objectStore.parseLocation(location, {
+            region: destination.region,
+            endpoint: destination.endpoint
+        });
+        const stream = await this.objectStore.getObjectStream(parsed.config, parsed.key);
+        const head = await this.objectStore.headObject(parsed.config, parsed.key);
+
+        return {
+            stream,
+            sizeBytes: head?.sizeBytes
         };
     }
 

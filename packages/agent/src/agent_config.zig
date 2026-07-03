@@ -35,6 +35,9 @@ pub const AgentConfig = struct {
     // NetBird device identifier assigned after enrollment (optional).
     netbird_device_id: ?[]const u8,
 
+    // API key used for authenticated control plane registry requests (optional).
+    api_key: ?[]const u8,
+
     // Absolute path of the on-disk config file backing this state.
     config_path: []const u8,
 
@@ -58,6 +61,9 @@ pub const AgentConfig = struct {
             allocator.free(value);
         }
         if (self.netbird_device_id) |value| {
+            allocator.free(value);
+        }
+        if (self.api_key) |value| {
             allocator.free(value);
         }
     }
@@ -200,6 +206,7 @@ fn loadDefaults(
         .netbird_management_url = null,
         .netbird_setup_key = null,
         .netbird_device_id = null,
+        .api_key = null,
         .config_path = try allocator.dupe(u8, config_path),
     };
 }
@@ -322,6 +329,13 @@ fn applyEnvOverrides(
         allocator.free(value);
     }
 
+    const api_key = env_util.readEnvOptional(allocator, "PLATFORM_API_KEY") orelse
+        env_util.readEnvOptional(allocator, "PLATFORM_TOKEN");
+    if (api_key) |value| {
+        try replaceOptionalString(allocator, &config.api_key, value);
+        allocator.free(value);
+    }
+
     _ = os;
 }
 
@@ -370,7 +384,7 @@ pub fn applyRegistrationResponse(
         },
         allocator,
         response_body,
-        .{},
+        .{ .ignore_unknown_fields = true },
     );
     defer parsed.deinit();
 

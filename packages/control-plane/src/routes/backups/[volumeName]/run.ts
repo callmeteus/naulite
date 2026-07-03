@@ -61,7 +61,8 @@ export const POST = defineRoute({
             const result = await BackupCompletionService.completeRun(
                 ControlPlaneService.requireContext().backupOrchestrator,
                 taskPayload,
-                agentResponse
+                agentResponse,
+                { agentUrl: node.agentUrl }
             );
 
             return {

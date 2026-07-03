@@ -16,17 +16,20 @@ describe("ApplyService", () => {
             ["minimal:web-1", "agent-1"],
             ["minimal:api-1", "agent-2"]
         ]);
+        const volumeNodes = new Map<string, string>();
 
         const agentOneOps = ApplyService.filterOperationsForNode(
             "agent-1",
             operations,
             instanceNodes,
+            volumeNodes,
             [{ id: "agent-1" }, { id: "agent-2" }] as never
         );
         const agentTwoOps = ApplyService.filterOperationsForNode(
             "agent-2",
             operations,
             instanceNodes,
+            volumeNodes,
             [{ id: "agent-1" }, { id: "agent-2" }] as never
         );
 
@@ -43,11 +46,13 @@ describe("ApplyService", () => {
         const instanceNodes = new Map<string, string>([
             ["minimal:web-1", "agent-1"]
         ]);
+        const volumeNodes = new Map<string, string>();
 
         const idleOps = ApplyService.filterOperationsForNode(
             "agent-2",
             operations,
             instanceNodes,
+            volumeNodes,
             [{ id: "agent-1" }, { id: "agent-2" }] as never
         );
 

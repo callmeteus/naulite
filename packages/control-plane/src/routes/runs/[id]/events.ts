@@ -9,6 +9,8 @@ import {
 } from "@platform/shared";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
+import { ApplyService } from "../../../services/ApplyService";
+import { BuildService } from "../../../services/BuildService";
 import { PipelineRunService } from "../../../services/PipelineRunService";
 
 const PipelineEventQuerySchema = z.object({
@@ -66,20 +68,52 @@ export const POST = defineRoute({
         const stepStatus = resolveStepStatus(body.kind);
 
         if (body.stepName && stepStatus) {
-            await PipelineRunService.transitionStep(
-                req.params.id,
-                body.stepName,
-                stepStatus,
-                {
-                    exitCode: body.exitCode,
-                    logText: body.logText,
-                    nodeId: body.nodeId,
-                    nodeHostname: body.nodeHostname,
-                    pool: body.pool,
-                    message,
-                    eventKind: body.kind
-                }
-            );
+            if (body.kind.startsWith("build.step.")) {
+                await BuildService.handleAgentBuildStepEvent(
+                    req.params.id,
+                    {
+                        kind: body.kind,
+                        stepName: body.stepName,
+                        message: body.message,
+                        exitCode: body.exitCode,
+                        logText: body.logText,
+                        nodeId: body.nodeId,
+                        nodeHostname: body.nodeHostname,
+                        pool: body.pool
+                    },
+                    stepStatus
+                );
+            } else if (body.kind.startsWith("deploy.step.")) {
+                await ApplyService.handleAgentDeployStepEvent(
+                    req.params.id,
+                    {
+                        kind: body.kind,
+                        stepName: body.stepName,
+                        message: body.message,
+                        exitCode: body.exitCode,
+                        logText: body.logText,
+                        nodeId: body.nodeId,
+                        nodeHostname: body.nodeHostname,
+                        pool: body.pool
+                    },
+                    stepStatus
+                );
+            } else {
+                await PipelineRunService.transitionStep(
+                    req.params.id,
+                    body.stepName,
+                    stepStatus,
+                    {
+                        exitCode: body.exitCode,
+                        logText: body.logText,
+                        nodeId: body.nodeId,
+                        nodeHostname: body.nodeHostname,
+                        pool: body.pool,
+                        message,
+                        eventKind: body.kind
+                    }
+                );
+            }
 
             const events = await PipelineRunService.listEvents(req.params.id);
             return events[events.length - 1];

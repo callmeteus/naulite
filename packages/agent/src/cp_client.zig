@@ -89,9 +89,15 @@ fn registerNode(
         try allocator.dupe(u8, "");
     defer allocator.free(netbird_device_json);
 
+    const resources_json = try formatResourcesJson(allocator, resources);
+    defer allocator.free(resources_json);
+
+    const register_fmt =
+        \\{{"id":"{s}","hostname":"{s}","agentVersion":"{s}","agentUrl":"{s}","labels":{s},"capabilities":{s},"resources":{s}{s}}}
+    ;
     const body = try std.fmt.allocPrint(
         allocator,
-        "{{\"id\":\"{s}\",\"hostname\":\"{s}\",\"agentVersion\":\"{s}\",\"agentUrl\":\"{s}\",\"labels\":{s},\"capabilities\":{s},\"resources\":{{\"cpuMillisTotal\":{d},\"cpuMillisUsed\":{d},\"memoryMbTotal\":{d},\"memoryMbUsed\":{d},\"diskMbTotal\":{d},\"diskMbUsed\":{d}}}}{s}}}",
+        register_fmt,
         .{
             config.node_id,
             config.hostname,
@@ -99,12 +105,7 @@ fn registerNode(
             config.agent_url,
             labels_json,
             capabilities_json,
-            resources.cpu_millis_total,
-            resources.cpu_millis_used,
-            resources.memory_mb_total,
-            resources.memory_mb_used,
-            resources.disk_mb_total,
-            resources.disk_mb_used,
+            resources_json,
             netbird_device_json,
         },
     );
@@ -113,7 +114,7 @@ fn registerNode(
     const path = try std.fmt.allocPrint(allocator, "{s}/nodes/register", .{config.cp_url});
     defer allocator.free(path);
 
-    const response_body = try postJson(allocator, io, path, body);
+    const response_body = try postJson(allocator, io, path, body, config.api_key);
     defer allocator.free(response_body);
 
     try agent_config.applyRegistrationResponse(allocator, config, response_body);
@@ -129,17 +130,16 @@ fn sendHeartbeat(
 ) !void {
     const resources = collectResources(allocator, config.docker_socket);
 
+    const resources_json = try formatResourcesJson(allocator, resources);
+    defer allocator.free(resources_json);
+
+    const heartbeat_fmt =
+        \\{{"status":"online","resources":{s}}}
+    ;
     const body = try std.fmt.allocPrint(
         allocator,
-        "{{\"status\":\"online\",\"resources\":{{\"cpuMillisTotal\":{d},\"cpuMillisUsed\":{d},\"memoryMbTotal\":{d},\"memoryMbUsed\":{d},\"diskMbTotal\":{d},\"diskMbUsed\":{d}}}}}}",
-        .{
-            resources.cpu_millis_total,
-            resources.cpu_millis_used,
-            resources.memory_mb_total,
-            resources.memory_mb_used,
-            resources.disk_mb_total,
-            resources.disk_mb_used,
-        },
+        heartbeat_fmt,
+        .{resources_json},
     );
     defer allocator.free(body);
 
@@ -150,7 +150,7 @@ fn sendHeartbeat(
     );
     defer allocator.free(path);
 
-    const response_body = try postJson(allocator, io, path, body);
+    const response_body = try postJson(allocator, io, path, body, config.api_key);
     defer allocator.free(response_body);
 }
 
@@ -176,6 +176,20 @@ fn fallbackResources() docker.ResourceSnapshot {
     };
 }
 
+fn formatResourcesJson(allocator: std.mem.Allocator, resources: docker.ResourceSnapshot) ![]u8 {
+    const fmt =
+        \\{{"cpuMillisTotal":{d},"cpuMillisUsed":{d},"memoryMbTotal":{d},"memoryMbUsed":{d},"diskMbTotal":{d},"diskMbUsed":{d}}}
+    ;
+    return std.fmt.allocPrint(allocator, fmt, .{
+        resources.cpu_millis_total,
+        resources.cpu_millis_used,
+        resources.memory_mb_total,
+        resources.memory_mb_used,
+        resources.disk_mb_total,
+        resources.disk_mb_used,
+    });
+}
+
 fn buildLabelsJson(allocator: std.mem.Allocator) ![]const u8 {
     if (env_util.readEnvOptional(allocator, "PLATFORM_NODE_LABELS")) |raw| {
         defer allocator.free(raw);
@@ -189,7 +203,7 @@ fn buildCapabilitiesJson(allocator: std.mem.Allocator) ![]const u8 {
     if (env_util.readEnvOptional(allocator, "PLATFORM_CAPABILITIES")) |raw| {
         defer allocator.free(raw);
 
-        var list = std.ArrayListUnmanaged([]const u8){};
+        var list = std.ArrayListUnmanaged([]const u8).empty;
         errdefer {
             for (list.items) |item| {
                 allocator.free(item);
@@ -210,7 +224,7 @@ fn buildCapabilitiesJson(allocator: std.mem.Allocator) ![]const u8 {
             return try allocator.dupe(u8, "[]");
         }
 
-        var json = std.ArrayListUnmanaged(u8){};
+        var json = std.ArrayListUnmanaged(u8).empty;
         defer json.deinit(allocator);
         try json.append(allocator, '[');
         for (list.items, 0..) |item, index| {
@@ -249,18 +263,23 @@ fn reportInstanceStatus(
     };
     defer allocator.free(path);
 
+    const status_fmt =
+        \\{{"status":"{s}"}}
+    ;
     const body = std.fmt.allocPrint(
         allocator,
-        "{{\"status\":\"{s}\"}}",
+        status_fmt,
         .{status},
     ) catch {
         return;
     };
     defer allocator.free(body);
 
-    postJson(allocator, io, path, body) catch |err| {
+    if (postJson(allocator, io, path, body, config.api_key)) |response| {
+        defer allocator.free(response);
+    } else |err| {
         std.log.warn("[cp] instance status report failed id={s} status={s} err={}", .{ instance_id, status, err });
-    };
+    }
 }
 
 pub fn reportInstanceRunning(
@@ -312,8 +331,19 @@ pub fn reportRunEvent(
     step_name: ?[]const u8,
     // Optional message payload.
     message: ?[]const u8,
+    // Optional step log text payload.
+    log_text: ?[]const u8,
 ) void {
-    reportRunEventUrl(allocator, config.cp_url, run_id, kind, step_name, message);
+    reportRunEventUrl(
+        allocator,
+        config.cp_url,
+        run_id,
+        kind,
+        step_name,
+        message,
+        log_text,
+        config.api_key,
+    );
 }
 
 /// Reports a pipeline run event using an explicit control plane URL.
@@ -324,10 +354,12 @@ pub fn reportRunEventUrl(
     kind: []const u8,
     step_name: ?[]const u8,
     message: ?[]const u8,
+    log_text: ?[]const u8,
+    api_key: ?[]const u8,
 ) void {
     var threaded = std.Io.Threaded.init(allocator, .{});
     defer threaded.deinit();
-    reportRunEventIo(allocator, threaded.io(), cp_url, run_id, kind, step_name, message);
+    reportRunEventIo(allocator, threaded.io(), cp_url, run_id, kind, step_name, message, log_text, api_key);
 }
 
 fn reportRunEventIo(
@@ -338,6 +370,8 @@ fn reportRunEventIo(
     kind: []const u8,
     step_name: ?[]const u8,
     message: ?[]const u8,
+    log_text: ?[]const u8,
+    api_key: ?[]const u8,
 ) void {
     const path = std.fmt.allocPrint(
         allocator,
@@ -348,17 +382,19 @@ fn reportRunEventIo(
     };
     defer allocator.free(path);
 
-    const body = buildRunEventBody(allocator, kind, step_name, message) catch {
+    const body = buildRunEventBody(allocator, kind, step_name, message, log_text) catch {
         return;
     };
     defer allocator.free(body);
 
-    postJson(allocator, io, path, body) catch |err| {
+    if (postJson(allocator, io, path, body, api_key)) |response| {
+        defer allocator.free(response);
+    } else |err| {
         std.log.warn(
             "[cp] run event report failed runId={s} kind={s} err={}",
             .{ run_id, kind, err },
         );
-    };
+    }
 }
 
 fn buildRunEventBody(
@@ -366,20 +402,40 @@ fn buildRunEventBody(
     kind: []const u8,
     step_name: ?[]const u8,
     message: ?[]const u8,
+    log_text: ?[]const u8,
 ) ![]u8 {
     var parts = std.ArrayList(u8).empty;
-    defer parts.deinit(allocator);
+    var aw = std.Io.Writer.Allocating.fromArrayList(allocator, &parts);
+    defer aw.deinit();
 
-    const writer = parts.writer(allocator);
     const message_text = message orelse kind;
-    try writer.print("{{\"kind\":\"{s}\"", .{kind});
+    try aw.writer.writeAll("{\"kind\":\"");
+    try aw.writer.writeAll(kind);
+    try aw.writer.writeAll("\"");
 
     if (step_name) |name| {
-        try writer.print(",\"stepName\":\"{s}\"", .{name});
+        try aw.writer.writeAll(",\"stepName\":\"");
+        try aw.writer.writeAll(name);
+        try aw.writer.writeAll("\"");
     }
 
-    try writer.print(",\"message\":\"", .{});
-    for (message_text) |byte| {
+    try aw.writer.writeAll(",\"message\":\"");
+    try writeJsonEscaped(&aw.writer, message_text);
+    try aw.writer.writeAll("\"");
+
+    if (log_text) |logs| {
+        try aw.writer.writeAll(",\"logText\":\"");
+        try writeJsonEscaped(&aw.writer, logs);
+        try aw.writer.writeAll("\"");
+    }
+
+    try aw.writer.writeAll("}");
+    parts = aw.toArrayList();
+    return try parts.toOwnedSlice(allocator);
+}
+
+fn writeJsonEscaped(writer: anytype, value: []const u8) !void {
+    for (value) |byte| {
         switch (byte) {
             '"' => try writer.writeAll("\\\""),
             '\\' => try writer.writeAll("\\\\"),
@@ -389,8 +445,59 @@ fn buildRunEventBody(
             else => try writer.writeByte(byte),
         }
     }
-    try writer.writeAll("\"}");
-    return try parts.toOwnedSlice(allocator);
+}
+
+fn receiveHttpHead(req: *std.http.Client.Request) !std.http.Client.Response {
+    var redirect_buffer: [8192]u8 = undefined;
+    return try req.receiveHead(&redirect_buffer);
+}
+
+fn readHttpBodyToSlice(
+    allocator: std.mem.Allocator,
+    response: *std.http.Client.Response,
+    max_bytes: usize,
+) ![]u8 {
+    var transfer_buffer: [65536]u8 = undefined;
+    const body_reader = response.reader(&transfer_buffer);
+
+    var body = std.ArrayList(u8).empty;
+    errdefer body.deinit(allocator);
+
+    var chunk: [8192]u8 = undefined;
+    while (body.items.len < max_bytes) {
+        const read_count = try std.Io.Reader.readSliceShort(body_reader, chunk[0..]);
+        if (read_count == 0) {
+            break;
+        }
+        try body.appendSlice(allocator, chunk[0..read_count]);
+    }
+
+    return try body.toOwnedSlice(allocator);
+}
+
+fn writeHttpBodyToFile(
+    io: std.Io,
+    response: *std.http.Client.Response,
+    archive_path: []const u8,
+) !void {
+    var transfer_buffer: [65536]u8 = undefined;
+    const body_reader = response.reader(&transfer_buffer);
+
+    var file = try std.Io.Dir.cwd().createFile(io, archive_path, .{});
+    defer file.close(io);
+
+    var write_buffer: [65536]u8 = undefined;
+    var file_writer = file.writer(io, &write_buffer);
+
+    var chunk: [8192]u8 = undefined;
+    while (true) {
+        const read_count = try std.Io.Reader.readSliceShort(body_reader, chunk[0..]);
+        if (read_count == 0) {
+            break;
+        }
+        try file_writer.interface.writeAll(chunk[0..read_count]);
+    }
+    try file_writer.interface.flush();
 }
 
 fn postJson(
@@ -400,6 +507,8 @@ fn postJson(
     url: []const u8,
     // JSON request body.
     body: []const u8,
+    // Optional API key for authenticated control plane routes.
+    api_key: ?[]const u8,
 ) ![]u8 {
     const uri = try std.Uri.parse(url);
     var client = std.http.Client{
@@ -408,26 +517,169 @@ fn postJson(
     };
     defer client.deinit();
 
+    var auth_value: ?[]const u8 = null;
+    defer if (auth_value) |value| allocator.free(value);
+
+    var headers_buf: [3]std.http.Header = undefined;
+    var header_count: usize = 2;
+    headers_buf[0] = .{ .name = "accept", .value = "application/json" };
+    headers_buf[1] = .{ .name = "content-type", .value = "application/json" };
+
+    if (api_key) |token| {
+        auth_value = try std.fmt.allocPrint(allocator, "Bearer {s}", .{token});
+        headers_buf[2] = .{ .name = "authorization", .value = auth_value.? };
+        header_count = 3;
+    }
+
     var req = try client.request(.POST, uri, .{
-        .extra_headers = &.{
-            .{ .name = "accept", .value = "application/json" },
-            .{ .name = "content-type", .value = "application/json" },
-        },
+        .extra_headers = headers_buf[0..header_count],
     });
     defer req.deinit();
 
     try req.sendBodyComplete(try allocator.dupe(u8, body));
 
-    const response_buffer = try allocator.alloc(u8, 1024 * 1024);
-    defer allocator.free(response_buffer);
-
-    var response_writer = std.Io.Writer.fixed(response_buffer);
-    const response = try req.receiveResponse(&response_writer);
+    var response = try receiveHttpHead(&req);
 
     if (response.head.status.class() != .success and response.head.status != .created) {
         std.log.err("[cp] request failed status={} url={s}", .{ response.head.status, url });
         return error.ControlPlaneRequestFailed;
     }
 
-    return try allocator.dupe(u8, response_writer.buffered());
+    return try readHttpBodyToSlice(allocator, &response, 1024 * 1024);
+}
+
+/// Uploads a docker save tarball to the control plane container registry.
+pub fn putRegistryImage(
+    allocator: std.mem.Allocator,
+    cp_url: []const u8,
+    name: []const u8,
+    tag: []const u8,
+    body: []const u8,
+    api_key: ?[]const u8,
+) !void {
+    var threaded = std.Io.Threaded.init(allocator, .{});
+    defer threaded.deinit();
+    try putRegistryImageIo(allocator, threaded.io(), cp_url, name, tag, body, api_key);
+}
+
+/// Downloads a docker save tarball from the control plane container registry.
+pub fn getRegistryImage(
+    allocator: std.mem.Allocator,
+    cp_url: []const u8,
+    name: []const u8,
+    tag: []const u8,
+    api_key: ?[]const u8,
+) ![]u8 {
+    var threaded = std.Io.Threaded.init(allocator, .{});
+    defer threaded.deinit();
+    return try getRegistryImageIo(allocator, threaded.io(), cp_url, name, tag, api_key);
+}
+
+fn putRegistryImageIo(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    cp_url: []const u8,
+    name: []const u8,
+    tag: []const u8,
+    body: []const u8,
+    api_key: ?[]const u8,
+) !void {
+    const path = try std.fmt.allocPrint(allocator, "{s}/cr/images/{s}/{s}", .{ cp_url, name, tag });
+    defer allocator.free(path);
+
+    const uri = try std.Uri.parse(path);
+    var client = std.http.Client{
+        .allocator = allocator,
+        .io = io,
+    };
+    defer client.deinit();
+
+    var auth_value: ?[]const u8 = null;
+    defer if (auth_value) |value| allocator.free(value);
+
+    var headers_buf: [3]std.http.Header = undefined;
+    var header_count: usize = 2;
+    headers_buf[0] = .{ .name = "accept", .value = "application/json" };
+    headers_buf[1] = .{ .name = "content-type", .value = "application/octet-stream" };
+
+    if (api_key) |token| {
+        auth_value = try std.fmt.allocPrint(allocator, "Bearer {s}", .{token});
+        headers_buf[2] = .{ .name = "authorization", .value = auth_value.? };
+        header_count = 3;
+    }
+
+    var req = try client.request(.PUT, uri, .{
+        .extra_headers = headers_buf[0..header_count],
+    });
+    defer req.deinit();
+
+    try req.sendBodyComplete(try allocator.dupe(u8, body));
+
+    var response = try receiveHttpHead(&req);
+
+    if (response.head.status != .created and response.head.status.class() != .success) {
+        std.log.err("[cp] registry put failed status={} path={s}", .{ response.head.status, path });
+        return error.ControlPlaneRequestFailed;
+    }
+
+    var discard_buffer: [1024]u8 = undefined;
+    const body_reader = response.reader(&discard_buffer);
+    _ = body_reader.discardRemaining() catch {};
+}
+
+fn getRegistryImageIo(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    cp_url: []const u8,
+    name: []const u8,
+    tag: []const u8,
+    api_key: ?[]const u8,
+) ![]u8 {
+    const path = try std.fmt.allocPrint(allocator, "{s}/cr/images/{s}/{s}", .{ cp_url, name, tag });
+    defer allocator.free(path);
+
+    const archive_path = try std.fmt.allocPrint(allocator, "/tmp/platform-cr-{s}-{s}.tar", .{ name, tag });
+    defer allocator.free(archive_path);
+
+    if (std.Io.Dir.cwd().access(io, archive_path, .{})) |_| {
+        std.Io.Dir.cwd().deleteFile(io, archive_path) catch {};
+    } else |_| {}
+
+    const uri = try std.Uri.parse(path);
+    var client = std.http.Client{
+        .allocator = allocator,
+        .io = io,
+    };
+    defer client.deinit();
+
+    var auth_value: ?[]const u8 = null;
+    defer if (auth_value) |value| allocator.free(value);
+
+    var headers_buf: [2]std.http.Header = undefined;
+    var header_count: usize = 1;
+    headers_buf[0] = .{ .name = "accept", .value = "application/octet-stream" };
+
+    if (api_key) |token| {
+        auth_value = try std.fmt.allocPrint(allocator, "Bearer {s}", .{token});
+        headers_buf[1] = .{ .name = "authorization", .value = auth_value.? };
+        header_count = 2;
+    }
+
+    var req = try client.request(.GET, uri, .{
+        .extra_headers = headers_buf[0..header_count],
+    });
+    defer req.deinit();
+
+    try req.sendBodiless();
+
+    var response = try receiveHttpHead(&req);
+
+    if (response.head.status.class() != .success) {
+        std.log.err("[cp] registry get failed status={} path={s}", .{ response.head.status, path });
+        return error.ControlPlaneRequestFailed;
+    }
+
+    try writeHttpBodyToFile(io, &response, archive_path);
+
+    return try allocator.dupe(u8, archive_path);
 }

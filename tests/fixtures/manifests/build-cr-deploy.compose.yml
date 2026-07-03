@@ -1,0 +1,11 @@
+name: build-cr
+services:
+  api:
+    build: .
+    capabilities:
+      - docker
+    cluster:
+      labels:
+        role: worker
+    deploy:
+      replicas: 1

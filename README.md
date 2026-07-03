@@ -88,6 +88,7 @@ platform/                  # git + dev root (you are here)
 
 - [CONTEXT.md](CONTEXT.md) - canonical architecture and philosophy
 - [PROGRESS.md](PROGRESS.md) - development log and phase status
+- [docs/ci.md](docs/ci.md) - CI requirements and local parity
 - [docs/architecture.md](docs/architecture.md)
 - [docs/manifest.md](docs/manifest.md)
 - [docs/networks.md](docs/networks.md)

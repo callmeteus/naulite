@@ -6,6 +6,7 @@ import type { ControlPlaneContext } from "../../../packages/control-plane/src/Co
 import { BuildService } from "../../../packages/control-plane/src/services/BuildService";
 import { LocalSecretProvider } from "../../../packages/control-plane/src/modules/secrets/LocalSecretProvider";
 import { ApplyService } from "../../../packages/control-plane/src/services/ApplyService";
+import { PipelineRunService } from "../../../packages/control-plane/src/services/PipelineRunService";
 
 import { ClusterStateService } from "../../../packages/control-plane/src/services/ClusterStateService";
 
@@ -146,6 +147,34 @@ function createApplyTestContext(): ControlPlaneContext {
 
 function installApplyTestContext(context: ControlPlaneContext): void {
     ControlPlaneService.install(context);
+    vi.spyOn(PipelineRunService, "createRun").mockResolvedValue({
+        id: "apply-run-test-1",
+        kind: "apply",
+        status: "pending",
+        manifestName: "minimal",
+        createdAt: new Date().toISOString()
+    } as never);
+    vi.spyOn(PipelineRunService, "getRun").mockResolvedValue({
+        id: "apply-run-test-1",
+        kind: "apply",
+        status: "pending",
+        manifestName: "minimal",
+        createdAt: new Date().toISOString()
+    } as never);
+    vi.spyOn(PipelineRunService, "markRunning").mockResolvedValue(undefined);
+    vi.spyOn(PipelineRunService, "emitEvent").mockResolvedValue({
+        id: "event-1",
+        runId: "apply-run-test-1",
+        kind: "gitops.sync.started",
+        createdAt: new Date().toISOString()
+    } as never);
+    vi.spyOn(PipelineRunService, "completeRun").mockResolvedValue({
+        id: "apply-run-test-1",
+        kind: "apply",
+        status: "succeeded",
+        manifestName: "minimal",
+        createdAt: new Date().toISOString()
+    } as never);
     vi.spyOn(ClusterStateService, "saveApplyRevision").mockResolvedValue(undefined);
     vi.spyOn(ControlPlaneService.Gateway, "upsertRoute").mockResolvedValue(undefined);
     vi.spyOn(ControlPlaneService.Gateway, "requestAutoTls").mockResolvedValue(undefined);
@@ -347,6 +376,7 @@ describe("ApplyService phase 1.2", () => {
                 name: "data",
                 manifestName: "minimal",
                 scope: "cluster",
+                nodeId: "agent-1",
                 mountPath: "/var/lib/platform/minimal/data",
                 status: "bound",
                 createdAt: new Date().toISOString(),
@@ -359,6 +389,10 @@ describe("ApplyService phase 1.2", () => {
                 type: "remove",
                 instanceId: "minimal:api-1",
                 force: true
+            }, {
+                type: "removeVolume",
+                volumeName: "data",
+                force: false
             }]
         }));
         installApplyTestContext(context);
@@ -373,13 +407,22 @@ describe("ApplyService phase 1.2", () => {
         } as never);
 
         const agentDispatcher = await import("../../../packages/control-plane/src/services/AgentDispatcher");
-        vi.spyOn(agentDispatcher.AgentDispatcher, "dispatchPlans").mockResolvedValue([]);
+        const dispatchSpy = vi.spyOn(agentDispatcher.AgentDispatcher, "dispatchPlans").mockResolvedValue([{
+            nodeId: "agent-1",
+            planId: "minimal-agent-1-1",
+            agentUrl: "http://agent-1",
+            status: "dispatched"
+        }]);
 
         await ApplyService.execute("name: minimal");
 
+        expect(dispatchSpy).toHaveBeenCalled();
         expect(context.store.deleteInstance).toHaveBeenCalledWith("minimal:api-1");
         expect(context.store.deleteService).toHaveBeenCalledWith("minimal:api");
         expect(context.store.deleteVolumeByName).toHaveBeenCalledWith("data");
+        expect(dispatchSpy.mock.invocationCallOrder[0]).toBeLessThan(
+            context.store.deleteVolumeByName.mock.invocationCallOrder[0] ?? 0
+        );
     });
 });
 
@@ -396,17 +439,22 @@ describe("ApplyService filterOperationsForNode", () => {
             ["minimal:web-1", "agent-1"],
             ["minimal:api-1", "agent-2"]
         ]);
+        const volumeNodes = new Map<string, string>([
+            ["data", "agent-1"]
+        ]);
 
         const agentOneOps = ApplyService.filterOperationsForNode(
             "agent-1",
             operations,
             instanceNodes,
+            volumeNodes,
             [{ id: "agent-1" }, { id: "agent-2" }] as never
         );
         const agentTwoOps = ApplyService.filterOperationsForNode(
             "agent-2",
             operations,
             instanceNodes,
+            volumeNodes,
             [{ id: "agent-1" }, { id: "agent-2" }] as never
         );
 
@@ -416,6 +464,36 @@ describe("ApplyService filterOperationsForNode", () => {
         expect(agentTwoOps.some((op) => op.type === "start")).toBe(false);
     });
 
+    it("routes removeVolume operations to the node that owns the volume", () => {
+        const operations: ExecutionOperation[] = [
+            { type: "removeVolume", volumeName: "data", force: false },
+            { type: "removeVolume", volumeName: "cache", force: false }
+        ];
+        const instanceNodes = new Map<string, string>();
+        const volumeNodes = new Map<string, string>([
+            ["data", "agent-1"],
+            ["cache", "agent-2"]
+        ]);
+
+        const agentOneOps = ApplyService.filterOperationsForNode(
+            "agent-1",
+            operations,
+            instanceNodes,
+            volumeNodes,
+            [{ id: "agent-1" }, { id: "agent-2" }] as never
+        );
+        const agentTwoOps = ApplyService.filterOperationsForNode(
+            "agent-2",
+            operations,
+            instanceNodes,
+            volumeNodes,
+            [{ id: "agent-1" }, { id: "agent-2" }] as never
+        );
+
+        expect(agentOneOps).toEqual([{ type: "removeVolume", volumeName: "data", force: false }]);
+        expect(agentTwoOps).toEqual([{ type: "removeVolume", volumeName: "cache", force: false }]);
+    });
+
     it("returns empty plans for idle nodes", () => {
         const operations: ExecutionOperation[] = [
             { type: "start", instanceId: "minimal:web-1" }
@@ -423,11 +501,13 @@ describe("ApplyService filterOperationsForNode", () => {
         const instanceNodes = new Map<string, string>([
             ["minimal:web-1", "agent-1"]
         ]);
+        const volumeNodes = new Map<string, string>();
 
         const idleOps = ApplyService.filterOperationsForNode(
             "agent-2",
             operations,
             instanceNodes,
+            volumeNodes,
             [{ id: "agent-1" }, { id: "agent-2" }] as never
         );
 

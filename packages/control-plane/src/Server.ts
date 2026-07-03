@@ -7,6 +7,7 @@ import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import { DatabaseProvider } from "./database/DatabaseProvider";
 import { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";
 import { ClusterStateService } from "./services/ClusterStateService";
+import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { ControlPlaneSyncSubscribers } from "./services/ControlPlaneSyncSubscribers";
 import { NetBirdBootstrap } from "./services/NetBirdBootstrap";
 
@@ -61,6 +62,9 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     ControlPlaneSyncSubscribers.register(context);
     context.leaderElection.setOnBecameLeader(async () => {
         await context.gatewayRouteService.hydrateFromDatabase();
+        await context.controlPlaneSync.publish(ControlPlaneSync.EVENTS.LEADER_CHANGED, {
+            leaderId: context.instanceId
+        });
     });
     context.leaderElection.start();
     await context.gatewayRouteService.hydrateFromDatabase();

@@ -337,6 +337,14 @@ export namespace ControlPlaneService {
         }
 
         /**
+         * @param id Backup run identifier
+         * @returns Backup run when found
+         */
+        export function getBackupRun(id: string): ReturnType<ControlPlaneStore["getBackupRun"]> {
+            return backing().getBackupRun(id);
+        }
+
+        /**
          * @returns API keys
          */
         export function listApiKeys(): ReturnType<ControlPlaneStore["listApiKeys"]> {
@@ -403,12 +411,25 @@ export namespace ControlPlaneService {
          * @param manifestYaml Manifest body
          * @param manifest Parsed manifest
          * @param rolledBackFromId Optional rollback source revision id
+         * @param runId Optional pipeline run to link to the revision
          * @returns Stored revision summary
          */
         export function recordRevision(
             ...args: Parameters<typeof GitOpsService.recordRevision>
         ): ReturnType<typeof GitOpsService.recordRevision> {
             return GitOpsService.recordRevision(...args);
+        }
+
+        /**
+         * Creates a GitOps apply pipeline run for webhook-triggered applies.
+         *
+         * @param input Git metadata for the apply run
+         * @returns Persisted pipeline run
+         */
+        export function createApplyRun(
+            ...args: Parameters<typeof GitOpsService.createApplyRun>
+        ): ReturnType<typeof GitOpsService.createApplyRun> {
+            return GitOpsService.createApplyRun(...args);
         }
 
         /**

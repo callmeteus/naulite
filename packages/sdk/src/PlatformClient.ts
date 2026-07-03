@@ -14,6 +14,7 @@ import type {
     ContainerRegistryImageHead,
     CreatedApiKey,
     ExecResponse,
+    GatewayRouteSummary,
     GitOpsWebhookPayload,
     IngressSummary,
     Instance,
@@ -330,6 +331,27 @@ export class PlatformClient {
     }
 
     /**
+     * Opens the control plane SSE stream for a pipeline run.
+     *
+     * @param runId Pipeline run identifier
+     * @returns Raw fetch response for piping to clients
+     */
+    async openRunEventStream(runId: string): Promise<Response> {
+        const headers: Record<string, string> = {
+            Accept: "text/event-stream"
+        };
+
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+
+        return this.fetchImpl(
+            `${this.baseUrl}/runs/${encodeURIComponent(runId)}/stream`,
+            { headers }
+        );
+    }
+
+    /**
      * Streams pipeline run events over SSE until the run completes.
      *
      * @param runId Pipeline run identifier
@@ -402,6 +424,28 @@ export class PlatformClient {
      */
     async provisionNode(input: ProvisionNodeInput): Promise<NodeProvision> {
         return this.request<NodeProvision>("POST", "/nodes/provision", input);
+    }
+
+    /**
+     * Returns a node provision request by identifier.
+     *
+     * @param provisionId Node provision identifier
+     * @returns Node provision record
+     */
+    async getNodeProvision(provisionId: string): Promise<NodeProvision> {
+        return this.request<NodeProvision>(
+            "GET",
+            `/nodes/provisions/${encodeURIComponent(provisionId)}`
+        );
+    }
+
+    /**
+     * Lists Traefik gateway routes persisted by the control plane.
+     *
+     * @returns Gateway route summaries
+     */
+    async listGatewayRoutes(): Promise<GatewayRouteSummary[]> {
+        return this.request<GatewayRouteSummary[]>("GET", "/gateway/routes");
     }
 
     /**

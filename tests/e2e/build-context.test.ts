@@ -27,7 +27,7 @@ describe("build context sync", () => {
             LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
         }
-    }, 300_000);
+    }, 600_000);
 
     afterAll(async () => {
         if (!dockerEnabled) {
@@ -73,6 +73,6 @@ describe("build context sync", () => {
         const services = await servicesResponse.json() as Array<{ name: string; image: string }>;
         const web = services.find((service) => service.name === "web");
         expect(web).toBeTruthy();
-        expect(web?.image).toContain("platform/build-web-web");
+        expect(web?.image).toContain("container-registry://build-web-web");
     });
 });

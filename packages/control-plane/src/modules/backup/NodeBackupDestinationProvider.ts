@@ -1,7 +1,8 @@
 import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import path from "node:path";
 
-import type { BackupDestinationResult, BackupTask, NodeBackupDestination } from "@platform/shared";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, NodeBackupDestination } from "@platform/shared";
 
 import { BackupDestinationProvider } from "./BackupDestinationProvider";
 
@@ -64,6 +65,27 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
 
         return {
             location: destinationPath,
+            sizeBytes: fileStat.size
+        };
+    }
+
+    /**
+     * Opens a readable stream for a node backup archive stored on this node.
+     *
+     * @param task Backup task containing destination configuration
+     * @param location Destination-specific location identifier
+     * @returns Readable backup archive stream
+     */
+    async read(task: BackupTask, location: string): Promise<BackupDestinationReadResult> {
+        if (task.destination.provider !== "node") {
+            throw new Error(`NodeBackupDestinationProvider cannot handle provider ${task.destination.provider}`);
+        }
+
+        console.debug("[backups] node read location=%s", location);
+        const fileStat = await stat(location);
+
+        return {
+            stream: createReadStream(location),
             sizeBytes: fileStat.size
         };
     }

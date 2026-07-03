@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const process_cmd = @import("process_cmd.zig");
+const threaded_io = @import("threaded_io.zig");
+
 const default_build_root = "/var/lib/platform/builds";
 
 /// Result of a build context sync received from the control plane.
@@ -23,6 +26,10 @@ pub fn receiveBuildContext(
     // Optional service name from a query parameter or request header.
     service_name_hint: ?[]const u8,
 ) !BuildContextResult {
+    var io_scope = threaded_io.Scope.init(allocator);
+    defer io_scope.deinit();
+    const io = io_scope.io;
+
     const service_name_owned = try resolveServiceName(allocator, body, service_name_hint);
     errdefer allocator.free(service_name_owned);
 
@@ -37,12 +44,12 @@ pub fn receiveBuildContext(
         .{ service_name_owned, archive_bytes.bytes.len, context_path },
     );
 
-    try std.fs.cwd().makePath(default_build_root) catch |err| switch (err) {
+    std.Io.Dir.cwd().createDirPath(io, default_build_root) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
 
-    try std.fs.cwd().makePath(context_path) catch |err| switch (err) {
+    std.Io.Dir.cwd().createDirPath(io, context_path) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
@@ -51,17 +58,20 @@ pub fn receiveBuildContext(
     defer allocator.free(temp_archive_path);
 
     {
-        const file = try std.fs.cwd().createFile(temp_archive_path, .{});
-        defer file.close();
-        try file.writeAll(archive_bytes.bytes);
+        var file = try std.Io.Dir.cwd().createFile(io, temp_archive_path, .{});
+        defer file.close(io);
+        var write_buffer: [65536]u8 = undefined;
+        var file_writer = file.writer(io, &write_buffer);
+        try file_writer.interface.writeAll(archive_bytes.bytes);
+        try file_writer.interface.flush();
     }
 
     runTarExtract(allocator, temp_archive_path, context_path) catch |err| {
-        std.fs.cwd().deleteFile(temp_archive_path) catch {};
+        std.Io.Dir.cwd().deleteFile(io, temp_archive_path) catch {};
         return err;
     };
 
-    std.fs.cwd().deleteFile(temp_archive_path) catch {};
+    std.Io.Dir.cwd().deleteFile(io, temp_archive_path) catch {};
 
     return .{
         .service_name = service_name_owned,
@@ -75,9 +85,13 @@ const ArchiveBytes = struct {
     source: enum { borrowed, owned },
 };
 
+/// Resolves a service name from a build context request.
 fn resolveServiceName(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The body of the build context request.
     body: []const u8,
+    // The service name hint.
     service_name_hint: ?[]const u8,
 ) ![]u8 {
     if (try parseJsonServiceName(allocator, body)) |service_name| {
@@ -94,15 +108,20 @@ fn resolveServiceName(
     return error.MissingServiceName;
 }
 
+/// Resolves the archive bytes from a build context request.
 fn resolveArchiveBytes(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The body of the build context request.
     body: []const u8,
+    // Whether the body is a raw archive.
     raw_body_mode: bool,
 ) !ArchiveBytes {
     if (raw_body_mode) {
         if (body.len == 0) {
             return error.MissingArchive;
         }
+
         return .{
             .bytes = body,
             .source = .borrowed,
@@ -115,6 +134,7 @@ fn resolveArchiveBytes(
         body,
         .{},
     ) catch return error.InvalidBuildContextRequest;
+
     defer parsed.deinit();
 
     const root = parsed.value;
@@ -131,8 +151,11 @@ fn resolveArchiveBytes(
     };
 }
 
+/// Parses a service name from a JSON build context request.
 fn parseJsonServiceName(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The body of the build context request.
     body: []const u8,
 ) !?[]u8 {
     const parsed = std.json.parseFromSlice(
@@ -156,7 +179,13 @@ fn parseJsonServiceName(
     return try allocator.dupe(u8, service_name);
 }
 
-fn objectGetString(object: std.json.ObjectMap, field_name: []const u8) ?[]const u8 {
+/// Gets a string value from a JSON object.
+fn objectGetString(
+    // The object to get the value from.
+    object: std.json.ObjectMap,
+    // The field name to get the value from.
+    field_name: []const u8,
+) ?[]const u8 {
     const value = object.get(field_name) orelse return null;
     return switch (value) {
         .string => |text| text,
@@ -164,7 +193,13 @@ fn objectGetString(object: std.json.ObjectMap, field_name: []const u8) ?[]const 
     };
 }
 
-fn decodeBase64(allocator: std.mem.Allocator, encoded: []const u8) ![]u8 {
+/// Decodes a base64-encoded string.
+fn decodeBase64(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+    // The base64-encoded string to decode.
+    encoded: []const u8,
+) ![]u8 {
     const decoder = std.base64.standard.Decoder;
     const decoded_size = try decoder.calcSizeForSlice(encoded);
     const buffer = try allocator.alloc(u8, decoded_size);
@@ -174,36 +209,31 @@ fn decodeBase64(allocator: std.mem.Allocator, encoded: []const u8) ![]u8 {
     return buffer;
 }
 
+/// Runs a tar extraction command.
 fn runTarExtract(
+    // The allocator to use.
     allocator: std.mem.Allocator,
+    // The path to the archive to extract.
     archive_path: []const u8,
+    // The path to the destination directory.
     destination_path: []const u8,
 ) !void {
     const args = [_][]const u8{ "tar", "-xzf", archive_path, "-C", destination_path };
+
     try runCommand(allocator, &args);
 }
 
-fn runCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    var child = std.process.Child.init(args, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Pipe;
-
-    try child.spawn();
-
-    const stderr = try child.stderr.?.readToEndAlloc(allocator, 1024 * 1024);
-    defer allocator.free(stderr);
-
-    const term = try child.wait();
-
-    switch (term) {
-        .Exited => |code| {
-            if (code != 0) {
-                std.log.err("[build-context] command failed exit={d} stderr={s}", .{ code, stderr });
-                return error.CommandFailed;
-            }
-        },
-        else => return error.CommandFailed,
-    }
+/// Runs a command and returns the output.
+fn runCommand(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+    // The command to run.
+    args: []const []const u8,
+) !void {
+    return process_cmd.runCommandVoid(allocator, args) catch |err| switch (err) {
+        error.CommandFailed => error.CommandFailed,
+        else => |other| other,
+    };
 }
 
 test "resolveServiceName prefers JSON serviceName" {
@@ -231,5 +261,5 @@ test "resolveServiceName uses hint for raw archive body" {
 test "resolveServiceName rejects empty hint" {
     const allocator = std.testing.allocator;
 
-    try std.testing.expectError(error.MissingServiceName, resolveServiceName(allocator, &[_]u8{ 0x1f }, ""));
+    try std.testing.expectError(error.MissingServiceName, resolveServiceName(allocator, &[_]u8{0x1f}, ""));
 }

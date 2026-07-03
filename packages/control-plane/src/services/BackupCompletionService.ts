@@ -2,6 +2,7 @@ import type { BackupTask } from "@platform/shared";
 
 import { BackupRunModel } from "../database/models/index";
 import type { BackupOrchestrator } from "../modules/backup/BackupOrchestrator";
+import { BackupArchiveStagingService } from "./BackupArchiveStagingService";
 
 /**
  * Parsed agent backup task response.
@@ -47,12 +48,14 @@ export namespace BackupCompletionService {
      * @param orchestrator Backup orchestrator used to persist the archive
      * @param task Backup task dispatched to the agent
      * @param agentResponse Raw agent response body
+     * @param options Optional agent URL used to stage archives before remote uploads
      * @returns Destination location and provider id
      */
     export async function completeRun(
         orchestrator: BackupOrchestrator,
         task: BackupTask,
-        agentResponse: unknown
+        agentResponse: unknown,
+        options: { agentUrl?: string } = {}
     ): Promise<{ location: string; provider: string }> {
         const parsed = parseAgentResponse(agentResponse);
 
@@ -63,7 +66,17 @@ export namespace BackupCompletionService {
             parsed.archivePath
         );
 
-        const writeResult = await orchestrator.write(task, parsed.archivePath);
+        let archivePath = parsed.archivePath;
+
+        if (task.destination.provider === "s3") {
+            if (!options.agentUrl) {
+                throw new Error("URL do agente é obrigatória para concluir backup S3.");
+            }
+
+            archivePath = await BackupArchiveStagingService.stageFromAgent(options.agentUrl, parsed.archivePath);
+        }
+
+        const writeResult = await orchestrator.write(task, archivePath);
         const completedAt = new Date().toISOString();
         const existing = await BackupRunModel.findByPk(task.taskId);
         const existingPayload = existing?.payload ?? {};

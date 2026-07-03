@@ -89,6 +89,15 @@ export const EnsureVolumeOperationSchema = z.object({
 });
 
 /**
+ * Remove a Docker volume from the target node.
+ */
+export const RemoveVolumeOperationSchema = z.object({
+    type: z.literal("removeVolume"),
+    volumeName: z.string().min(1),
+    force: z.boolean().default(false)
+});
+
+/**
  * Ordered runtime operation dispatched to an agent.
  */
 export const ExecutionOperationSchema = z.discriminatedUnion("type", [
@@ -99,7 +108,8 @@ export const ExecutionOperationSchema = z.discriminatedUnion("type", [
     RemoveInstanceOperationSchema,
     ConnectNetworkOperationSchema,
     DisconnectNetworkOperationSchema,
-    EnsureVolumeOperationSchema
+    EnsureVolumeOperationSchema,
+    RemoveVolumeOperationSchema
 ]);
 
 /**

@@ -1,0 +1,31 @@
+# Traefik static configuration for Platform gateway routes.
+# Dynamic routes are polled from the HTTP provider (control plane pushes via PUT to that store).
+
+global:
+    checkNewVersion: false
+    sendAnonymousUsage: false
+
+api:
+    dashboard: true
+    insecure: true
+
+entryPoints:
+    web:
+        address: ":80"
+    websecure:
+        address: ":443"
+
+providers:
+    http:
+        endpoint: "http://traefik-dynamic-config:8099/platform/dynamic-config"
+        pollInterval: "2s"
+        pollTimeout: "5s"
+
+certificatesResolvers:
+    letsencrypt:
+        acme:
+            # Staging CA for CI and local dogfood; override with production CA in real deployments.
+            email: "platform@localhost"
+            storage: /acme/acme.json
+            caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
+            tlsChallenge: {}

@@ -6,7 +6,7 @@
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "scripts": {
-        "build": "tsc -p tsconfig.json",
+        "build": "tsc -p tsconfig.json && node ../../scripts/fix-esm-imports.mjs dist && node ../../scripts/copy-control-plane-migrations.mjs",
         "lint": "eslint src/",
         "start": "node dist/Server.js"
     },
@@ -16,6 +16,9 @@
         "@platform/builder-docker": "0.1.0",
         "@platform/builder-kaniko": "0.1.0",
         "@platform/gateway": "0.1.0",
+        "@platform/runtime-containerd": "0.1.0",
+        "@platform/runtime-docker": "0.1.0",
+        "@platform/runtime-podman": "0.1.0",
         "@platform/shared": "0.1.0",
         "fastify": "^5.2.0",
         "pg": "^8.13.1",

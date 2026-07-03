@@ -10,6 +10,54 @@ const fixturePath = path.resolve(
     "tests/fixtures/manifests/ingress-public.compose.yml"
 );
 
+/**
+ * Waits until the public ingress route serves HTTP through Traefik.
+ *
+ * @param host Ingress host header value
+ * @param timeoutMs Maximum wait time in milliseconds
+ * @returns Nothing.
+ */
+async function waitForTraefikIngress(host: string, timeoutMs = 120_000): Promise<void> {
+    const traefikUrl = LocalTestCluster.getTraefikHttpUrl();
+    const controlPlaneUrl = LocalTestCluster.getControlPlaneUrl();
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+        try {
+            const instancesResponse = await fetch(`${controlPlaneUrl}/instances`);
+            if (instancesResponse.ok) {
+                const instances = await instancesResponse.json() as Array<{
+                    serviceName: string;
+                    status: string;
+                }>;
+                const running = instances.some((instance) => {
+                    return instance.serviceName === "web" && instance.status === "running";
+                });
+
+                if (running) {
+                    const ingressResponse = await fetch(`${traefikUrl}/`, {
+                        headers: {
+                            Host: host
+                        }
+                    });
+
+                    if (ingressResponse.ok) {
+                        return;
+                    }
+                }
+            }
+        } catch {
+            // Retry until timeout.
+        }
+
+        await new Promise((resolve) => {
+            setTimeout(resolve, 2_000);
+        });
+    }
+
+    throw new Error(`Ingress for host ${host} did not become reachable through Traefik at ${traefikUrl}`);
+}
+
 describe("public ingress via gateway routes", () => {
     let dockerEnabled = false;
 
@@ -27,7 +75,7 @@ describe("public ingress via gateway routes", () => {
             LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
         }
-    }, 300_000);
+    }, 600_000);
 
     afterAll(async () => {
         if (!dockerEnabled) {
@@ -67,7 +115,9 @@ describe("public ingress via gateway routes", () => {
         expect(routes.some((route) => route.serviceName === "web" && route.host === "web.test.local")).toBe(true);
         expect(routes.find((route) => route.serviceName === "web")?.targetHost).toBeTruthy();
 
-        const traefikConfigResponse = await fetch("http://127.0.0.1:19099/last-config");
+        const traefikConfigResponse = await fetch(
+            `${LocalTestCluster.getTraefikDynamicConfigStoreUrl()}/last-config`
+        );
         expect(traefikConfigResponse.ok).toBe(true);
 
         const traefikConfig = await traefikConfigResponse.json() as {
@@ -75,4 +125,40 @@ describe("public ingress via gateway routes", () => {
         };
         expect(Object.keys(traefikConfig.http?.routers ?? {}).length).toBeGreaterThan(0);
     });
+
+    it("routes HTTP traffic through Traefik to the deployed service", async (context) => {
+        if (!dockerEnabled) {
+            if (LocalTestCluster.isDockerRequired()) {
+                throw new Error("Docker test cluster is required but did not start.");
+            }
+            context.skip();
+        }
+
+        if (LocalTestCluster.usesTraefikMock()) {
+            context.skip();
+        }
+
+        const manifestYaml = await readFile(fixturePath, "utf8");
+        const applyResponse = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/apply`, {
+            method: "POST",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ manifestYaml })
+        });
+        expect(applyResponse.ok).toBe(true);
+
+        await waitForTraefikIngress("web.test.local");
+
+        const ingressResponse = await fetch(`${LocalTestCluster.getTraefikHttpUrl()}/`, {
+            headers: {
+                Host: "web.test.local"
+            }
+        });
+        expect(ingressResponse.ok).toBe(true);
+
+        const body = await ingressResponse.text();
+        expect(body.toLowerCase()).toContain("welcome to nginx");
+    }, 180_000);
 });

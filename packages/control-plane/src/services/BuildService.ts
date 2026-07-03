@@ -1,6 +1,9 @@
 import {
+    parseContainerRegistryRef,
+    resolveDockerBuildTag,
     resolveManifestBuild,
     resolveServiceImageRef,
+    toContainerRegistryRef,
     type BuildResult,
     type ExecutionOperation,
     type Manifest,
@@ -23,6 +26,9 @@ export interface ServiceBuildConfig {
     dockerfile?: string;
     provider: "docker" | "kaniko";
     tags: string[];
+    crName: string;
+    crTag: string;
+    crRef: string;
     runId?: string;
 }
 
@@ -88,6 +94,14 @@ export namespace BuildService {
         }
 
         const imageRef = resolveServiceImageRef(manifestName, serviceName, service);
+        const parsedCr = parseContainerRegistryRef(imageRef)
+            ?? parseContainerRegistryRef(toContainerRegistryRef(`${manifestName}-${serviceName}`, "latest"));
+
+        if (!parsedCr) {
+            return null;
+        }
+
+        const crRef = toContainerRegistryRef(parsedCr.name, parsedCr.tag);
 
         return {
             serviceName,
@@ -95,9 +109,45 @@ export namespace BuildService {
             contextPath: build.context,
             dockerfile: build.dockerfile,
             provider: build.provider ?? "docker",
-            tags: [imageRef],
+            tags: [resolveDockerBuildTag(manifestName, serviceName, parsedCr.tag)],
+            crName: parsedCr.name,
+            crTag: parsedCr.tag,
+            crRef,
             runId
         };
+    }
+
+    /**
+     * Applies an agent-reported build step event to the pipeline run.
+     *
+     * @param runId Pipeline run identifier
+     * @param event Agent step event payload
+     * @param stepStatus Resolved step status transition
+     * @returns Nothing.
+     */
+    export async function handleAgentBuildStepEvent(
+        runId: string,
+        event: {
+            kind: string;
+            stepName: string;
+            message?: string;
+            exitCode?: number;
+            logText?: string;
+            nodeId?: string;
+            nodeHostname?: string;
+            pool?: string;
+        },
+        stepStatus: "running" | "succeeded" | "failed"
+    ): Promise<void> {
+        await PipelineRunService.transitionStep(runId, event.stepName, stepStatus, {
+            exitCode: event.exitCode,
+            logText: event.logText,
+            nodeId: event.nodeId,
+            nodeHostname: event.nodeHostname,
+            pool: event.pool,
+            message: event.message ?? event.kind,
+            eventKind: event.kind
+        });
     }
 
     /**
@@ -396,13 +446,18 @@ export namespace BuildService {
                 contextPath: buildConfig.contextPath,
                 dockerfile: buildConfig.dockerfile,
                 tags: buildConfig.tags,
+                crName: buildConfig.crName,
+                crTag: buildConfig.crTag,
+                crRef: buildConfig.crRef,
                 provider: providerId,
                 registry: options.registry,
-                cpUrl: process.env.PLATFORM_PUBLIC_URL?.replace(/\/+$/, "") ?? "http://localhost:8080"
+                cpUrl: process.env.PLATFORM_PUBLIC_URL?.replace(/\/+$/, "") ?? "http://localhost:8080",
+                apiKey: process.env.PLATFORM_AGENT_API_KEY?.trim()
             }) as {
                 taskId?: string;
                 status?: string;
                 imageRef?: string;
+                pushed?: boolean;
                 logs?: string;
                 error?: string;
             };
@@ -419,15 +474,30 @@ export namespace BuildService {
                 );
             }
 
+            if (!response.pushed) {
+                await PipelineRunService.completeRun(runId, "failed", {
+                    errorMessage: `Build for ${buildConfig.serviceName} completed without pushing to the container registry.`,
+                    failureLog: response.logs
+                });
+                throw new BuildServiceError(
+                    "BUILD_PUSH_FAILED",
+                    `Build for ${buildConfig.serviceName} completed without pushing to the container registry.`,
+                    502
+                );
+            }
+
             await PipelineRunService.emitEvent(runId, {
                 kind: "image.pushed",
                 message: `Image pushed ${buildConfig.serviceName}`,
-                pool: PipelineRunService.resolvePoolFromLabels(builderNode.labels)
+                pool: PipelineRunService.resolvePoolFromLabels(builderNode.labels),
+                metadata: {
+                    imageRef: response.imageRef ?? buildConfig.crRef
+                }
             });
             await PipelineRunService.completeRun(runId, "succeeded");
 
             return {
-                imageRef: response.imageRef ?? buildConfig.tags[0] ?? `platform/${buildConfig.serviceName}:latest`,
+                imageRef: response.imageRef ?? buildConfig.crRef,
                 logs: response.logs ? [response.logs] : [`[build] completed taskId=${response.taskId ?? taskId}`],
                 durationMs: Date.now() - startedAt
             };

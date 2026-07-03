@@ -19,8 +19,32 @@
 | 10 - Agent bootstrap | completed | 2026-07-02 | 2026-07-02 |
 | p3-ux-quality (partial) | completed | 2026-07-02 | 2026-07-02 |
 | Backlog M1-M7 (scaffold) | completed | 2026-07-02 | 2026-07-02 |
+| Gap items 1-6, 8-13 | completed | 2026-07-02 | 2026-07-02 |
 
 ## Log
+
+### 2026-07-02 - Gap items 1-6, 8-13 (integration)
+
+- **Build to CR to deploy**: `container-registry://` refs, agent `PUT/GET /cr`, `build-cr-deploy` e2e
+- **S3 backup/restore**: `BackupRestoreService`, agent staging, MinIO fixture, `backup-restore-s3` e2e
+- **Volume teardown**: `removeVolume` op end-to-end (planner, apply, agent Zig, Docker runtime)
+- **Traefik + ACME**: real Traefik v3.3 in test cluster, `infra/traefik/`, ingress HTTP e2e
+- **HA failover**: `ha-failover-apply` e2e with leader kill mid-apply
+- **Pipeline runs**: BFF `/runs/*`, agent `logText`, `BuildService` step transitions, `build-pipeline-runs` e2e
+- **UX**: `RunsView` logs/SSE, `BuildView`, `ProvisionView`, `GatewayRoutesView`, PT i18n
+- **Stubs wired**: Infisical HTTP client, Podman runtime, containerd stub + `RuntimeLoader`
+- **Release**: `.github/workflows/release.yml` (4 GHCR images on `v*` tags)
+- **CI**: Zig 0.17.0-dev.1158 pin, docker-smoke job, extended e2e matrix (`docs/ci.md`)
+- **Agent Zig 0.17**: `process_cmd.zig`, `threaded_io.zig`, `std.Io.Dir` + HTTP `receiveHead` API migration
+- **Tests**: 219 unit tests; agent Docker image builds on Linux CI
+
+### 2026-07-03 - Gap items integration (wave 4 parent)
+
+- **Control-plane Docker image**: copies all workspace deps (gateway, builders, runtimes, plugins); `scripts/fix-esm-imports.mjs` post-build for Node ESM; SQL migrations copied to `dist/database/migrations`
+- **PostgreSQL migrations**: `SchemaMigrationModel.sync()` before SQL apply; `004-node-agent-url-deploy-spec.sql`
+- **Test cluster**: `PLATFORM_NETBIRD_MOCK=1`, MinIO init retry, `fileParallelism: false`, compose `--remove-orphans`, e2e hook timeouts 600s
+- **Agent Docker**: Debian bookworm runtime (glibc); HTTP `stream.read` fix (was blocking on `readSliceShort`); registration JSON `ignore_unknown_fields`
+- **Gates**: `yarn lint` 25/25, `yarn test:unit` 219/219, `health` e2e green; full e2e matrix running with `REQUIRE_DOCKER=true`
 
 ### 2026-07-02 - p3-ux-quality partial (BFF, SDK, CR UI)
 

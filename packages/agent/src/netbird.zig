@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const agent_config = @import("agent_config.zig");
+const process_cmd = @import("process_cmd.zig");
 
 pub const LoadError = error{
     MissingManagementUrl,
@@ -88,19 +89,19 @@ pub const NetbirdClient = struct {
         allocator: std.mem.Allocator,
         // Loaded agent configuration.
         config: *const agent_config.AgentConfig,
-    ) LoadError!NetbirdClient {
+    ) !NetbirdClient {
         if (config.netbird_management_url) |persisted| {
-            return init(allocator, persisted, config.netbird_setup_key);
+            return try init(allocator, persisted, config.netbird_setup_key);
         }
 
-        return loadFromEnv(allocator);
+        return try loadFromEnv(allocator);
     }
 
     /// Loads NetBird settings from environment variables.
     pub fn loadFromEnv(
         // The allocator to use.
         allocator: std.mem.Allocator,
-    ) LoadError!NetbirdClient {
+    ) !NetbirdClient {
         const raw_ptr = std.c.getenv("NETBIRD_MANAGEMENT_URL") orelse std.c.getenv("NETBIRD_API_URL") orelse {
             std.log.err("[netbird] NETBIRD_MANAGEMENT_URL is required (self-hosted only)", .{});
             return error.MissingManagementUrl;
@@ -115,7 +116,7 @@ pub const NetbirdClient = struct {
 
     /// Returns whether the NetBird mesh is connected.
     pub fn isConnected(self: *NetbirdClient) bool {
-        const status = readStatus(self.allocator) catch {
+        var status = readStatus(self.allocator) catch {
             std.log.debug("[netbird] connected check management_url={s} status=unavailable", .{self.management_url});
             return false;
         };
@@ -239,13 +240,13 @@ fn readOptionalEnv(allocator: std.mem.Allocator, key: []const u8) !?[]const u8 {
 }
 
 fn readStatus(allocator: std.mem.Allocator) !StatusInfo {
-    if (readOptionalEnv(allocator, "NETBIRD_STATUS_JSON")) |raw_json| {
+    if (try readOptionalEnv(allocator, "NETBIRD_STATUS_JSON")) |raw_json| {
         defer allocator.free(raw_json);
         return parseStatusJson(allocator, raw_json);
     }
 
-    const output = runCommand(allocator, &.{ "netbird", "status", "--json" }) catch {
-        const text_output = runCommand(allocator, &.{ "netbird", "status" }) catch {
+    const output = process_cmd.runCommand(allocator, &.{ "netbird", "status", "--json" }) catch {
+        const text_output = process_cmd.runCommand(allocator, &.{ "netbird", "status" }) catch {
             return StatusInfo{ .connected = false, .device_id = null };
         };
         defer allocator.free(text_output);
@@ -280,8 +281,8 @@ fn parseStatusJson(allocator: std.mem.Allocator, raw_json: []const u8) !StatusIn
 }
 
 fn parseStatusText(allocator: std.mem.Allocator, raw_text: []const u8) !StatusInfo {
-    const connected = std.ascii.indexOfIgnoreCase(raw_text, "management: connected") != null
-        or std.ascii.indexOfIgnoreCase(raw_text, "status: connected") != null;
+    const connected = std.ascii.findIgnoreCase(raw_text, "management: connected") != null
+        or std.ascii.findIgnoreCase(raw_text, "status: connected") != null;
 
     var device_id: ?[]const u8 = null;
     var lines = std.mem.splitScalar(u8, raw_text, '\n');
@@ -318,45 +319,17 @@ fn runNetbirdUp(
         setup_key,
     };
 
-    const output = try runCommand(allocator, &argv);
+    const output = try process_cmd.runCommand(allocator, &argv);
     defer allocator.free(output);
 
     std.log.debug("[netbird] netbird up output_len={d}", .{output.len});
 }
 
 fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) ![]u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-
-    try child.spawn();
-
-    const stdout = try child.stdout.?.readToEndAlloc(allocator, 1024 * 1024);
-    errdefer allocator.free(stdout);
-
-    const stderr = try child.stderr.?.readToEndAlloc(allocator, 1024 * 1024);
-    defer allocator.free(stderr);
-
-    const term = try child.wait();
-    switch (term) {
-        .Exited => |code| {
-            if (code != 0) {
-                std.log.debug("[netbird] command failed argv0={s} code={d} stderr={s}", .{
-                    argv[0],
-                    code,
-                    stderr,
-                });
-                return error.EnrollmentFailed;
-            }
-        },
-        else => return error.EnrollmentFailed,
-    }
-
-    if (stdout.len == 0 and stderr.len > 0) {
-        return try allocator.dupe(u8, stderr);
-    }
-
-    return stdout;
+    return process_cmd.runCommand(allocator, argv) catch |err| switch (err) {
+        error.CommandFailed => error.EnrollmentFailed,
+        else => |other| other,
+    };
 }
 
 test "rejects NetBird cloud endpoints" {

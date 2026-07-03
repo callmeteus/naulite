@@ -31,6 +31,7 @@ export interface CreatePipelineRunInput {
     imageRef?: string;
     commitSha?: string;
     branch?: string;
+    revisionId?: string;
     workflowId?: string;
     pool?: string;
     nodeId?: string;
@@ -84,6 +85,7 @@ export namespace PipelineRunService {
             imageRef: input.imageRef ?? null,
             commitSha: input.commitSha ?? null,
             branch: input.branch ?? null,
+            revisionId: input.revisionId ?? null,
             workflowId,
             pool: input.pool ?? null,
             nodeId: input.nodeId ?? null,
@@ -316,6 +318,26 @@ export namespace PipelineRunService {
     }
 
     /**
+     * Links a pipeline run to a recorded git revision.
+     *
+     * @param runId Pipeline run identifier
+     * @param revisionId Git revision identifier
+     * @returns Updated pipeline run when found
+     */
+    export async function linkRevision(runId: string, revisionId: string): Promise<PipelineRun | null> {
+        const row = await PipelineRunModel.findByPk(runId);
+
+        if (!row) {
+            return null;
+        }
+
+        await row.update({ revisionId });
+        console.debug("[pipeline] run linked runId=%s revisionId=%s", runId, revisionId);
+
+        return getRun(runId);
+    }
+
+    /**
      * Lists pipeline runs using optional filters.
      *
      * @param filters List filters
@@ -471,6 +493,7 @@ export namespace PipelineRunService {
             imageRef: plain.imageRef ? String(plain.imageRef) : undefined,
             commitSha: plain.commitSha ? String(plain.commitSha) : undefined,
             branch: plain.branch ? String(plain.branch) : undefined,
+            revisionId: plain.revisionId ? String(plain.revisionId) : undefined,
             workflowId: plain.workflowId ? String(plain.workflowId) : undefined,
             pool: plain.pool ? String(plain.pool) : undefined,
             nodeId: plain.nodeId ? String(plain.nodeId) : undefined,

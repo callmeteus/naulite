@@ -13,7 +13,59 @@ services:
             timeout: 5s
             retries: 10
 
+    minio:
+        image: minio/minio:latest
+        command: server /data --console-address ":9001"
+        environment:
+            MINIO_ROOT_USER: minio
+            MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+            - "19000:9000"
+            - "19002:9001"
+
+    minio-init:
+        image: minio/mc:latest
+        depends_on:
+            minio:
+                condition: service_started
+        entrypoint: >
+            /bin/sh -c "
+            sleep 3 &&
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+              mc alias set local http://minio:9000 minio minioadmin && break;
+              sleep 2;
+            done &&
+            mc mb local/platform-backups --ignore-existing
+            "
+
+    traefik-dynamic-config:
+        profiles: [real]
+        image: node:22-alpine
+        working_dir: /app
+        command: ["node", "server.mjs"]
+        volumes:
+            - ../../infra/traefik/dynamic-config-store:/app:ro
+        ports:
+            - "19099:8099"
+
+    traefik:
+        profiles: [real]
+        image: traefik:v3.3
+        depends_on:
+            traefik-dynamic-config:
+                condition: service_started
+        volumes:
+            - ../../infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+            - traefik-acme:/acme
+        ports:
+            - "19080:80"
+            - "19443:443"
+            - "19098:8080"
+        command:
+            - --configFile=/etc/traefik/traefik.yml
+
     traefik-mock:
+        profiles: [mock]
         image: node:22-alpine
         working_dir: /app
         command: ["node", "server.mjs"]
@@ -24,59 +76,94 @@ services:
 
     control-plane-1:
         build:
-            context: ../../..
+            context: ../..
             dockerfile: packages/control-plane/Dockerfile
         environment:
             DATABASE_URL: postgres://platform:platform@postgres:5432/platform
             CP_INSTANCE_ID: cp-1
             NETBIRD_API_URL: http://127.0.0.1:1/api
             NETBIRD_MANAGEMENT_URL: http://127.0.0.1:1
-            TRAEFIK_DYNAMIC_CONFIG_URL: http://traefik-mock:8099/platform/dynamic-config
+            PLATFORM_NETBIRD_MOCK: "1"
+            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
             PLATFORM_BUILD_CONTEXT_ROOT: /platform/build-fixtures
+            S3_ENDPOINT: http://minio:9000
+            S3_FORCE_PATH_STYLE: "true"
+            AWS_ACCESS_KEY_ID: minio
+            AWS_SECRET_ACCESS_KEY: minioadmin
+            AWS_REGION: us-east-1
+            PLATFORM_PUBLIC_URL: http://control-plane-1:8080
+            PLATFORM_AGENT_API_KEY: platform-test-agent-key
+            PLATFORM_E2E_ALLOW_BRIDGE: "1"
+            PLATFORM_CONTAINER_REGISTRY_PATH: /data/container-registry
         volumes:
             - ./build-context:/platform/build-fixtures:ro
+            - cp-cr-data:/data/container-registry
         ports:
             - "18080:8080"
         depends_on:
             postgres:
                 condition: service_healthy
+            traefik-dynamic-config:
+                condition: service_started
+                required: false
             traefik-mock:
                 condition: service_started
+                required: false
+            minio-init:
+                condition: service_completed_successfully
 
     control-plane-2:
         build:
-            context: ../../..
+            context: ../..
             dockerfile: packages/control-plane/Dockerfile
         environment:
             DATABASE_URL: postgres://platform:platform@postgres:5432/platform
             CP_INSTANCE_ID: cp-2
             NETBIRD_API_URL: http://127.0.0.1:1/api
             NETBIRD_MANAGEMENT_URL: http://127.0.0.1:1
-            TRAEFIK_DYNAMIC_CONFIG_URL: http://traefik-mock:8099/platform/dynamic-config
+            PLATFORM_NETBIRD_MOCK: "1"
+            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
             PLATFORM_BUILD_CONTEXT_ROOT: /platform/build-fixtures
+            S3_ENDPOINT: http://minio:9000
+            S3_FORCE_PATH_STYLE: "true"
+            AWS_ACCESS_KEY_ID: minio
+            AWS_SECRET_ACCESS_KEY: minioadmin
+            AWS_REGION: us-east-1
+            PLATFORM_PUBLIC_URL: http://control-plane-1:8080
+            PLATFORM_AGENT_API_KEY: platform-test-agent-key
+            PLATFORM_E2E_ALLOW_BRIDGE: "1"
+            PLATFORM_CONTAINER_REGISTRY_PATH: /data/container-registry
         volumes:
             - ./build-context:/platform/build-fixtures:ro
+            - cp-cr-data:/data/container-registry
         ports:
             - "18081:8080"
         depends_on:
             postgres:
                 condition: service_healthy
+            traefik-dynamic-config:
+                condition: service_started
+                required: false
             traefik-mock:
                 condition: service_started
+                required: false
+            minio-init:
+                condition: service_completed_successfully
 
-    agent-node-a:
+    agent-builder:
         build:
-            context: ../../..
+            context: ../..
             dockerfile: packages/agent/Dockerfile
         environment:
-            NODE_ID: agent-1
-            HOSTNAME: agent-1
+            NODE_ID: agent-builder
+            HOSTNAME: agent-builder
             PLATFORM_CP_URL: http://control-plane-1:8080
-            AGENT_URL: http://agent-node-a:9470
+            AGENT_URL: http://agent-builder:9470
             AGENT_PORT: "9470"
             AGENT_VERSION: zig-0.1.0
-            PLATFORM_NODE_LABELS: "role=worker"
+            PLATFORM_NODE_LABELS: "{\"role\":\"builder\"}"
             PLATFORM_CAPABILITIES: "docker,builder"
+            PLATFORM_API_KEY: platform-test-agent-key
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
@@ -84,3 +171,29 @@ services:
         depends_on:
             control-plane-1:
                 condition: service_started
+
+    agent-worker:
+        build:
+            context: ../..
+            dockerfile: packages/agent/Dockerfile
+        environment:
+            NODE_ID: agent-worker
+            HOSTNAME: agent-worker
+            PLATFORM_CP_URL: http://control-plane-1:8080
+            AGENT_URL: http://agent-worker:9470
+            AGENT_PORT: "9470"
+            AGENT_VERSION: zig-0.1.0
+            PLATFORM_NODE_LABELS: "{\"role\":\"worker\"}"
+            PLATFORM_CAPABILITIES: "docker"
+            PLATFORM_API_KEY: platform-test-agent-key
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+            - "19003:9470"
+        depends_on:
+            control-plane-1:
+                condition: service_started
+
+volumes:
+    cp-cr-data:
+    traefik-acme:

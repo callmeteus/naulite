@@ -54,6 +54,8 @@ export class MigrationRunner {
             };
         }
 
+        await SchemaMigrationModel.sync();
+
         const migrationDir = join(migrationsRoot, "postgresql");
         const files = (await readdir(migrationDir))
             .filter((fileName) => fileName.endsWith(".sql"))

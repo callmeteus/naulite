@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const process_cmd = @import("process_cmd.zig");
+const threaded_io = @import("threaded_io.zig");
+
 /// Result of a backup task executed on the agent.
 pub const BackupTaskResult = struct {
     // Control plane task identifier.
@@ -39,6 +42,10 @@ pub fn executeBackupTask(
     // The backup task JSON payload.
     body: []const u8,
 ) !BackupTaskResult {
+    var io_scope = threaded_io.Scope.init(allocator);
+    defer io_scope.deinit();
+    const io = io_scope.io;
+
     const parsed = try std.json.parseFromSlice(
         std.json.Value,
         allocator,
@@ -69,7 +76,7 @@ pub fn executeBackupTask(
         .{ task_id, volume_name, mount_path, excludes.len },
     );
 
-    try std.fs.cwd().makePath(default_backup_root) catch |err| switch (err) {
+    std.Io.Dir.cwd().createDirPath(io, default_backup_root) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
@@ -102,6 +109,10 @@ pub fn restoreBackupArchive(
     // The restore task JSON payload.
     body: []const u8,
 ) !BackupRestoreResult {
+    var io_scope = threaded_io.Scope.init(allocator);
+    defer io_scope.deinit();
+    const io = io_scope.io;
+
     const parsed = try std.json.parseFromSlice(
         std.json.Value,
         allocator,
@@ -132,7 +143,7 @@ pub fn restoreBackupArchive(
         .{ backup_id, volume_name, archive_path, mount_path },
     );
 
-    try std.fs.cwd().makePath(mount_path) catch |err| switch (err) {
+    std.Io.Dir.cwd().createDirPath(io, mount_path) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
@@ -164,12 +175,16 @@ pub fn receiveBackupArchive(
     // The backup archive bytes.
     body: []const u8,
 ) ![]const u8 {
+    var io_scope = threaded_io.Scope.init(allocator);
+    defer io_scope.deinit();
+    const io = io_scope.io;
+
     std.log.debug("[backup] receive archive bytes={d} backupId={s}", .{
         body.len,
         backup_id orelse "-",
     });
 
-    try std.fs.cwd().makePath(default_backup_root) catch |err| switch (err) {
+    std.Io.Dir.cwd().createDirPath(io, default_backup_root) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
@@ -179,12 +194,39 @@ pub fn receiveBackupArchive(
     else
         try std.fmt.allocPrint(allocator, "{s}/received-{d}.tar.gz", .{ default_backup_root, body.len });
 
-    const file = try std.fs.cwd().createFile(file_name, .{});
-    defer file.close();
+    var file = try std.Io.Dir.cwd().createFile(io, file_name, .{});
+    defer file.close(io);
 
-    try file.writeAll(body);
+    var write_buffer: [65536]u8 = undefined;
+    var file_writer = file.writer(io, &write_buffer);
+    try file_writer.interface.writeAll(body);
+    try file_writer.interface.flush();
 
     return file_name;
+}
+
+/// Exports a backup archive stored on the agent filesystem.
+pub fn exportBackupArchive(
+    // The allocator to use.
+    allocator: std.mem.Allocator,
+    // Absolute archive path on the agent.
+    archive_path: []const u8,
+) ![]u8 {
+    var io_scope = threaded_io.Scope.init(allocator);
+    defer io_scope.deinit();
+    const io = io_scope.io;
+
+    if (!isPathWithinBackupRoot(archive_path)) {
+        return error.InvalidBackupArchivePath;
+    }
+
+    std.log.debug("[backup] export archive path={s}", .{archive_path});
+
+    return try std.Io.Dir.cwd().readFileAlloc(io, archive_path, allocator, .limited(std.math.maxInt(usize)));
+}
+
+fn isPathWithinBackupRoot(archive_path: []const u8) bool {
+    return std.mem.startsWith(u8, archive_path, default_backup_root);
 }
 
 fn runTarCreate(
@@ -221,26 +263,10 @@ fn runTarExtract(
 }
 
 fn runCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    var child = std.process.Child.init(args, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Pipe;
-
-    try child.spawn();
-
-    const stderr = try child.stderr.?.readToEndAlloc(allocator, 1024 * 1024);
-    defer allocator.free(stderr);
-
-    const term = try child.wait();
-
-    switch (term) {
-        .Exited => |code| {
-            if (code != 0) {
-                std.log.err("[backup] command failed exit={d} stderr={s}", .{ code, stderr });
-                return error.CommandFailed;
-            }
-        },
-        else => return error.CommandFailed,
-    }
+    return process_cmd.runCommandVoid(allocator, args) catch |err| switch (err) {
+        error.CommandFailed => error.CommandFailed,
+        else => |other| other,
+    };
 }
 
 fn resolveMountPath(

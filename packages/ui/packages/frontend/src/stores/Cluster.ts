@@ -1,5 +1,5 @@
-import type { ApplyResponse, BackupRun, ClusterStatus, ContainerRegistryImage, Instance, Node, PipelineEvent, PipelineRun, Secret, Service, Volume } from "@platform/sdk";
-import type { ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology } from "@platform/sdk";
+import type { ApplyResponse, BackupRun, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, Instance, Node, NodeProvision, PipelineEvent, PipelineRun, Secret, Service, Volume } from "@platform/sdk";
+import type { BuildRequest, BuildResponse, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, ProvisionNodeInput } from "@platform/sdk";
 import { reactive } from "vue";
 
 import { platformClient } from "../api/Client";
@@ -29,6 +29,7 @@ export const clusterStore = reactive({
     netBirdGroups: [] as NetBirdGroup[],
     netBirdAcls: [] as NetBirdAcl[],
     containerRegistryImages: [] as ContainerRegistryImage[],
+    gatewayRoutes: [] as GatewayRouteSummary[],
     runs: [] as PipelineRun[],
     lastApplyResult: null as ApplyResponse | null,
     loading: false,
@@ -375,6 +376,74 @@ export const clusterStore = reactive({
      */
     async getRunEvents(runId: string): Promise<PipelineEvent[]> {
         return platformClient.getRunEvents(runId);
+    },
+
+    /**
+     * Triggers a service image build.
+     *
+     * @param request Build request payload
+     * @returns Build response with optional run identifier
+     */
+    async triggerBuild(request: BuildRequest): Promise<BuildResponse> {
+        this.loading = true;
+        this.error = "";
+
+        try {
+            return await platformClient.triggerBuild(request);
+        } catch (err) {
+            this.error = err instanceof Error ? err.message : String(err);
+            throw err;
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Provisions a cloud node through the control plane.
+     *
+     * @param input Node provision request payload
+     * @returns Created node provision record
+     */
+    async provisionNode(input: ProvisionNodeInput): Promise<NodeProvision> {
+        this.loading = true;
+        this.error = "";
+
+        try {
+            return await platformClient.provisionNode(input);
+        } catch (err) {
+            this.error = err instanceof Error ? err.message : String(err);
+            throw err;
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Returns a node provision request by identifier.
+     *
+     * @param provisionId Node provision identifier
+     * @returns Node provision record
+     */
+    async getNodeProvision(provisionId: string): Promise<NodeProvision> {
+        return platformClient.getNodeProvision(provisionId);
+    },
+
+    /**
+     * Loads gateway routes from the admin API.
+     *
+     * @returns Nothing.
+     */
+    async refreshGatewayRoutes(): Promise<void> {
+        this.loading = true;
+        this.error = "";
+
+        try {
+            this.gatewayRoutes = await platformClient.listGatewayRoutes();
+        } catch (err) {
+            this.error = err instanceof Error ? err.message : String(err);
+        } finally {
+            this.loading = false;
+        }
     },
 
     /**

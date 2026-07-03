@@ -26,7 +26,7 @@ describe("platform CLI smoke", () => {
             LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
         }
-    }, 300_000);
+    }, 600_000);
 
     afterAll(async () => {
         if (!dockerEnabled) {

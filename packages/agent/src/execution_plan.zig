@@ -10,6 +10,7 @@ pub const OperationType = enum {
     connectNetwork,
     disconnectNetwork,
     ensureVolume,
+    removeVolume,
 
     /// Parses an operation type from its JSON string name.
     pub fn fromString(value: []const u8) ?OperationType {

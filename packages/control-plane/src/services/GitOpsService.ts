@@ -8,6 +8,7 @@ import { GitRevisionModel } from "../database/models/index";
 import { ComposeParser } from "../orchestration/ComposeParser";
 import { GitRepository } from "../gitops/GitRepository";
 import { ManifestMerge } from "../gitops/ManifestMerge";
+import { PipelineRunService } from "./PipelineRunService";
 
 /**
  * Git repository checkout options.
@@ -65,6 +66,46 @@ export namespace GitOpsService {
     }
 
     /**
+     * Creates a GitOps apply pipeline run before webhook apply execution.
+     *
+     * @param input Git metadata for the apply run
+     * @returns Persisted pipeline run
+     */
+    export async function createApplyRun(input: {
+        manifestName: string;
+        repositoryUrl: string;
+        branch: string;
+        commitSha?: string;
+    }) {
+        const run = await PipelineRunService.createRun({
+            kind: "gitops_apply",
+            manifestName: input.manifestName,
+            commitSha: input.commitSha,
+            branch: input.branch,
+            workflowId: `${input.manifestName}-${PipelineRunService.createWorkflowId("gitops")}`
+        });
+
+        await PipelineRunService.emitEvent(run.id, {
+            kind: "gitops.sync.started",
+            message: `GitOps apply started ${input.manifestName}`,
+            metadata: {
+                repositoryUrl: input.repositoryUrl,
+                commitSha: input.commitSha,
+                branch: input.branch
+            }
+        });
+
+        console.debug(
+            "[gitops] apply run created runId=%s manifest=%s commit=%s",
+            run.id,
+            input.manifestName,
+            input.commitSha ?? "-"
+        );
+
+        return run;
+    }
+
+    /**
      * Checks out a repository revision and merges overlay manifests.
      *
      * @param options Checkout options
@@ -118,13 +159,15 @@ export namespace GitOpsService {
      * @param manifestYaml Applied manifest YAML
      * @param manifest Parsed manifest
      * @param rolledBackFromId Optional revision id rolled back from
+     * @param runId Optional pipeline run to link to the recorded revision
      * @returns Persisted revision record
      */
     export async function recordRevision(
         options: GitOpsCheckoutOptions,
         manifestYaml: string,
         manifest: Manifest,
-        rolledBackFromId?: string
+        rolledBackFromId?: string,
+        runId?: string
     ): Promise<GitRevisionRecord> {
         const record: GitRevisionRecord = {
             id: randomUUID(),
@@ -149,6 +192,10 @@ export namespace GitOpsService {
             appliedAt: record.appliedAt,
             rolledBackFromId: record.rolledBackFromId ?? null
         });
+
+        if (runId) {
+            await PipelineRunService.linkRevision(runId, record.id);
+        }
 
         return record;
     }

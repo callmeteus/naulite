@@ -102,6 +102,30 @@ describe("Planner", () => {
         expect(diff.servicesToCreate[0]?.image).toBe("build://./api");
     });
 
+    it("keeps container-registry image refs on services and create operations", () => {
+        const manifest = buildManifest({
+            services: {
+                api: {
+                    image: "container-registry://demo-api:v1",
+                    capabilities: []
+                }
+            },
+            volumes: {}
+        });
+        const diff = planner.diff(manifest, {
+            services: [],
+            instances: [],
+            volumes: []
+        });
+        const createOp = diff.operations.find((operation) => operation.type === "create");
+
+        expect(diff.servicesToCreate[0]?.image).toBe("container-registry://demo-api:v1");
+        expect(createOp?.type).toBe("create");
+        if (createOp?.type === "create") {
+            expect(createOp.image).toBe("container-registry://demo-api:v1");
+        }
+    });
+
     it("removes services and instances that are no longer in the manifest", () => {
         const manifest = buildManifest({ services: {}, volumes: {} });
         const now = new Date().toISOString();

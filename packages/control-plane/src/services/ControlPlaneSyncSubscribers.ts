@@ -29,6 +29,14 @@ export namespace ControlPlaneSyncSubscribers {
         context.controlPlaneSync.on(ControlPlaneSync.EVENTS.GATEWAY_ROUTE_CHANGED, () => {
             void context.gatewayRouteService.reloadFromDatabase().catch(() => undefined);
         });
+        context.controlPlaneSync.on(ControlPlaneSync.EVENTS.LEADER_CHANGED, (event) => {
+            console.debug(
+                "[sync] leader changed leaderId=%s source=%s",
+                event.payload.leaderId,
+                event.sourceInstanceId
+            );
+            void context.gatewayRouteService.reloadFromDatabase().catch(() => undefined);
+        });
     }
 
     /**

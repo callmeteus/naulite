@@ -7,6 +7,7 @@ import type {
     Service,
     Volume
 } from "@platform/shared";
+import { isContainerRegistryRef } from "@platform/shared";
 
 /**
  * Resource diff between desired and actual cluster state.
@@ -112,6 +113,7 @@ export class Planner {
             instancesToCreate,
             instancesToRemove,
             volumesToEnsure,
+            volumesToRemove,
             actual.instances,
             servicesToUpdate,
             actualByName
@@ -210,6 +212,7 @@ export class Planner {
      * @param instancesToCreate Instances that should be created
      * @param instancesToRemove Instances that should be removed
      * @param volumesToEnsure Volumes that should exist
+     * @param volumesToRemove Volumes that should be deleted
      * @param existingInstances Instances before this apply
      * @param servicesToUpdate Services being updated in place
      * @param actualByName Current services keyed by name
@@ -220,20 +223,13 @@ export class Planner {
         instancesToCreate: Instance[],
         instancesToRemove: Instance[],
         volumesToEnsure: Volume[],
+        volumesToRemove: Volume[],
         existingInstances: Instance[],
         servicesToUpdate: Service[],
         actualByName: Map<string, Service>
     ): ExecutionOperation[] {
         const operations: ExecutionOperation[] = [];
         const instancesToRemoveIds = new Set(instancesToRemove.map((instance) => instance.id));
-
-        for (const volume of volumesToEnsure) {
-            operations.push({
-                type: "ensureVolume",
-                volumeName: volume.name,
-                mountPath: volume.mountPath
-            });
-        }
 
         for (const instance of instancesToRemove) {
             operations.push({
@@ -244,6 +240,22 @@ export class Planner {
                 type: "remove",
                 instanceId: instance.id,
                 force: true
+            });
+        }
+
+        for (const volume of volumesToRemove) {
+            operations.push({
+                type: "removeVolume",
+                volumeName: volume.name,
+                force: false
+            });
+        }
+
+        for (const volume of volumesToEnsure) {
+            operations.push({
+                type: "ensureVolume",
+                volumeName: volume.name,
+                mountPath: volume.mountPath
             });
         }
 
@@ -485,6 +497,10 @@ export class Planner {
         }
 
         if (service.build && typeof service.build === "object") {
+            if (service.build.image && isContainerRegistryRef(service.build.image)) {
+                return service.build.image;
+            }
+
             return `build://${service.build.context}`;
         }
 

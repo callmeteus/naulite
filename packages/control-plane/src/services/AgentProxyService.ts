@@ -156,6 +156,65 @@ export namespace AgentProxyService {
 
         return response.json();
     }
+
+    /**
+     * Fetches a backup archive from a node agent.
+     *
+     * @param agentUrl Node agent base URL
+     * @param archivePath Absolute archive path on the agent
+     * @returns Backup archive bytes
+     */
+    export async function fetchBackupArchive(agentUrl: string, archivePath: string): Promise<Buffer> {
+        const url = `${agentUrl}/backups/archive?archivePath=${encodeURIComponent(archivePath)}`;
+        console.debug("[agent-proxy] fetch backup archive path=%s", archivePath);
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new AgentProxyError(
+                "AGENT_REQUEST_FAILED",
+                `Falha ao buscar arquivo de backup no agente: HTTP ${response.status}.`,
+                response.status
+            );
+        }
+
+        return Buffer.from(await response.arrayBuffer());
+    }
+
+    /**
+     * Posts a binary payload to a node agent endpoint.
+     *
+     * @param agentUrl Node agent base URL
+     * @param path Agent path
+     * @param body Binary request body
+     * @param contentType Request content type
+     * @returns Parsed JSON response
+     */
+    export async function postBinary(
+        agentUrl: string,
+        path: string,
+        body: Buffer,
+        contentType = "application/octet-stream"
+    ): Promise<unknown> {
+        console.debug("[agent-proxy] post binary path=%s bytes=%d", path, body.length);
+        const response = await fetch(`${agentUrl}${path}`, {
+            method: "POST",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": contentType
+            },
+            body
+        });
+
+        if (!response.ok) {
+            throw new AgentProxyError(
+                "AGENT_REQUEST_FAILED",
+                `Falha ao enviar arquivo ao agente: HTTP ${response.status}.`,
+                response.status
+            );
+        }
+
+        return response.json();
+    }
 }
 
 /**

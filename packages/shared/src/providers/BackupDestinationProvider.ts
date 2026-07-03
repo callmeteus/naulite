@@ -1,3 +1,5 @@
+import type { Readable } from "node:stream";
+
 import type { BackupTask } from "../types/BackupTask";
 
 /**
@@ -7,6 +9,14 @@ export interface BackupDestinationResult {
     location: string;
     sizeBytes: number;
     checksum?: string;
+}
+
+/**
+ * Readable backup archive returned by destination providers.
+ */
+export interface BackupDestinationReadResult {
+    stream: Readable;
+    sizeBytes?: number;
 }
 
 /**
@@ -26,6 +36,15 @@ export interface BackupDestinationProvider {
      * @returns Destination result metadata
      */
     write(task: BackupTask, archivePath: string): Promise<BackupDestinationResult>;
+
+    /**
+     * Opens a readable stream for a stored backup archive.
+     *
+     * @param task Backup task containing destination configuration
+     * @param location Destination-specific location identifier
+     * @returns Readable backup archive stream
+     */
+    read(task: BackupTask, location: string): Promise<BackupDestinationReadResult>;
 
     /**
      * Deletes a backup object according to retention policy.

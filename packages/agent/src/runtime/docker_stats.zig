@@ -69,9 +69,9 @@ pub fn collect(
     const cpu_millis_total = @max(ncpu, 1) * 1000;
     const cpu_millis_used = @as(i64, @intFromFloat(@min(cpu_percent_total, 100.0) * @as(f64, @floatFromInt(cpu_millis_total)) / 100.0));
 
-    const memory_mb_total = @max(mem_total / (1024 * 1024), 1);
-    const memory_mb_used = @max(memory_used_bytes / (1024 * 1024), 0);
-    const disk_mb_used = @max(disk_used_bytes / (1024 * 1024), 0);
+    const memory_mb_total = @max(@divTrunc(mem_total, 1024 * 1024), 1);
+    const memory_mb_used = @max(@divTrunc(memory_used_bytes, 1024 * 1024), 0);
+    const disk_mb_used = @max(@divTrunc(disk_used_bytes, 1024 * 1024), 0);
     const disk_mb_total = @max(disk_mb_used * 4, 102_400);
 
     std.log.debug(

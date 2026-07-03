@@ -170,20 +170,38 @@ export class S3ObjectStore {
      * Parses an s3:// location into bucket/key parts.
      *
      * @param location S3 location URI
+     * @param metadata Optional region and endpoint overrides from backup metadata
      * @returns Parsed bucket and key
      */
-    parseLocation(location: string): { bucket: string; key: string; config: S3ObjectStoreConfig } {
+    parseLocation(
+        location: string,
+        metadata?: Pick<S3ObjectStoreConfig, "region" | "endpoint">
+    ): { bucket: string; key: string; config: S3ObjectStoreConfig } {
         const match = /^s3:\/\/([^/]+)\/(.+)$/.exec(location);
         if (!match) {
             throw new Error(`Invalid S3 location: ${location}`);
         }
+
+        const region = metadata?.region
+            ?? process.env.AWS_REGION
+            ?? process.env.AWS_DEFAULT_REGION
+            ?? "us-east-1";
+        const endpoint = metadata?.endpoint ?? process.env.S3_ENDPOINT;
+
+        console.debug(
+            "[s3-storage] parse location=%s region=%s endpoint=%s",
+            location,
+            region,
+            endpoint ?? "-"
+        );
 
         return {
             bucket: match[1],
             key: match[2],
             config: {
                 bucket: match[1],
-                region: "us-east-1"
+                region,
+                endpoint
             }
         };
     }
@@ -213,6 +231,7 @@ export class S3ObjectStore {
         return new S3Client({
             region: config.region,
             endpoint: config.endpoint,
+            forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
             ...this.defaultClientConfig
         });
     }

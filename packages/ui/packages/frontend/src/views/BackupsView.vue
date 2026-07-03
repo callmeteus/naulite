@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
+import { useClientPagination } from "../composables/useClientPagination";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
 const store = useClusterStore();
 const volumeName = ref("");
+
+const backupsRef = computed(() => store.backups);
+const {
+    paginatedItems: paginatedBackups,
+    pageLabel,
+    canGoPrevious,
+    canGoNext,
+    previousPage,
+    nextPage
+} = useClientPagination(backupsRef, 20);
 
 onMounted(() => {
     void store.refreshBackups();
@@ -40,7 +51,7 @@ async function restoreBackup(backupId: string): Promise<void> {
 <template>
     <section>
         <h2>{{ t("backups") }}</h2>
-        <p v-if="store.loading">Loading...</p>
+        <p v-if="store.loading">{{ t("loading") }}</p>
         <p v-else-if="store.error" class="error">{{ store.error }}</p>
         <div v-else class="panel">
             <form class="actions" @submit.prevent="runBackup">
@@ -64,7 +75,7 @@ async function restoreBackup(backupId: string): Promise<void> {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="backup in store.backups" :key="backup.id">
+                    <tr v-for="backup in paginatedBackups" :key="backup.id">
                         <td>{{ backup.id }}</td>
                         <td>{{ backup.volumeName }}</td>
                         <td>{{ backup.status }}</td>
@@ -81,6 +92,15 @@ async function restoreBackup(backupId: string): Promise<void> {
                     </tr>
                 </tbody>
             </table>
+            <div v-if="store.backups.length > 0" class="pagination">
+                <button type="button" :disabled="!canGoPrevious" @click="previousPage">
+                    {{ t("paginationPrevious") }}
+                </button>
+                <span>{{ pageLabel }}</span>
+                <button type="button" :disabled="!canGoNext" @click="nextPage">
+                    {{ t("paginationNext") }}
+                </button>
+            </div>
         </div>
     </section>
 </template>

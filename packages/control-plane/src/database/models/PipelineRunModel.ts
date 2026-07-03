@@ -30,6 +30,9 @@ export class PipelineRunModel extends Model {
     @Column(DataType.STRING)
     declare branch: string | null;
 
+    @Column({ type: DataType.STRING, field: "revision_id" })
+    declare revisionId: string | null;
+
     @Column({ type: DataType.STRING, field: "workflow_id" })
     declare workflowId: string | null;
 

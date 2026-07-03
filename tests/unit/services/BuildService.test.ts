@@ -59,5 +59,6 @@ describe("BuildService", () => {
         expect(config?.buildRef).toBe("build://./api");
         expect(config?.contextPath).toBe("./api");
         expect(config?.tags).toEqual(["platform/demo-api:latest"]);
+        expect(config?.crRef).toBe("container-registry://demo-api:latest");
     });
 });

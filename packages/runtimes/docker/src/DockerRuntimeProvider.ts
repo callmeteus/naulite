@@ -188,6 +188,30 @@ export class DockerRuntimeProvider implements RuntimeProvider {
     }
 
     /**
+     * Removes a Docker volume from the node.
+     *
+     * @param volumeName Volume name
+     * @param force Whether to force removal when the volume is in use
+     * @returns Nothing.
+     */
+    async removeVolume(volumeName: string, force = false): Promise<void> {
+        console.debug("[runtime-docker] removeVolume name=%s force=%s", volumeName, force);
+        const volume = this.client.getVolume(volumeName);
+
+        try {
+            await volume.remove({ force });
+        } catch (err) {
+            const statusCode = (err as { statusCode?: number }).statusCode;
+
+            if (statusCode === 404) {
+                return;
+            }
+
+            throw err;
+        }
+    }
+
+    /**
      * Applies an execution plan on the local Docker engine.
      * 
      * @param plan Execution plan for the local node
@@ -222,6 +246,9 @@ export class DockerRuntimeProvider implements RuntimeProvider {
                     break;
                 case "remove":
                     await this.remove(operation.instanceId, operation.force);
+                    break;
+                case "removeVolume":
+                    await this.removeVolume(operation.volumeName, operation.force);
                     break;
                 default:
                     console.debug("[runtime-docker] applyPlan skipped operation type=%s", operation.type);

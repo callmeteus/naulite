@@ -1,13 +1,15 @@
 import type { ExecutionOperation, Instance, Manifest, ManifestService, Node, SecretFilter } from "@platform/shared";
+import { resolveManifestBuild } from "@platform/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 import { HTTP503Error } from "../errors/TreatedError";
 import { NetworkGroupId } from "../orchestration/NetworkGroupId";
 import type { PlannerDiff } from "../orchestration/Planner";
-import type { LocalSecretProvider } from "../modules/secrets/LocalSecretProvider";
+import type { SecretProvider } from "../modules/secrets/SecretProvider";
 
 import { AgentDispatcher } from "./AgentDispatcher";
+import { BuildContextService } from "./BuildContextService";
 import { BuildService } from "./BuildService";
 import { PipelineRunService } from "./PipelineRunService";
 import { RolloutWatcher } from "./RolloutWatcher";
@@ -42,12 +44,46 @@ export interface ApplyExecuteOptions {
     commitSha?: string;
     rolledBackFromId?: string;
     buildContextRoot?: string;
+    runId?: string;
 }
 
 /**
  * Orchestrates manifest parse, diff, persistence, exposure, and agent dispatch.
  */
 export namespace ApplyService {
+    /**
+     * Applies an agent-reported deploy step event to the pipeline run.
+     *
+     * @param runId Pipeline run identifier
+     * @param event Agent step event payload
+     * @param stepStatus Resolved step status transition
+     * @returns Nothing.
+     */
+    export async function handleAgentDeployStepEvent(
+        runId: string,
+        event: {
+            kind: string;
+            stepName: string;
+            message?: string;
+            exitCode?: number;
+            logText?: string;
+            nodeId?: string;
+            nodeHostname?: string;
+            pool?: string;
+        },
+        stepStatus: "running" | "succeeded" | "failed"
+    ): Promise<void> {
+        await PipelineRunService.transitionStep(runId, event.stepName, stepStatus, {
+            exitCode: event.exitCode,
+            logText: event.logText,
+            nodeId: event.nodeId,
+            nodeHostname: event.nodeHostname,
+            pool: event.pool,
+            message: event.message ?? event.kind,
+            eventKind: event.kind
+        });
+    }
+
     /**
      * Parses and applies a manifest YAML, dispatching execution plans to agents.
      *
@@ -74,23 +110,35 @@ export namespace ApplyService {
             volumes
         });
 
-        const applyRun = await PipelineRunService.createRun({
-            kind: options.repositoryUrl?.startsWith("inline://") ? "apply" : "gitops_sync",
-            manifestName: manifest.name,
-            commitSha: options.commitSha,
-            branch: options.branch,
-            workflowId: `${manifest.name}-${PipelineRunService.createWorkflowId("apply")}`
-        });
-
-        await PipelineRunService.markRunning(applyRun.id);
-        await PipelineRunService.emitEvent(applyRun.id, {
-            kind: "gitops.sync.started",
-            message: `GitOps sync started ${manifest.name}`,
-            metadata: {
+        const applyRun = options.runId
+            ? await PipelineRunService.getRun(options.runId)
+            : await PipelineRunService.createRun({
+                kind: options.repositoryUrl?.startsWith("inline://") ? "apply" : "gitops_sync",
+                manifestName: manifest.name,
                 commitSha: options.commitSha,
-                branch: options.branch
-            }
-        });
+                branch: options.branch,
+                workflowId: `${manifest.name}-${PipelineRunService.createWorkflowId("apply")}`
+            });
+
+        if (!applyRun) {
+            throw new HTTP503Error(`Pipeline run ${options.runId} was not found.`, {
+                runId: options.runId
+            });
+        }
+
+        if (!options.runId) {
+            await PipelineRunService.markRunning(applyRun.id);
+            await PipelineRunService.emitEvent(applyRun.id, {
+                kind: "gitops.sync.started",
+                message: `GitOps sync started ${manifest.name}`,
+                metadata: {
+                    commitSha: options.commitSha,
+                    branch: options.branch
+                }
+            });
+        } else if (applyRun.status === "pending") {
+            await PipelineRunService.markRunning(applyRun.id);
+        }
 
         await ControlPlaneService.Apply.incrementRevision();
 
@@ -136,10 +184,6 @@ export namespace ApplyService {
             await ControlPlaneService.Store.deleteService(service.id);
         }
 
-        for (const volume of diff.volumesToRemove) {
-            await ControlPlaneService.Store.deleteVolumeByName(volume.name);
-        }
-
         const volumeNodeAssignments = buildVolumeNodeAssignments(manifest, diff, instanceNodes);
 
         for (const volume of diff.volumesToEnsure) {
@@ -166,13 +210,16 @@ export namespace ApplyService {
             },
             manifestYaml,
             manifest,
-            options.rolledBackFromId
+            options.rolledBackFromId,
+            applyRun.id
         );
 
         await ControlPlaneService.Sync.publish("apply", {
             manifestName: manifest.name,
             revision: ControlPlaneService.Apply.getRevision()
         });
+
+        await syncBuildContexts(options.buildContextRoot, manifest, nodes, diff.operations);
 
         const resolvedOperations = await BuildService.resolveBuildOperations(
             context,
@@ -185,8 +232,15 @@ export namespace ApplyService {
             manifest,
             context.secretProvider
         );
+        const volumeNodes = buildVolumeNodeMap(volumes, diff);
         const plans = nodes.map((node) => {
-            const nodeOperations = filterOperationsForNode(node.id, operations, instanceNodes, nodes);
+            const nodeOperations = filterOperationsForNode(
+                node.id,
+                operations,
+                instanceNodes,
+                volumeNodes,
+                nodes
+            );
             const plan = ControlPlaneService.Orchestration.Planner.buildExecutionPlan(
                 manifest.name,
                 node.id,
@@ -206,6 +260,26 @@ export namespace ApplyService {
         });
 
         const dispatch = await AgentDispatcher.dispatchPlans(plans, nodes);
+
+        for (const volume of diff.volumesToRemove) {
+            const nodeId = volume.nodeId ?? volumeNodes.get(volume.name);
+
+            if (nodeId) {
+                const result = dispatch.find((entry) => entry.nodeId === nodeId);
+
+                if (result?.status !== "dispatched") {
+                    console.debug(
+                        "[apply] skip volume store delete name=%s nodeId=%s dispatchStatus=%s",
+                        volume.name,
+                        nodeId,
+                        result?.status ?? "missing"
+                    );
+                    continue;
+                }
+            }
+
+            await ControlPlaneService.Store.deleteVolumeByName(volume.name);
+        }
 
         const watchedInstanceIds = diff.instancesToCreate.map((instance) => instance.id);
         RolloutWatcher.watch(applyRun.id, watchedInstanceIds);
@@ -321,13 +395,13 @@ export namespace ApplyService {
      *
      * @param operations Planner operations
      * @param manifest Parsed manifest
-     * @param secretProvider Local secret provider
+     * @param secretProvider Secret provider for agent delivery
      * @returns Operations with resolved secrets on create steps
      */
     async function enrichOperationsWithSecrets(
         operations: ExecutionOperation[],
         manifest: Manifest,
-        secretProvider: LocalSecretProvider
+        secretProvider: SecretProvider
     ): Promise<ExecutionOperation[]> {
         const enriched: ExecutionOperation[] = [];
 
@@ -388,6 +462,65 @@ export namespace ApplyService {
     }
 
     /**
+     * Syncs local build contexts to the builder agent before image builds run.
+     *
+     * @param buildContextRoot Repository or fixture root on the control plane
+     * @param manifest Parsed manifest being applied
+     * @param nodes Registered cluster nodes
+     * @param operations Planner operations for the apply
+     * @returns Nothing.
+     */
+    async function syncBuildContexts(
+        buildContextRoot: string | undefined,
+        manifest: Manifest,
+        nodes: Node[],
+        operations: ExecutionOperation[]
+    ): Promise<void> {
+        if (!buildContextRoot) {
+            return;
+        }
+
+        const builderNode = BuildService.resolveBuilderNode(nodes);
+
+        if (!builderNode?.agentUrl) {
+            console.debug("[apply] skip build context sync reason=no-builder-node");
+            return;
+        }
+
+        const servicesToSync = new Set<string>();
+
+        for (const operation of operations) {
+            if (operation.type !== "create" || !operation.image.startsWith("build://")) {
+                continue;
+            }
+
+            servicesToSync.add(operation.serviceName);
+        }
+
+        for (const serviceName of servicesToSync) {
+            const manifestService = manifest.services[serviceName];
+            const build = resolveManifestBuild(manifestService);
+
+            if (!build) {
+                continue;
+            }
+
+            console.debug(
+                "[apply] sync build context service=%s root=%s context=%s",
+                serviceName,
+                buildContextRoot,
+                build.context
+            );
+            await BuildContextService.syncToAgent({
+                serviceName,
+                contextRoot: buildContextRoot,
+                relativeContextPath: build.context,
+                agentUrl: builderNode.agentUrl
+            });
+        }
+    }
+
+    /**
      * Inserts image pull operations before create operations.
      *
      * @param operations Planner operations
@@ -417,11 +550,40 @@ export namespace ApplyService {
     }
 
     /**
+     * Builds a map of volume name to node id for operation filtering.
+     *
+     * @param existingVolumes Volumes already stored in the cluster
+     * @param diff Planner diff for the current apply
+     * @returns Volume name to node id map
+     */
+    function buildVolumeNodeMap(
+        existingVolumes: Awaited<ReturnType<ControlPlaneContext["store"]["listVolumes"]>>,
+        diff: PlannerDiff
+    ): Map<string, string> {
+        const volumeNodes = new Map<string, string>();
+
+        for (const volume of existingVolumes) {
+            if (volume.nodeId) {
+                volumeNodes.set(volume.name, volume.nodeId);
+            }
+        }
+
+        for (const volume of diff.volumesToRemove) {
+            if (volume.nodeId) {
+                volumeNodes.set(volume.name, volume.nodeId);
+            }
+        }
+
+        return volumeNodes;
+    }
+
+    /**
      * Filters planner operations to those that should run on a single node.
      *
      * @param nodeId Target node id
      * @param operations Full operation list
      * @param instanceNodes Instance id to node id map
+     * @param volumeNodes Volume name to node id map
      * @param nodes Registered nodes
      * @returns Operations for the target node
      */
@@ -429,13 +591,22 @@ export namespace ApplyService {
         nodeId: string,
         operations: ExecutionOperation[],
         instanceNodes: Map<string, string>,
+        volumeNodes: Map<string, string>,
         nodes: Node[]
     ): ExecutionOperation[] {
         const nodeIdsWithWork = new Set(instanceNodes.values());
         const shouldReceiveVolumeOps = nodeIdsWithWork.has(nodeId) || nodes.length === 1;
+        const singleNodeId = nodes.length === 1 ? nodes[0]?.id : undefined;
 
         return operations.filter((operation) => {
-            return switchOperation(nodeId, operation, instanceNodes, shouldReceiveVolumeOps);
+            return switchOperation(
+                nodeId,
+                operation,
+                instanceNodes,
+                volumeNodes,
+                shouldReceiveVolumeOps,
+                singleNodeId
+            );
         });
     }
 
@@ -445,18 +616,31 @@ export namespace ApplyService {
      * @param nodeId Target node id
      * @param operation Runtime operation
      * @param instanceNodes Instance id to node id map
-     * @param shouldReceiveVolumeOps Whether volume ops should run on this node
+     * @param volumeNodes Volume name to node id map
+     * @param shouldReceiveVolumeOps Whether ensureVolume ops should run on this node
+     * @param singleNodeId Node id when the cluster has exactly one node
      * @returns True when the operation targets the node
      */
     function switchOperation(
         nodeId: string,
         operation: ExecutionOperation,
         instanceNodes: Map<string, string>,
-        shouldReceiveVolumeOps: boolean
+        volumeNodes: Map<string, string>,
+        shouldReceiveVolumeOps: boolean,
+        singleNodeId: string | undefined
     ): boolean {
         switch (operation.type) {
             case "ensureVolume":
                 return shouldReceiveVolumeOps;
+            case "removeVolume": {
+                const ownerNodeId = volumeNodes.get(operation.volumeName);
+
+                if (ownerNodeId) {
+                    return ownerNodeId === nodeId;
+                }
+
+                return singleNodeId === nodeId;
+            }
             case "pull":
             case "create":
             case "start":

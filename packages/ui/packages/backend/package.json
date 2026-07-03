@@ -5,10 +5,10 @@
     "type": "module",
     "main": "./dist/Server.js",
     "scripts": {
-        "build": "tsc -p tsconfig.json",
+        "build": "tsc -p tsconfig.json && node ../../../../scripts/fix-esm-imports.mjs dist",
         "lint": "eslint src/",
         "start": "node dist/Server.js",
-        "dev": "tsc -p tsconfig.json && node dist/Server.js"
+        "dev": "tsc -p tsconfig.json && node ../../../../scripts/fix-esm-imports.mjs dist && node dist/Server.js"
     },
     "dependencies": {
         "@platform/sdk": "0.1.0",

@@ -1,0 +1,20 @@
+name: backup-s3-volume
+
+volumes:
+    app-data:
+        backup:
+            schedule: "* * * * *"
+            destination:
+                provider: s3
+                bucket: platform-backups
+                prefix: e2e
+                region: us-east-1
+                endpoint: http://minio:9000
+                credentialsSecret: s3-creds
+
+services:
+    app:
+        image: nginx:1.27-alpine
+        volumes:
+            - app-data:/data
+        restart: unless-stopped

@@ -276,6 +276,34 @@ pub const DockerApi = struct {
         return error.DockerVolumeFailed;
     }
 
+    /// Removes a Docker volume by name.
+    pub fn removeVolume(
+        self: *const DockerApi,
+        // The name of the volume to remove.
+        volume_name: []const u8,
+        // Whether to force removal when the volume is in use.
+        force: bool,
+    ) !void {
+        const path = try std.fmt.allocPrint(
+            self.allocator,
+            "/volumes/{s}?force={s}",
+            .{ volume_name, if (force) "true" else "false" },
+        );
+        defer self.allocator.free(path);
+
+        var response = try self.request("DELETE", path, null);
+        defer response.deinit(self.allocator);
+
+        if (response.status == 404) {
+            return;
+        }
+
+        if (response.status < 200 or response.status >= 300) {
+            std.log.err("[docker] removeVolume failed status={d} name={s}", .{ response.status, volume_name });
+            return error.DockerVolumeRemoveFailed;
+        }
+    }
+
     /// Returns Docker Engine info JSON.
     pub fn getInfo(self: *const DockerApi) !DockerResponse {
         return self.request("GET", "/info", null);
@@ -456,7 +484,7 @@ pub const DockerApi = struct {
             return error.DockerExecFailed;
         }
 
-        var streams = try demuxDockerExecStream(self.allocator, start_response.body);
+        const streams = try demuxDockerExecStream(self.allocator, start_response.body);
         defer {
             self.allocator.free(streams.stdout);
             self.allocator.free(streams.stderr);

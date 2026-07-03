@@ -5,6 +5,19 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 
 /**
+ * Cluster status payload from `/cluster/status`.
+ */
+export interface ClusterStatusResponse {
+    leaderId: string;
+    isLeader: boolean;
+    controlPlaneId: string;
+    summary?: {
+        runningInstances: number;
+        instances: number;
+    };
+}
+
+/**
  * Manages the local Docker-based multi-node test cluster.
  */
 export class LocalTestCluster {
@@ -15,12 +28,30 @@ export class LocalTestCluster {
 
     private static readonly projectName = "platform-test-cluster";
 
+    private static readonly controlPlanePorts: Record<string, number> = {
+        "cp-1": 18_080,
+        "cp-2": 18_081
+    };
+
+    private static readonly instanceComposeServices: Record<string, string> = {
+        "cp-1": "control-plane-1",
+        "cp-2": "control-plane-2"
+    };
+
     /**
      * Starts the docker compose test cluster.
      * 
      * @returns Nothing.
      */
     static async start(): Promise<void> {
+        await this.ensureStopped();
+
+        const useMock = this.usesTraefikMock();
+        const traefikProfile = useMock ? "mock" : "real";
+        const traefikDynamicConfigUrl = useMock
+            ? "http://traefik-mock:8099/platform/dynamic-config"
+            : "http://traefik-dynamic-config:8099/platform/dynamic-config";
+
         await execFileAsync(
             "docker",
             [
@@ -29,11 +60,20 @@ export class LocalTestCluster {
                 this.composeFile,
                 "-p",
                 this.projectName,
+                "--profile",
+                traefikProfile,
                 "up",
                 "-d",
-                "--build"
+                "--build",
+                "--remove-orphans"
             ],
-            { cwd: process.cwd() }
+            {
+                cwd: process.cwd(),
+                env: {
+                    ...process.env,
+                    TRAEFIK_DYNAMIC_CONFIG_URL: traefikDynamicConfigUrl
+                }
+            }
         );
     }
 
@@ -43,19 +83,37 @@ export class LocalTestCluster {
      * @returns Nothing.
      */
     static async stop(): Promise<void> {
-        await execFileAsync(
-            "docker",
-            [
-                "compose",
-                "-f",
-                this.composeFile,
-                "-p",
-                this.projectName,
-                "down",
-                "-v"
-            ],
-            { cwd: process.cwd() }
-        );
+        await this.ensureStopped();
+    }
+
+    /**
+     * Tears down the compose project including profile-specific services and orphans.
+     *
+     * @returns Nothing.
+     */
+    private static async ensureStopped(): Promise<void> {
+        try {
+            await execFileAsync(
+                "docker",
+                [
+                    "compose",
+                    "-f",
+                    this.composeFile,
+                    "-p",
+                    this.projectName,
+                    "--profile",
+                    "mock",
+                    "--profile",
+                    "real",
+                    "down",
+                    "-v",
+                    "--remove-orphans"
+                ],
+                { cwd: process.cwd() }
+            );
+        } catch {
+            // Best-effort cleanup before start or after tests.
+        }
     }
 
     /**
@@ -74,13 +132,49 @@ export class LocalTestCluster {
      * @param timeoutMs Maximum wait time in milliseconds
      * @returns Nothing.
      */
-    static async waitHealthy(timeoutMs = 120_000): Promise<void> {
+    static async waitHealthy(timeoutMs = 300_000): Promise<void> {
+        const url = this.getControlPlaneUrl();
+        const deadline = Date.now() + timeoutMs;
+
+        await this.waitForControlPlaneLive(Math.max(30_000, deadline - Date.now()));
+
+        while (Date.now() < deadline) {
+            try {
+                const response = await fetch(`${url}/health`);
+
+                if (response.ok) {
+                    const body = await response.json() as { status?: string };
+
+                    if (body.status === "healthy") {
+                        return;
+                    }
+                }
+            } catch {
+                // Retry until timeout.
+            }
+
+            await new Promise((resolve) => {
+                setTimeout(resolve, 2_000);
+            });
+        }
+
+        throw new Error(`Control plane did not become healthy at ${url}`);
+    }
+
+    /**
+     * Waits until the primary control plane responds on `/health/live`.
+     *
+     * @param timeoutMs Maximum wait time in milliseconds
+     * @returns Nothing.
+     */
+    static async waitForControlPlaneLive(timeoutMs = 120_000): Promise<void> {
         const url = this.getControlPlaneUrl();
         const startedAt = Date.now();
 
         while (Date.now() - startedAt < timeoutMs) {
             try {
-                const response = await fetch(`${url}/health`);
+                const response = await fetch(`${url}/health/live`);
+
                 if (response.ok) {
                     return;
                 }
@@ -93,7 +187,7 @@ export class LocalTestCluster {
             });
         }
 
-        throw new Error(`Control plane did not become healthy at ${url}`);
+        throw new Error(`Control plane did not become reachable at ${url}`);
     }
 
     /**
@@ -156,6 +250,167 @@ export class LocalTestCluster {
     }
 
     /**
+     * Returns whether the test cluster should use traefik-mock instead of real Traefik.
+     *
+     * @returns `true` when `TRAEFIK_USE_MOCK=true`
+     */
+    static usesTraefikMock(): boolean {
+        return process.env.TRAEFIK_USE_MOCK === "true";
+    }
+
+    /**
+     * Returns the host-mapped Traefik HTTP entrypoint URL for ingress e2e checks.
+     *
+     * @returns Traefik web entrypoint URL
+     */
+    static getTraefikHttpUrl(): string {
+        return process.env.TRAEFIK_HTTP_URL ?? "http://127.0.0.1:19080";
+    }
+
+    /**
+     * Returns the host-mapped dynamic configuration store URL for diagnostics.
+     *
+     * @returns Dynamic config store base URL
+     */
+    static getTraefikDynamicConfigStoreUrl(): string {
+        return process.env.TRAEFIK_DYNAMIC_CONFIG_STORE_URL ?? "http://127.0.0.1:19099";
+    }
+
+    /**
+     * Returns the control plane base URL for a host port.
+     *
+     * @param port Published control plane host port
+     * @returns Control plane URL
+     */
+    static getControlPlaneUrlForPort(port: number): string {
+        return `http://127.0.0.1:${port}`;
+    }
+
+    /**
+     * Returns the traefik-mock base URL exposed by the test cluster.
+     *
+     * @returns Traefik mock URL
+     */
+    static getTraefikMockUrl(): string {
+        return "http://127.0.0.1:19099";
+    }
+
+    /**
+     * Fetches cluster status from a control plane replica port.
+     *
+     * @param port Published control plane host port
+     * @returns Cluster status payload
+     */
+    static async fetchClusterStatus(port: number): Promise<ClusterStatusResponse> {
+        const response = await fetch(`${this.getControlPlaneUrlForPort(port)}/cluster/status`);
+
+        if (!response.ok) {
+            throw new Error(`Cluster status request failed on port ${port}: ${response.status}`);
+        }
+
+        return response.json() as Promise<ClusterStatusResponse>;
+    }
+
+    /**
+     * Returns the host port of the elected control plane leader.
+     *
+     * @returns Leader host port
+     */
+    static async getLeaderPort(): Promise<number> {
+        for (const port of Object.values(this.controlPlanePorts)) {
+            try {
+                const status = await this.fetchClusterStatus(port);
+
+                if (status.isLeader) {
+                    return port;
+                }
+            } catch {
+                // Try the other replica.
+            }
+        }
+
+        throw new Error("No control plane leader is currently elected.");
+    }
+
+    /**
+     * Returns the host port of the non-leader control plane replica.
+     *
+     * @returns Follower host port
+     */
+    static async getFollowerPort(): Promise<number> {
+        const leaderPort = await this.getLeaderPort();
+        return leaderPort === this.controlPlanePorts["cp-1"]
+            ? this.controlPlanePorts["cp-2"]
+            : this.controlPlanePorts["cp-1"];
+    }
+
+    /**
+     * Stops a control plane container by instance id (for example `cp-1`).
+     *
+     * @param instanceId Control plane instance id (`cp-1` or `cp-2`)
+     * @returns Nothing.
+     */
+    static async stopContainer(instanceId: string): Promise<void> {
+        const service = this.instanceComposeServices[instanceId];
+
+        if (!service) {
+            throw new Error(`Unknown control plane instance id: ${instanceId}`);
+        }
+
+        await execFileAsync(
+            "docker",
+            [
+                "compose",
+                "-f",
+                this.composeFile,
+                "-p",
+                this.projectName,
+                "stop",
+                service
+            ],
+            { cwd: process.cwd() }
+        );
+    }
+
+    /**
+     * Waits until a new leader is elected on a surviving control plane replica.
+     *
+     * @param timeoutMs Maximum wait time in milliseconds
+     * @param excludedInstanceId Optional dead instance id to ignore while polling
+     * @returns Host port of the newly elected leader
+     */
+    static async waitForNewLeader(
+        timeoutMs = 90_000,
+        excludedInstanceId?: string
+    ): Promise<number> {
+        const startedAt = Date.now();
+
+        while (Date.now() - startedAt < timeoutMs) {
+            for (const [instanceId, port] of Object.entries(this.controlPlanePorts)) {
+                if (excludedInstanceId && instanceId === excludedInstanceId) {
+                    continue;
+                }
+
+                try {
+                    const status = await this.fetchClusterStatus(port);
+
+                    if (status.isLeader) {
+                        return port;
+                    }
+                } catch {
+                    // Retry until timeout.
+                }
+            }
+
+            await new Promise((resolve) => {
+                setTimeout(resolve, 2_000);
+            });
+        }
+
+        throw new Error("A new control plane leader was not elected before timeout.");
+    }
+
+    /**
      * Returns the agent base URL for a simulated node id.
      * 
      * @param nodeId Simulated node identifier
@@ -163,10 +418,12 @@ export class LocalTestCluster {
      */
     static getAgentUrl(nodeId: string): string {
         const ports: Record<string, string> = {
-            "node-a": "http://localhost:19001",
+            "node-a": "http://localhost:19003",
+            "agent-worker": "http://localhost:19003",
+            "agent-builder": "http://localhost:19001",
             "agent-1": "http://localhost:19001"
         };
 
-        return ports[nodeId] ?? "http://localhost:19000";
+        return ports[nodeId] ?? "http://localhost:19003";
     }
 }

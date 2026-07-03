@@ -161,3 +161,87 @@ button.danger {
   margin-top: 1rem;
   color: #7a8a9b;
 }
+
+.pagination {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filters select {
+  background: #0d1117;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.log-panel pre {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.step-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.step-list li {
+  margin-bottom: 0.25rem;
+}
+
+.step-list li.selected .step-button {
+  border-color: #7cc4ff;
+}
+
+.step-button {
+  width: 100%;
+  text-align: left;
+  background: #21262d;
+}
+
+.event-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.event-list li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #30363d;
+}
+
+.provision-form {
+  flex-wrap: wrap;
+}
+
+.empty {
+  color: #7a8a9b;
+  margin-top: 1rem;
+}
