@@ -36,7 +36,17 @@ export class Scheduler {
         manifestService: ManifestService | undefined,
         nodes: Node[]
     ): ScheduleResult | null {
-        const eligibleNodes = nodes.filter((node) => node.status === "online" || node.status === "registering");
+        const eligibleNodes = nodes.filter((node) => {
+            if (node.status !== "online" && node.status !== "registering") {
+                return false;
+            }
+
+            if (!Scheduler.isBuildWorkload(service, manifestService) && node.labels.role === "builder") {
+                return false;
+            }
+
+            return true;
+        });
 
         if (eligibleNodes.length === 0) {
             return null;
@@ -140,5 +150,20 @@ export class Scheduler {
             matchedLabels,
             matchedCapabilities
         };
+    }
+
+    /**
+     * Returns whether a service should run on builder-role nodes.
+     *
+     * @param service Service being scheduled
+     * @param manifestService Manifest service definition
+     * @returns True when the workload is a build/deploy image build
+     */
+    private static isBuildWorkload(service: Service, manifestService: ManifestService | undefined): boolean {
+        if (service.image.startsWith("build://")) {
+            return true;
+        }
+
+        return Boolean(manifestService?.build);
     }
 }

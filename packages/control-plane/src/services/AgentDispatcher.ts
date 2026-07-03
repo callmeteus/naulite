@@ -47,15 +47,29 @@ export namespace AgentDispatcher {
             }
 
             const agentUrl = node.agentUrl.replace(/\/$/, "");
+            const requestBody = JSON.stringify(plan);
+
+            if (plan.operations.length === 0) {
+                results.push({
+                    nodeId: plan.nodeId,
+                    planId: plan.planId,
+                    agentUrl,
+                    status: "skipped",
+                    message: "Plan has no operations."
+                });
+
+                continue;
+            }
 
             try {
                 const response = await fetchImpl(`${agentUrl}/execution/apply`, {
                     method: "POST",
                     headers: {
                         Accept: "application/json",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Content-Length": String(Buffer.byteLength(requestBody))
                     },
-                    body: JSON.stringify(plan)
+                    body: requestBody
                 });
 
                 if (!response.ok) {

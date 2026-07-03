@@ -219,8 +219,15 @@ fn handleConnection(
 
         try received.appendSlice(allocator, read_buffer[0..read_count]);
 
-        if (std.mem.indexOf(u8, received.items, "\r\n\r\n") != null) {
-            break;
+        const header_end = std.mem.indexOf(u8, received.items, "\r\n\r\n");
+        if (header_end != null) {
+            const header_section = received.items[0..header_end.?];
+            const content_length = parseContentLength(header_section) catch 0;
+            const body_start = header_end.? + 4;
+
+            if (content_length == 0 or received.items.len >= body_start + content_length) {
+                break;
+            }
         }
 
         if (received.items.len >= 1024 * 1024) {
@@ -260,7 +267,7 @@ fn handleConnection(
 
         const owned = try allocator.alloc(u8, content_length);
         body_owned = owned;
-        const already_read = received.items.len - body_start;
+        const already_read = if (received.items.len > body_start) received.items.len - body_start else 0;
         if (already_read > 0) {
             @memcpy(owned[0..already_read], received.items[body_start..]);
         }

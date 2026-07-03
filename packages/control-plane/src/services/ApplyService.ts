@@ -228,18 +228,20 @@ export namespace ApplyService {
             nodes
         );
         const operations = await enrichOperationsWithSecrets(
-            addPullOperations(resolvedOperations),
+            resolvedOperations,
             manifest,
             context.secretProvider
         );
         const volumeNodes = buildVolumeNodeMap(volumes, diff);
         const plans = nodes.map((node) => {
-            const nodeOperations = filterOperationsForNode(
-                node.id,
-                operations,
-                instanceNodes,
-                volumeNodes,
-                nodes
+            const nodeOperations = addPullOperations(
+                filterOperationsForNode(
+                    node.id,
+                    operations,
+                    instanceNodes,
+                    volumeNodes,
+                    nodes
+                )
             );
             const plan = ControlPlaneService.Orchestration.Planner.buildExecutionPlan(
                 manifest.name,
@@ -526,7 +528,7 @@ export namespace ApplyService {
      * @param operations Planner operations
      * @returns Operations with pull steps prepended
      */
-    function addPullOperations(operations: ExecutionOperation[]): ExecutionOperation[] {
+    export function addPullOperations(operations: ExecutionOperation[]): ExecutionOperation[] {
         const output: ExecutionOperation[] = [];
         const pulledImages = new Set<string>();
 

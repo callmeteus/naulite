@@ -92,6 +92,8 @@ export class LocalTestCluster {
      * @returns Nothing.
      */
     private static async ensureStopped(): Promise<void> {
+        await this.cleanupApplyContainers();
+
         try {
             await execFileAsync(
                 "docker",
@@ -113,6 +115,34 @@ export class LocalTestCluster {
             );
         } catch {
             // Best-effort cleanup before start or after tests.
+        }
+    }
+
+    /**
+     * Removes containers created by apply tests on the shared Docker host.
+     *
+     * @returns Nothing.
+     */
+    private static async cleanupApplyContainers(): Promise<void> {
+        try {
+            const { stdout } = await execFileAsync(
+                "docker",
+                ["ps", "-aq", "--filter", "name=minimal-"],
+                { cwd: process.cwd() }
+            );
+
+            const containerIds = stdout
+                .split(/\s+/)
+                .map((entry) => entry.trim())
+                .filter((entry) => entry.length > 0);
+
+            if (containerIds.length === 0) {
+                return;
+            }
+
+            await execFileAsync("docker", ["rm", "-f", ...containerIds], { cwd: process.cwd() });
+        } catch {
+            // Best-effort cleanup for leftover workload containers.
         }
     }
 

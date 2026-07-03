@@ -54,7 +54,8 @@ describe("apply minimal manifest via SDK", () => {
         const health = await client.getHealth();
         expect(health.status).toBe("healthy");
 
-        const response = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/apply`, {
+        const leaderPort = await LocalTestCluster.getLeaderPort();
+        const response = await fetch(`${LocalTestCluster.getControlPlaneUrlForPort(leaderPort)}/apply`, {
             method: "POST",
             headers: {
                 Accept: "application/json",
@@ -73,7 +74,8 @@ describe("apply minimal manifest via SDK", () => {
         expect(body.diff.servicesToCreate).toBeGreaterThanOrEqual(1);
 
         if (body.dispatch && body.dispatch.length > 0) {
-            expect(body.dispatch[0]?.status).toBe("dispatched");
+            const workerDispatch = body.dispatch.find((entry) => entry.nodeId === "agent-worker");
+            expect(workerDispatch?.status).toBe("dispatched");
         }
 
         const services = await client.listServices();

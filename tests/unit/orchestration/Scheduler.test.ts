@@ -117,4 +117,39 @@ describe("Scheduler", () => {
         expect(result).toBeNull();
         expect(scheduler.scoreAll(service, undefined, nodes)).toEqual([]);
     });
+
+    it("excludes builder-role nodes for runtime image services", () => {
+        const service = buildService({
+            image: "nginx:1.27-alpine",
+            capabilities: ["docker"],
+            cluster: undefined
+        });
+        const manifestService: ManifestService = {
+            capabilities: ["docker"]
+        };
+        const nodes = [
+            buildNode({
+                id: "agent-builder",
+                labels: { role: "builder" },
+                capabilities: ["docker"],
+                resources: {
+                    cpuMillisTotal: 8000,
+                    cpuMillisUsed: 100,
+                    memoryMbTotal: 16384,
+                    memoryMbUsed: 256,
+                    diskMbTotal: 204800,
+                    diskMbUsed: 1024
+                }
+            }),
+            buildNode({
+                id: "agent-worker",
+                labels: { role: "worker" },
+                capabilities: ["docker"]
+            })
+        ];
+
+        const result = scheduler.schedule(service, manifestService, nodes);
+
+        expect(result?.node.id).toBe("agent-worker");
+    });
 });

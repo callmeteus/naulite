@@ -75,6 +75,10 @@ pub const DockerClient = struct {
             }
 
             self.dispatchOperation(&api, op) catch |err| {
+                std.log.err(
+                    "[docker] dispatch op={s} failed err={} raw_json={s}",
+                    .{ @tagName(op.op_type), err, op.raw_json },
+                );
                 if (plan.run_id) |run_id| {
                     if (self.cp_config) |config| {
                         const message = std.fmt.allocPrint(

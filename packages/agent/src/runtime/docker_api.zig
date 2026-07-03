@@ -1,5 +1,8 @@
 const std = @import("std");
 
+/// Minimum Docker Engine API version supported by current daemons.
+const docker_api_version = "v1.44";
+
 /// HTTP response from the Docker Engine API.
 pub const DockerResponse = struct {
     // The HTTP status code.
@@ -110,7 +113,7 @@ pub const DockerApi = struct {
 
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/images/create?fromImage={s}&tag={s}",
+            "/v1.44/images/create?fromImage={s}&tag={s}",
             .{ repo, tag },
         );
 
@@ -122,6 +125,15 @@ pub const DockerApi = struct {
         if (response.status < 200 or response.status >= 300) {
             std.log.err("[docker] pull failed status={d} image={s} body={s}", .{
                 response.status,
+                image,
+                response.body,
+            });
+
+            return error.DockerPullFailed;
+        }
+
+        if (std.mem.indexOf(u8, response.body, "\"error\"") != null) {
+            std.log.err("[docker] pull stream reported error image={s} body={s}", .{
                 image,
                 response.body,
             });
@@ -146,7 +158,7 @@ pub const DockerApi = struct {
         // The binds to set in the container.
         binds_json: []const u8,
     ) ![]u8 {
-        const path = try std.fmt.allocPrint(self.allocator, "/containers/create?name={s}", .{container_name});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/create?name={s}", .{container_name});
         defer self.allocator.free(path);
 
         const cmd_json = try stringArrayToJson(self.allocator, command);
@@ -167,6 +179,11 @@ pub const DockerApi = struct {
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
+            if (response.status == 409) {
+                std.log.warn("[docker] create skipped existing container name={s}", .{container_name});
+                return try self.allocator.dupe(u8, container_name);
+            }
+
             std.log.err("[docker] create failed status={d} name={s} body={s}", .{
                 response.status,
                 container_name,
@@ -176,7 +193,14 @@ pub const DockerApi = struct {
             return error.DockerCreateFailed;
         }
 
-        return try parseJsonStringField(self.allocator, response.body, "Id");
+        return parseJsonStringField(self.allocator, response.body, "Id") catch |err| {
+            std.log.err("[docker] create response parse failed status={d} name={s} body={s}", .{
+                response.status,
+                container_name,
+                response.body,
+            });
+            return err;
+        };
     }
 
     /// Starts a container by name or id.
@@ -185,7 +209,7 @@ pub const DockerApi = struct {
         // The name or id of the container.
         container_ref: []const u8,
     ) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "/containers/{s}/start", .{container_ref});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/{s}/start", .{container_ref});
         defer self.allocator.free(path);
 
         var response = try self.request("POST", path, null);
@@ -207,7 +231,7 @@ pub const DockerApi = struct {
         // The name or id of the container.
         container_ref: []const u8,
     ) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "/containers/{s}/stop", .{container_ref});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/{s}/stop", .{container_ref});
         defer self.allocator.free(path);
 
         var response = try self.request("POST", path, null);
@@ -233,7 +257,7 @@ pub const DockerApi = struct {
     ) !void {
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/containers/{s}?force={s}",
+            "/v1.44/containers/{s}?force={s}",
             .{ container_ref, if (force) "true" else "false" },
         );
 
@@ -261,7 +285,7 @@ pub const DockerApi = struct {
         const body = try std.fmt.allocPrint(self.allocator, "{{\"Name\":\"{s}\"}}", .{volume_name});
         defer self.allocator.free(body);
 
-        var response = try self.request("POST", "/volumes/create", body);
+        var response = try self.request("POST", "/v1.44/volumes/create", body);
         defer response.deinit(self.allocator);
 
         if (response.status == 201 or response.status == 200) {
@@ -286,7 +310,7 @@ pub const DockerApi = struct {
     ) !void {
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/volumes/{s}?force={s}",
+            "/v1.44/volumes/{s}?force={s}",
             .{ volume_name, if (force) "true" else "false" },
         );
         defer self.allocator.free(path);
@@ -306,17 +330,17 @@ pub const DockerApi = struct {
 
     /// Returns Docker Engine info JSON.
     pub fn getInfo(self: *const DockerApi) !DockerResponse {
-        return self.request("GET", "/info", null);
+        return self.request("GET", "/v1.44/info", null);
     }
 
     /// Returns Docker disk usage summary JSON.
     pub fn getSystemDf(self: *const DockerApi) !DockerResponse {
-        return self.request("GET", "/system/df", null);
+        return self.request("GET", "/v1.44/system/df", null);
     }
 
     /// Lists identifiers for running containers.
     pub fn listRunningContainerIds(self: *const DockerApi) ![]const []const u8 {
-        var response = try self.request("GET", "/containers/json", null);
+        var response = try self.request("GET", "/v1.44/containers/json", null);
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
@@ -362,7 +386,7 @@ pub const DockerApi = struct {
     ) !DockerResponse {
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/containers/{s}/stats?stream=false",
+            "/v1.44/containers/{s}/stats?stream=false",
             .{container_ref},
         );
         defer self.allocator.free(path);
@@ -378,7 +402,7 @@ pub const DockerApi = struct {
         // Container name or id.
         container_ref: []const u8,
     ) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "/networks/{s}/connect", .{network_name});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/networks/{s}/connect", .{network_name});
         defer self.allocator.free(path);
 
         const body = try std.fmt.allocPrint(
@@ -410,7 +434,7 @@ pub const DockerApi = struct {
         // Whether to force disconnect.
         force: bool,
     ) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "/networks/{s}/disconnect", .{network_name});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/networks/{s}/disconnect", .{network_name});
         defer self.allocator.free(path);
 
         const body = try std.fmt.allocPrint(
@@ -440,7 +464,7 @@ pub const DockerApi = struct {
         // Command argv to run inside the container.
         command: []const []const u8,
     ) !ExecResult {
-        const create_path = try std.fmt.allocPrint(self.allocator, "/containers/{s}/exec", .{container_ref});
+        const create_path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/{s}/exec", .{container_ref});
         defer self.allocator.free(create_path);
 
         const cmd_json = try stringArrayToJson(self.allocator, command);
@@ -468,7 +492,7 @@ pub const DockerApi = struct {
         const exec_id = try parseJsonStringField(self.allocator, create_response.body, "Id");
         defer self.allocator.free(exec_id);
 
-        const start_path = try std.fmt.allocPrint(self.allocator, "/exec/{s}/start", .{exec_id});
+        const start_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/start", .{exec_id});
         defer self.allocator.free(start_path);
 
         const start_body = "{\"Detach\":false,\"Tty\":false}";
@@ -490,7 +514,7 @@ pub const DockerApi = struct {
             self.allocator.free(streams.stderr);
         }
 
-        const inspect_path = try std.fmt.allocPrint(self.allocator, "/exec/{s}/json", .{exec_id});
+        const inspect_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/json", .{exec_id});
         defer self.allocator.free(inspect_path);
 
         var inspect_response = try self.request("GET", inspect_path, null);
@@ -520,7 +544,7 @@ pub const DockerApi = struct {
         const tail_count = tail orelse 200;
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/containers/{s}/logs?stdout=true&stderr=true&tail={d}",
+            "/v1.44/containers/{s}/logs?stdout=true&stderr=true&tail={d}",
             .{ container_ref, tail_count },
         );
 
@@ -544,6 +568,7 @@ pub const DockerApi = struct {
     ) !DockerResponse {
         const header_end = std.mem.indexOf(u8, raw, "\r\n\r\n") orelse return error.InvalidHttpResponse;
         const header_section = raw[0..header_end];
+        const raw_body = raw[header_end + 4 ..];
 
         const status_line_end = std.mem.indexOfScalar(u8, header_section, '\n') orelse return error.InvalidHttpResponse;
         const status_line = std.mem.trim(u8, header_section[0..status_line_end], "\r");
@@ -553,8 +578,96 @@ pub const DockerApi = struct {
         const status_code_text = status_parts.next() orelse return error.InvalidHttpResponse;
         const status = try std.fmt.parseInt(u16, status_code_text, 10);
 
-        const body = try allocator.dupe(u8, raw[header_end + 4 ..]);
+        const transfer_encoding = readHeaderValue(header_section, "Transfer-Encoding");
+        const content_length_text = readHeaderValue(header_section, "Content-Length");
+
+        const body = body_blk: {
+            if (transfer_encoding) |encoding| {
+                if (std.ascii.eqlIgnoreCase(encoding, "chunked")) {
+                    break :body_blk try decodeChunkedBody(allocator, raw_body);
+                }
+
+                break :body_blk try allocator.dupe(u8, raw_body);
+            }
+
+            if (content_length_text) |length_text| {
+                const content_length = try std.fmt.parseInt(usize, length_text, 10);
+                const bounded = raw_body[0..@min(content_length, raw_body.len)];
+                break :body_blk try allocator.dupe(u8, bounded);
+            }
+
+            break :body_blk try allocator.dupe(u8, raw_body);
+        };
+
         return .{ .status = status, .body = body };
+    }
+
+    /// Returns a trimmed HTTP header value when present.
+    fn readHeaderValue(
+        // The HTTP header section.
+        header_section: []const u8,
+        // The header name to read.
+        header_name: []const u8,
+    ) ?[]const u8 {
+        var lines = std.mem.splitScalar(u8, header_section, '\n');
+
+        while (lines.next()) |line| {
+            const trimmed = std.mem.trim(u8, line, "\r");
+
+            if (trimmed.len == 0) {
+                continue;
+            }
+
+            const colon = std.mem.indexOfScalar(u8, trimmed, ':') orelse continue;
+            const name = std.mem.trim(u8, trimmed[0..colon], " ");
+
+            if (!std.ascii.eqlIgnoreCase(name, header_name)) {
+                continue;
+            }
+
+            return std.mem.trim(u8, trimmed[colon + 1 ..], " ");
+        }
+
+        return null;
+    }
+
+    /// Decodes an HTTP/1.1 chunked response body.
+    fn decodeChunkedBody(
+        // The allocator to use.
+        allocator: std.mem.Allocator,
+        // The chunked body bytes.
+        raw_body: []const u8,
+    ) ![]u8 {
+        var decoded: std.ArrayList(u8) = .empty;
+        errdefer decoded.deinit(allocator);
+
+        var offset: usize = 0;
+
+        while (offset < raw_body.len) {
+            const line_end = std.mem.indexOfPos(u8, raw_body, offset, "\r\n") orelse break;
+            const size_line = std.mem.trim(u8, raw_body[offset..line_end], " ");
+            const size_text = if (std.mem.indexOfScalar(u8, size_line, ';')) |semicolon|
+                size_line[0..semicolon]
+            else
+                size_line;
+
+            const chunk_size = try std.fmt.parseInt(usize, size_text, 16);
+
+            offset = line_end + 2;
+
+            if (chunk_size == 0) {
+                break;
+            }
+
+            if (offset + chunk_size > raw_body.len) {
+                return error.InvalidHttpResponse;
+            }
+
+            try decoded.appendSlice(allocator, raw_body[offset .. offset + chunk_size]);
+            offset += chunk_size + 2;
+        }
+
+        return try decoded.toOwnedSlice(allocator);
     }
 
     /// Converts a string array to a JSON array.

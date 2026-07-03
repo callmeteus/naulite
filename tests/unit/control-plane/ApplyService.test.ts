@@ -464,6 +464,29 @@ describe("ApplyService filterOperationsForNode", () => {
         expect(agentTwoOps.some((op) => op.type === "start")).toBe(false);
     });
 
+    it("prepends pull operations after filtering creates to a single node", () => {
+        const operations: ExecutionOperation[] = [
+            { type: "create", instanceId: "minimal:web-1", serviceName: "web", image: "nginx:alpine", command: [], environment: {}, volumes: [], networks: [], ports: [], secrets: [] },
+            { type: "start", instanceId: "minimal:web-1" }
+        ];
+        const instanceNodes = new Map<string, string>([
+            ["minimal:web-1", "agent-1"]
+        ]);
+        const volumeNodes = new Map<string, string>();
+        const nodes = [{ id: "agent-1" }, { id: "agent-2" }] as never;
+
+        const agentOneOps = ApplyService.addPullOperations(
+            ApplyService.filterOperationsForNode("agent-1", operations, instanceNodes, volumeNodes, nodes)
+        );
+        const agentTwoOps = ApplyService.addPullOperations(
+            ApplyService.filterOperationsForNode("agent-2", operations, instanceNodes, volumeNodes, nodes)
+        );
+
+        expect(agentOneOps[0]).toEqual({ type: "pull", image: "nginx:alpine" });
+        expect(agentOneOps.some((op) => op.type === "create")).toBe(true);
+        expect(agentTwoOps).toEqual([]);
+    });
+
     it("routes removeVolume operations to the node that owns the volume", () => {
         const operations: ExecutionOperation[] = [
             { type: "removeVolume", volumeName: "data", force: false },
