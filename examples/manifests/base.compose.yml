@@ -16,9 +16,8 @@ services:
     backend:
         build:
             context: ./packages/backend
-        buildOptions:
+            image: ghcr.io/techtail/rushpedia-backend:${VERSION}
             provider: docker
-        image: ghcr.io/techtail/rushpedia-backend:${VERSION}
         restart: unless-stopped
         networks:
             - internal
@@ -40,7 +39,7 @@ services:
     frontend:
         build:
             context: ./packages/frontend
-        image: ghcr.io/techtail/rushpedia-frontend:${VERSION}
+            image: ghcr.io/techtail/rushpedia-frontend:${VERSION}
         restart: unless-stopped
         networks:
             - edge

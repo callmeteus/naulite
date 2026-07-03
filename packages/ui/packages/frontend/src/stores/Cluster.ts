@@ -1,5 +1,5 @@
-import type { ApplyResponse, BackupRun, ClusterStatus, ContainerRegistryImage, Instance, Node, Secret, Service, Volume } from "@platform/sdk";
-import type { NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology } from "@platform/sdk";
+import type { ApplyResponse, BackupRun, ClusterStatus, ContainerRegistryImage, Instance, Node, PipelineEvent, PipelineRun, Secret, Service, Volume } from "@platform/sdk";
+import type { ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology } from "@platform/sdk";
 import { reactive } from "vue";
 
 import { platformClient } from "../api/Client";
@@ -29,6 +29,7 @@ export const clusterStore = reactive({
     netBirdGroups: [] as NetBirdGroup[],
     netBirdAcls: [] as NetBirdAcl[],
     containerRegistryImages: [] as ContainerRegistryImage[],
+    runs: [] as PipelineRun[],
     lastApplyResult: null as ApplyResponse | null,
     loading: false,
     error: "" as string,
@@ -335,6 +336,45 @@ export const clusterStore = reactive({
         } finally {
             this.loading = false;
         }
+    },
+
+    /**
+     * Loads pipeline runs from the admin API.
+     *
+     * @param query Optional list filters
+     * @returns Nothing.
+     */
+    async refreshRuns(query: ListPipelineRunsQuery = {}): Promise<void> {
+        this.loading = true;
+        this.error = "";
+
+        try {
+            this.runs = await platformClient.listRuns(query);
+        } catch (err) {
+            this.error = err instanceof Error ? err.message : String(err);
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Returns a pipeline run with steps and events.
+     *
+     * @param runId Pipeline run identifier
+     * @returns Pipeline run detail
+     */
+    async getRun(runId: string): Promise<PipelineRun> {
+        return platformClient.getRun(runId);
+    },
+
+    /**
+     * Returns timeline events for a pipeline run.
+     *
+     * @param runId Pipeline run identifier
+     * @returns Pipeline events
+     */
+    async getRunEvents(runId: string): Promise<PipelineEvent[]> {
+        return platformClient.getRunEvents(runId);
     },
 
     /**

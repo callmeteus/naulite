@@ -7,13 +7,34 @@ import { IngressSchema } from "./Ingress";
 import { LogRotationPolicySchema } from "./LogRotationTask";
 
 /**
- * Docker or Kaniko build options declared beside Compose build.
+ * @todo rename platform prefix after final platform name is chosen
+ * Unified build block: context, output image tag, provider, and builder placement.
  */
-export const BuildOptionsSchema = z.object({
-    provider: z.enum(["docker", "kaniko"]).default("docker"),
-    context: z.string().min(1).optional(),
+export const ManifestBuildSchema = z.object({
+    context: z.string().min(1),
     dockerfile: z.string().min(1).optional(),
+    image: z.string().min(1).optional(),
+    provider: z.enum(["docker", "kaniko"]).default("docker"),
     cluster: ClusterPlacementSchema.optional()
+});
+
+/**
+ * @deprecated Use ManifestBuildSchema fields inside `build` instead.
+ */
+export const BuildOptionsSchema = ManifestBuildSchema.omit({ context: true }).extend({
+    context: z.string().min(1).optional()
+});
+
+/**
+ * Optional per-manifest notification overrides.
+ */
+export const ManifestPipelineNotificationsSchema = z.object({
+    notifications: z.object({
+        slack: z.object({
+            enabled: z.boolean().default(true),
+            channel: z.string().optional()
+        }).optional()
+    }).optional()
 });
 
 /**
@@ -29,10 +50,7 @@ export const ManifestDefaultsSchema = z.object({
  */
 export const ManifestServiceSchema = z.object({
     image: z.string().min(1).optional(),
-    build: z.union([z.string(), z.object({
-        context: z.string().min(1),
-        dockerfile: z.string().min(1).optional()
-    })]).optional(),
+    build: z.union([z.string().min(1), ManifestBuildSchema]).optional(),
     command: z.union([z.string(), z.array(z.string())]).optional(),
     environment: z.record(z.string(), z.string()).optional(),
     ports: z.array(z.union([
@@ -48,13 +66,28 @@ export const ManifestServiceSchema = z.object({
     dependsOn: z.array(z.string()).optional(),
     cluster: ClusterPlacementSchema.optional(),
     capabilities: z.array(z.string()).default([]),
-    buildOptions: BuildOptionsSchema.optional(),
     ingress: IngressSchema.optional(),
     logRotation: LogRotationPolicySchema.optional(),
     secrets: z.array(SecretReferenceSchema).default([]),
     deploy: z.object({
         replicas: z.number().int().positive().default(1)
     }).optional()
+}).superRefine((service, ctx) => {
+    if (service.image && service.build) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Service cannot declare both image and build.",
+            path: ["build"]
+        });
+    }
+
+    if (!service.image && !service.build) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Service must declare image or build.",
+            path: ["image"]
+        });
+    }
 });
 
 /**
@@ -91,5 +124,6 @@ export const ManifestSchema = z.object({
     volumes: z.record(z.string(), ManifestVolumeSchema).default({}),
     networks: z.record(z.string(), ManifestNetworkSchema).default({}),
     registries: z.record(z.string(), ManifestRegistrySchema).default({}),
-    defaults: ManifestDefaultsSchema.optional()
+    defaults: ManifestDefaultsSchema.optional(),
+    pipeline: ManifestPipelineNotificationsSchema.optional()
 });

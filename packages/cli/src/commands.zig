@@ -57,6 +57,79 @@ pub fn getSecrets(allocator: std.mem.Allocator, client: *Client) !void {
     try printJson(stdout, response.body);
 }
 
+/// Lists pipeline runs.
+pub fn listRuns(allocator: std.mem.Allocator, client: *Client) !void {
+    const stdout = io_output.stdoutWriter();
+    const response = try client.get("/runs");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Returns a pipeline run by identifier.
+pub fn getRun(allocator: std.mem.Allocator, client: *Client, run_id: []const u8) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/runs/{s}", .{run_id});
+    defer allocator.free(path);
+    const response = try client.get(path);
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Prints pipeline run timeline events.
+pub fn getRunLogs(
+    allocator: std.mem.Allocator,
+    client: *Client,
+    run_id: []const u8,
+    step_name: ?[]const u8,
+) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/runs/{s}/events", .{run_id});
+    defer allocator.free(path);
+    const response = try client.get(path);
+    defer allocator.free(response.body);
+
+    if (step_name == null) {
+        try printJson(stdout, response.body);
+        return;
+    }
+
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        allocator,
+        response.body,
+        .{},
+    );
+    defer parsed.deinit();
+
+    if (parsed.value != .array) {
+        try printJson(stdout, response.body);
+        return;
+    }
+
+    var filtered = std.ArrayList(std.json.Value).empty;
+    defer filtered.deinit(allocator);
+
+    for (parsed.value.array.items) |item| {
+        if (item != .object) {
+            continue;
+        }
+
+        const metadata = item.object.get("metadata") orelse continue;
+        if (metadata != .object) {
+            continue;
+        }
+
+        const step_value = metadata.object.get("stepName") orelse continue;
+        if (step_value == .string and std.mem.eql(u8, step_value.string, step_name.?)) {
+            try filtered.append(allocator, item);
+        }
+    }
+
+    const encoded = try std.json.Stringify.valueAlloc(allocator, filtered.items, .{});
+    defer allocator.free(encoded);
+    try printJson(stdout, encoded);
+}
+
 /// Lists backup runs.
 pub fn getBackups(allocator: std.mem.Allocator, client: *Client) !void {
     const stdout = io_output.stdoutWriter();

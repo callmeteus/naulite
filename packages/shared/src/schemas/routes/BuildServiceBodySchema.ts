@@ -8,3 +8,10 @@ export const BuildServiceBodySchema = z.object({
     provider: z.string().min(1).optional(),
     registry: z.string().min(1).optional()
 });
+
+/**
+ * Query parameters for async build routes.
+ */
+export const BuildWaitQuerySchema = z.object({
+    wait: z.enum(["true", "false"]).optional()
+});

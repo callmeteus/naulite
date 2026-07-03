@@ -29,6 +29,11 @@ async function applyManifest(): Promise<void> {
                 <button :disabled="store.loading" @click="applyManifest">{{ t("applyManifest") }}</button>
             </p>
             <p v-if="revision">{{ t("deployRevision") }}: {{ revision }}</p>
+            <p v-if="store.lastApplyResult?.runId">
+                <router-link :to="{ path: '/runs', query: { id: store.lastApplyResult.runId } }">
+                    {{ t("deployRunLink") }}: {{ store.lastApplyResult.runId }}
+                </router-link>
+            </p>
             <div v-if="store.lastApplyResult" class="apply-summary">
                 <p>{{ t("deployCreated") }}: {{ store.lastApplyResult.servicesCreated }}</p>
                 <p>{{ t("deployUpdated") }}: {{ store.lastApplyResult.servicesUpdated }}</p>

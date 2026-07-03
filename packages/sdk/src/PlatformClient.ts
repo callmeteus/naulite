@@ -19,6 +19,9 @@ import type {
     Instance,
     LogRotationRun,
     LogRotationTask,
+    PipelineEvent,
+    PipelineRun,
+    ListPipelineRunsQuery,
     LogsResponse,
     NetBirdAcl,
     NodeProvision,
@@ -173,6 +176,7 @@ export class PlatformClient {
             servicesUpdated: payload.diff.servicesToUpdate,
             servicesDeleted: payload.diff.servicesToRemove,
             instancesToCreate: payload.diff.instancesToCreate,
+            runId: payload.runId,
             dispatch: payload.dispatch
         };
     }
@@ -250,20 +254,144 @@ export class PlatformClient {
      * Triggers a service image build.
      *
      * @param request Build request payload
+     * @param options Optional build options
      * @returns Build response
      */
-    async triggerBuild(request: BuildRequest): Promise<BuildResponse> {
-        return this.request<BuildResponse>("POST", "/build", request);
+    async build(request: BuildRequest, options: { wait?: boolean } = {}): Promise<BuildResponse> {
+        const query = options.wait ? "?wait=true" : "";
+        return this.request<BuildResponse>("POST", `/build${query}`, request);
     }
 
     /**
-     * Triggers a service image build.
+     * Triggers a service image build without waiting for completion.
      *
      * @param request Build request payload
      * @returns Build response
      */
-    async build(request: BuildRequest): Promise<BuildResponse> {
-        return this.triggerBuild(request);
+    async triggerBuild(request: BuildRequest): Promise<BuildResponse> {
+        return this.build(request);
+    }
+
+    /**
+     * Lists pipeline runs with optional filters.
+     *
+     * @param query Optional list filters
+     * @returns Pipeline runs
+     */
+    async listRuns(query: ListPipelineRunsQuery = {}): Promise<PipelineRun[]> {
+        const params = new URLSearchParams();
+
+        if (query.kind) {
+            params.set("kind", query.kind);
+        }
+        if (query.status) {
+            params.set("status", query.status);
+        }
+        if (query.service) {
+            params.set("service", query.service);
+        }
+        if (query.pool) {
+            params.set("pool", query.pool);
+        }
+        if (query.since) {
+            params.set("since", query.since);
+        }
+        if (query.limit !== undefined) {
+            params.set("limit", String(query.limit));
+        }
+
+        const suffix = params.size > 0 ? `?${params.toString()}` : "";
+        return this.request<PipelineRun[]>("GET", `/runs${suffix}`);
+    }
+
+    /**
+     * Returns a pipeline run with steps and events.
+     *
+     * @param runId Pipeline run identifier
+     * @returns Pipeline run detail
+     */
+    async getRun(runId: string): Promise<PipelineRun> {
+        return this.request<PipelineRun>("GET", `/runs/${encodeURIComponent(runId)}`);
+    }
+
+    /**
+     * Lists timeline events for a pipeline run.
+     *
+     * @param runId Pipeline run identifier
+     * @param since Optional event id lower bound
+     * @returns Pipeline events
+     */
+    async getRunEvents(runId: string, since?: number): Promise<PipelineEvent[]> {
+        const suffix = since !== undefined ? `?since=${since}` : "";
+        return this.request<PipelineEvent[]>(
+            "GET",
+            `/runs/${encodeURIComponent(runId)}/events${suffix}`
+        );
+    }
+
+    /**
+     * Streams pipeline run events over SSE until the run completes.
+     *
+     * @param runId Pipeline run identifier
+     * @returns Async iterator of pipeline events
+     */
+    async *streamRunEvents(runId: string): AsyncGenerator<PipelineEvent> {
+        const headers: Record<string, string> = {
+            Accept: "text/event-stream"
+        };
+
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+
+        const response = await this.fetchImpl(
+            `${this.baseUrl}/runs/${encodeURIComponent(runId)}/stream`,
+            { headers }
+        );
+
+        if (!response.ok || !response.body) {
+            throw new PlatformApiError(response.status, `SSE stream failed with status ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+
+            while (true) {
+                const boundary = buffer.indexOf("\n\n");
+
+                if (boundary < 0) {
+                    break;
+                }
+
+                const chunk = buffer.slice(0, boundary);
+                buffer = buffer.slice(boundary + 2);
+                const dataLine = chunk
+                    .split("\n")
+                    .find((line) => line.startsWith("data:"));
+
+                if (!dataLine) {
+                    continue;
+                }
+
+                const payload = dataLine.slice("data:".length).trim();
+
+                if (!payload || payload === "[DONE]") {
+                    continue;
+                }
+
+                yield JSON.parse(payload) as PipelineEvent;
+            }
+        }
     }
 
     /**

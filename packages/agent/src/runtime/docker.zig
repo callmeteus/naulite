@@ -42,8 +42,81 @@ pub const DockerClient = struct {
 
         const api = docker_api.DockerApi.init(self.allocator, self.socket_path);
 
+        if (plan.run_id) |run_id| {
+            if (self.cp_config) |config| {
+                cp_client.reportRunEvent(
+                    self.allocator,
+                    config,
+                    run_id,
+                    "rollout.started",
+                    null,
+                    null,
+                );
+            }
+        }
+
         for (plan.operations) |op| {
-            try self.dispatchOperation(&api, op);
+            const step_name = @tagName(op.op_type);
+            if (plan.run_id) |run_id| {
+                if (self.cp_config) |config| {
+                    cp_client.reportRunEvent(
+                        self.allocator,
+                        config,
+                        run_id,
+                        "deploy.step.started",
+                        step_name,
+                        null,
+                    );
+                }
+            }
+
+            self.dispatchOperation(&api, op) catch |err| {
+                if (plan.run_id) |run_id| {
+                    if (self.cp_config) |config| {
+                        const message = std.fmt.allocPrint(
+                            self.allocator,
+                            "operation failed: {}",
+                            .{err},
+                        ) catch null;
+                        defer if (message) |value| self.allocator.free(value);
+                        cp_client.reportRunEvent(
+                            self.allocator,
+                            config,
+                            run_id,
+                            "deploy.step.failed",
+                            step_name,
+                            message,
+                        );
+                    }
+                }
+                return err;
+            };
+
+            if (plan.run_id) |run_id| {
+                if (self.cp_config) |config| {
+                    cp_client.reportRunEvent(
+                        self.allocator,
+                        config,
+                        run_id,
+                        "deploy.step.finished",
+                        step_name,
+                        null,
+                    );
+                }
+            }
+        }
+
+        if (plan.run_id) |run_id| {
+            if (self.cp_config) |config| {
+                cp_client.reportRunEvent(
+                    self.allocator,
+                    config,
+                    run_id,
+                    "rollout.finished",
+                    null,
+                    null,
+                );
+            }
         }
     }
 

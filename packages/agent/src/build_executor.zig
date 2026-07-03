@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const cp_client = @import("cp_client.zig");
+const dockerfile_parser = @import("dockerfile_parser.zig");
+
 /// Result of a build task executed on the agent.
 pub const BuildTaskResult = struct {
     // Control plane task identifier.
@@ -55,10 +58,38 @@ pub fn executeBuildTask(
     const image_ref = try resolveImageRef(allocator, root.object, service_name);
     errdefer allocator.free(image_ref);
 
+    const run_id = try readOptionalStringField(allocator, root.object, "runId");
+    defer if (run_id) |value| allocator.free(value);
+
+    const cp_url = try readOptionalStringField(allocator, root.object, "cpUrl");
+    defer if (cp_url) |value| allocator.free(value);
+
     std.log.debug(
-        "[build] execute taskId={s} service={s} context={s} image={s}",
-        .{ task_id, service_name, context_path, image_ref },
+        "[build] execute taskId={s} service={s} context={s} image={s} runId={?s}",
+        .{ task_id, service_name, context_path, image_ref, run_id },
     );
+
+    const steps = try loadDockerfileSteps(
+        allocator,
+        context_path,
+        dockerfile,
+    );
+    defer freeSteps(allocator, steps);
+
+    if (run_id) |pipeline_run_id| {
+        if (cp_url) |url| {
+            for (steps) |step| {
+                cp_client.reportRunEventUrl(
+                    allocator,
+                    url,
+                    pipeline_run_id,
+                    "build.step.started",
+                    step.name,
+                    null,
+                );
+            }
+        }
+    }
 
     const build_logs = runDockerBuild(
         allocator,
@@ -68,6 +99,19 @@ pub fn executeBuildTask(
         image_ref,
     ) catch |err| {
         const message = try std.fmt.allocPrint(allocator, "docker build failed: {}", .{err});
+        if (run_id) |pipeline_run_id| {
+            if (cp_url) |url| {
+                const failed_step = if (steps.len > 0) steps[steps.len - 1].name else "docker-build";
+                cp_client.reportRunEventUrl(
+                    allocator,
+                    url,
+                    pipeline_run_id,
+                    "build.step.failed",
+                    failed_step,
+                    message,
+                );
+            }
+        }
         return .{
             .task_id = task_id,
             .status = try allocator.dupe(u8, "failed"),
@@ -77,6 +121,21 @@ pub fn executeBuildTask(
         };
     };
     defer allocator.free(build_logs);
+
+    if (run_id) |pipeline_run_id| {
+        if (cp_url) |url| {
+            for (steps) |step| {
+                cp_client.reportRunEventUrl(
+                    allocator,
+                    url,
+                    pipeline_run_id,
+                    "build.step.finished",
+                    step.name,
+                    null,
+                );
+            }
+        }
+    }
 
     return .{
         .task_id = task_id,
@@ -100,7 +159,7 @@ fn runDockerBuild(
     var args = std.ArrayList([]const u8).empty;
     defer args.deinit(allocator);
 
-    try args.appendSlice(allocator, &[_][]const u8{ "docker", "-H", docker_host, "build", "-t", image_ref });
+    try args.appendSlice(allocator, &[_][]const u8{ "docker", "-H", docker_host, "build", "--progress=plain", "-t", image_ref });
 
     if (dockerfile) |file_name| {
         const dockerfile_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ context_path, file_name });
@@ -229,6 +288,37 @@ fn readOptionalStringField(
     }
 
     return null;
+}
+
+fn loadDockerfileSteps(
+    allocator: std.mem.Allocator,
+    context_path: []const u8,
+    dockerfile: ?[]const u8,
+) ![]dockerfile_parser.StepMarker {
+    const file_name = dockerfile orelse "Dockerfile";
+    const dockerfile_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ context_path, file_name });
+    defer allocator.free(dockerfile_path);
+
+    const content = std.fs.cwd().readFileAlloc(allocator, dockerfile_path, 1024 * 1024) catch {
+        const name = try allocator.dupe(u8, "docker-build");
+        const marker = try allocator.alloc(dockerfile_parser.StepMarker, 1);
+        marker[0] = .{
+            .name = name,
+            .start_line = 1,
+            .end_line = 1,
+        };
+        return marker;
+    };
+    defer allocator.free(content);
+
+    return dockerfile_parser.DockerfileParser.parseSteps(allocator, content);
+}
+
+fn freeSteps(allocator: std.mem.Allocator, steps: []dockerfile_parser.StepMarker) void {
+    for (steps) |step| {
+        allocator.free(step.name);
+    }
+    allocator.free(steps);
 }
 
 test "resolveImageRef defaults to platform tag" {

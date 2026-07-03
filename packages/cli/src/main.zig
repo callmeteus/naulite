@@ -69,6 +69,14 @@ pub fn main(init: std.process.Init) !void {
     var client = control_plane_client.Client.init(allocator, init.io, resolved.config);
     defer client.deinit();
 
+    if (std.mem.eql(u8, args[index], "runs")) {
+        const exit_code = try dispatchRuns(allocator, &client, args[index..]);
+        if (exit_code != 0) {
+            std.process.exit(exit_code);
+        }
+        return;
+    }
+
     const exit_code = try dispatch(allocator, &client, args[index..]);
     if (exit_code != 0) {
         std.process.exit(exit_code);
@@ -135,6 +143,39 @@ fn handleLogin(
 
     const stdout = io_output.stdoutWriter();
     try stdout.writeAll("Credentials saved.\n");
+}
+
+/// Dispatches top-level pipeline run commands.
+fn dispatchRuns(
+    allocator: std.mem.Allocator,
+    client: *control_plane_client.Client,
+    argv: []const []const u8,
+) !u8 {
+    if (argv.len < 2) {
+        return error.InvalidArgument;
+    }
+
+    if (std.mem.eql(u8, argv[1], "list")) {
+        return try runVoid(commands.listRuns(allocator, client));
+    }
+
+    if (std.mem.eql(u8, argv[1], "get")) {
+        if (argv.len < 3) {
+            return error.InvalidArgument;
+        }
+        return try runVoid(commands.getRun(allocator, client, argv[2]));
+    }
+
+    if (std.mem.eql(u8, argv[1], "logs")) {
+        if (argv.len < 3) {
+            return error.InvalidArgument;
+        }
+        const step_name = readOptionalFlagValue(argv[3..], "--step");
+        return try runVoid(commands.getRunLogs(allocator, client, argv[2], step_name));
+    }
+
+    try printUsage(io_output.stderrWriter());
+    return error.InvalidArgument;
 }
 
 /// Dispatches parsed CLI arguments to command handlers.
@@ -345,6 +386,10 @@ fn printUsage(writer: anytype) !void {
         \\  platform cluster builds run --service <name> [--provider <name>] [--registry <name>]
         \\  platform cluster registries get
         \\  platform cluster ingress get
+        \\
+        \\  platform runs list
+        \\  platform runs get <runId>
+        \\  platform runs logs <runId> [--step <name>]
         \\
         \\Remote access:
         \\  Generate an API key in the panel, then run `platform login` with the NetBird IP.

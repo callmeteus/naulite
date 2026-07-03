@@ -34,4 +34,5 @@ export * from "./ExecInstanceBodySchema";
 export * from "./UpdateInstanceStatusBodySchema";
 export * from "./UpsertSecretBodySchema";
 export * from "./ProvisionNodeBodySchema";
+export * from "./PipelineRunSchemas";
 export * from "./cr";

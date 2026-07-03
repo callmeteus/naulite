@@ -1,10 +1,9 @@
-import type { PluginRegistry } from "@platform/shared";
-
-import type { NodeProvisionerProvider } from "@platform/shared";
+import type { NotificationProvider, NodeProvisionerProvider } from "@platform/shared";
 
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 import { BackupDestinationProvider } from "../modules/backup/BackupDestinationProvider";
 import { ContainerRegistryBlobProvider } from "../modules/container-registry/ContainerRegistryBlobProvider";
+import { RunNotificationDispatcher } from "../services/RunNotificationDispatcher";
 import type { LoadedPluginRegistration } from "./LoadedPluginRegistration";
 
 /**
@@ -41,6 +40,13 @@ export namespace PluginRegistryWiring {
                 );
                 console.debug("[plugins] wired node provisioner id=%s", plugin.id);
             }
+
+            if (plugin.type === "notification" && plugin.notificationProvider) {
+                RunNotificationDispatcher.register(
+                    plugin.notificationProvider as NotificationProvider
+                );
+                console.debug("[plugins] wired notification provider id=%s", plugin.id);
+            }
         }
     }
 
@@ -52,7 +58,7 @@ export namespace PluginRegistryWiring {
      * @returns Matching plugin registrations
      */
     export function listByType(
-        registry: PluginRegistry,
+        registry: ControlPlaneContext["pluginRegistry"],
         type: LoadedPluginRegistration["type"]
     ): LoadedPluginRegistration[] {
         return registry.list()

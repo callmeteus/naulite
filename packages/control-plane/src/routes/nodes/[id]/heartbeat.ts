@@ -44,6 +44,9 @@ export const POST = defineRoute({
             return { message: "Node not found." };
         }
 
+        const { NodeHealthWatcher } = await import("../../../services/NodeHealthWatcher");
+        await NodeHealthWatcher.onHeartbeat(updated);
+
         return updated;
     }
 });

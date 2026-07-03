@@ -10,6 +10,9 @@ import { InstanceModel } from "./InstanceModel";
 import { LogRotationRunModel } from "./LogRotationRunModel";
 import { NodeProvisionModel } from "./NodeProvisionModel";
 import { NodeModel } from "./NodeModel";
+import { PipelineEventModel } from "./PipelineEventModel";
+import { PipelineRunModel } from "./PipelineRunModel";
+import { PipelineStepModel } from "./PipelineStepModel";
 import { SchemaMigrationModel } from "./SchemaMigrationModel";
 import { SecretModel } from "./SecretModel";
 import { ServiceModel } from "./ServiceModel";
@@ -26,6 +29,9 @@ export {
     GitRevisionModel,
     InstanceModel,
     LogRotationRunModel,
+    PipelineRunModel,
+    PipelineStepModel,
+    PipelineEventModel,
     NodeModel,
     NodeProvisionModel,
     SchemaMigrationModel,
@@ -48,6 +54,9 @@ export const controlPlaneModels = [
     ContainerRegistryImageModel,
     LogRotationRunModel,
     GitRevisionModel,
+    PipelineRunModel,
+    PipelineStepModel,
+    PipelineEventModel,
     ControlPlaneEventModel,
     ApiKeyModel,
     SchemaMigrationModel,

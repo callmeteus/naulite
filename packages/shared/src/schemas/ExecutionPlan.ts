@@ -110,6 +110,7 @@ export const ExecutionPlanSchema = z.object({
     revision: z.number().int().nonnegative(),
     nodeId: z.string().min(1),
     manifestName: z.string().min(1),
+    runId: z.string().min(1).optional(),
     operations: z.array(ExecutionOperationSchema),
     createdAt: z.string().datetime({ offset: true })
 });

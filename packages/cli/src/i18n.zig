@@ -17,6 +17,9 @@ pub fn t(key: []const u8) []const u8 {
     if (std.mem.eql(u8, key, "rollbackSuccess")) {
         return "GitOps rollback completed.";
     }
+    if (std.mem.eql(u8, key, "runsListed")) {
+        return "Pipeline runs listed.";
+    }
     return key;
 }
 

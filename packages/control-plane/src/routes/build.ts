@@ -4,6 +4,7 @@ import { defineRoute } from "../routing/DefineRoute";
 import { BuildService, BuildServiceError } from "../services/BuildService";
 import {
     BuildServiceBodySchema,
+    BuildWaitQuerySchema,
     LooseObjectSchema,
     RouteErrorResponseSchema
 } from "@platform/shared";
@@ -16,6 +17,7 @@ export const POST = defineRoute({
         tags: ["build"],
         operationId: "triggerServiceBuild",
         body: BuildServiceBodySchema,
+        querystring: BuildWaitQuerySchema,
         response: {
             200: LooseObjectSchema,
             404: RouteErrorResponseSchema,
@@ -54,14 +56,20 @@ export const POST = defineRoute({
                 nodes,
                 serviceName,
                 manifest,
-                { provider, registry }
+                { provider, registry, wait: req.query.wait === "true" }
             );
+
+            if (!req.query.wait) {
+                res.status(202);
+            }
 
             return {
                 serviceName,
                 imageRef: result.imageRef,
                 logs: result.logs,
-                durationMs: result.durationMs
+                durationMs: result.durationMs,
+                runId: result.runId,
+                workflowId: result.workflowId
             };
         } catch (err) {
             if (err instanceof BuildServiceError) {

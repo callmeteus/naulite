@@ -7,6 +7,10 @@ import type {
     LogRotationTask,
     Node,
     NodeProvision,
+    PipelineEvent,
+    PipelineRun,
+    PipelineRunKind,
+    PipelineRunStatus,
     Secret,
     Service,
     Volume
@@ -75,6 +79,7 @@ export interface ApplyResponse {
     servicesUpdated: number;
     servicesDeleted: number;
     instancesToCreate?: number;
+    runId?: string;
     dispatch?: Array<{
         nodeId: string;
         planId: string;
@@ -104,6 +109,7 @@ export interface ApplyResultPayload {
         status: string;
         agentUrl?: string;
     }>;
+    runId?: string;
 }
 
 /**
@@ -159,9 +165,29 @@ export interface ProvisionNodeInput {
  * Build response payload.
  */
 export interface BuildResponse {
-    buildId: string;
-    status: "queued" | "running" | "succeeded" | "failed";
+    serviceName?: string;
+    imageRef?: string;
+    logs?: string;
+    durationMs?: number;
+    runId?: string;
+    workflowId?: string;
+    buildId?: string;
+    status?: "queued" | "running" | "succeeded" | "failed";
 }
+
+/**
+ * Filters for listing pipeline runs.
+ */
+export interface ListPipelineRunsQuery {
+    kind?: PipelineRunKind;
+    status?: PipelineRunStatus;
+    service?: string;
+    pool?: string;
+    since?: string;
+    limit?: number;
+}
+
+export type { PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus };
 
 /**
  * Registry operation response.

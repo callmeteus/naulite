@@ -97,11 +97,13 @@ export type {
 
 export type {
     BuildOptions,
+    ManifestBuild,
     ManifestDefaults,
     ManifestService,
     ManifestVolume,
     ManifestNetwork,
     ManifestRegistry,
+    ManifestPipelineNotifications,
     Manifest
 } from "./Manifest";
 
@@ -110,5 +112,16 @@ export type {
     Plugin,
     PluginRegistration
 } from "./Plugin";
+
+export type {
+    PipelineRun,
+    PipelineRunKind,
+    PipelineRunStatus,
+    PipelineStep,
+    PipelineStepStatus,
+    PipelineEvent,
+    PipelineEventKind,
+    DockerfileStepMarker
+} from "./PipelineRun";
 
 export type { ApiKey, CreatedApiKey } from "./ApiKey";

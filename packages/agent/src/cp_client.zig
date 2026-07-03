@@ -299,6 +299,100 @@ pub fn reportInstanceFailed(
     reportInstanceStatus(allocator, threaded.io(), config, instance_id, "failed");
 }
 
+/// Reports a pipeline run event to the control plane.
+pub fn reportRunEvent(
+    allocator: std.mem.Allocator,
+    // Control plane client configuration.
+    config: Config,
+    // Pipeline run identifier.
+    run_id: []const u8,
+    // Event kind string.
+    kind: []const u8,
+    // Optional step name.
+    step_name: ?[]const u8,
+    // Optional message payload.
+    message: ?[]const u8,
+) void {
+    reportRunEventUrl(allocator, config.cp_url, run_id, kind, step_name, message);
+}
+
+/// Reports a pipeline run event using an explicit control plane URL.
+pub fn reportRunEventUrl(
+    allocator: std.mem.Allocator,
+    cp_url: []const u8,
+    run_id: []const u8,
+    kind: []const u8,
+    step_name: ?[]const u8,
+    message: ?[]const u8,
+) void {
+    var threaded = std.Io.Threaded.init(allocator, .{});
+    defer threaded.deinit();
+    reportRunEventIo(allocator, threaded.io(), cp_url, run_id, kind, step_name, message);
+}
+
+fn reportRunEventIo(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    cp_url: []const u8,
+    run_id: []const u8,
+    kind: []const u8,
+    step_name: ?[]const u8,
+    message: ?[]const u8,
+) void {
+    const path = std.fmt.allocPrint(
+        allocator,
+        "{s}/runs/{s}/events",
+        .{ cp_url, run_id },
+    ) catch {
+        return;
+    };
+    defer allocator.free(path);
+
+    const body = buildRunEventBody(allocator, kind, step_name, message) catch {
+        return;
+    };
+    defer allocator.free(body);
+
+    postJson(allocator, io, path, body) catch |err| {
+        std.log.warn(
+            "[cp] run event report failed runId={s} kind={s} err={}",
+            .{ run_id, kind, err },
+        );
+    };
+}
+
+fn buildRunEventBody(
+    allocator: std.mem.Allocator,
+    kind: []const u8,
+    step_name: ?[]const u8,
+    message: ?[]const u8,
+) ![]u8 {
+    var parts = std.ArrayList(u8).empty;
+    defer parts.deinit(allocator);
+
+    const writer = parts.writer(allocator);
+    const message_text = message orelse kind;
+    try writer.print("{{\"kind\":\"{s}\"", .{kind});
+
+    if (step_name) |name| {
+        try writer.print(",\"stepName\":\"{s}\"", .{name});
+    }
+
+    try writer.print(",\"message\":\"", .{});
+    for (message_text) |byte| {
+        switch (byte) {
+            '"' => try writer.writeAll("\\\""),
+            '\\' => try writer.writeAll("\\\\"),
+            '\n' => try writer.writeAll("\\n"),
+            '\r' => try writer.writeAll("\\r"),
+            '\t' => try writer.writeAll("\\t"),
+            else => try writer.writeByte(byte),
+        }
+    }
+    try writer.writeAll("\"}");
+    return try parts.toOwnedSlice(allocator);
+}
+
 fn postJson(
     allocator: std.mem.Allocator,
     io: std.Io,

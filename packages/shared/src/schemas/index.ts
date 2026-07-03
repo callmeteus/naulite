@@ -102,8 +102,26 @@ export {
     ManifestNetworkSchema,
     ManifestRegistrySchema,
     ManifestDefaultsSchema,
+    ManifestBuildSchema,
+    ManifestPipelineNotificationsSchema,
     BuildOptionsSchema
 } from "./Manifest";
+
+export {
+    PipelineRunSchema,
+    PipelineRunKindSchema,
+    PipelineRunStatusSchema,
+    PipelineStepSchema,
+    PipelineStepStatusSchema,
+    PipelineEventSchema,
+    PipelineEventKindSchema
+} from "./PipelineRun";
+
+export {
+    DockerfileStepMarkerSchema,
+    DockerfileStepNameSchema,
+    DOCKERFILE_STEP_COMMENT_PREFIX
+} from "./DockerfileStepMarker";
 
 export {
     PluginSchema,

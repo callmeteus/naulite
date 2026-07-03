@@ -37,6 +37,9 @@ pub const ExecutionPlan = struct {
     // Ordered runtime operations.
     operations: []const Operation,
 
+    // Optional pipeline run identifier for step event correlation.
+    run_id: ?[]const u8,
+
     /// Single operation entry inside an execution plan.
     pub const Operation = struct {
         // Operation kind to dispatch.
@@ -56,6 +59,9 @@ pub const ExecutionPlan = struct {
         allocator.free(self.node_id);
         allocator.free(self.manifest_name);
         allocator.free(self.created_at);
+        if (self.run_id) |value| {
+            allocator.free(value);
+        }
 
         for (self.operations) |op| {
             allocator.free(op.raw_json);
@@ -133,6 +139,9 @@ pub fn parseExecutionPlan(
         };
     }
 
+    const run_id = try duplicateOptionalString(allocator, root, "runId");
+    errdefer if (run_id) |value| allocator.free(value);
+
     return .{
         .plan_id = plan_id,
         .revision = revision,
@@ -140,6 +149,7 @@ pub fn parseExecutionPlan(
         .manifest_name = manifest_name,
         .created_at = created_at,
         .operations = operations,
+        .run_id = run_id,
     };
 }
 
@@ -170,6 +180,23 @@ fn duplicateRequiredString(
     const value = root.object.get(field_name) orelse return error.InvalidExecutionPlan;
     return switch (value) {
         .string => |s| try allocator.dupe(u8, s),
+        else => error.InvalidExecutionPlan,
+    };
+}
+
+fn duplicateOptionalString(
+    allocator: std.mem.Allocator,
+    root: std.json.Value,
+    field_name: []const u8,
+) !?[]u8 {
+    if (root != .object) {
+        return error.InvalidExecutionPlan;
+    }
+
+    const value = root.object.get(field_name) orelse return null;
+    return switch (value) {
+        .string => |s| try allocator.dupe(u8, s),
+        .null => null,
         else => error.InvalidExecutionPlan,
     };
 }

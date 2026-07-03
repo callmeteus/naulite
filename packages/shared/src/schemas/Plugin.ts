@@ -15,7 +15,8 @@ export const PluginTypeSchema = z.enum([
     "logRotation",
     "logRotationSink",
     "database",
-    "nodeProvisioner"
+    "nodeProvisioner",
+    "notification"
 ]);
 
 /**

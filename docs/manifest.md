@@ -20,7 +20,7 @@ Platform manifests are Compose YAML files with platform-specific extensions pars
 |-------|---------|
 | `cluster.labels` | Node label selector for scheduling |
 | `capabilities` | Required node capabilities |
-| `buildOptions` | Builder provider and build node selection |
+| `build` | Build context, output image, provider, and builder node selection (mutually exclusive with `image`) |
 | `ingress` | Public hostnames and TLS configuration |
 | `logRotation` | Scheduled log rotation policy |
 | `environment` secret refs | Structured secret key references |

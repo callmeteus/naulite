@@ -39,4 +39,7 @@ export interface LoadedPluginRegistration extends PluginRegistration {
         getStatus: (cloudInstanceId: string, region?: string) => Promise<unknown>;
         terminate: (cloudInstanceId: string, region?: string) => Promise<void>;
     };
+    notificationProvider?: {
+        onPipelineEvent: (event: unknown) => Promise<void>;
+    };
 }

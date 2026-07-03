@@ -1,4 +1,4 @@
-import { ManifestSchema, type Manifest, type ManifestService, type NetworkExposure } from "@platform/shared";
+import { ManifestSchema, type Manifest, type ManifestBuild, type ManifestService, type NetworkExposure } from "@platform/shared";
 import { parse as parseYaml } from "yaml";
 import { ZodError } from "zod";
 
@@ -16,6 +16,7 @@ interface RawComposeDocument {
     networks?: Record<string, Record<string, unknown>>;
     registries?: Record<string, Record<string, unknown>>;
     defaults?: Record<string, unknown>;
+    pipeline?: Record<string, unknown>;
     xPlatform?: Record<string, unknown>;
 }
 
@@ -56,7 +57,8 @@ export class ComposeParser {
             volumes: ComposeParser.mapVolumes(document.volumes ?? {}),
             networks: ComposeParser.mapNetworks(document.networks ?? {}),
             registries: ComposeParser.mapRegistries(document.registries ?? document.xPlatform?.registries as Record<string, Record<string, unknown>> ?? {}),
-            defaults: ComposeParser.mapDefaults(document.defaults ?? document.xPlatform?.defaults as Record<string, unknown> | undefined)
+            defaults: ComposeParser.mapDefaults(document.defaults ?? document.xPlatform?.defaults as Record<string, unknown> | undefined),
+            pipeline: ComposeParser.mapPipeline(document.pipeline ?? document.xPlatform?.pipeline)
         };
 
         try {
@@ -81,7 +83,7 @@ export class ComposeParser {
 
         return {
             image: rawService.image as string | undefined,
-            build: rawService.build as ManifestService["build"],
+            build: ComposeParser.mapBuild(rawService, platform),
             command: rawService.command as ManifestService["command"],
             environment: rawService.environment as ManifestService["environment"],
             ports: rawService.ports as ManifestService["ports"],
@@ -90,11 +92,88 @@ export class ComposeParser {
             dependsOn: rawService.dependsOn as ManifestService["dependsOn"],
             cluster: (platform.cluster ?? rawService.cluster) as ManifestService["cluster"],
             capabilities: (platform.capabilities ?? rawService.capabilities ?? []) as string[],
-            buildOptions: (platform.buildOptions ?? rawService.buildOptions) as ManifestService["buildOptions"],
             ingress: (platform.ingress ?? rawService.ingress) as ManifestService["ingress"],
             logRotation: (platform.logRotation ?? rawService.logRotation) as ManifestService["logRotation"],
             secrets: (platform.secrets ?? rawService.secrets ?? []) as ManifestService["secrets"],
             deploy: ComposeParser.mapDeploy(platform.deploy ?? rawService.deploy)
+        };
+    }
+
+    /**
+     * Maps compose build block and legacy buildOptions into a unified build object.
+     *
+     * @param rawService Raw compose service object
+     * @param platform Parsed x-platform extension block
+     * @returns Manifest build definition
+     */
+    private static mapBuild(
+        rawService: Record<string, unknown>,
+        platform: Record<string, unknown>
+    ): ManifestService["build"] {
+        const legacyOptions = (platform.buildOptions ?? rawService.buildOptions) as Record<string, unknown> | undefined;
+        const rawBuild = rawService.build;
+
+        if (typeof rawBuild === "string") {
+            if (legacyOptions) {
+                return {
+                    context: rawBuild,
+                    dockerfile: legacyOptions.dockerfile as string | undefined,
+                    image: legacyOptions.image as string | undefined,
+                    provider: (legacyOptions.provider as ManifestBuild["provider"]) ?? "docker",
+                    cluster: legacyOptions.cluster as ManifestBuild["cluster"]
+                };
+            }
+
+            return rawBuild;
+        }
+
+        if (rawBuild && typeof rawBuild === "object") {
+            const buildObject = rawBuild as Record<string, unknown>;
+
+            return {
+                context: String(buildObject.context ?? "."),
+                dockerfile: buildObject.dockerfile as string | undefined,
+                image: buildObject.image as string | undefined,
+                provider: (buildObject.provider as ManifestBuild["provider"])
+                    ?? (legacyOptions?.provider as ManifestBuild["provider"])
+                    ?? "docker",
+                cluster: (buildObject.cluster as ManifestBuild["cluster"])
+                    ?? (legacyOptions?.cluster as ManifestBuild["cluster"])
+            };
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Maps optional manifest-level pipeline notification overrides.
+     *
+     * @param rawPipeline Raw pipeline object from compose extensions
+     * @returns Manifest pipeline block when present
+     */
+    private static mapPipeline(rawPipeline: unknown): Manifest["pipeline"] {
+        if (!rawPipeline || typeof rawPipeline !== "object") {
+            return undefined;
+        }
+
+        const pipeline = rawPipeline as Record<string, unknown>;
+        const notifications = pipeline.notifications as Record<string, unknown> | undefined;
+
+        if (!notifications) {
+            return undefined;
+        }
+
+        const slack = notifications.slack as Record<string, unknown> | undefined;
+
+        return {
+            notifications: slack
+                ? {
+                    slack: {
+                        enabled: slack.enabled !== false,
+                        channel: typeof slack.channel === "string" ? slack.channel : undefined
+                    }
+                }
+                : undefined
         };
     }
 

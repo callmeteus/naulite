@@ -20,3 +20,4 @@ export type {
     MachineStatus,
     ListMachinesFilters
 } from "./NodeProvisionerProvider";
+export type { NotificationProvider, PipelineNotificationEvent } from "./NotificationProvider";

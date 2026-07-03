@@ -87,12 +87,11 @@ services:
         build:
             context: ./api
             dockerfile: Dockerfile
-        buildOptions:
+            image: ghcr.io/acme/bookstore-api:${GIT_SHA:-latest}
             provider: docker
             cluster:
                 labels:
                     capability: builder
-        image: ghcr.io/acme/bookstore-api:${GIT_SHA:-latest}
         restart: unless-stopped
         networks:
             - edge
@@ -146,13 +145,12 @@ services:
     worker:
         build:
             context: ./worker
-        buildOptions:
+            image: ghcr.io/acme/bookstore-worker:${GIT_SHA:-latest}
             provider: kaniko
             cluster:
                 labels:
                     capability: builder
             registry: ghcr
-        image: ghcr.io/acme/bookstore-worker:${GIT_SHA:-latest}
         restart: unless-stopped
         networks:
             - app

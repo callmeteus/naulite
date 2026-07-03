@@ -9,6 +9,8 @@ import type { LocalSecretProvider } from "../modules/secrets/LocalSecretProvider
 
 import { AgentDispatcher } from "./AgentDispatcher";
 import { BuildService } from "./BuildService";
+import { PipelineRunService } from "./PipelineRunService";
+import { RolloutWatcher } from "./RolloutWatcher";
 
 /**
  * Result of applying a manifest through the control plane.
@@ -28,6 +30,7 @@ export interface ApplyResult {
     exposurePlan: ReturnType<ControlPlaneContext["exposurePlanner"]["plan"]>;
     plans: ReturnType<ControlPlaneContext["planner"]["buildExecutionPlan"]>[];
     dispatch: Awaited<ReturnType<typeof AgentDispatcher.dispatchPlans>>;
+    runId: string;
 }
 
 /**
@@ -69,6 +72,24 @@ export namespace ApplyService {
             services,
             instances,
             volumes
+        });
+
+        const applyRun = await PipelineRunService.createRun({
+            kind: options.repositoryUrl?.startsWith("inline://") ? "apply" : "gitops_sync",
+            manifestName: manifest.name,
+            commitSha: options.commitSha,
+            branch: options.branch,
+            workflowId: `${manifest.name}-${PipelineRunService.createWorkflowId("apply")}`
+        });
+
+        await PipelineRunService.markRunning(applyRun.id);
+        await PipelineRunService.emitEvent(applyRun.id, {
+            kind: "gitops.sync.started",
+            message: `GitOps sync started ${manifest.name}`,
+            metadata: {
+                commitSha: options.commitSha,
+                branch: options.branch
+            }
         });
 
         await ControlPlaneService.Apply.incrementRevision();
@@ -157,11 +178,7 @@ export namespace ApplyService {
             context,
             manifest,
             diff.operations,
-            nodes,
-            {
-                buildContextRoot: options.buildContextRoot
-                    ?? process.env.PLATFORM_BUILD_CONTEXT_ROOT?.trim()
-            }
+            nodes
         );
         const operations = await enrichOperationsWithSecrets(
             addPullOperations(resolvedOperations),
@@ -170,19 +187,42 @@ export namespace ApplyService {
         );
         const plans = nodes.map((node) => {
             const nodeOperations = filterOperationsForNode(node.id, operations, instanceNodes, nodes);
-            return ControlPlaneService.Orchestration.Planner.buildExecutionPlan(
+            const plan = ControlPlaneService.Orchestration.Planner.buildExecutionPlan(
                 manifest.name,
                 node.id,
                 ControlPlaneService.Apply.getRevision(),
                 nodeOperations
             );
+
+            return {
+                ...plan,
+                runId: applyRun.id
+            };
+        });
+
+        await PipelineRunService.emitEvent(applyRun.id, {
+            kind: "rollout.started",
+            message: `Rollout started ${manifest.name}`
         });
 
         const dispatch = await AgentDispatcher.dispatchPlans(plans, nodes);
 
+        const watchedInstanceIds = diff.instancesToCreate.map((instance) => instance.id);
+        RolloutWatcher.watch(applyRun.id, watchedInstanceIds);
+
+        await PipelineRunService.emitEvent(applyRun.id, {
+            kind: "infra.sync.finished",
+            message: `Infra sync finished ${manifest.name}`,
+            metadata: {
+                revision: ControlPlaneService.Apply.getRevision(),
+                commitSha: options.commitSha
+            }
+        });
+
         return {
             revision: ControlPlaneService.Apply.getRevision(),
             manifestName: manifest.name,
+            runId: applyRun.id,
             diff: {
                 servicesToCreate: diff.servicesToCreate.length,
                 servicesToUpdate: diff.servicesToUpdate.length,
