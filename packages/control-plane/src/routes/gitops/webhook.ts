@@ -77,7 +77,8 @@ export const POST = defineRoute({
         const applyResult = await ApplyService.execute(checkout.manifestYaml, {
             repositoryUrl: body.repositoryUrl,
             branch: body.branch ?? "main",
-            commitSha: body.commitSha ?? body.revision ?? checkout.commitSha
+            commitSha: body.commitSha ?? body.revision ?? checkout.commitSha,
+            buildContextRoot: checkout.workDir
         });
 
         await ControlPlaneService.Sync.publish("gitops.webhook", {

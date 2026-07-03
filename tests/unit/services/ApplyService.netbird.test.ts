@@ -149,8 +149,17 @@ function createNetBirdApplyContext(): ControlPlaneContext {
             syncPlatformNodePeers
         },
         gatewayProvider: {
+            syncRoutes: vi.fn(async () => undefined),
             upsertRoute,
             requestAutoTls
+        },
+        gatewayRouteService: {
+            upsertRoute,
+            requestAutoTls,
+            listRoutes: vi.fn(async () => []),
+            removeRoute: vi.fn(async () => false),
+            hydrateFromDatabase: vi.fn(async () => undefined),
+            reloadFromDatabase: vi.fn(async () => undefined)
         },
         controlPlaneSync: {
             publish: vi.fn(async () => null)

@@ -4,6 +4,7 @@ import { ClusterStateModel } from "./ClusterStateModel";
 import { ContainerRegistryImageModel } from "./ContainerRegistryImageModel";
 import { ControlPlaneEventModel } from "./ControlPlaneEventModel";
 import { ControlPlaneLeaderModel } from "./ControlPlaneLeaderModel";
+import { GatewayRouteModel } from "./GatewayRouteModel";
 import { GitRevisionModel } from "./GitRevisionModel";
 import { InstanceModel } from "./InstanceModel";
 import { LogRotationRunModel } from "./LogRotationRunModel";
@@ -21,6 +22,7 @@ export {
     ContainerRegistryImageModel,
     ControlPlaneEventModel,
     ControlPlaneLeaderModel,
+    GatewayRouteModel,
     GitRevisionModel,
     InstanceModel,
     LogRotationRunModel,
@@ -50,5 +52,6 @@ export const controlPlaneModels = [
     ApiKeyModel,
     SchemaMigrationModel,
     ControlPlaneLeaderModel,
-    ClusterStateModel
+    ClusterStateModel,
+    GatewayRouteModel
 ];

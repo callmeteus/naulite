@@ -26,6 +26,9 @@ export namespace ControlPlaneSyncSubscribers {
                 event.payload
             );
         });
+        context.controlPlaneSync.on(ControlPlaneSync.EVENTS.GATEWAY_ROUTE_CHANGED, () => {
+            void context.gatewayRouteService.reloadFromDatabase().catch(() => undefined);
+        });
     }
 
     /**

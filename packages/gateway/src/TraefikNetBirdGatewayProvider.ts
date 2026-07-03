@@ -1,5 +1,4 @@
-import type { GatewayProvider, GatewayRoute, GatewayTlsMaterial } from "@platform/shared";
-import type { Ingress } from "@platform/shared";
+import type { GatewayProvider, GatewayRoute, GatewayTlsMaterial, Ingress } from "@platform/shared";
 
 import { TraefikDynamicConfig } from "./TraefikDynamicConfig";
 
@@ -146,6 +145,34 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
      */
     listRoutes(): StoredRoute[] {
         return [...this.routes.values()];
+    }
+
+    /**
+     * Replaces the in-memory route table and pushes Traefik dynamic configuration.
+     *
+     * @param routes Gateway routes to publish
+     * @returns Nothing.
+     */
+    async syncRoutes(routes: GatewayRoute[]): Promise<void> {
+        const nextKeys = new Set<string>();
+
+        for (const route of routes) {
+            const key = `${route.serviceName}:${route.ingress.host}`;
+            nextKeys.add(key);
+            this.routes.set(key, {
+                serviceName: route.serviceName,
+                host: route.ingress.host,
+                route
+            });
+        }
+
+        for (const key of [...this.routes.keys()]) {
+            if (!nextKeys.has(key)) {
+                this.routes.delete(key);
+            }
+        }
+
+        await this.pushDynamicConfig();
     }
 
     /**

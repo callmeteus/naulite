@@ -38,6 +38,7 @@ export interface ApplyExecuteOptions {
     branch?: string;
     commitSha?: string;
     rolledBackFromId?: string;
+    buildContextRoot?: string;
 }
 
 /**
@@ -156,7 +157,11 @@ export namespace ApplyService {
             context,
             manifest,
             diff.operations,
-            nodes
+            nodes,
+            {
+                buildContextRoot: options.buildContextRoot
+                    ?? process.env.PLATFORM_BUILD_CONTEXT_ROOT?.trim()
+            }
         );
         const operations = await enrichOperationsWithSecrets(
             addPullOperations(resolvedOperations),

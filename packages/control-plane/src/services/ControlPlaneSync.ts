@@ -22,7 +22,9 @@ export class ControlPlaneSync {
     static readonly EVENTS = {
         APPLY_REVISION_CHANGED: "apply.revision.changed",
         SECRET_CHANGED: "secret.changed",
-        CLUSTER_INVALIDATED: "cluster.invalidated"
+        CLUSTER_INVALIDATED: "cluster.invalidated",
+        GATEWAY_ROUTE_CHANGED: "gateway.route.changed",
+        LEADER_CHANGED: "leader.changed"
     } as const;
 
     private pollHandle: NodeJS.Timeout | null = null;

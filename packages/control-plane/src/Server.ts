@@ -59,7 +59,11 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     await context.pluginLoader.load(context.pluginRegistry);
     PluginRegistryWiring.wire(context);
     ControlPlaneSyncSubscribers.register(context);
+    context.leaderElection.setOnBecameLeader(async () => {
+        await context.gatewayRouteService.hydrateFromDatabase();
+    });
     context.leaderElection.start();
+    await context.gatewayRouteService.hydrateFromDatabase();
     context.backupScheduler.start();
     context.logRotationScheduler.start();
     context.controlPlaneSync.start();

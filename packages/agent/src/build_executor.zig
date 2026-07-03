@@ -149,14 +149,31 @@ fn resolveContextPath(
     object: std.json.ObjectMap,
     service_name: []const u8,
 ) ![]u8 {
+    const synced_path = try std.fmt.allocPrint(allocator, "/var/lib/platform/builds/{s}", .{service_name});
+    errdefer allocator.free(synced_path);
+
+    // Prefer synced build context when the control plane already pushed an archive.
+    if (directoryExists(synced_path)) {
+        return synced_path;
+    }
+
     if (object.get("contextPath")) |value| {
         return switch (value) {
-            .string => |path| try allocator.dupe(u8, path),
+            .string => |path| {
+                allocator.free(synced_path);
+                return try allocator.dupe(u8, path);
+            },
             else => error.InvalidBuildTask,
         };
     }
 
-    return try std.fmt.allocPrint(allocator, "/var/lib/platform/builds/{s}", .{service_name});
+    return synced_path;
+}
+
+fn directoryExists(path: []const u8) bool {
+    var dir = std.fs.cwd().openDir(path, .{}) catch return false;
+    dir.close();
+    return true;
 }
 
 fn resolveImageRef(

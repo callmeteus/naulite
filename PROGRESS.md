@@ -34,6 +34,7 @@
   - Container registry SDK + control-plane routes + S3 plugin
   - Leader-gated backup and log-rotation schedulers
 - **Honest scope note**: BFF and UI views are thin proxies over control-plane APIs. Production hardening (authz per resource, pagination, build status polling, provision progress UI) remains follow-up work.
+- **2026-07-02 follow-up**: Gateway routes persisted in `gateway_routes` + Traefik sync on leader; build context sync (`POST /tasks/build-context`); HA e2e with 2 CP replicas; ingress e2e with traefik-mock. Kaniko explicitly unsupported (`provider: docker` only on agents).
 
 ### 2026-07-02 - Agent and control plane bootstrap
 

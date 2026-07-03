@@ -19,7 +19,9 @@ export const POST = defineRoute({
     async handler(req) {
         const body = req.body;
         const manifestYaml = body.manifestYaml ?? body.manifest ?? "";
-        const result = await ApplyService.execute(manifestYaml);
+        const result = await ApplyService.execute(manifestYaml, {
+            buildContextRoot: body.buildContextRoot
+        });
 
         for (const entry of result.dispatch) {
             req.log.debug(

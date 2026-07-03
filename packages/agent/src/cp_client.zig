@@ -80,10 +80,8 @@ fn registerNode(
     const labels_json = buildLabelsJson(allocator) catch "{}";
     defer allocator.free(labels_json);
 
-    const capabilities_json = if (bootstrap.probeDockerSocket())
-        "[\"docker\"]"
-    else
-        "[]";
+    const capabilities_json = buildCapabilitiesJson(allocator) catch "[\"docker\"]";
+    defer allocator.free(capabilities_json);
 
     const netbird_device_json = if (config.netbird_device_id) |device_id|
         try std.fmt.allocPrint(allocator, ",\"netbirdDeviceId\":\"{s}\"", .{device_id})
@@ -185,6 +183,54 @@ fn buildLabelsJson(allocator: std.mem.Allocator) ![]const u8 {
     }
 
     return try allocator.dupe(u8, "{}");
+}
+
+fn buildCapabilitiesJson(allocator: std.mem.Allocator) ![]const u8 {
+    if (env_util.readEnvOptional(allocator, "PLATFORM_CAPABILITIES")) |raw| {
+        defer allocator.free(raw);
+
+        var list = std.ArrayListUnmanaged([]const u8){};
+        errdefer {
+            for (list.items) |item| {
+                allocator.free(item);
+            }
+            list.deinit(allocator);
+        }
+
+        var parts = std.mem.splitScalar(u8, raw, ',');
+        while (parts.next()) |part| {
+            const trimmed = std.mem.trim(u8, part, " \t\r\n");
+            if (trimmed.len == 0) {
+                continue;
+            }
+            try list.append(allocator, try allocator.dupe(u8, trimmed));
+        }
+
+        if (list.items.len == 0) {
+            return try allocator.dupe(u8, "[]");
+        }
+
+        var json = std.ArrayListUnmanaged(u8){};
+        defer json.deinit(allocator);
+        try json.append(allocator, '[');
+        for (list.items, 0..) |item, index| {
+            if (index > 0) {
+                try json.append(allocator, ',');
+            }
+            try json.appendSlice(allocator, "\"");
+            try json.appendSlice(allocator, item);
+            try json.appendSlice(allocator, "\"");
+            allocator.free(item);
+        }
+        try json.append(allocator, ']');
+        return try json.toOwnedSlice(allocator);
+    }
+
+    if (bootstrap.probeDockerSocket()) {
+        return try allocator.dupe(u8, "[\"docker\"]");
+    }
+
+    return try allocator.dupe(u8, "[]");
 }
 
 fn reportInstanceStatus(

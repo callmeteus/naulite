@@ -8,6 +8,7 @@ import type {
 
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 
+import { BuildContextService } from "./BuildContextService";
 import { AgentProxyError, AgentProxyService } from "./AgentProxyService";
 
 /**
@@ -105,13 +106,14 @@ export namespace BuildService {
      * @returns Build result metadata from the agent or provider
      */
     export async function buildService(
-        context: ControlPlaneContext,
+        _context: ControlPlaneContext,
         nodes: Node[],
         serviceName: string,
         manifest: Manifest,
         options: {
             provider?: string;
             registry?: string;
+            buildContextRoot?: string;
         } = {}
     ): Promise<BuildResult> {
         const manifestService = manifest.services[serviceName];
@@ -137,21 +139,11 @@ export namespace BuildService {
         const providerId = options.provider ?? buildConfig.provider;
 
         if (providerId === "kaniko") {
-            const provider = context.builderProviders.get("kaniko");
-
-        if (!provider) {
             throw new BuildServiceError(
-                "BUILDER_NOT_CONFIGURED",
-                "Kaniko builder provider is not registered.",
-                503
+                "BUILDER_NOT_SUPPORTED",
+                "Kaniko builds are not supported in this release. Use provider: docker on a builder-capable agent.",
+                422
             );
-        }
-
-        return provider.buildWithKaniko({
-                contextUri: buildConfig.contextPath,
-                dockerfile: buildConfig.dockerfile,
-                destination: buildConfig.tags[0] ?? `platform/${serviceName}:latest`
-            });
         }
 
         const builderNode = resolveBuilderNode(nodes);
@@ -166,12 +158,26 @@ export namespace BuildService {
 
         const startedAt = Date.now();
         const taskId = `${manifest.name}-${serviceName}-${startedAt}`;
+        let agentContextPath = `/var/lib/platform/builds/${serviceName}`;
+        const contextRoot = options.buildContextRoot?.trim();
+
+        if (contextRoot) {
+            const relativePath = typeof manifestService.build === "string"
+                ? manifestService.build
+                : manifestService.build?.context ?? ".";
+            agentContextPath = await BuildContextService.syncToAgent({
+                serviceName,
+                contextRoot,
+                relativeContextPath: relativePath,
+                agentUrl: builderNode.agentUrl
+            });
+        }
 
         try {
             const response = await AgentProxyService.postTask(builderNode.agentUrl, "/tasks/build", {
                 taskId,
                 serviceName,
-                contextPath: buildConfig.contextPath,
+                contextPath: agentContextPath,
                 dockerfile: buildConfig.dockerfile,
                 tags: buildConfig.tags,
                 provider: providerId,
@@ -227,7 +233,10 @@ export namespace BuildService {
         context: ControlPlaneContext,
         manifest: Manifest,
         operations: ExecutionOperation[],
-        nodes: Node[]
+        nodes: Node[],
+        options: {
+            buildContextRoot?: string;
+        } = {}
     ): Promise<ExecutionOperation[]> {
         const buildRefs = new Map<string, string>();
 
@@ -245,7 +254,9 @@ export namespace BuildService {
             }
 
             const serviceName = operation.serviceName;
-            const result = await buildService(context, nodes, serviceName, manifest);
+            const result = await buildService(context, nodes, serviceName, manifest, {
+                buildContextRoot: options.buildContextRoot
+            });
             buildRefs.set(operation.image, result.imageRef);
         }
 

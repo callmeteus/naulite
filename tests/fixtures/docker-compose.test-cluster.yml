@@ -13,6 +13,15 @@ services:
             timeout: 5s
             retries: 10
 
+    traefik-mock:
+        image: node:22-alpine
+        working_dir: /app
+        command: ["node", "server.mjs"]
+        volumes:
+            - ./traefik-mock:/app:ro
+        ports:
+            - "19099:8099"
+
     control-plane-1:
         build:
             context: ../../..
@@ -22,11 +31,38 @@ services:
             CP_INSTANCE_ID: cp-1
             NETBIRD_API_URL: http://127.0.0.1:1/api
             NETBIRD_MANAGEMENT_URL: http://127.0.0.1:1
+            TRAEFIK_DYNAMIC_CONFIG_URL: http://traefik-mock:8099/platform/dynamic-config
+            PLATFORM_BUILD_CONTEXT_ROOT: /platform/build-fixtures
+        volumes:
+            - ./build-context:/platform/build-fixtures:ro
         ports:
             - "18080:8080"
         depends_on:
             postgres:
                 condition: service_healthy
+            traefik-mock:
+                condition: service_started
+
+    control-plane-2:
+        build:
+            context: ../../..
+            dockerfile: packages/control-plane/Dockerfile
+        environment:
+            DATABASE_URL: postgres://platform:platform@postgres:5432/platform
+            CP_INSTANCE_ID: cp-2
+            NETBIRD_API_URL: http://127.0.0.1:1/api
+            NETBIRD_MANAGEMENT_URL: http://127.0.0.1:1
+            TRAEFIK_DYNAMIC_CONFIG_URL: http://traefik-mock:8099/platform/dynamic-config
+            PLATFORM_BUILD_CONTEXT_ROOT: /platform/build-fixtures
+        volumes:
+            - ./build-context:/platform/build-fixtures:ro
+        ports:
+            - "18081:8080"
+        depends_on:
+            postgres:
+                condition: service_healthy
+            traefik-mock:
+                condition: service_started
 
     agent-node-a:
         build:
@@ -39,6 +75,8 @@ services:
             AGENT_URL: http://agent-node-a:9470
             AGENT_PORT: "9470"
             AGENT_VERSION: zig-0.1.0
+            PLATFORM_NODE_LABELS: "role=worker"
+            PLATFORM_CAPABILITIES: "docker,builder"
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:

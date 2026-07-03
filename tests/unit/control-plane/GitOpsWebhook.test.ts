@@ -10,7 +10,8 @@ import { ApplyService } from "../../../packages/control-plane/src/services/Apply
 const mocks = vi.hoisted(() => ({
     checkoutAndMerge: vi.fn(async () => ({
         manifestYaml: "name: webhook-test\nservices:\n  web:\n    image: nginx:1.27",
-        commitSha: "abc123def456abc123def456abc123def456abcd"
+        commitSha: "abc123def456abc123def456abc123def456abcd",
+        workDir: "/tmp/gitops-test"
     })),
     applyExecute: vi.fn(async () => ({
         revision: 1,
@@ -215,7 +216,8 @@ describe("gitops webhook signature integration", () => {
             {
                 repositoryUrl: payload.repositoryUrl,
                 branch: "main",
-                commitSha: "abc123def456abc123def456abc123def456abcd"
+                commitSha: "abc123def456abc123def456abc123def456abcd",
+                buildContextRoot: "/tmp/gitops-test"
             }
         );
 

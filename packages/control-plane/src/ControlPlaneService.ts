@@ -533,29 +533,36 @@ export namespace ControlPlaneService {
          * @returns Nothing.
          */
         export function upsertRoute(
-            route: Parameters<ControlPlaneContext["gatewayProvider"]["upsertRoute"]>[0]
-        ): ReturnType<ControlPlaneContext["gatewayProvider"]["upsertRoute"]> {
-            return ControlPlaneService.requireContext().gatewayProvider.upsertRoute(route);
+            route: Parameters<ControlPlaneContext["gatewayRouteService"]["upsertRoute"]>[0]
+        ): ReturnType<ControlPlaneContext["gatewayRouteService"]["upsertRoute"]> {
+            return ControlPlaneService.requireContext().gatewayRouteService.upsertRoute(route);
         }
 
         /**
          * @param serviceName Service name associated with the route
          * @param host Ingress host name
-         * @returns Nothing.
+         * @returns Whether a route was removed
          */
         export function removeRoute(
             serviceName: string,
             host: string
-        ): ReturnType<ControlPlaneContext["gatewayProvider"]["removeRoute"]> {
-            return ControlPlaneService.requireContext().gatewayProvider.removeRoute(serviceName, host);
+        ): ReturnType<ControlPlaneContext["gatewayRouteService"]["removeRoute"]> {
+            return ControlPlaneService.requireContext().gatewayRouteService.removeRoute(serviceName, host);
+        }
+
+        /**
+         * @returns Persisted gateway routes
+         */
+        export function listRoutes(): ReturnType<ControlPlaneContext["gatewayRouteService"]["listRoutes"]> {
+            return ControlPlaneService.requireContext().gatewayRouteService.listRoutes();
         }
 
         /**
          * @param host Host name to secure
          * @returns Nothing.
          */
-        export function requestAutoTls(host: string): ReturnType<ControlPlaneContext["gatewayProvider"]["requestAutoTls"]> {
-            return ControlPlaneService.requireContext().gatewayProvider.requestAutoTls(host);
+        export function requestAutoTls(host: string): ReturnType<ControlPlaneContext["gatewayRouteService"]["requestAutoTls"]> {
+            return ControlPlaneService.requireContext().gatewayRouteService.requestAutoTls(host);
         }
     }
 

@@ -27,6 +27,7 @@ export interface GitOpsCheckoutOptions {
 export interface CheckoutMergeResult {
     manifestYaml: string;
     commitSha: string;
+    workDir: string;
 }
 
 /**
@@ -105,7 +106,8 @@ export namespace GitOpsService {
 
         return {
             manifestYaml,
-            commitSha: checkout.commitSha
+            commitSha: checkout.commitSha,
+            workDir
         };
     }
 

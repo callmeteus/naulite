@@ -12,6 +12,8 @@ export class LeaderElection {
     private renewHandle: NodeJS.Timeout | null = null;
     private leaderInstanceId: string | null = null;
     private isCurrentLeader = false;
+    private wasLeader = false;
+    private onBecameLeader: (() => void | Promise<void>) | null = null;
 
     /**
      * Creates a leader election service.
@@ -27,6 +29,16 @@ export class LeaderElection {
         private readonly leaseTtlMs: number = DEFAULT_LEASE_TTL_MS,
         private readonly renewIntervalMs: number = DEFAULT_RENEW_INTERVAL_MS
     ) {}
+
+    /**
+     * Registers a callback invoked when this instance becomes the elected leader.
+     *
+     * @param handler Leader promotion handler
+     * @returns Nothing.
+     */
+    setOnBecameLeader(handler: () => void | Promise<void>): void {
+        this.onBecameLeader = handler;
+    }
 
     /**
      * Starts leader election when PostgreSQL is configured.
@@ -161,5 +173,12 @@ export class LeaderElection {
             this.leaderInstanceId,
             this.isCurrentLeader
         );
+
+        if (this.isCurrentLeader && !this.wasLeader) {
+            console.debug("[leader] promotion instanceId=%s", this.instanceId);
+            void this.onBecameLeader?.();
+        }
+
+        this.wasLeader = this.isCurrentLeader;
     }
 }

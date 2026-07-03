@@ -25,6 +25,7 @@ import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { AgentProxyService } from "./services/AgentProxyService";
 import { createNetBirdAdapter } from "./services/CreateNetBirdService";
 import { GatewayConfig } from "./services/GatewayConfig";
+import { GatewayRouteService } from "./services/GatewayRouteService";
 import { LeaderElection } from "./services/LeaderElection";
 import { NetBirdEnrollmentService } from "./services/NetBirdEnrollmentService";
 import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
@@ -56,6 +57,7 @@ export interface ControlPlaneContext {
     netBirdService: NetBirdService;
     netBirdEnrollment: NetBirdEnrollmentService;
     gatewayProvider: TraefikNetBirdGatewayProvider;
+    gatewayRouteService: GatewayRouteService;
     nodeProvisionerRegistry: NodeProvisionerRegistry;
     nodeProvisionService: NodeProvisionService;
     builderProviders: Map<string, BuilderProvider>;
@@ -100,6 +102,13 @@ export function createControlPlaneContext(
     const builderProviders = createBuilderProviders();
     const backupOrchestrator = createBackupOrchestrator();
     const leaderElection = new LeaderElection(databaseProvider, instanceId);
+    const controlPlaneSync = new ControlPlaneSync(databaseProvider, instanceId);
+    const gatewayProvider = createTraefikNetBirdGatewayProvider({
+        netbirdEndpoint: GatewayConfig.resolveNetbirdEndpoint(),
+        traefikApiUrl: GatewayConfig.resolveTraefikApiUrl(),
+        traefikDynamicConfigUrl: GatewayConfig.resolveTraefikDynamicConfigUrl()
+    });
+    const gatewayRouteService = new GatewayRouteService(gatewayProvider, leaderElection, controlPlaneSync);
 
     return {
         instanceId,
@@ -122,15 +131,12 @@ export function createControlPlaneContext(
             isLeader: () => leaderElection.isLeader()
         }),
         containerRegistryService: createContainerRegistryService(),
-        controlPlaneSync: new ControlPlaneSync(databaseProvider, instanceId),
+        controlPlaneSync,
         leaderElection,
         netBirdService,
         netBirdEnrollment,
-        gatewayProvider: createTraefikNetBirdGatewayProvider({
-            netbirdEndpoint: GatewayConfig.resolveNetbirdEndpoint(),
-            traefikApiUrl: GatewayConfig.resolveTraefikApiUrl(),
-            traefikDynamicConfigUrl: GatewayConfig.resolveTraefikDynamicConfigUrl()
-        }),
+        gatewayProvider,
+        gatewayRouteService,
         nodeProvisionerRegistry,
         nodeProvisionService,
         builderProviders,

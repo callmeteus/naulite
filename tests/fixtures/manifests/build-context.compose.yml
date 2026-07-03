@@ -1,0 +1,7 @@
+name: build-web
+services:
+  web:
+    build: .
+    capabilities:
+      - builder
+      - docker

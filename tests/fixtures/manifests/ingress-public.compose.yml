@@ -1,0 +1,10 @@
+name: ingress-public
+services:
+  web:
+    image: nginx:1.27-alpine
+    ingress:
+      exposure: public
+      host: web.test.local
+      paths:
+        - path: /
+          port: 80

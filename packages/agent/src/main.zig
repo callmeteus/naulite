@@ -53,6 +53,7 @@ pub fn main() !void {
 }
 
 test {
+    _ = @import("build_context.zig");
     _ = @import("execution_plan.zig");
     _ = @import("http_server.zig");
     _ = @import("netbird.zig");

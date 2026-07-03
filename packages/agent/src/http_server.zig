@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const backup_executor = @import("backup_executor.zig");
+const build_context = @import("build_context.zig");
 const build_executor = @import("build_executor.zig");
 const bootstrap = @import("bootstrap.zig");
 const execution_plan = @import("execution_plan.zig");
@@ -58,7 +59,7 @@ pub fn handleRequest(
     // Request body bytes.
     body: []const u8,
 ) !HttpResponse {
-    return handleRequestWithSocket(allocator, docker_client, "/var/run/docker.sock", method, path, body);
+    return handleRequestWithSocket(allocator, docker_client, "/var/run/docker.sock", method, path, body, null);
 }
 
 /// Handles an HTTP request with an explicit Docker socket path.
@@ -74,6 +75,8 @@ pub fn handleRequestWithSocket(
     path: []const u8,
     // Request body bytes.
     body: []const u8,
+    // Optional service name from query string or request header.
+    service_name_hint: ?[]const u8,
 ) !HttpResponse {
     const ctx = RouteContext{
         .allocator = allocator,
@@ -127,6 +130,10 @@ pub fn handleRequestWithSocket(
         return try handleBuildTask(&ctx, body);
     }
 
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/build-context")) {
+        return try handleBuildContext(&ctx, body, service_name_hint);
+    }
+
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/log-rotation")) {
         return try handleLogRotationTask(&ctx, body);
     }
@@ -171,7 +178,7 @@ pub fn serve(
             continue;
         };
 
-        handleConnection(allocator, io, &docker_client, &stream) catch |err| {
+        handleConnection(allocator, io, &docker_client, config.docker_socket, &stream) catch |err| {
             std.log.warn("[http] connection failed: {}", .{err});
         };
         stream.close(io);
@@ -184,6 +191,8 @@ fn handleConnection(
     io: std.Io,
     // Docker runtime client for container operations.
     docker_client: *docker.DockerClient,
+    // Path to the Docker Unix socket or named pipe.
+    docker_socket: []const u8,
     // Accepted client stream.
     stream: *std.Io.net.Stream,
 ) !void {
@@ -266,14 +275,16 @@ fn handleConnection(
     const request_allocator = request_arena.allocator();
 
     const path = try normalizePath(request_allocator, target);
+    const service_name_hint = parseQueryParam(target, "serviceName") orelse parseHeaderValue(header_section, "X-Service-Name");
 
     const response = handleRequestWithSocket(
         request_allocator,
         docker_client,
-        config.docker_socket,
+        docker_socket,
         method,
         path,
         body,
+        service_name_hint,
     ) catch |err| {
         std.log.err("[http] handler failed: {}", .{err});
         try writeRawResponse(io, stream, 500, "Internal Server Error", "application/json", "{\"error\":\"internal server error\"}");
@@ -431,6 +442,25 @@ fn handleBackupRestore(ctx: *const RouteContext, body: []const u8) !HttpResponse
     };
 }
 
+fn handleBuildContext(ctx: *const RouteContext, body: []const u8, service_name_hint: ?[]const u8) !HttpResponse {
+    const result = try build_context.receiveBuildContext(ctx.allocator, body, service_name_hint);
+    defer ctx.allocator.free(result.service_name);
+    defer ctx.allocator.free(result.context_path);
+    defer ctx.allocator.free(result.status);
+
+    const response_body = try std.fmt.allocPrint(
+        ctx.allocator,
+        "{{\"serviceName\":\"{s}\",\"contextPath\":\"{s}\",\"status\":\"{s}\"}}",
+        .{ result.service_name, result.context_path, result.status },
+    );
+
+    return .{
+        .status = 201,
+        .content_type = "application/json",
+        .body = response_body,
+    };
+}
+
 fn handleBuildTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
     const result = try build_executor.executeBuildTask(ctx.allocator, ctx.docker_socket, body);
     defer ctx.allocator.free(result.task_id);
@@ -497,7 +527,7 @@ fn handleLogRotationTask(ctx: *const RouteContext, body: []const u8) !HttpRespon
 }
 
 fn handleBackupReceive(ctx: *const RouteContext, body: []const u8) !HttpResponse {
-    const stored_path = try backup_executor.receiveBackupArchive(ctx.allocator, body);
+    const stored_path = try backup_executor.receiveBackupArchive(ctx.allocator, null, body);
     defer ctx.allocator.free(stored_path);
 
     const response_body = try std.fmt.allocPrint(
@@ -591,6 +621,45 @@ fn normalizePath(allocator: std.mem.Allocator, target: []const u8) ![]const u8 {
     return try allocator.dupe(u8, target[0..query_index]);
 }
 
+fn parseQueryParam(target: []const u8, param_name: []const u8) ?[]const u8 {
+    const query_index = std.mem.indexOfScalar(u8, target, '?') orelse return null;
+    var pairs = std.mem.tokenizeScalar(u8, target[query_index + 1 ..], '&');
+
+    while (pairs.next()) |pair| {
+        if (std.mem.indexOfScalar(u8, pair, '=')) |eq_index| {
+            const name = pair[0..eq_index];
+            if (std.mem.eql(u8, name, param_name)) {
+                return pair[eq_index + 1 ..];
+            }
+        } else if (std.mem.eql(u8, pair, param_name)) {
+            return "";
+        }
+    }
+
+    return null;
+}
+
+fn parseHeaderValue(header_section: []const u8, header_name: []const u8) ?[]const u8 {
+    var lines = std.mem.splitSequence(u8, header_section, "\r\n");
+    _ = lines.next();
+
+    while (lines.next()) |line| {
+        if (line.len == 0) {
+            continue;
+        }
+
+        const colon = std.mem.indexOfScalar(u8, line, ':') orelse continue;
+        const name = std.mem.trim(u8, line[0..colon], " ");
+        if (!std.ascii.eqlIgnoreCase(name, header_name)) {
+            continue;
+        }
+
+        return std.mem.trim(u8, line[colon + 1 ..], " ");
+    }
+
+    return null;
+}
+
 fn extractContainerId(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
     const prefix = "/containers/";
     if (!std.mem.startsWith(u8, path, prefix)) return error.InvalidContainerPath;
@@ -671,6 +740,21 @@ test "build route returns accepted payload" {
     defer allocator.free(response.body);
 
     try std.testing.expect(response.status == 202 or response.status == 500);
+}
+
+test "build context route rejects missing archive payload" {
+    const allocator = std.testing.allocator;
+    var docker_client = docker.DockerClient.init(allocator, "/var/run/docker.sock");
+
+    const response = handleRequest(
+        allocator,
+        &docker_client,
+        "POST",
+        "/tasks/build-context",
+        "{\"serviceName\":\"web\"}",
+    );
+
+    try std.testing.expectError(error.MissingArchive, response);
 }
 
 test "unknown route returns 404" {
