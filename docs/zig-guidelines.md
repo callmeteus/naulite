@@ -1,6 +1,6 @@
 # Zig code guidelines (Platform)
 
-Canonical reference: `packages/agent/src/runtime/docker_api.zig`.
+Canonical reference: `packages/agent/src/runtime/docker/docker_api.zig`.
 
 All new or changed Zig code in this monorepo must follow this style.
 

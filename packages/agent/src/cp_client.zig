@@ -2,7 +2,7 @@ const std = @import("std");
 
 const agent_config = @import("agent_config.zig");
 const bootstrap = @import("bootstrap.zig");
-const docker = @import("runtime/docker.zig");
+const docker = @import("runtime/docker/docker.zig");
 const env_util = @import("env_util.zig");
 
 /// Control plane client configuration (persisted agent identity and connectivity).

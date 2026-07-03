@@ -6,7 +6,7 @@ const build_context = @import("build_context.zig");
 const build_executor = @import("build_executor.zig");
 const execution_plan = @import("execution_plan.zig");
 const log_rotation_executor = @import("log_rotation_executor.zig");
-const docker = @import("runtime/docker.zig");
+const docker = @import("runtime/docker/docker.zig");
 
 pub const Config = struct {
     // Listen address for the agent HTTP server.

@@ -57,5 +57,5 @@ test {
     _ = @import("execution_plan.zig");
     _ = @import("http_server.zig");
     _ = @import("netbird.zig");
-    _ = @import("runtime/docker_stats.zig");
+    _ = @import("runtime/docker/docker_stats.zig");
 }

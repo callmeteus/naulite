@@ -1,8 +1,8 @@
 const std = @import("std");
-const execution_plan = @import("../execution_plan.zig");
-const cp_client = @import("../cp_client.zig");
-const process_cmd = @import("../process_cmd.zig");
-const threaded_io = @import("../threaded_io.zig");
+const execution_plan = @import("../../execution_plan.zig");
+const cp_client = @import("../../cp_client.zig");
+const process_cmd = @import("../../process_cmd.zig");
+const threaded_io = @import("../../threaded_io.zig");
 const docker_api = @import("docker_api.zig");
 const docker_stats = @import("docker_stats.zig");
 
