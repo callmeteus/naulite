@@ -1,0 +1,83 @@
+services:
+    postgres-primary:
+        image: postgres:16-alpine
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: platform
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+            POSTGRES_DB: platform
+            POSTGRES_REPLICATION_USER: ${POSTGRES_REPLICATION_USER:-replicator}
+            POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-replicator}
+        entrypoint: ["sh", "/primary-entrypoint.sh"]
+        volumes:
+            - postgres-primary-data:/var/lib/postgresql/data
+            - ./init/primary:/docker-entrypoint-initdb.d:ro
+            - ./init/primary-entrypoint.sh:/primary-entrypoint.sh:ro
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U platform -d platform"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+    postgres-replica:
+        image: postgres:16-alpine
+        restart: unless-stopped
+        depends_on:
+            postgres-primary:
+                condition: service_healthy
+        environment:
+            POSTGRES_USER: platform
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+            POSTGRES_PRIMARY_HOST: postgres-primary
+            POSTGRES_REPLICATION_USER: ${POSTGRES_REPLICATION_USER:-replicator}
+            POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-replicator}
+        entrypoint: ["sh", "/replica-entrypoint.sh"]
+        volumes:
+            - postgres-replica-data:/var/lib/postgresql/data
+            - ./init/replica-entrypoint.sh:/replica-entrypoint.sh:ro
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U platform -d platform"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
+            start_period: 60s
+
+    pgpool:
+        # 4.5.3 is not published on Docker Hub; 4.4.3 is the latest semver tag (2023-05-24).
+        image: pgpool/pgpool:4.4.3
+        restart: unless-stopped
+        depends_on:
+            postgres-primary:
+                condition: service_healthy
+            postgres-replica:
+                condition: service_healthy
+        environment:
+            POSTGRES_USERNAME: platform
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+            PGPOOL_PARAMS_PORT: "5432"
+            PGPOOL_PARAMS_BACKEND_HOSTNAME0: postgres-primary
+            PGPOOL_PARAMS_BACKEND_PORT0: "5432"
+            PGPOOL_PARAMS_BACKEND_FLAG0: ALWAYS_PRIMARY|DISALLOW_TO_FAILOVER
+            PGPOOL_PARAMS_BACKEND_HOSTNAME1: postgres-replica
+            PGPOOL_PARAMS_BACKEND_PORT1: "5432"
+            PGPOOL_PARAMS_BACKEND_FLAG1: DISALLOW_TO_FAILOVER
+            PGPOOL_PARAMS_FAILOVER_ON_BACKEND_ERROR: "off"
+            PGPOOL_PARAMS_HEALTH_CHECK_PERIOD: "10"
+            PGPOOL_PARAMS_HEALTH_CHECK_USER: platform
+            PGPOOL_PARAMS_HEALTH_CHECK_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+        ports:
+            - "5432:5432"
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "PGPASSWORD=$${POSTGRES_PASSWORD:-platform} pg_isready -h 127.0.0.1 -p 5432 -U platform -d platform",
+                ]
+            interval: 5s
+            timeout: 3s
+            retries: 15
+            start_period: 30s
+
+volumes:
+    postgres-primary-data:
+    postgres-replica-data:

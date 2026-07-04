@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { buildClearSessionCookie, buildSessionCookie } from "../auth/SessionCookie";
+import { CsrfProtection } from "../auth/CsrfProtection";
+import { buildClearSessionCookie, buildSessionCookie, resolveSecureCookies } from "../auth/SessionCookie";
 import { RolePreHandlers } from "../auth/RolePreHandlers";
 
 const LoginBodySchema = z.object({
@@ -19,11 +20,17 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     app.post("/auth/login", async (request, reply) => {
         const body = LoginBodySchema.parse(request.body);
         const login = await app.controlPlane.adminLogin(body);
+        const csrfToken = CsrfProtection.generateToken();
+        const secureCookies = resolveSecureCookies();
 
-        reply.header("Set-Cookie", buildSessionCookie(login.sessionToken));
+        reply.header("Set-Cookie", [
+            buildSessionCookie(login.sessionToken),
+            CsrfProtection.buildCsrfCookie(csrfToken, secureCookies)
+        ]);
 
         return {
-            user: login.user
+            user: login.user,
+            csrfToken
         };
     });
 
@@ -38,7 +45,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
             }
         }
 
-        reply.header("Set-Cookie", buildClearSessionCookie());
+        reply.header("Set-Cookie", [
+            buildClearSessionCookie(),
+            CsrfProtection.buildClearCsrfCookie(resolveSecureCookies())
+        ]);
         return { ok: true };
     });
 

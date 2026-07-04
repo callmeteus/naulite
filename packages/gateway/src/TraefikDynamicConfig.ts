@@ -21,6 +21,7 @@ interface TraefikRouterDefinition {
     middlewares?: string[];
     tls?: {
         certResolver?: string;
+        passthrough?: boolean;
     };
 }
 
@@ -37,9 +38,19 @@ interface TraefikMiddlewareDefinition {
 }
 
 interface TraefikTlsCertificate {
-    certFile: string;
-    keyFile: string;
+    certFile?: string;
+    keyFile?: string;
+    cert?: string;
+    key?: string;
     stores?: string[];
+}
+
+/**
+ * Options that control how TLS is rendered in Traefik dynamic configuration.
+ */
+export interface TraefikTlsBuildOptions {
+    mode?: string;
+    certResolver?: string;
 }
 
 interface StoredRoute {
@@ -105,14 +116,20 @@ export namespace TraefikDynamicConfig {
      * @param tlsByHost Installed TLS material keyed by host
      * @param netbirdEndpoint Public NetBird reverse-proxy endpoint
      * @param autoTlsHosts Hosts that should request automatic TLS
+     * @param options TLS rendering options derived from PLATFORM_TLS_MODE
      * @returns Traefik dynamic configuration payload
      */
     export function build(
         routes: Map<string, StoredRoute>,
         tlsByHost: Map<string, StoredTls>,
         netbirdEndpoint: string,
-        autoTlsHosts: Set<string>
+        autoTlsHosts: Set<string>,
+        options: TraefikTlsBuildOptions = {}
     ): TraefikDynamicConfiguration {
+        const mode = options.mode ?? "acme_tls";
+        const certResolver = options.certResolver ?? "letsencrypt";
+        const useAcme = mode === "acme_tls" || mode === "acme_dns_cloudflare";
+        const usePassthrough = mode === "passthrough";
         const routers: Record<string, TraefikRouterDefinition> = {};
         const services: Record<string, TraefikServiceDefinition> = {};
         const middlewares: Record<string, TraefikMiddlewareDefinition> = {};
@@ -148,8 +165,15 @@ export namespace TraefikDynamicConfig {
                 middlewares: [middlewareKey]
             };
 
-            if (autoTlsHosts.has(route.ingress.host) || route.ingress.tls?.enabled) {
-                router.tls = { certResolver: "letsencrypt" };
+            const hasInlineTls = tlsByHost.has(route.ingress.host);
+            const wantsTls = route.ingress.tls?.enabled !== false;
+
+            if (usePassthrough && wantsTls) {
+                router.tls = { passthrough: true };
+            } else if (hasInlineTls) {
+                router.tls = {};
+            } else if (useAcme && (autoTlsHosts.has(route.ingress.host) || route.ingress.tls?.enabled)) {
+                router.tls = { certResolver };
             }
 
             routers[routerKey] = router;
@@ -164,8 +188,8 @@ export namespace TraefikDynamicConfig {
         };
 
         const certificates = [...tlsByHost.values()].map((entry) => ({
-            certFile: entry.certificate,
-            keyFile: entry.privateKey,
+            cert: entry.certificate,
+            key: entry.privateKey,
             stores: ["default"]
         }));
 

@@ -81,9 +81,5 @@ export function resolveSecretBackendId(): string {
         return process.env.SECRET_BACKEND;
     }
 
-    if (process.env.INFISICAL_TOKEN) {
-        return "infisical";
-    }
-
-    return "local";
+    return "postgres";
 }

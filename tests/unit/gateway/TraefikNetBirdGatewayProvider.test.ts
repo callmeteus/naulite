@@ -42,6 +42,81 @@ describe("TraefikDynamicConfig", () => {
             }
         });
     });
+
+    it("embeds inline TLS certificates using cert and key fields", () => {
+        const routes = new Map([
+            ["api:api.example.com", {
+                serviceName: "api",
+                host: "api.example.com",
+                route: {
+                    serviceName: "api",
+                    ingress: {
+                        host: "api.example.com",
+                        exposure: "public" as const,
+                        tls: { enabled: true },
+                        paths: [{ path: "/", port: 443, protocol: "https" as const }]
+                    },
+                    targetHost: "agent-1",
+                    targetPort: 443
+                }
+            }]
+        ]);
+        const tlsByHost = new Map([
+            ["api.example.com", {
+                host: "api.example.com",
+                certificate: "-----BEGIN CERTIFICATE-----\ncert\n-----END CERTIFICATE-----",
+                privateKey: "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----"
+            }]
+        ]);
+
+        const configuration = TraefikDynamicConfig.build(
+            routes,
+            tlsByHost,
+            "https://vpn.example.com",
+            new Set(),
+            { mode: "custom" }
+        );
+
+        expect(configuration.http.routers["platform-api-api-example-com"].tls).toEqual({});
+        expect(configuration.tls?.certificates).toEqual([{
+            cert: "-----BEGIN CERTIFICATE-----\ncert\n-----END CERTIFICATE-----",
+            key: "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----",
+            stores: ["default"]
+        }]);
+    });
+
+    it("uses TLS passthrough routers when mode is passthrough", () => {
+        const routes = new Map([
+            ["api:api.example.com", {
+                serviceName: "api",
+                host: "api.example.com",
+                route: {
+                    serviceName: "api",
+                    ingress: {
+                        host: "api.example.com",
+                        exposure: "public" as const,
+                        tls: { enabled: true },
+                        paths: [{ path: "/", port: 443, protocol: "https" as const }]
+                    },
+                    targetHost: "agent-1",
+                    targetPort: 443
+                }
+            }]
+        ]);
+
+        const configuration = TraefikDynamicConfig.build(
+            routes,
+            new Map(),
+            "https://vpn.example.com",
+            new Set(),
+            { mode: "passthrough" }
+        );
+
+        expect(configuration.http.routers["platform-api-api-example-com"].tls).toEqual({
+            passthrough: true
+        });
+        expect(configuration.tls).toBeUndefined();
+    });
 });
 
 describe("TraefikNetBirdGatewayProvider", () => {

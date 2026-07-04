@@ -1,4 +1,5 @@
 import type { NotificationProvider, PipelineNotificationEvent } from "@platform/shared";
+import { E7MessageFormatter } from "@platform/shared";
 
 /**
  * Slack webhook notification provider for pipeline events.
@@ -38,13 +39,15 @@ export class SlackNotificationProvider implements NotificationProvider {
             event.runId
         );
 
+        const text = E7MessageFormatter.format(event);
+
         const response = await this.fetchImpl(this.webhookUrl, {
             method: "POST",
             headers: {
                 "content-type": "application/json"
             },
             body: JSON.stringify({
-                text: event.message
+                text
             })
         });
 

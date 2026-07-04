@@ -5,8 +5,11 @@ import { HTTP401Error } from "../../../errors/TreatedError";
 import { AdminService } from "../AdminService";
 
 const AdminLoginBodySchema = z.object({
-    username: z.string().min(1).max(120),
+    username: z.string().min(1).max(120).optional(),
+    email: z.string().email().optional(),
     password: z.string().min(1).max(256)
+}).refine((body) => Boolean(body.username?.trim() || body.email?.trim()), {
+    message: "username or email is required"
 });
 
 const AdminLoginResponseSchema = z.object({
@@ -39,7 +42,8 @@ export const POST = defineRoute({
         }
     },
     async handler(req) {
-        const result = await AdminService.login(req.body.username, req.body.password);
+        const username = (req.body.email ?? req.body.username ?? "").trim();
+        const result = await AdminService.login(username, req.body.password);
 
         if (!result) {
             throw new HTTP401Error("Invalid username or password.");

@@ -72,13 +72,48 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Build agent image
-              run: docker build -f packages/agent/Dockerfile .
+              run: docker build -t platform-agent -f packages/agent/Dockerfile .
 
             - name: Build control-plane image
-              run: docker build -f packages/control-plane/Dockerfile .
+              run: docker build -t platform-control-plane -f packages/control-plane/Dockerfile .
 
             - name: Build UI image
-              run: docker build -f packages/ui/Dockerfile .
+              run: docker build -t platform-ui -f packages/ui/Dockerfile .
 
             - name: Build UI backend image
-              run: docker build -f packages/ui/packages/backend/Dockerfile .
+              run: docker build -t platform-ui-backend -f packages/ui/packages/backend/Dockerfile .
+
+    image-scan:
+        needs: docker-smoke
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
+
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - image: platform-agent
+                      dockerfile: packages/agent/Dockerfile
+                    - image: platform-control-plane
+                      dockerfile: packages/control-plane/Dockerfile
+                    - image: platform-ui
+                      dockerfile: packages/ui/Dockerfile
+                    - image: platform-ui-backend
+                      dockerfile: packages/ui/packages/backend/Dockerfile
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Build image
+              run: docker build -t ${{ matrix.image }} -f ${{ matrix.dockerfile }} .
+
+            - name: Run Trivy vulnerability scanner
+              uses: aquasecurity/trivy-action@v0.36.0
+              with:
+                  image-ref: ${{ matrix.image }}
+                  format: table
+                  exit-code: "1"
+                  ignore-unfixed: true
+                  vuln-type: os,library
+                  severity: CRITICAL

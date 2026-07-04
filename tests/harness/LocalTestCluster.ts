@@ -403,6 +403,62 @@ export class LocalTestCluster {
     }
 
     /**
+     * Pauses a control plane container by instance id (for example `cp-1`).
+     *
+     * @param instanceId Control plane instance id (`cp-1` or `cp-2`)
+     * @returns Nothing.
+     */
+    static async pauseContainer(instanceId: string): Promise<void> {
+        const service = this.instanceComposeServices[instanceId];
+
+        if (!service) {
+            throw new Error(`Unknown control plane instance id: ${instanceId}`);
+        }
+
+        await execFileAsync(
+            "docker",
+            [
+                "compose",
+                "-f",
+                this.composeFile,
+                "-p",
+                this.projectName,
+                "pause",
+                service
+            ],
+            { cwd: process.cwd() }
+        );
+    }
+
+    /**
+     * Unpauses a paused control plane container by instance id.
+     *
+     * @param instanceId Control plane instance id (`cp-1` or `cp-2`)
+     * @returns Nothing.
+     */
+    static async unpauseContainer(instanceId: string): Promise<void> {
+        const service = this.instanceComposeServices[instanceId];
+
+        if (!service) {
+            throw new Error(`Unknown control plane instance id: ${instanceId}`);
+        }
+
+        await execFileAsync(
+            "docker",
+            [
+                "compose",
+                "-f",
+                this.composeFile,
+                "-p",
+                this.projectName,
+                "unpause",
+                service
+            ],
+            { cwd: process.cwd() }
+        );
+    }
+
+    /**
      * Waits until a new leader is elected on a surviving control plane replica.
      *
      * @param timeoutMs Maximum wait time in milliseconds

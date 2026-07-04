@@ -35,3 +35,22 @@ git push origin v1.0.0
 The workflow also runs on `workflow_dispatch`. In the Actions tab, open **Release**, choose **Run workflow**, and select a `v*` tag ref when re-running a past release.
 
 Manual runs from a branch tag images as `dev-<short-sha>` plus the commit SHA.
+
+## Image pinning policy
+
+Third-party container images in dogfood and infra must use **immutable version tags**, never `:latest`.
+
+| Image | Pinned tag | Source |
+|-------|------------|--------|
+| `minio/minio` | `RELEASE.2025-09-07T16-13-09Z` | [Docker Hub tags](https://hub.docker.com/r/minio/minio/tags?name=RELEASE.2025-09-07) |
+| `netbirdio/dashboard` | `v2.90.0` | [Docker Hub tags](https://hub.docker.com/r/netbirdio/dashboard/tags?name=v2.90.0) |
+| `netbirdio/netbird-server` | `0.73.2` | [Docker Hub tags](https://hub.docker.com/r/netbirdio/netbird-server/tags?name=0.73.2) |
+
+Before changing a pinned tag:
+
+1. Confirm the tag exists on the official registry listing (Docker Hub, GHCR, Quay, etc.).
+2. Copy the tag exactly as published - do not invent semver or reuse tags from memory.
+3. Update the compose/manifest and this table in the same PR.
+4. Note the registry URL used for verification in the PR description.
+
+Platform images published to GHCR use semver from git tags or commit SHA (see above). CI runs Trivy on built Platform images (`platform-agent`, `platform-control-plane`, `platform-ui`, `platform-ui-backend`) and fails on **CRITICAL** vulnerabilities (`.github/workflows/ci.yml`, job `image-scan`).

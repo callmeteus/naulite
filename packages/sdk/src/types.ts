@@ -317,6 +317,30 @@ export interface UpsertSecretInput {
     description?: string;
 }
 
+/**
+ * Notification provider environment status.
+ */
+export interface NotificationProviderStatus {
+    id: string;
+    type: "notification";
+    registered: boolean;
+    urlConfigured: boolean;
+    secretConfigured: boolean;
+    env: {
+        urlVars: string[];
+        secretVars: string[];
+    };
+}
+
+/**
+ * Result of a notification provider test ping.
+ */
+export interface NotificationTestResult {
+    id: string;
+    ok: boolean;
+    error?: string;
+}
+
 export type {
     ApiKey,
     BackupTask,

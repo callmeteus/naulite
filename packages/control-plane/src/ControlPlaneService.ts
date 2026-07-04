@@ -397,6 +397,13 @@ export namespace ControlPlaneService {
         export function healthCheck(): ReturnType<ControlPlaneContext["databaseProvider"]["healthCheck"]> {
             return ControlPlaneService.requireContext().databaseProvider.healthCheck();
         }
+
+        /**
+         * @returns Whether pending SQL migrations remain unapplied
+         */
+        export function hasPendingMigrations(): ReturnType<ControlPlaneContext["databaseProvider"]["hasPendingMigrations"]> {
+            return ControlPlaneService.requireContext().databaseProvider.hasPendingMigrations();
+        }
     }
 
     /**

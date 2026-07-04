@@ -1,11 +1,11 @@
 import { NodeProvisionSchema, IdParamsSchema } from "@platform/shared";
 
-import { AuthPreHandlers } from "../../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../../../ControlPlaneService";
 import { defineRoute } from "../../../../routing/DefineRoute";
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:terminate"),
     schema: {
         summary: "Terminate node provision",
         description: "Terminates the cloud VM associated with a provision request.",

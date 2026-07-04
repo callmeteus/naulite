@@ -3,12 +3,12 @@ import {
     ProvisionNodeBodySchema
 } from "@platform/shared";
 
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:provision"),
     schema: {
         summary: "Provision node",
         description: "Launches a cloud VM and bootstraps a platform agent via userData.",

@@ -1,3 +1,4 @@
+import { AdminAuditLogModel } from "./AdminAuditLogModel";
 import { AdminSessionModel } from "./AdminSessionModel";
 import { AdminUserModel } from "./AdminUserModel";
 import { ApiKeyModel } from "./ApiKeyModel";
@@ -22,6 +23,7 @@ import { TenantModel } from "./TenantModel";
 import { VolumeModel } from "./VolumeModel";
 
 export {
+    AdminAuditLogModel,
     AdminSessionModel,
     AdminUserModel,
     ApiKeyModel,
@@ -52,6 +54,7 @@ export {
 export const controlPlaneModels = [
     AdminUserModel,
     AdminSessionModel,
+    AdminAuditLogModel,
     TenantModel,
     NodeModel,
     NodeProvisionModel,

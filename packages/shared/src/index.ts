@@ -22,3 +22,8 @@ export {
     toCrPullSpec
 } from "./manifest/resolveContainerRegistryImageRef";
 export type { ParsedContainerRegistryRef } from "./manifest/resolveContainerRegistryImageRef";
+export { E7MessageFormatter } from "./notifications/E7MessageFormatter";
+export {
+    PipelineNotificationPayload,
+    type PipelineNotificationPayload as PipelineNotificationPayloadData
+} from "./notifications/PipelineNotificationPayload";

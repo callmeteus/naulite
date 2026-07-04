@@ -5,7 +5,8 @@ import {
     type NodeProvision,
     type PaginatedList,
     type PaginationQuery,
-    type ProvisionNodeBodySchema
+    type ProvisionNodeBodySchema,
+    type MachineStatus
 } from "@platform/shared";
 import type { z } from "zod";
 
@@ -15,15 +16,19 @@ import type { NodeProvisionerRegistry } from "../plugins/NodeProvisionerRegistry
 
 import { NodeProvisionUserDataTemplate } from "./NodeProvisionUserDataTemplate";
 import type { NetBirdEnrollmentService } from "./NetBirdEnrollmentService";
+import type { LeaderElection } from "./LeaderElection";
 
 type ProvisionNodeInput = z.infer<typeof ProvisionNodeBodySchema>;
 
 const PROVISION_SETUP_KEY_PREFIX = "netbird/provision-setup-key/";
+const DEFAULT_STATUS_POLL_INTERVAL_MS = 30_000;
 
 /**
  * Orchestrates cloud node provisioning and correlates agent registration.
  */
 export class NodeProvisionService {
+    private statusPollTimer: ReturnType<typeof setInterval> | null = null;
+
     /**
      * Creates the node provision service.
      *
@@ -38,6 +43,95 @@ export class NodeProvisionService {
         private readonly registry: NodeProvisionerRegistry,
         private readonly resolvePublicCpUrl: () => string
     ) {}
+
+    /**
+     * Starts leader-only polling of cloud instance status for in-flight provisions.
+     *
+     * @param leaderElection Leader election service
+     * @param intervalMs Poll interval in milliseconds
+     * @returns Nothing.
+     */
+    startStatusPolling(leaderElection: LeaderElection, intervalMs = DEFAULT_STATUS_POLL_INTERVAL_MS): void {
+        if (this.statusPollTimer) {
+            return;
+        }
+
+        this.statusPollTimer = setInterval(() => {
+            if (!leaderElection.isLeader()) {
+                return;
+            }
+
+            void this.pollActiveProvisions().catch((err) => {
+                console.error("[node-provision] status poll failed: %O", err);
+            });
+        }, intervalMs);
+
+        console.debug("[node-provision] status polling started intervalMs=%d", intervalMs);
+    }
+
+    /**
+     * Stops cloud instance status polling.
+     *
+     * @returns Nothing.
+     */
+    stopStatusPolling(): void {
+        if (!this.statusPollTimer) {
+            return;
+        }
+
+        clearInterval(this.statusPollTimer);
+        this.statusPollTimer = null;
+        console.debug("[node-provision] status polling stopped");
+    }
+
+    /**
+     * Polls cloud providers for in-flight provision statuses.
+     *
+     * @returns Nothing.
+     */
+    async pollActiveProvisions(): Promise<void> {
+        const provisions = await this.store.listNodeProvisionsInFlight();
+
+        for (const provision of provisions) {
+            if (!provision.cloudInstanceId) {
+                continue;
+            }
+
+            const provider = this.registry.get(provision.provider);
+
+            if (!provider) {
+                console.debug(
+                    "[node-provision] poll skip missing provider provisionId=%s provider=%s",
+                    provision.id,
+                    provision.provider
+                );
+                continue;
+            }
+
+            const machineStatus = await provider.getStatus(provision.cloudInstanceId, provision.region);
+            const nextStatus = mapMachineStatusToProvisionStatus(provision.status, machineStatus);
+
+            if (!nextStatus || nextStatus === provision.status) {
+                continue;
+            }
+
+            const updated = NodeProvisionSchema.parse({
+                ...provision,
+                status: nextStatus,
+                error: machineStatus === "failed" ? "Cloud instance entered failed state." : provision.error,
+                updatedAt: new Date().toISOString()
+            });
+            await this.store.saveNodeProvision(updated);
+
+            console.debug(
+                "[node-provision] poll updated provisionId=%s instanceId=%s status=%s machineStatus=%s",
+                provision.id,
+                provision.cloudInstanceId,
+                nextStatus,
+                machineStatus
+            );
+        }
+    }
 
     /**
      * Creates a provision request and launches cloud machines.
@@ -264,6 +358,38 @@ export class NodeProvisionService {
         console.debug("[node-provision] created setup key provisionId=%s", provisionId);
         return setupKey;
     }
+}
+
+/**
+ * Maps cloud machine status to provision lifecycle status.
+ *
+ * @param currentStatus Current provision status
+ * @param machineStatus Cloud machine status
+ * @returns Next provision status when an update is needed
+ */
+function mapMachineStatusToProvisionStatus(
+    currentStatus: NodeProvision["status"],
+    machineStatus: MachineStatus
+): NodeProvision["status"] | null {
+    if (machineStatus === "failed") {
+        return "failed";
+    }
+
+    if (machineStatus === "terminated" || machineStatus === "stopped") {
+        return currentStatus === "registered" ? currentStatus : "failed";
+    }
+
+    if (machineStatus === "pending" || machineStatus === "launching") {
+        return currentStatus === "pending" ? "launching" : currentStatus;
+    }
+
+    if (machineStatus === "running") {
+        if (currentStatus === "pending" || currentStatus === "launching") {
+            return "bootstrapping";
+        }
+    }
+
+    return null;
 }
 
 /**

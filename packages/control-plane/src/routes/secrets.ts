@@ -3,13 +3,13 @@ import { z } from "zod";
 import { SecretSchema, UpsertSecretBodySchema } from "@platform/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
 import { LeaderPreHandlers } from "../auth/LeaderPreHandlers";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { HTTP400Error } from "../errors/TreatedError";
 import { defineRoute } from "../routing/DefineRoute";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("secrets:read"),
     schema: {
         summary: "List secrets",
         description: "Lists secret metadata stored in the cluster.",
@@ -25,7 +25,10 @@ export const GET = defineRoute({
 });
 
 export const POST = defineRoute({
-    preHandler: [AuthPreHandlers.authorizedLocalOrApiKey, LeaderPreHandlers.requireLeader()],
+    preHandler: [
+        ...PermissionPreHandlers.authorizedWithPermission("secrets:write"),
+        LeaderPreHandlers.requireLeader()
+    ],
     schema: {
         summary: "Create secret",
         description: "Creates a cluster secret with encrypted values at rest.",

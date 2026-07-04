@@ -1,11 +1,11 @@
 ---
 title: Operations runbook
-description: Dogfood and staging operational procedures for Platform clusters.
+description: Incident response procedures for Platform clusters.
 ---
 
 # Operations runbook
 
-Procedures for operators running the Platform dogfood stack or a small staging cluster. Production hardening is follow-up work beyond the alpha scaffold.
+Incident-focused procedures for operators running a Platform dogfood or staging cluster. For installation, database setup, and first apply, start with [Get started](/get-started/).
 
 ## Health checks
 
@@ -23,40 +23,6 @@ platform cluster nodes get
 ```
 
 Nodes should report `online` after the first heartbeat post-bootstrap.
-
-## Start and stop (dogfood)
-
-```bash
-# Linux/macOS/Git Bash
-./bin/dev.sh
-
-# Windows PowerShell
-./bin/dev.ps1
-```
-
-Stop the stack:
-
-```bash
-docker compose down
-```
-
-## Bootstrap new nodes
-
-See [Bootstrap](/bootstrap/) for control plane and agent one-liners, setup keys, and dry-run validation.
-
-Post-bootstrap verification:
-
-```bash
-platform cluster nodes get
-```
-
-## Apply a manifest
-
-```bash
-platform cluster apply -f path/to/manifest.compose.yml
-```
-
-GitOps webhook and revision rollback are documented in the repository `CONTEXT.md`.
 
 ## Backups and log rotation
 
@@ -81,6 +47,8 @@ Dogfood uses service-token auth via `ADMIN_API_KEY` in `.env`. See [Admin authen
 | NetBird enrollment fails | Self-hosted management URL only; setup key from bootstrap |
 | Apply stuck | Agent logs; scheduler node labels vs manifest `cluster.labels` |
 | Metrics empty | `GET /metrics` requires local or API key auth; Prometheus URL in dogfood compose |
+| HTTP 503 `not_leader` | Retry on leader replica; see [Failover](/operations/failover/) |
+| Database readiness fails | `DATABASE_URL`, Postgres or pgpool health; see [Database](/get-started/database/) |
 
 ## Escalation data to collect
 
@@ -88,3 +56,12 @@ Dogfood uses service-token auth via `ADMIN_API_KEY` in `.env`. See [Admin authen
 2. Affected node id and `platform cluster nodes get` output
 3. Recent apply revision id and manifest name
 4. Agent logs on the scheduled node
+5. Leader instance id and Postgres connectivity if HA symptoms appear
+
+## Related operations guides
+
+- [Failover](/operations/failover/) - control plane leader and PostgreSQL HA
+- [Migrations](/operations/migrations/) - rolling deploy schema changes
+- [Metrics](/operations/metrics/) - Prometheus scraping
+- [AWS provisioner](/operations/aws-provisioner/) - EC2 worker lifecycle
+- [Load and chaos testing](/operations/load-chaos/) - local resilience scripts

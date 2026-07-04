@@ -1,6 +1,6 @@
 services:
     dashboard:
-        image: netbirdio/dashboard:latest
+        image: netbirdio/dashboard:v2.90.0
         container_name: netbird-dashboard
         restart: unless-stopped
         networks:
@@ -9,7 +9,7 @@ services:
             - dashboard.env
 
     netbird-server:
-        image: netbirdio/netbird-server:latest
+        image: netbirdio/netbird-server:0.73.2
         container_name: netbird-server
         restart: unless-stopped
         environment:

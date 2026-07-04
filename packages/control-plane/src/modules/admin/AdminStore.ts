@@ -3,6 +3,7 @@ import { Op } from "sequelize";
 
 import type { AdminLoginResult, AdminRole, AdminUserPublic } from "../../auth/AdminAuthTypes";
 import { parseAdminRole } from "../../auth/AdminAuthTypes";
+import { AdminAuditService } from "./AdminAuditService";
 import { AdminSessionModel, AdminUserModel } from "../../database/models/index";
 
 import { AdminPasswordCrypto } from "./AdminPasswordCrypto";
@@ -21,6 +22,95 @@ export class AdminStore {
      */
     async countUsers(): Promise<number> {
         return AdminUserModel.count();
+    }
+
+    /**
+     * Lists all admin users.
+     *
+     * @returns Public admin user records
+     */
+    async listUsers(): Promise<AdminUserPublic[]> {
+        const rows = await AdminUserModel.findAll({
+            order: [["username", "ASC"]]
+        });
+
+        return rows.map(mapAdminUser);
+    }
+
+    /**
+     * Creates a new admin user.
+     *
+     * @param input User creation payload
+     * @returns Created public user
+     */
+    async createUser(input: {
+        username: string;
+        password: string;
+        role: AdminRole;
+        tenantId?: string | null;
+    }): Promise<AdminUserPublic> {
+        const existing = await this.findUserByUsername(input.username);
+
+        if (existing) {
+            throw new Error(`Admin user already exists: ${input.username}`);
+        }
+
+        const now = new Date().toISOString();
+        const passwordHash = await AdminPasswordCrypto.hashPassword(input.password);
+        const row = await AdminUserModel.create({
+            id: randomUUID(),
+            username: input.username,
+            passwordHash,
+            role: input.role,
+            tenantId: input.tenantId ?? null,
+            createdAt: now,
+            updatedAt: now,
+            disabledAt: null
+        });
+
+        return mapAdminUser(row);
+    }
+
+    /**
+     * Disables an admin user by id.
+     *
+     * @param userId Admin user identifier
+     * @returns Updated public user when found
+     */
+    async disableUser(userId: string): Promise<AdminUserPublic | null> {
+        const user = await this.findUserById(userId);
+
+        if (!user) {
+            return null;
+        }
+
+        const now = new Date().toISOString();
+        await user.update({
+            disabledAt: now,
+            updatedAt: now
+        });
+
+        await AdminSessionModel.update(
+            { revokedAt: now },
+            {
+                where: {
+                    userId,
+                    revokedAt: { [Op.is]: null }
+                }
+            }
+        );
+
+        return mapAdminUser(user);
+    }
+
+    /**
+     * Resolves a login identifier to a username (email aliases are stored as username).
+     *
+     * @param identifier Username or email-shaped login
+     * @returns Normalized username
+     */
+    resolveLoginIdentifier(identifier: string): string {
+        return identifier.trim().toLowerCase();
     }
 
     /**
@@ -86,15 +176,25 @@ export class AdminStore {
      * @returns Login result when credentials are valid
      */
     async login(username: string, password: string): Promise<AdminLoginResult | null> {
-        const user = await this.findUserByUsername(username);
+        const normalized = this.resolveLoginIdentifier(username);
+        const user = await this.findUserByUsername(normalized);
 
         if (!user || user.disabledAt) {
+            await AdminAuditService.record({
+                action: "login.failed",
+                detail: { username: normalized }
+            });
             return null;
         }
 
         const validPassword = await AdminPasswordCrypto.verifyPassword(password, user.passwordHash);
 
         if (!validPassword) {
+            await AdminAuditService.record({
+                action: "login.failed",
+                actorUserId: user.id,
+                detail: { username: normalized }
+            });
             return null;
         }
 
@@ -104,8 +204,23 @@ export class AdminStore {
             return null;
         }
 
+        await AdminSessionModel.update(
+            { revokedAt: new Date().toISOString() },
+            {
+                where: {
+                    userId: user.id,
+                    revokedAt: { [Op.is]: null }
+                }
+            }
+        );
+
         const session = await this.createSession(user.id);
         const publicUser = mapAdminUser(user);
+
+        await AdminAuditService.record({
+            action: "login.success",
+            actorUserId: user.id
+        });
 
         return {
             sessionToken: session.token,
@@ -162,6 +277,13 @@ export class AdminStore {
                 }
             }
         );
+
+        if (affectedCount > 0) {
+            await AdminAuditService.record({
+                action: "logout",
+                detail: { revokedSessions: affectedCount }
+            });
+        }
 
         return affectedCount > 0;
     }

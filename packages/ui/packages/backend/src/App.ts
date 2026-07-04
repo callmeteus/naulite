@@ -2,6 +2,7 @@ import { PlatformApiError, PlatformClient } from "@platform/sdk";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { AuthPreHandlers } from "./auth/AuthPreHandlers";
+import { CsrfProtection } from "./auth/CsrfProtection";
 import { RolePreHandlers } from "./auth/RolePreHandlers";
 import { resolveConfigFromEnv } from "./Config";
 import { registerRoutes } from "./routes/index";
@@ -60,6 +61,12 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
             return;
         }
 
+        if (CsrfProtection.requiresValidation(request) && !CsrfProtection.isValid(request)) {
+            return reply.code(403).send({
+                message: "Token CSRF inválido ou ausente."
+            });
+        }
+
         const path = request.url.split("?")[0] ?? request.url;
         const method = request.method.toUpperCase();
 
@@ -71,10 +78,18 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
                 return;
             }
 
+            if (path.startsWith("/notifications")) {
+                if (!RolePreHandlers.canOperate(request)) {
+                    throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
+                }
+                return;
+            }
+
             if (
                 method === "POST" &&
                 (path === "/apply" ||
                     path === "/build" ||
+                    path === "/notifications/test" ||
                     path === "/nodes/provision" ||
                     path.startsWith("/backups/") ||
                     (path.startsWith("/nodes/provisions/") && path.endsWith("/terminate")))

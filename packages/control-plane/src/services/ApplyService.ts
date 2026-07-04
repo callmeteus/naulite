@@ -1,5 +1,6 @@
-import type { ExecutionOperation, Instance, Manifest, ManifestService, Node, SecretFilter } from "@platform/shared";
+import type { ExecutionOperation, Instance, IngressTls, Manifest, ManifestService, Node, SecretFilter } from "@platform/shared";
 import { resolveManifestBuild } from "@platform/shared";
+import type { GatewayTlsMaterial } from "@platform/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
 import type { ControlPlaneContext } from "../ControlPlaneContext";
@@ -13,6 +14,8 @@ import { BuildContextService } from "./BuildContextService";
 import { BuildService } from "./BuildService";
 import { PipelineRunService } from "./PipelineRunService";
 import { RolloutWatcher } from "./RolloutWatcher";
+import { SecretsService } from "./SecretsService";
+import { TlsConfig } from "./TlsConfig";
 
 /**
  * Result of applying a manifest through the control plane.
@@ -715,6 +718,8 @@ export namespace ApplyService {
         nodes: Node[],
         instanceNodes: Map<string, string>
     ): Promise<void> {
+        const context = ControlPlaneService.requireContext();
+
         for (const [serviceName, service] of Object.entries(manifest.services)) {
             if (!service.ingress || service.ingress.exposure !== "public") {
                 continue;
@@ -737,10 +742,64 @@ export namespace ApplyService {
                 targetPort: pathRule.port
             });
 
-            if (service.ingress.tls?.enabled) {
+            const tls = service.ingress.tls;
+
+            if (tls?.certificateSecret && tls?.privateKeySecret) {
+                const material = await resolveIngressTlsMaterial(tls, context.secretsService);
+
+                if (material) {
+                    console.debug("[apply] install custom tls host=%s", service.ingress.host);
+                    await context.gatewayProvider.installTls(service.ingress.host, material);
+                }
+            } else if (tls?.enabled && TlsConfig.supportsAutoTls()) {
                 await ControlPlaneService.Gateway.requestAutoTls(service.ingress.host);
             }
         }
+    }
+
+    /**
+     * Resolves TLS certificate material from cluster secrets referenced by ingress TLS config.
+     *
+     * @param tls Ingress TLS definition with secret references
+     * @param secretsService Secrets service for value resolution
+     * @returns Resolved certificate and private key when available
+     */
+    async function resolveIngressTlsMaterial(
+        tls: IngressTls,
+        secretsService: SecretsService
+    ): Promise<GatewayTlsMaterial | null> {
+        const certRef = tls.certificateSecret;
+        const keyRef = tls.privateKeySecret;
+
+        if (!certRef || !keyRef) {
+            return null;
+        }
+
+        const certValues = await secretsService.resolveValues(certRef.secretName);
+        const keyValues = await secretsService.resolveValues(keyRef.secretName);
+
+        if (!certValues || !keyValues) {
+            console.debug(
+                "[apply] tls secrets unresolved cert=%s key=%s",
+                certRef.secretName,
+                keyRef.secretName
+            );
+            return null;
+        }
+
+        const certificate = certValues[certRef.key ?? "tls.crt"] ?? certValues.certificate;
+        const privateKey = keyValues[keyRef.key ?? "tls.key"] ?? keyValues.privateKey;
+
+        if (!certificate || !privateKey) {
+            console.debug(
+                "[apply] tls secret keys missing cert=%s key=%s",
+                certRef.secretName,
+                keyRef.secretName
+            );
+            return null;
+        }
+
+        return { certificate, privateKey };
     }
 
     /**

@@ -17,6 +17,8 @@ COPY packages/runtimes/podman/package.json ./packages/runtimes/podman/
 COPY packages/runtimes/containerd/package.json ./packages/runtimes/containerd/
 COPY packages/plugins/s3-storage-provider/package.json ./packages/plugins/s3-storage-provider/
 COPY packages/plugins/aws-node-provisioner/package.json ./packages/plugins/aws-node-provisioner/
+COPY packages/plugins/notification-slack/package.json ./packages/plugins/notification-slack/
+COPY packages/plugins/notification-webhook/package.json ./packages/plugins/notification-webhook/
 
 RUN corepack enable && yarn install --frozen-lockfile || yarn install
 
@@ -30,6 +32,8 @@ COPY packages/runtimes/podman ./packages/runtimes/podman
 COPY packages/runtimes/containerd ./packages/runtimes/containerd
 COPY packages/plugins/s3-storage-provider ./packages/plugins/s3-storage-provider
 COPY packages/plugins/aws-node-provisioner ./packages/plugins/aws-node-provisioner
+COPY packages/plugins/notification-slack ./packages/plugins/notification-slack
+COPY packages/plugins/notification-webhook ./packages/plugins/notification-webhook
 COPY bootstrap ./bootstrap
 COPY scripts ./scripts
 
@@ -42,6 +46,8 @@ RUN yarn workspace @platform/shared build \
     && yarn workspace @platform/runtime-containerd build \
     && yarn workspace @platform/plugin-s3-storage-provider build \
     && yarn workspace @platform/plugin-aws-node-provisioner build \
+    && yarn workspace @platform/plugin-notification-slack build \
+    && yarn workspace @platform/plugin-notification-webhook build \
     && yarn workspace @platform/control-plane build
 
 FROM node:22-bookworm-slim AS runtime
@@ -79,6 +85,10 @@ COPY --from=build /app/packages/plugins/s3-storage-provider/dist ./packages/plug
 COPY --from=build /app/packages/plugins/s3-storage-provider/package.json ./packages/plugins/s3-storage-provider/package.json
 COPY --from=build /app/packages/plugins/aws-node-provisioner/dist ./packages/plugins/aws-node-provisioner/dist
 COPY --from=build /app/packages/plugins/aws-node-provisioner/package.json ./packages/plugins/aws-node-provisioner/package.json
+COPY --from=build /app/packages/plugins/notification-slack/dist ./packages/plugins/notification-slack/dist
+COPY --from=build /app/packages/plugins/notification-slack/package.json ./packages/plugins/notification-slack/package.json
+COPY --from=build /app/packages/plugins/notification-webhook/dist ./packages/plugins/notification-webhook/dist
+COPY --from=build /app/packages/plugins/notification-webhook/package.json ./packages/plugins/notification-webhook/package.json
 COPY --from=build /app/bootstrap ./bootstrap
 
 RUN mkdir -p /data

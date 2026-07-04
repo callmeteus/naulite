@@ -137,11 +137,16 @@ prepare_env() {
     set_env_var "PROMETHEUS_URL" "${PROMETHEUS_URL:-http://platform-prometheus:9090}"
     set_env_var "PLATFORM_PROMETHEUS_FILE_SD_DIR" "${PLATFORM_PROMETHEUS_FILE_SD_DIR:-/var/lib/platform/prometheus/file_sd}"
     set_env_var "PLATFORM_METRICS_SYNC_ENABLED" "${PLATFORM_METRICS_SYNC_ENABLED:-true}"
+    set_env_var "POSTGRES_HA_ENABLED" "true"
 
     # shellcheck disable=SC1091
     set -a
     source "${DOGFOOD_DIR}/.env"
     set +a
+
+    if ! grep -q "^DATABASE_URL=" "${DOGFOOD_DIR}/.env" 2>/dev/null; then
+        set_env_var "DATABASE_URL" "postgres://platform:${POSTGRES_PASSWORD:-platform}@pgpool:5432/platform"
+    fi
 }
 
 init_netbird() {

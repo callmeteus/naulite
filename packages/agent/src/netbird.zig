@@ -158,7 +158,10 @@ pub const NetbirdClient = struct {
             return error.MissingSetupKey;
         };
 
-        std.log.info("[netbird] enrolling management_url={s}", .{self.management_url});
+        std.log.info(
+            "[netbird] enrolling management_url={s} setup_key_len={d}",
+            .{ self.management_url, key.len },
+        );
         try runNetbirdUp(self.allocator, self.management_url, key);
 
         if (!self.isConnected()) {
@@ -305,6 +308,15 @@ fn parseStatusText(allocator: std.mem.Allocator, raw_text: []const u8) !StatusIn
     };
 }
 
+const netbird_up_max_attempts: u32 = 3;
+const netbird_up_base_delay_ms: u64 = 500;
+
+/// Returns exponential backoff delay for a zero-based attempt index.
+fn netbirdUpRetryDelayMs(attempt_index: u32) u64 {
+    const capped_shift: u5 = @intCast(@min(attempt_index, 10));
+    return netbird_up_base_delay_ms * (@as(u64, 1) << capped_shift);
+}
+
 fn runNetbirdUp(
     allocator: std.mem.Allocator,
     management_url: []const u8,
@@ -319,10 +331,51 @@ fn runNetbirdUp(
         setup_key,
     };
 
-    const output = try process_cmd.runCommand(allocator, &argv);
-    defer allocator.free(output);
+    var attempt: u32 = 0;
+    while (attempt < netbird_up_max_attempts) : (attempt += 1) {
+        std.log.debug(
+            "[netbird] netbird up attempt={d}/{d} management_url={s}",
+            .{ attempt + 1, netbird_up_max_attempts, management_url },
+        );
 
-    std.log.debug("[netbird] netbird up output_len={d}", .{output.len});
+        const captured = process_cmd.runCapture(allocator, &argv) catch |err| {
+            std.log.debug("[netbird] netbird up attempt={d} spawn failed err={}", .{ attempt + 1, err });
+            if (attempt + 1 >= netbird_up_max_attempts) {
+                return err;
+            }
+            const delay_ms = netbirdUpRetryDelayMs(attempt);
+            std.log.debug("[netbird] netbird up retry delay_ms={d}", .{delay_ms});
+            std.Thread.sleep(delay_ms * std.time.ns_per_ms);
+            continue;
+        };
+        defer allocator.free(captured.stdout);
+        defer allocator.free(captured.stderr);
+
+        if (captured.exited_normally and captured.exit_code == 0) {
+            std.log.debug(
+                "[netbird] netbird up succeeded attempt={d} output_len={d} stderr_len={d}",
+                .{ attempt + 1, captured.stdout.len, captured.stderr.len },
+            );
+            return;
+        }
+
+        std.log.debug(
+            "[netbird] netbird up attempt={d} failed code={d} stderr={s}",
+            .{ attempt + 1, captured.exit_code, captured.stderr },
+        );
+
+        if (attempt + 1 >= netbird_up_max_attempts) {
+            std.log.err(
+                "[netbird] netbird up failed after {d} attempts code={d} stderr={s}",
+                .{ netbird_up_max_attempts, captured.exit_code, captured.stderr },
+            );
+            return error.EnrollmentFailed;
+        }
+
+        const delay_ms = netbirdUpRetryDelayMs(attempt);
+        std.log.debug("[netbird] netbird up retry delay_ms={d}", .{delay_ms});
+        std.Thread.sleep(delay_ms * std.time.ns_per_ms);
+    }
 }
 
 fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) ![]u8 {
@@ -359,6 +412,12 @@ test "parses connected status from JSON payload" {
 
     try std.testing.expect(status.connected);
     try std.testing.expectEqualStrings("device-123", status.device_id.?);
+}
+
+test "computes exponential backoff for netbird up retries" {
+    try std.testing.expectEqual(@as(u64, 500), netbirdUpRetryDelayMs(0));
+    try std.testing.expectEqual(@as(u64, 1000), netbirdUpRetryDelayMs(1));
+    try std.testing.expectEqual(@as(u64, 2000), netbirdUpRetryDelayMs(2));
 }
 
 test "parses connected status from text output" {

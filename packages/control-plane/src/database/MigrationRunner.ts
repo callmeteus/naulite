@@ -29,6 +29,62 @@ export class MigrationRunner {
     ) {}
 
     /**
+     * Lists migration names expected for the active dialect.
+     *
+     * @returns Sorted migration names from disk
+     */
+    async listExpectedMigrationNames(): Promise<string[]> {
+        if (this.dialect === "sqlite") {
+            return ["001-initial-schema"];
+        }
+
+        const migrationDir = join(migrationsRoot, "postgresql");
+        const files = (await readdir(migrationDir))
+            .filter((fileName) => fileName.endsWith(".sql"))
+            .sort();
+
+        return files.map((fileName) => fileName.replace(/\.sql$/, ""));
+    }
+
+    /**
+     * Lists migration names already recorded in schema_migrations.
+     *
+     * @returns Applied migration names
+     */
+    async listAppliedMigrationNames(): Promise<string[]> {
+        if (this.dialect === "sqlite") {
+            try {
+                const existing = await SchemaMigrationModel.findByPk("001-initial-schema");
+                return existing ? ["001-initial-schema"] : [];
+            } catch {
+                return [];
+            }
+        }
+
+        try {
+            const rows = await SchemaMigrationModel.findAll({
+                attributes: ["name"],
+                order: [["name", "ASC"]]
+            });
+
+            return rows.map((row) => row.name);
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Returns true when disk migrations are not fully applied in the database.
+     *
+     * @returns Whether pending migrations exist
+     */
+    async hasPendingMigrations(): Promise<boolean> {
+        const expected = await this.listExpectedMigrationNames();
+        const applied = new Set(await this.listAppliedMigrationNames());
+        return expected.some((name) => !applied.has(name));
+    }
+
+    /**
      * Applies pending SQL migrations for the active dialect.
      *
      * @returns Migration result summary

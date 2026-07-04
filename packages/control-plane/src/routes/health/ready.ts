@@ -12,10 +12,17 @@ export const GET = defineRoute({
             200: HealthReadyResponseSchema
         }
     },
-    async handler() {
+    async handler(_req, reply) {
         const databaseHealthy = await ControlPlaneService.Database.healthCheck();
+        const migrationsReady = !(await ControlPlaneService.Database.hasPendingMigrations());
+        const ready = databaseHealthy && migrationsReady;
+
+        if (!ready) {
+            reply.code(503);
+        }
+
         return {
-            ready: databaseHealthy
+            ready
         };
     }
 });

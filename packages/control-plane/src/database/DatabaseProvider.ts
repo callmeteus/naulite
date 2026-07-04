@@ -105,6 +105,16 @@ export class DatabaseProvider implements DatabaseProviderContract {
     }
 
     /**
+     * Reports whether pending migrations remain unapplied.
+     *
+     * @returns Whether migrations are behind the on-disk catalog
+     */
+    async hasPendingMigrations(): Promise<boolean> {
+        const runner = new MigrationRunner(this.getSequelize(), this.dialect);
+        return runner.hasPendingMigrations();
+    }
+
+    /**
      * Reports whether the database connection is healthy.
      *
      * @returns Whether the database is reachable

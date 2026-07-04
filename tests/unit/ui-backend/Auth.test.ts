@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../../../packages/ui/packages/backend/src/App";
-import { buildSessionCookie } from "../../../packages/ui/packages/backend/src/auth/SessionCookie";
+import { buildSessionCookie, PLATFORM_SESSION_COOKIE } from "../../../packages/ui/packages/backend/src/auth/SessionCookie";
+import { PLATFORM_CSRF_COOKIE } from "../../../packages/ui/packages/backend/src/auth/CsrfProtection";
 
 describe("ui-backend auth", () => {
     afterEach(() => {
@@ -154,7 +155,12 @@ describe("ui-backend auth routes", () => {
 
         expect(loginResponse.statusCode).toBe(200);
         expect(loginResponse.json().user.email).toBe("admin@example.com");
-        expect(loginResponse.headers["set-cookie"]).toContain("platform_session=");
+        expect(loginResponse.json().csrfToken).toBeTruthy();
+        const setCookie = loginResponse.headers["set-cookie"];
+        const cookieHeader = Array.isArray(setCookie) ? setCookie.join(";") : String(setCookie ?? "");
+        expect(cookieHeader).toContain("platform_session=");
+
+        const csrfToken = loginResponse.json().csrfToken;
 
         const meResponse = await app.inject({
             method: "GET",
@@ -171,12 +177,15 @@ describe("ui-backend auth routes", () => {
             method: "POST",
             url: "/auth/logout",
             headers: {
-                cookie: buildSessionCookie("session-abc")
+                cookie: `${PLATFORM_SESSION_COOKIE}=${encodeURIComponent("session-abc")}; ${PLATFORM_CSRF_COOKIE}=${encodeURIComponent(csrfToken)}`,
+                "x-csrf-token": csrfToken
             }
         });
 
         expect(logoutResponse.statusCode).toBe(200);
-        expect(logoutResponse.headers["set-cookie"]).toContain("Max-Age=0");
+        const logoutCookies = logoutResponse.headers["set-cookie"];
+        const logoutCookieHeader = Array.isArray(logoutCookies) ? logoutCookies.join(";") : String(logoutCookies ?? "");
+        expect(logoutCookieHeader).toContain("Max-Age=0");
 
         await app.close();
     });

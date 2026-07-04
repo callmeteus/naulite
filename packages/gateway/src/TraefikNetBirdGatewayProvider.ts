@@ -9,6 +9,7 @@ export interface TraefikNetBirdGatewayProviderOptions {
     netbirdEndpoint?: string;
     traefikApiUrl?: string;
     traefikDynamicConfigUrl?: string;
+    tlsMode?: string;
     fetchImpl?: typeof fetch;
 }
 
@@ -32,6 +33,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
     private readonly traefikApiUrl: string;
     private readonly traefikDynamicConfigUrl: string;
     private readonly fetchImpl: typeof fetch;
+    private readonly tlsMode: string;
     private readonly routes = new Map<string, StoredRoute>();
     private readonly tlsByHost = new Map<string, StoredTls>();
     private readonly autoTlsHosts = new Set<string>();
@@ -46,6 +48,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
         this.traefikApiUrl = options.traefikApiUrl ?? "http://127.0.0.1:8080";
         this.traefikDynamicConfigUrl = options.traefikDynamicConfigUrl
             ?? `${this.traefikApiUrl.replace(/\/+$/, "")}/platform/dynamic-config`;
+        this.tlsMode = options.tlsMode ?? process.env.PLATFORM_TLS_MODE?.trim().toLowerCase() ?? "acme_tls";
         this.fetchImpl = options.fetchImpl ?? fetch;
     }
 
@@ -185,7 +188,8 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
             this.routes,
             this.tlsByHost,
             this.netbirdEndpoint,
-            this.autoTlsHosts
+            this.autoTlsHosts,
+            { mode: this.tlsMode }
         );
 
         console.debug(

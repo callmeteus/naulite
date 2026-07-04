@@ -29,6 +29,7 @@ function createNetBirdApplyContext(): ControlPlaneContext {
     }));
     const upsertRoute = vi.fn(async () => undefined);
     const requestAutoTls = vi.fn(async () => undefined);
+    const installTls = vi.fn(async () => undefined);
 
     return {
         store: {
@@ -152,7 +153,8 @@ function createNetBirdApplyContext(): ControlPlaneContext {
         gatewayProvider: {
             syncRoutes: vi.fn(async () => undefined),
             upsertRoute,
-            requestAutoTls
+            requestAutoTls,
+            installTls
         },
         gatewayRouteService: {
             upsertRoute,

@@ -50,7 +50,7 @@ services:
         restart: unless-stopped
 ```
 
-See `tests/fixtures/manifests/minimal.compose.yml` for the repository copy.
+See [Manifest examples](/guides/manifest-examples/) for minimal, multi-service, overlay, and game-server samples.
 
 ## Apply contract
 

@@ -1,11 +1,11 @@
 import { NodeProvisionSchema, PaginatedListSchema, PaginationQuerySchema } from "@platform/shared";
 
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:read"),
     schema: {
         summary: "List node provisions",
         description: "Lists cloud node provision requests and their registration status.",

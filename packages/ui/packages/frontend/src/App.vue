@@ -46,6 +46,7 @@ async function logout(): Promise<void> {
                 <router-link v-if="auth.canView()" to="/container-registry">{{ t("containerRegistry") }}</router-link>
                 <router-link v-if="auth.canView()" to="/backups">{{ t("backups") }}</router-link>
                 <router-link v-if="auth.canView()" to="/netbird">{{ t("netbird") }}</router-link>
+                <router-link v-if="auth.canOperate()" to="/notifications">{{ t("notifications") }}</router-link>
                 <router-link v-if="auth.canAdmin()" to="/api-keys">{{ t("apiKeys") }}</router-link>
                 <router-link v-if="auth.canAdmin()" to="/admin-users">{{ t("adminUsers") }}</router-link>
             </nav>

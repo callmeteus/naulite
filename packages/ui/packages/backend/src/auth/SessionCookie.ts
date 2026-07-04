@@ -38,6 +38,25 @@ export function parseCookies(header: string | undefined): Record<string, string>
 }
 
 /**
+ * Returns whether session cookies should include the Secure attribute.
+ *
+ * @returns True when Secure cookies are enabled
+ */
+export function resolveSecureCookies(): boolean {
+    const configured = process.env.PLATFORM_COOKIE_SECURE?.trim().toLowerCase();
+
+    if (configured === "true" || configured === "1") {
+        return true;
+    }
+
+    if (configured === "false" || configured === "0") {
+        return false;
+    }
+
+    return process.env.NODE_ENV === "production";
+}
+
+/**
  * Builds a Set-Cookie header value for a platform session.
  *
  * @param token Opaque session token
@@ -45,7 +64,8 @@ export function parseCookies(header: string | undefined): Record<string, string>
  * @returns Set-Cookie header value
  */
 export function buildSessionCookie(token: string, maxAge = PLATFORM_SESSION_MAX_AGE_SECS): string {
-    return `${PLATFORM_SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+    const secureFlag = resolveSecureCookies() ? "; Secure" : "";
+    return `${PLATFORM_SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secureFlag}`;
 }
 
 /**
@@ -54,5 +74,6 @@ export function buildSessionCookie(token: string, maxAge = PLATFORM_SESSION_MAX_
  * @returns Set-Cookie header value
  */
 export function buildClearSessionCookie(): string {
-    return `${PLATFORM_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
+    const secureFlag = resolveSecureCookies() ? "; Secure" : "";
+    return `${PLATFORM_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secureFlag}`;
 }

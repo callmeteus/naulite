@@ -32,6 +32,8 @@ See `PROGRESS.md` for the phase log and `CONTEXT.md` for architecture.
 
 ## Quick start
 
+**Documentation entry point:** [Get started](/get-started/) covers install, database choice, and your first manifest apply. Use this page for repository layout and local dev scripts.
+
 ```bash
 yarn install
 yarn build

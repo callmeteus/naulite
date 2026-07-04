@@ -34,12 +34,23 @@ export default defineConfig({
                     ],
                 },
                 {
+                    label: 'Get Started',
+                    items: [
+                        { label: 'Overview', slug: 'get-started' },
+                        { label: 'Install', slug: 'get-started/install' },
+                        { label: 'TLS modes', slug: 'get-started/tls' },
+                        { label: 'Database', slug: 'get-started/database' },
+                        { label: 'First workload', slug: 'get-started/first-workload' },
+                    ],
+                },
+                {
                     label: 'Operations',
                     items: [{ autogenerate: { directory: 'operations' } }],
                 },
                 {
                     label: 'Guides',
                     items: [
+                        { label: 'Manifest examples', slug: 'guides/manifest-examples' },
                         { label: 'Bootstrap', slug: 'bootstrap' },
                         { label: 'Backups', slug: 'backups' },
                         { label: 'Log rotation', slug: 'log-rotation' },

@@ -1,11 +1,14 @@
 import { ApplyService } from "../services/ApplyService";
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
 import { LeaderPreHandlers } from "../auth/LeaderPreHandlers";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
 import { ApplyManifestBodySchema, LooseObjectSchema } from "@platform/shared";
 
 export const POST = defineRoute({
-    preHandler: [AuthPreHandlers.authorizedLocalOrApiKey, LeaderPreHandlers.requireLeader()],
+    preHandler: [
+        ...PermissionPreHandlers.authorizedWithPermission("manifests:apply"),
+        LeaderPreHandlers.requireLeader()
+    ],
     schema: {
         summary: "Apply manifest",
         description: "Applies a YAML manifest to the cluster and dispatches the plan to agents.",

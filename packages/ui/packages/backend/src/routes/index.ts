@@ -11,6 +11,7 @@ import { registerContainerRegistryRoutes } from "./cr";
 import { registerHealthRoutes } from "./health";
 import { registerMetricsRoutes } from "./metrics";
 import { registerNetBirdRoutes } from "./netbird";
+import { registerNotificationRoutes } from "./notifications";
 import { registerNodeProvisionRoutes } from "./nodes-provision";
 import { registerRunsRoutes } from "./runs";
 import { registerSecretRoutes } from "./secrets";
@@ -35,5 +36,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     await registerGatewayRoutes(app);
     await registerNodeProvisionRoutes(app);
     await registerRunsRoutes(app);
+    await registerNotificationRoutes(app);
     await registerAdminUserRoutes(app);
 }

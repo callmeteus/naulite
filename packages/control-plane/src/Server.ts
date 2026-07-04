@@ -70,6 +70,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
         });
     });
     context.leaderElection.start();
+    context.nodeProvisionService.startStatusPolling(context.leaderElection);
     await context.gatewayRouteService.hydrateFromDatabase();
     context.metricsSyncService.start();
     context.backupScheduler.start();
@@ -89,6 +90,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
         port,
         databaseProvider,
         stop: async () => {
+            context.nodeProvisionService.stopStatusPolling();
             context.leaderElection.stop();
             context.metricsSyncService.stop();
             context.backupScheduler.stop();

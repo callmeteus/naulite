@@ -3,11 +3,11 @@ import { z } from "zod";
 import { NodeSchema } from "@platform/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:read"),
     schema: {
         summary: "List nodes",
         description: "Lists all nodes registered in the cluster.",

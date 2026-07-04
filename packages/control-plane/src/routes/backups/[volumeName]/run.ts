@@ -2,7 +2,7 @@ import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers
 import { BackupCompletionService } from "../../../services/BackupCompletionService";
 import { BackupDispatchService } from "../../../services/BackupDispatchService";
 import { ControlPlaneService } from "../../../ControlPlaneService";
-import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 import {
     EnqueuedBackupRunSchema,
@@ -11,7 +11,7 @@ import {
 } from "@platform/shared";
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("backups:run"),
     schema: {
         summary: "Run volume backup",
         description: "Enqueues and dispatches a backup for the given volume to the responsible agent.",

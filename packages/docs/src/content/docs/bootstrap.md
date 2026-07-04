@@ -7,6 +7,8 @@ description: Install platform nodes and register agents with the control plane.
 
 Bootstrap scripts install platform nodes and register agents with the control plane.
 
+**New cluster?** Start with [Get started](/get-started/) for prerequisites, install order, and your first workload. This page documents enrollment routes, dry-run mode, and agent persisted configuration in depth.
+
 ## Goals
 
 - Detect OS and architecture

@@ -47,6 +47,7 @@ export namespace PluginRegistryWiring {
 
             if (plugin.type === "notification" && plugin.notificationProvider) {
                 RunNotificationDispatcher.register(
+                    plugin.id,
                     plugin.notificationProvider as NotificationProvider
                 );
                 console.debug("[plugins] wired notification provider id=%s", plugin.id);
@@ -78,14 +79,14 @@ export namespace PluginRegistryWiring {
         const backendId = resolveSecretBackendId();
         console.debug("[secrets] backend=%s available=%o", backendId, context.secretProviderRegistry.listIds());
 
-        if (backendId === "local") {
+        if (backendId === "local" || backendId === "postgres") {
             return;
         }
 
         const pluginProvider = context.secretProviderRegistry.get(backendId);
 
         if (!pluginProvider) {
-            console.debug("[secrets] backend=%s not registered, keeping local provider", backendId);
+            console.debug("[secrets] backend=%s not registered, keeping default provider", backendId);
             return;
         }
 

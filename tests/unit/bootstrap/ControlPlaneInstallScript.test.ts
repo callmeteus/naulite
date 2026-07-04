@@ -81,6 +81,8 @@ describeBootstrap("control-plane-install.sh", () => {
         expect(envContents).toContain("PROMETHEUS_URL=http://platform-prometheus:9090");
         expect(envContents).toContain("PLATFORM_PROMETHEUS_FILE_SD_DIR=/var/lib/platform/prometheus/file_sd");
         expect(envContents).toContain("PLATFORM_METRICS_SYNC_ENABLED=true");
+        expect(envContents).toContain("POSTGRES_HA_ENABLED=true");
+        expect(envContents).toContain("DATABASE_URL=postgres://platform:platform@pgpool:5432/platform");
     });
 
     it("creates .env from .env.example when missing", async () => {

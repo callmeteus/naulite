@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLATFORM_ROOT="${PLATFORM_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 
 AGENT_VERSION="${AGENT_VERSION:-zig-0.1.0}"
+NETBIRD_VERSION="${NETBIRD_VERSION:-0.35.2}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/platform-agent}"
 BIN_PATH="${INSTALL_DIR}/bin/platform-agent"
 SERVICE_NAME="${SERVICE_NAME:-platform-agent}"
@@ -19,6 +20,7 @@ NODE_ID=""
 LABELS_JSON=""
 CAPABILITIES_JSON=""
 DRY_RUN=0
+INSTALL_NETBIRD=0
 
 log() {
     printf '[platform-agent] %s\n' "$*"
@@ -38,6 +40,7 @@ Options:
   --agent-port <port>              Agent HTTP listen port (default: 9470)
   --install-dir <path>             Install directory (default: /opt/platform-agent)
   --config-path <path>             Agent JSON config path (default: /var/lib/platform/agent.json)
+  --install-netbird                Install pinned NetBird CLI on Linux (default version: 0.35.2)
   --dry-run                        Validate input, fetch bootstrap data, write config only
   -h, --help                       Show this help
 EOF
@@ -77,6 +80,10 @@ parse_args() {
             --config-path)
                 CONFIG_PATH="${2:-}"
                 shift 2
+                ;;
+            --install-netbird)
+                INSTALL_NETBIRD=1
+                shift
                 ;;
             --dry-run)
                 DRY_RUN=1
@@ -200,7 +207,69 @@ write_agent_config() {
 EOF
 
   chmod 600 "${CONFIG_PATH}"
-  log "wrote agent config path=${CONFIG_PATH}"
+    log "wrote agent config path=${CONFIG_PATH}"
+}
+
+install_netbird() {
+    if [[ "${INSTALL_NETBIRD}" -ne 1 ]]; then
+        return 0
+    fi
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "dry-run would install netbird ${NETBIRD_VERSION}"
+        return 0
+    fi
+
+    if command -v netbird >/dev/null 2>&1; then
+        log "netbird already installed"
+        return 0
+    fi
+
+    local os arch
+    os="$(detect_os)"
+    if [[ "${os}" != "linux" ]]; then
+        log "netbird install is supported on Linux only"
+        exit 1
+    fi
+
+    if ! command -v curl >/dev/null 2>&1; then
+        log "curl is required to install netbird"
+        exit 1
+    fi
+
+    arch="$(uname -m)"
+    log "installing netbird ${NETBIRD_VERSION} (${arch})"
+
+    case "${arch}" in
+        x86_64|amd64)
+            local deb="/tmp/netbird_${NETBIRD_VERSION}_linux_amd64.deb"
+            curl -fsSL \
+                "https://github.com/netbirdio/netbird/releases/download/v${NETBIRD_VERSION}/netbird_${NETBIRD_VERSION}_linux_amd64.deb" \
+                -o "${deb}"
+            if command -v apt-get >/dev/null 2>&1; then
+                apt-get install -y "${deb}"
+            elif command -v dpkg >/dev/null 2>&1; then
+                dpkg -i "${deb}" || apt-get install -f -y
+            else
+                log "apt-get or dpkg is required to install the netbird deb"
+                rm -f "${deb}"
+                exit 1
+            fi
+            rm -f "${deb}"
+            ;;
+        *)
+            log "unsupported architecture for pinned netbird deb: ${arch}"
+            log "install netbird manually or use an amd64 host"
+            exit 1
+            ;;
+    esac
+
+    if command -v netbird >/dev/null 2>&1; then
+        log "netbird installed"
+    else
+        log "netbird install finished but binary was not found in PATH"
+        exit 1
+    fi
 }
 
 install_binary() {
@@ -261,6 +330,7 @@ main() {
         log "dry-run installing platform-agent ${AGENT_VERSION}"
         fetch_bootstrap_bundle
         write_agent_config "${os}"
+        install_netbird
         log "dry-run complete config=${CONFIG_PATH}"
         exit 0
     fi
@@ -273,6 +343,7 @@ main() {
     log "installing platform-agent ${AGENT_VERSION}"
     fetch_bootstrap_bundle
     write_agent_config "${os}"
+    install_netbird
     install_binary
 
     if ! command -v docker >/dev/null 2>&1; then

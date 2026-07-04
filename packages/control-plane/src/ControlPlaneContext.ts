@@ -12,6 +12,8 @@ import type { DatabaseProvider } from "./database/DatabaseProvider";
 import { createBackupOrchestrator, type BackupOrchestrator } from "./modules/backup/BackupOrchestrator";
 import { createContainerRegistryService, type ContainerRegistryService } from "./modules/container-registry/ContainerRegistryService";
 import { createLocalSecretProvider } from "./modules/secrets/LocalSecretProvider";
+import { createPostgresSecretProvider } from "./modules/secrets/PostgresSecretProvider";
+import { resolveSecretBackendId } from "./modules/secrets/PluginSecretProviderAdapter";
 import type { SecretProvider } from "./modules/secrets/SecretProvider";
 import { ComposeParser } from "./orchestration/ComposeParser";
 import { ExposurePlanner } from "./orchestration/ExposurePlanner";
@@ -118,6 +120,7 @@ export function createControlPlaneContext(
     });
     const gatewayRouteService = new GatewayRouteService(gatewayProvider, leaderElection, controlPlaneSync);
     const metricsSyncService = createMetricsSyncService(store, leaderElection);
+    const secretsService = new SecretsService(store, masterKey);
 
     return {
         instanceId,
@@ -128,8 +131,8 @@ export function createControlPlaneContext(
         secretProviderRegistry: new SecretProviderRegistry(),
         runtimeRegistry: RuntimeLoader.load(),
         backupOrchestrator,
-        secretProvider: createLocalSecretProvider({ masterKey }),
-        secretsService: new SecretsService(store, masterKey),
+        secretProvider: createDefaultSecretProvider(secretsService, masterKey),
+        secretsService,
         composeParser: new ComposeParser(),
         planner: new Planner(),
         scheduler: new Scheduler(),
@@ -166,4 +169,22 @@ function createBuilderProviders(): Map<string, BuilderProvider> {
         ["docker", createDockerBuilderProvider()],
         ["kaniko", createKanikoBuilderProvider()]
     ]);
+}
+
+/**
+ * Creates the default secret provider for the configured backend.
+ *
+ * @param secretsService Encrypted secrets service backed by the control plane store
+ * @param masterKey Master encryption key material for local backend
+ * @returns Configured secret provider
+ */
+function createDefaultSecretProvider(secretsService: SecretsService, masterKey: string): SecretProvider {
+    const backendId = resolveSecretBackendId();
+    console.debug("[secrets] default provider backend=%s", backendId);
+
+    if (backendId === "local") {
+        return createLocalSecretProvider({ masterKey });
+    }
+
+    return createPostgresSecretProvider(secretsService);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { E7MessageFormatter } from "../../../packages/control-plane/src/services/E7MessageFormatter";
+import { E7MessageFormatter } from "../../../packages/shared/src/notifications/E7MessageFormatter";
 
 describe("E7MessageFormatter", () => {
     it("formats rollout started messages", () => {

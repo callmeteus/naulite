@@ -1,0 +1,18 @@
+{
+    "name": "@platform/plugin-notification-webhook",
+    "version": "0.1.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc -p tsconfig.json && node ../../../scripts/fix-esm-imports.mjs dist",
+        "lint": "eslint src/"
+    },
+    "dependencies": {
+        "@platform/shared": "0.1.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.5",
+        "typescript": "^5.7.2"
+    }
+}

@@ -1,6 +1,6 @@
 # Development Progress
 
-**Last updated:** 2026-07-03
+**Last updated:** 2026-07-04
 
 ## Overview
 
@@ -21,8 +21,29 @@
 | Backlog M1-M7 (scaffold) | completed | 2026-07-02 | 2026-07-02 |
 | Gap items 1-6, 8-13 | completed | 2026-07-02 | 2026-07-02 |
 | Alpha wave - platform hardening | completed | 2026-07-03 | 2026-07-03 |
+| Alpha de prod - hardening | completed | 2026-07-04 | 2026-07-04 |
 
 ## Log
+
+### 2026-07-04 - Alpha de prod: hardening
+
+- **Docs IA**: Get Started (`install`, `database`, `first-workload`, `tls`); Operations enxuto (`runbook`, `failover`, `migrations`, `load-chaos`, `aws-provisioner`); exemplos migrados de `platform/examples/` para `guides/manifest-examples.md`
+- **Postgres HA**: stack primary + replica + pgpool no compose padrão; `DATABASE_URL` via pgpool no install script; RDS externo como opt-out documentado
+- **Secrets**: `PostgresSecretProvider` como default (`SECRET_BACKEND=postgres`); apply e API `/secrets` usam a mesma tabela
+- **TLS**: `PLATFORM_TLS_MODE` (ACME TLS/DNS, passthrough, self_signed, custom); Traefik template + certs inline no dynamic config
+- **Agent**: NetBird CLI pinado no Dockerfile; hardening compose (`cap_drop`, non-root); bootstrap `--install-netbird`
+- **CI**: imagens pinadas no dogfood; job `image-scan` com Trivy após `docker-smoke`
+- **ACL + sessões**: catálogo `resource:action`; rotas CP com `requirePermission`; audit `admin_audit_log`; BFF CSRF double-submit + cookies Secure; rotas `/admin/users`; mapeamento email/username no SDK
+- **Notificações**: plugin `notification-webhook` + Slack; UI test ping; dispatcher multi-provider
+- **AWS provisioner**: polling leader-only de status EC2 no `NodeProvisionService`
+- **Migrations + chaos**: gate `/health/ready` até migrations aplicadas; scripts `scripts/load/k6-apply.js` e `scripts/chaos/kill-leader.sh`; e2e `chaos-failover.test.ts`
+
+### Feature flags (opt-in, default off)
+
+| Flag | Default | O que é | Estado do código |
+|------|---------|---------|------------------|
+| `PLATFORM_MULTI_TENANT` | `false` | Isolamento por `tenant_id` para rodar vários clientes no mesmo cluster (SaaS) | Tabela `tenants` e `TenantScope` existem; rotas **não** filtram por tenant ainda. Não ligar em prod até hardening futuro. |
+| `PLATFORM_API_KEY_ROTATION_ENABLED` | `false` | Rotação de API keys com grace period | `POST /api-keys/:id/rotate` retorna `503` quando desligado. Habilitar só quando o operador aceitar o fluxo de rotação. |
 
 ### 2026-07-03 - Alpha wave: platform hardening (integration complete)
 
@@ -39,11 +60,11 @@
 
 ### Post-alpha backlog
 
-- Agent NetBird CLI enrollment inside container image
 - Zig 0.16 leak checker noise on `zig build test` (tests pass)
 - Infisical, Kaniko, containerd runtime production paths
 - SLOs/alerting on top of Prometheus
 - Full multi-tenant scoping when `PLATFORM_MULTI_TENANT=true`
+- Rate limiting no BFF/control plane
 
 ### 2026-07-03 - Alpha wave: SA-ci (draft)
 

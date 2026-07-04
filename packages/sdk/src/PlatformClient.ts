@@ -1,3 +1,4 @@
+import { AdminUserMapper, type ControlPlaneAdminUser } from "./AdminUserMapper";
 import { PlatformApiError } from "./PlatformApiError";
 import type {
     AdminLoginInput,
@@ -32,6 +33,8 @@ import type {
     PipelineRun,
     ListPipelineRunsQuery,
     LogsResponse,
+    NotificationProviderStatus,
+    NotificationTestResult,
     NetBirdAcl,
     NodeProvision,
     NetBirdDevice,
@@ -133,7 +136,19 @@ export class PlatformClient {
      * @returns Session token and user profile
      */
     async adminLogin(input: AdminLoginInput): Promise<AdminLoginResponse> {
-        return this.request<AdminLoginResponse>("POST", "/admin/login", input);
+        const response = await this.request<{
+            sessionToken: string;
+            expiresAt?: string;
+            user: ControlPlaneAdminUser;
+        }>("POST", "/admin/login", {
+            email: AdminUserMapper.emailToUsername(input.email),
+            password: input.password
+        });
+
+        return {
+            sessionToken: response.sessionToken,
+            user: AdminUserMapper.toSdkUser(response.user)
+        };
     }
 
     /**
@@ -151,7 +166,10 @@ export class PlatformClient {
      * @returns Active admin session
      */
     async getAdminMe(): Promise<AdminSession> {
-        return this.request<AdminSession>("GET", "/admin/me");
+        const response = await this.request<{ user: ControlPlaneAdminUser }>("GET", "/admin/me");
+        return {
+            user: AdminUserMapper.toSdkUser(response.user)
+        };
     }
 
     /**
@@ -160,7 +178,8 @@ export class PlatformClient {
      * @returns Admin user records
      */
     async listAdminUsers(): Promise<AdminUser[]> {
-        return this.request<AdminUser[]>("GET", "/admin/users");
+        const users = await this.request<ControlPlaneAdminUser[]>("GET", "/admin/users");
+        return users.map((user) => AdminUserMapper.toSdkUser(user));
     }
 
     /**
@@ -170,7 +189,12 @@ export class PlatformClient {
      * @returns Created admin user
      */
     async createAdminUser(input: CreateAdminUserInput): Promise<AdminUser> {
-        return this.request<AdminUser>("POST", "/admin/users", input);
+        const user = await this.request<ControlPlaneAdminUser>("POST", "/admin/users", {
+            email: AdminUserMapper.emailToUsername(input.email),
+            password: input.password,
+            role: input.role
+        });
+        return AdminUserMapper.toSdkUser(user);
     }
 
     /**
@@ -181,11 +205,12 @@ export class PlatformClient {
      * @returns Updated admin user
      */
     async disableAdminUser(userId: string, input: DisableAdminUserInput = {}): Promise<AdminUser> {
-        return this.request<AdminUser>(
+        const user = await this.request<ControlPlaneAdminUser>(
             "POST",
             `/admin/users/${encodeURIComponent(userId)}/disable`,
             input
         );
+        return AdminUserMapper.toSdkUser(user);
     }
 
     /**
@@ -270,6 +295,24 @@ export class PlatformClient {
      */
     async getSecret(secretName: string): Promise<Secret> {
         return this.request<Secret>("GET", `/secrets/${encodeURIComponent(secretName)}`);
+    }
+
+    /**
+     * Lists registered notification providers and their environment status.
+     *
+     * @returns Notification provider status list
+     */
+    async listNotificationProviders(): Promise<{ providers: NotificationProviderStatus[] }> {
+        return this.request<{ providers: NotificationProviderStatus[] }>("GET", "/notifications/providers");
+    }
+
+    /**
+     * Sends a test notification to every registered provider.
+     *
+     * @returns Per-provider delivery results
+     */
+    async testNotificationProviders(): Promise<{ providers: NotificationTestResult[] }> {
+        return this.request<{ providers: NotificationTestResult[] }>("POST", "/notifications/test");
     }
 
     /**

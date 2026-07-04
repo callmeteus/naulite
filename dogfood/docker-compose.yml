@@ -1,6 +1,8 @@
 name: platform
 
 include:
+    - path: infra/postgres-ha/docker-compose.yml
+      project_directory: infra/postgres-ha
     - path: infra/netbird/docker-compose.yml
       project_directory: infra/netbird
     - path: ../packages/metrics/compose/metrics-stack.yml
@@ -13,25 +15,8 @@ platform:
             - s3
 
 services:
-    postgres:
-        image: postgres:16-alpine
-        restart: unless-stopped
-        environment:
-            POSTGRES_USER: platform
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
-            POSTGRES_DB: platform
-        volumes:
-            - pgdata:/var/lib/postgresql/data
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U platform"]
-            interval: 5s
-            timeout: 3s
-            retries: 10
-        ports:
-            - "5432:5432"
-
     minio:
-        image: minio/minio:latest
+        image: minio/minio:RELEASE.2025-09-07T16-13-09Z
         restart: unless-stopped
         command: server /data --console-address ":9001"
         environment:
@@ -52,6 +37,20 @@ services:
         volumes:
             - ./infra/traefik/dynamic-config-store:/app:ro
 
+    traefik-config:
+        profiles: [traefik]
+        image: node:22-alpine
+        restart: "no"
+        working_dir: /work
+        command: ["node", "render-traefik-config.mjs"]
+        environment:
+            PLATFORM_TLS_MODE: ${PLATFORM_TLS_MODE:-acme_tls}
+            ACME_EMAIL: ${ACME_EMAIL:-platform@localhost}
+            ACME_CA_SERVER: ${ACME_CA_SERVER:-https://acme-staging-v02.api.letsencrypt.org/directory}
+            CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:-}
+        volumes:
+            - ./infra/traefik:/work:rw
+
     traefik:
         profiles: [traefik]
         image: traefik:v3.3
@@ -59,8 +58,12 @@ services:
         depends_on:
             traefik-dynamic-config:
                 condition: service_started
+            traefik-config:
+                condition: service_completed_successfully
+        environment:
+            CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:-}
         volumes:
-            - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+            - ./infra/traefik/traefik.generated.yml:/etc/traefik/traefik.yml:ro
             - traefik-acme:/acme
         ports:
             - "80:80"
@@ -75,7 +78,7 @@ services:
             dockerfile: packages/control-plane/Dockerfile
         restart: unless-stopped
         depends_on:
-            postgres:
+            pgpool:
                 condition: service_healthy
             netbird-server:
                 condition: service_started
@@ -84,12 +87,13 @@ services:
                 required: false
         environment:
             NODE_ENV: production
-            DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
+            DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@pgpool:5432/platform
             PLATFORM_PUBLIC_URL: ${PLATFORM_PUBLIC_URL:-}
             NETBIRD_PUBLIC_MANAGEMENT_URL: ${NETBIRD_PUBLIC_MANAGEMENT_URL:-}
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
             TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
+            PLATFORM_TLS_MODE: ${PLATFORM_TLS_MODE:-acme_tls}
             CP_INSTANCE_ID: cp-1
             CP_PEER_URLS: http://control-plane-2:8080
             CP_PLUGINS: s3
@@ -113,7 +117,7 @@ services:
             dockerfile: packages/control-plane/Dockerfile
         restart: unless-stopped
         depends_on:
-            postgres:
+            pgpool:
                 condition: service_healthy
             netbird-server:
                 condition: service_started
@@ -122,12 +126,13 @@ services:
                 required: false
         environment:
             NODE_ENV: production
-            DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@postgres:5432/platform
+            DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@pgpool:5432/platform
             PLATFORM_PUBLIC_URL: ${PLATFORM_PUBLIC_URL:-}
             NETBIRD_PUBLIC_MANAGEMENT_URL: ${NETBIRD_PUBLIC_MANAGEMENT_URL:-}
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
             TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
+            PLATFORM_TLS_MODE: ${PLATFORM_TLS_MODE:-acme_tls}
             CP_INSTANCE_ID: cp-2
             CP_PEER_URLS: http://control-plane-1:8080
             CP_PLUGINS: s3
@@ -174,6 +179,17 @@ services:
             context: ..
             dockerfile: packages/agent/Dockerfile
         restart: unless-stopped
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        cap_add:
+            - NET_ADMIN
+            - NET_RAW
+        devices:
+            - /dev/net/tun
+        group_add:
+            - "${DOCKER_SOCKET_GID:-999}"
         environment:
             NODE_ID: agent-1
             HOSTNAME: agent-1
@@ -197,7 +213,6 @@ services:
             - netbird
 
 volumes:
-    pgdata:
     minio-data:
     cp-data-1:
     cp-data-2:

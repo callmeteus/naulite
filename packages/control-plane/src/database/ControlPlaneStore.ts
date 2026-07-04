@@ -764,6 +764,24 @@ export class ControlPlaneStore {
     }
 
     /**
+     * Lists node provisions that are still waiting for cloud or agent completion.
+     *
+     * @returns In-flight node provision records
+     */
+    async listNodeProvisionsInFlight(): Promise<NodeProvision[]> {
+        const rows = await NodeProvisionModel.findAll({
+            where: {
+                status: {
+                    [Op.in]: ["pending", "launching", "bootstrapping"]
+                }
+            },
+            order: [["createdAt", "ASC"]]
+        });
+
+        return rows.map((row) => RowMapper.nodeProvision(row.get({ plain: true })));
+    }
+
+    /**
      * Finds a node provision request by id.
      *
      * @param id Provision identifier

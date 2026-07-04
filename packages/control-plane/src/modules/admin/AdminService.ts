@@ -60,4 +60,29 @@ export namespace AdminService {
     ): ReturnType<AdminStore["createBootstrapUser"]> {
         return getAdminStore().createBootstrapUser(input);
     }
+
+    /**
+     * @returns Public admin users
+     */
+    export function listUsers(): ReturnType<AdminStore["listUsers"]> {
+        return getAdminStore().listUsers();
+    }
+
+    /**
+     * @param input User creation payload
+     * @returns Created public user
+     */
+    export function createUser(
+        input: Parameters<AdminStore["createUser"]>[0]
+    ): ReturnType<AdminStore["createUser"]> {
+        return getAdminStore().createUser(input);
+    }
+
+    /**
+     * @param userId Admin user id
+     * @returns Disabled user or null
+     */
+    export function disableUser(userId: string): ReturnType<AdminStore["disableUser"]> {
+        return getAdminStore().disableUser(userId);
+    }
 }

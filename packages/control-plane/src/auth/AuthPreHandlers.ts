@@ -130,15 +130,6 @@ export namespace AuthPreHandlers {
             minimumRole?: AdminRole;
         } = {}
     ): Promise<void> {
-        if (options.allowLocalBootstrapRequest && isLocalBootstrapRequest(request)) {
-            attachRequestAuth(request, {
-                authMethod: "local",
-                role: "admin",
-                tenantId: null
-            });
-            return;
-        }
-
         const sessionToken = readSessionToken(request);
 
         if (sessionToken) {
@@ -165,6 +156,15 @@ export namespace AuthPreHandlers {
                 request.tenantId = scopedTenantId;
             }
 
+            return;
+        }
+
+        if (options.allowLocalBootstrapRequest && isLocalBootstrapRequest(request)) {
+            attachRequestAuth(request, {
+                authMethod: "local",
+                role: "admin",
+                tenantId: null
+            });
             return;
         }
 

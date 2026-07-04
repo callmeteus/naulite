@@ -147,5 +147,18 @@
     "imageSize": "Tamanho",
     "imagePushedAt": "Enviada em",
     "deleteImage": "Excluir",
-    "loading": "Carregando..."
+    "loading": "Carregando...",
+    "notifications": "Notificações",
+    "notificationsHint": "Provedores de notificação registrados no control plane e variáveis de ambiente associadas.",
+    "notificationsRefresh": "Atualizar",
+    "notificationsTest": "Enviar teste",
+    "notificationsTesting": "Enviando teste...",
+    "notificationsProvider": "Provedor",
+    "notificationsUrlConfigured": "URL configurada",
+    "notificationsSecretConfigured": "Segredo configurado",
+    "notificationsEnvVars": "Variáveis de ambiente",
+    "notificationsEmpty": "Nenhum provedor de notificação registrado.",
+    "notificationsTestResults": "Resultado do teste",
+    "notificationsTestOk": "Entrega bem-sucedida",
+    "notificationsTestFailed": "Falha na entrega"
 }

@@ -39,6 +39,8 @@ export {
     SecretProvider,
     LocalSecretProvider,
     createLocalSecretProvider,
+    PostgresSecretProvider,
+    createPostgresSecretProvider,
     PluginSecretProviderAdapter,
     resolveSecretBackendId,
     VolumeProvider,

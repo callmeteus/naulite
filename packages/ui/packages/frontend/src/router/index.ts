@@ -13,6 +13,7 @@ import InstancesView from "../views/InstancesView.vue";
 import LoginView from "../views/LoginView.vue";
 import MetricsView from "../views/MetricsView.vue";
 import NetBirdView from "../views/NetBirdView.vue";
+import NotificationsView from "../views/NotificationsView.vue";
 import NodesView from "../views/NodesView.vue";
 import ProvisionView from "../views/ProvisionView.vue";
 import RunsView from "../views/RunsView.vue";
@@ -45,6 +46,7 @@ const router = createRouter({
         { path: "/container-registry", component: ContainerRegistryView, meta: { roles: ["viewer", "operator", "admin"] } },
         { path: "/backups", component: BackupsView, meta: { roles: ["viewer", "operator", "admin"] } },
         { path: "/netbird", component: NetBirdView, meta: { roles: ["viewer", "operator", "admin"] } },
+        { path: "/notifications", component: NotificationsView, meta: { roles: ["operator", "admin"] } },
         { path: "/api-keys", component: ApiKeysView, meta: { roles: ["admin"] } },
         { path: "/admin-users", component: AdminUsersView, meta: { roles: ["admin"] } }
     ]
