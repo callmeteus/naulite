@@ -2,7 +2,7 @@ import { ApplyService } from "../services/ApplyService";
 import { LeaderPreHandlers } from "../auth/LeaderPreHandlers";
 import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
-import { ApplyManifestBodySchema, LooseObjectSchema } from "@platform/shared";
+import { ApplyManifestBodySchema, LooseObjectSchema } from "@naulite/shared";
 
 export const POST = defineRoute({
     preHandler: [

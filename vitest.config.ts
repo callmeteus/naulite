@@ -8,19 +8,20 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
     resolve: {
         alias: {
-            "@platform/shared": path.resolve(rootDir, "packages/shared/src/index.ts"),
-            "@platform/sdk": path.resolve(rootDir, "packages/sdk/src/index.ts"),
-            "@platform/gateway": path.resolve(rootDir, "packages/gateway/src/index.ts"),
-            "@platform/control-plane": path.resolve(rootDir, "packages/control-plane/src/index.ts"),
-            "@platform/plugin-s3-storage-provider": path.resolve(rootDir, "packages/plugins/s3-storage-provider/src/index.ts"),
-            "@platform/plugin-infisical-secret-provider": path.resolve(rootDir, "packages/plugins/infisical-secret-provider/src/index.ts"),
-            "@platform/plugin-aws-node-provisioner": path.resolve(rootDir, "packages/plugins/aws-node-provisioner/src/index.ts"),
-            "@platform/plugin-notification-slack": path.resolve(rootDir, "packages/plugins/notification-slack/src/index.ts"),
-            "@platform/plugin-notification-webhook": path.resolve(rootDir, "packages/plugins/notification-webhook/src/index.ts"),
-            "@platform/builder-docker": path.resolve(rootDir, "packages/builders/docker/src/index.ts"),
-            "@platform/runtime-docker": path.resolve(rootDir, "packages/runtimes/docker/src/index.ts"),
-            "@platform/runtime-podman": path.resolve(rootDir, "packages/runtimes/podman/src/index.ts"),
-            "@platform/runtime-containerd": path.resolve(rootDir, "packages/runtimes/containerd/src/index.ts")
+            "@naulite/shared": path.resolve(rootDir, "packages/shared/src/index.ts"),
+            "@naulite/sdk": path.resolve(rootDir, "packages/sdk/src/index.ts"),
+            "@naulite/gateway": path.resolve(rootDir, "packages/gateway/src/index.ts"),
+            "@naulite/control-plane": path.resolve(rootDir, "packages/control-plane/src/index.ts"),
+            "@naulite/plugin-s3-storage-provider": path.resolve(rootDir, "packages/plugins/s3-storage-provider/src/index.ts"),
+            "@naulite/plugin-infisical-secret-provider": path.resolve(rootDir, "packages/plugins/infisical-secret-provider/src/index.ts"),
+            "@naulite/plugin-aws-node-provisioner": path.resolve(rootDir, "packages/plugins/aws-node-provisioner/src/index.ts"),
+            "@naulite/plugin-notification-slack": path.resolve(rootDir, "packages/plugins/notification-slack/src/index.ts"),
+            "@naulite/plugin-notification-webhook": path.resolve(rootDir, "packages/plugins/notification-webhook/src/index.ts"),
+            "@naulite/builder-docker": path.resolve(rootDir, "packages/builders/docker/src/index.ts"),
+            "@naulite/builder-kaniko": path.resolve(rootDir, "packages/builders/kaniko/src/index.ts"),
+            "@naulite/runtime-docker": path.resolve(rootDir, "packages/runtimes/docker/src/index.ts"),
+            "@naulite/runtime-podman": path.resolve(rootDir, "packages/runtimes/podman/src/index.ts"),
+            "@naulite/runtime-containerd": path.resolve(rootDir, "packages/runtimes/containerd/src/index.ts")
         }
     },
     test: {

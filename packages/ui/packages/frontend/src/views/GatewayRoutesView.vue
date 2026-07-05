@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 
-import { platformClient } from "../api/Client";
+import { nauliteClient } from "../api/Client";
 import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
@@ -18,7 +18,7 @@ const {
     refresh,
     loading,
     error
-} = useServerPagination((page, limit) => platformClient.listGatewayRoutesPaginated({ page, limit }), 20);
+} = useServerPagination((page, limit) => nauliteClient.listGatewayRoutesPaginated({ page, limit }), 20);
 
 onMounted(() => {
     void refresh();

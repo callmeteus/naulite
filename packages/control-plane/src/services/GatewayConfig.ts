@@ -27,7 +27,7 @@ export namespace GatewayConfig {
             return configured.replace(/\/+$/, "");
         }
 
-        return `${resolveTraefikApiUrl()}/platform/dynamic-config`;
+        return `${resolveTraefikApiUrl()}/naulite/dynamic-config`;
     }
 
     /**

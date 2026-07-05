@@ -1,4 +1,4 @@
-import type { Instance, Node, NodeProvision, Secret, Service, Volume, ApiKey } from "@platform/shared";
+import type { Instance, Node, NodeProvision, Secret, Service, Volume, ApiKey } from "@naulite/shared";
 
 /**
  * JSON field helpers for sqlite text columns.

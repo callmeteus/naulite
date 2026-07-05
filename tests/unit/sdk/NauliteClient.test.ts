@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { PlatformClient } from "../../../packages/sdk/src/PlatformClient";
+import { NauliteClient } from "../../../packages/sdk/src/NauliteClient";
 
-describe("PlatformClient", () => {
+describe("NauliteClient", () => {
     it("upserts secrets through the control plane API", async () => {
         const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
             id: "secret:db",
@@ -13,7 +13,7 @@ describe("PlatformClient", () => {
             updatedAt: "2026-07-02T00:00:00.000Z"
         }), { status: 200 }));
 
-        const client = new PlatformClient({
+        const client = new NauliteClient({
             baseUrl: "http://localhost:8080",
             fetchImpl
         });
@@ -35,7 +35,7 @@ describe("PlatformClient", () => {
             devices: [{ id: "dev-1", name: "agent-1", connected: true }]
         }), { status: 200 }));
 
-        const client = new PlatformClient({
+        const client = new NauliteClient({
             baseUrl: "http://localhost:8080",
             fetchImpl
         });
@@ -46,19 +46,19 @@ describe("PlatformClient", () => {
     });
 
     it("returns prometheus metrics as plain text", async () => {
-        const fetchImpl = vi.fn(async () => new Response("platform_nodes_total 1\n", {
+        const fetchImpl = vi.fn(async () => new Response("naulite_nodes_total 1\n", {
             status: 200,
             headers: { "Content-Type": "text/plain" }
         }));
 
-        const client = new PlatformClient({
+        const client = new NauliteClient({
             baseUrl: "http://localhost:8080",
             fetchImpl
         });
 
         const metrics = await client.getPrometheusMetrics();
 
-        expect(metrics).toBe("platform_nodes_total 1\n");
+        expect(metrics).toBe("naulite_nodes_total 1\n");
         expect(fetchImpl).toHaveBeenCalledWith(
             "http://localhost:8080/metrics",
             expect.objectContaining({ method: "GET" })
@@ -72,13 +72,13 @@ describe("PlatformClient", () => {
                 tag: "latest",
                 digest: "sha256:abc",
                 sizeBytes: 1024,
-                destination: { provider: "local", path: "/var/lib/platform/cr" },
-                location: "/var/lib/platform/cr/api/latest.tar",
+                destination: { provider: "local", path: "/var/lib/naulite/cr" },
+                location: "/var/lib/naulite/cr/api/latest.tar",
                 pushedAt: "2026-07-02T00:00:00.000Z"
             }]
         }), { status: 200 }));
 
-        const client = new PlatformClient({
+        const client = new NauliteClient({
             baseUrl: "http://localhost:8080",
             fetchImpl
         });
@@ -103,7 +103,7 @@ describe("PlatformClient", () => {
             }
         }));
 
-        const client = new PlatformClient({
+        const client = new NauliteClient({
             baseUrl: "http://localhost:8080",
             fetchImpl
         });
@@ -128,7 +128,7 @@ describe("PlatformClient", () => {
             tag: "latest"
         }), { status: 200 }));
 
-        const client = new PlatformClient({
+        const client = new NauliteClient({
             baseUrl: "http://localhost:8080",
             fetchImpl
         });
@@ -148,7 +148,7 @@ describe("PlatformClient", () => {
             status: "queued"
         }), { status: 200 }));
 
-        const client = new PlatformClient({
+        const client = new NauliteClient({
             baseUrl: "http://localhost:8080",
             fetchImpl
         });
@@ -175,7 +175,7 @@ describe("PlatformClient", () => {
             updatedAt: "2026-07-02T00:00:00.000Z"
         }), { status: 200 }));
 
-        const client = new PlatformClient({
+        const client = new NauliteClient({
             baseUrl: "http://localhost:8080",
             fetchImpl
         });
@@ -189,6 +189,29 @@ describe("PlatformClient", () => {
         expect(fetchImpl).toHaveBeenCalledWith(
             "http://localhost:8080/nodes/provision",
             expect.objectContaining({ method: "POST" })
+        );
+    });
+
+    it("sends CSRF header on mutating BFF requests when configured", async () => {
+        const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+        const client = new NauliteClient({
+            baseUrl: "http://localhost:3001/api",
+            credentials: "include",
+            csrfToken: "csrf-token-abc",
+            fetchImpl
+        });
+
+        await client.login({ email: "admin@example.com", password: "secret" });
+
+        expect(fetchImpl).toHaveBeenCalledWith(
+            "http://localhost:3001/api/auth/login",
+            expect.objectContaining({
+                method: "POST",
+                headers: expect.objectContaining({
+                    "x-csrf-token": "csrf-token-abc"
+                })
+            })
         );
     });
 });

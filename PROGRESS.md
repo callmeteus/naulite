@@ -30,7 +30,7 @@
 - **Docs IA**: Get Started (`install`, `database`, `first-workload`, `tls`); Operations enxuto (`runbook`, `failover`, `migrations`, `load-chaos`, `aws-provisioner`); exemplos migrados de `platform/examples/` para `guides/manifest-examples.md`
 - **Postgres HA**: stack primary + replica + pgpool no compose padrão; `DATABASE_URL` via pgpool no install script; RDS externo como opt-out documentado
 - **Secrets**: `PostgresSecretProvider` como default (`SECRET_BACKEND=postgres`); apply e API `/secrets` usam a mesma tabela
-- **TLS**: `PLATFORM_TLS_MODE` (ACME TLS/DNS, passthrough, self_signed, custom); Traefik template + certs inline no dynamic config
+- **TLS**: `NAULITE_TLS_MODE` (ACME TLS/DNS, passthrough, self_signed, custom); Traefik template + certs inline no dynamic config
 - **Agent**: NetBird CLI pinado no Dockerfile; hardening compose (`cap_drop`, non-root); bootstrap `--install-netbird`
 - **CI**: imagens pinadas no dogfood; job `image-scan` com Trivy após `docker-smoke`
 - **ACL + sessões**: catálogo `resource:action`; rotas CP com `requirePermission`; audit `admin_audit_log`; BFF CSRF double-submit + cookies Secure; rotas `/admin/users`; mapeamento email/username no SDK
@@ -42,16 +42,16 @@
 
 | Flag | Default | O que é | Estado do código |
 |------|---------|---------|------------------|
-| `PLATFORM_MULTI_TENANT` | `false` | Isolamento por `tenant_id` para rodar vários clientes no mesmo cluster (SaaS) | Tabela `tenants` e `TenantScope` existem; rotas **não** filtram por tenant ainda. Não ligar em prod até hardening futuro. |
-| `PLATFORM_API_KEY_ROTATION_ENABLED` | `false` | Rotação de API keys com grace period | `POST /api-keys/:id/rotate` retorna `503` quando desligado. Habilitar só quando o operador aceitar o fluxo de rotação. |
+| `NAULITE_MULTI_TENANT` | `false` | Isolamento por `tenant_id` para rodar vários clientes no mesmo cluster (SaaS) | Tabela `tenants` e `TenantScope` existem; rotas **não** filtram por tenant ainda. Não ligar em prod até hardening futuro. |
+| `NAULITE_API_KEY_ROTATION_ENABLED` | `false` | Rotação de API keys com grace period | `POST /api-keys/:id/rotate` retorna `503` quando desligado. Habilitar só quando o operador aceitar o fluxo de rotação. |
 
 ### 2026-07-03 - Alpha wave: platform hardening (integration complete)
 
-- **Dogfood**: compose, dev scripts, NetBird/Traefik infra moved under `dogfood/`; Prometheus metrics stack wired with shared `platform-prometheus-file-sd` volume on both CP replicas
+- **Dogfood**: compose, dev scripts, NetBird/Traefik infra moved under `dogfood/`; Prometheus metrics stack wired with shared `naulite-prometheus-file-sd` volume on both CP replicas
 - **Agent + CLI**: Zig **0.16.0** stable; Docker runtime under `packages/agent/src/runtime/docker/`; `metrics_exporter.zig`; `scripts/zig-build.mjs` for Windows cache dir
-- **Auth**: `admin_users` + `admin_sessions`; BFF login with session cookies; `PLATFORM_MULTI_TENANT=false` by default; `PLATFORM_API_KEY_ROTATION_ENABLED=false` by default; `POST /api-keys/:id/rotate` gated by rotation flag
+- **Auth**: `admin_users` + `admin_sessions`; BFF login with session cookies; `NAULITE_MULTI_TENANT=false` by default; `NAULITE_API_KEY_ROTATION_ENABLED=false` by default; `POST /api-keys/:id/rotate` gated by rotation flag
 - **Pagination**: server-side list APIs (`items`, `total`, `page`, `limit`, `hasMore`) + UI `useServerPagination`
-- **Metrics**: `@platform/metrics` package; `MetricsSyncService` file_sd; PromQL proxy routes; `MetricsView` (uPlot)
+- **Metrics**: `@naulite/metrics` package; `MetricsSyncService` file_sd; PromQL proxy routes; `MetricsView` (uPlot)
 - **UI**: Build SSE, Provision stepper/history/terminate, AdminUsersView, role guards
 - **Docs**: `packages/docs` Astro + Starlight site; `alpha-scope.md`, operations runbook/metrics
 - **CI**: e2e removed from `ci.yml` (local only); Zig 0.16.0 pin in `infra/zig-toolchain.env`
@@ -63,7 +63,7 @@
 - Zig 0.16 leak checker noise on `zig build test` (tests pass)
 - Infisical, Kaniko, containerd runtime production paths
 - SLOs/alerting on top of Prometheus
-- Full multi-tenant scoping when `PLATFORM_MULTI_TENANT=true`
+- Full multi-tenant scoping when `NAULITE_MULTI_TENANT=true`
 - Rate limiting no BFF/control plane
 
 ### 2026-07-03 - Alpha wave: SA-ci (draft)
@@ -92,14 +92,14 @@
 
 - **Control-plane Docker image**: copies all workspace deps (gateway, builders, runtimes, plugins); `scripts/fix-esm-imports.mjs` post-build for Node ESM; SQL migrations copied to `dist/database/migrations`
 - **PostgreSQL migrations**: `SchemaMigrationModel.sync()` before SQL apply; `004-node-agent-url-deploy-spec.sql`
-- **Test cluster**: `PLATFORM_NETBIRD_MOCK=1`, MinIO init retry, `fileParallelism: false`, compose `--remove-orphans`, e2e hook timeouts 600s
+- **Test cluster**: `NAULITE_NETBIRD_MOCK=1`, MinIO init retry, `fileParallelism: false`, compose `--remove-orphans`, e2e hook timeouts 600s
 - **Agent Docker**: Debian bookworm runtime (glibc); HTTP `stream.read` fix (was blocking on `readSliceShort`); registration JSON `ignore_unknown_fields`
 - **Gates**: `yarn lint` 25/25, `yarn test:unit` 219/219, `health` e2e green; full e2e matrix running with `REQUIRE_DOCKER=true`
 
 ### 2026-07-02 - p3-ux-quality partial (BFF, SDK, CR UI)
 
-- **BFF routes** (`@platform/ui-backend`): `POST /build`, `GET /cr/images`, `DELETE /cr/images/:name/:tag`, `POST /nodes/provision` proxied via `app.controlPlane`
-- **SDK** (`@platform/sdk`): `triggerBuild()`, `provisionNode()`; CR methods already present (`listContainerRegistryImages`, `deleteContainerRegistryImage`)
+- **BFF routes** (`@naulite/ui-backend`): `POST /build`, `GET /cr/images`, `DELETE /cr/images/:name/:tag`, `POST /nodes/provision` proxied via `app.controlPlane`
+- **SDK** (`@naulite/sdk`): `triggerBuild()`, `provisionNode()`; CR methods already present (`listContainerRegistryImages`, `deleteContainerRegistryImage`)
 - **UI**: `ContainerRegistryView.vue` lists images from BFF; nav link at `/container-registry` (Portuguese labels)
 - **Tests**: 183 unit tests (up from ~72); new BFF route tests and SDK coverage for build/provision
 - **Backlog phases implemented (scaffold / integration level)**:
@@ -112,27 +112,27 @@
 
 ### 2026-07-02 - Agent and control plane bootstrap
 
-- Agent persists identity in `agent.json` (`/var/lib/platform/agent.json` or `%ProgramData%\Platform\agent.json`)
+- Agent persists identity in `agent.json` (`/var/lib/naulite/agent.json` or `%ProgramData%\naulite\agent.json`)
 - Control plane public bootstrap routes: `GET /bootstrap/agent` (setup-key auth), `GET /bootstrap/setup-key` (loopback)
 - `POST /nodes/register` remains the only remote write path required for agent enrollment
 - Bootstrap scripts: `bootstrap/control-plane-install.{sh,ps1}` and `bootstrap/agent-install.{sh,ps1}`
 - Agent install accepts `--host` and `--setup-key`, writes config, installs systemd/Windows service
 - Control plane install accepts `--host`, boots Docker Compose stack, prints agent install command with setup key
 - Zig style: all `if` / `else` use `{ }` blocks across agent and CLI packages
-- Platform docs standardized to English (`zig-guidelines.md`, `admin-auth.md`, `bootstrap.md`)
+- Naulite docs standardized to English (`zig-guidelines.md`, `admin-auth.md`, `bootstrap.md`)
 
 ### 2026-07-02 - V1 implementation complete
 
 - Monorepo foundation: 17 packages, Turbo workspaces, shared ESLint/TSConfig, CI workflow
-- `@platform/shared`: Zod schemas, provider interfaces, `PluginRegistry`, `NetworkGroupId`
-- `@platform/control-plane`: Fastify REST, Sequelize (SQLite dev + PostgreSQL HA), planner, scheduler, GitOps, NetBird self-hosted
-- `@platform/agent` (Zig 0.17): Docker Engine API executor, CP register/heartbeat, instance status callbacks, HTTP server on `std.Io`
+- `@naulite/shared`: Zod schemas, provider interfaces, `PluginRegistry`, `NetworkGroupId`
+- `@naulite/control-plane`: Fastify REST, Sequelize (SQLite dev + PostgreSQL HA), planner, scheduler, GitOps, NetBird self-hosted
+- `@naulite/agent` (Zig 0.17): Docker Engine API executor, CP register/heartbeat, instance status callbacks, HTTP server on `std.Io`
 - Dogfood compose uses Zig agent image (`packages/agent/Dockerfile`); `infra/agent-dogfood` removed
 - `bin/dev.sh` / `bin/dev.ps1`: NetBird config bootstrap, `docker compose up`, auto `ADMIN_API_KEY` when missing
 - NetBird credentials bootstrapped automatically into cluster secret `netbird/internal` (no manual token)
 - Providers: runtimes (`packages/runtimes/*`), builders (`packages/builders/*`), gateway, `plugin-s3-storage-provider`; local backup/secrets/volumes/log-rotation live in `control-plane/src/modules/`
-- `@platform/cli` + `@platform/sdk`: kubectl-style commands via typed HTTP client
-- `@platform/ui-frontend` / `@platform/ui-backend`: Vue 3 dashboard + Fastify admin BFF (nodes, services, deploy, backups, container registry); cluster state via Vue `reactive()`
+- `@naulite/cli` + `@naulite/sdk`: kubectl-style commands via typed HTTP client
+- `@naulite/ui-frontend` / `@naulite/ui-backend`: Vue 3 dashboard + Fastify admin BFF (nodes, services, deploy, backups, container registry); cluster state via Vue `reactive()`
 - Tests: 183 unit tests, e2e harness with real control plane + Zig agent (`LocalTestCluster`)
 - Examples: minimal, app-with-db, rushpedia overlays, minecraft, with-defaults
 - Dogfood: `docker-compose.yml` with HA control plane, Postgres, MinIO, UI, NetBird, `agent-1`

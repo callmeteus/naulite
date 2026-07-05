@@ -1,13 +1,13 @@
 import {
     isContainerRegistryRef,
-    isPlatformCrDockerRef,
+    isNauliteCrDockerRef,
     parseContainerRegistryRef,
     resolveContainerRegistryImageRef,
     resolveDockerBuildTag,
-    resolvePlatformCrDockerRef,
+    resolveNauliteCrDockerRef,
     toContainerRegistryRef,
     toCrPullSpec
-} from "@platform/shared";
+} from "@naulite/shared";
 import { describe, expect, it } from "vitest";
 
 describe("resolveContainerRegistryImageRef", () => {
@@ -30,12 +30,12 @@ describe("resolveContainerRegistryImageRef", () => {
 
     it("resolves manifest service naming conventions", () => {
         expect(resolveContainerRegistryImageRef("demo", "api")).toBe("container-registry://demo-api:latest");
-        expect(resolveDockerBuildTag("demo", "api")).toBe("platform/demo-api:latest");
-        expect(resolvePlatformCrDockerRef("demo", "api")).toBe("platform-cr/demo-api:latest");
+        expect(resolveDockerBuildTag("demo", "api")).toBe("naulite/demo-api:latest");
+        expect(resolveNauliteCrDockerRef("demo", "api")).toBe("naulite-cr/demo-api:latest");
     });
 
-    it("detects platform-cr docker refs", () => {
-        expect(isPlatformCrDockerRef("platform-cr/demo-api:latest")).toBe(true);
-        expect(isPlatformCrDockerRef("platform/demo-api:latest")).toBe(false);
+    it("detects naulite-cr docker refs", () => {
+        expect(isNauliteCrDockerRef("naulite-cr/demo-api:latest")).toBe(true);
+        expect(isNauliteCrDockerRef("naulite/demo-api:latest")).toBe(false);
     });
 });

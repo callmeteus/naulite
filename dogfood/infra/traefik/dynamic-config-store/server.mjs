@@ -16,7 +16,7 @@ const server = http.createServer((request, response) => {
         return;
     }
 
-    if (request.method === "PUT" && request.url === "/platform/dynamic-config") {
+    if (request.method === "PUT" && request.url === "/naulite/dynamic-config") {
         const chunks = [];
 
         request.on("data", (chunk) => {
@@ -43,7 +43,7 @@ const server = http.createServer((request, response) => {
         return;
     }
 
-    if (request.method === "GET" && request.url === "/platform/dynamic-config") {
+    if (request.method === "GET" && request.url === "/naulite/dynamic-config") {
         response.writeHead(200, { "Content-Type": "application/json" });
         response.end(JSON.stringify(lastConfig));
         return;

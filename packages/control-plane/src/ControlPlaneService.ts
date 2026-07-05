@@ -1,4 +1,4 @@
-import type { Instance as InstanceModel, Node, SecretUpsertInput, Service, Volume } from "@platform/shared";
+import type { Instance as InstanceModel, Node, SecretUpsertInput, Service, Volume } from "@naulite/shared";
 
 import type { ControlPlaneContext } from "./ControlPlaneContext";
 import type { ControlPlaneStore } from "./database/ControlPlaneStore";

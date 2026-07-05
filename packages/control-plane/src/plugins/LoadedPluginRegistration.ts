@@ -1,4 +1,4 @@
-import type { PluginRegistration } from "@platform/shared";
+import type { PluginRegistration } from "@naulite/shared";
 
 /**
  * Plugin package export contract discovered by the control plane loader.

@@ -1,4 +1,4 @@
-import { NetworkGroupId } from "@platform/control-plane";
+import { NetworkGroupId } from "@naulite/control-plane";
 import { describe, expect, it } from "vitest";
 
 describe("control-plane NetworkGroupId", () => {

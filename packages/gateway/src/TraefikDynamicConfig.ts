@@ -1,4 +1,4 @@
-import type { GatewayRoute } from "@platform/shared";
+import type { GatewayRoute } from "@naulite/shared";
 
 /**
  * Traefik dynamic configuration payload pushed to the HTTP provider endpoint.
@@ -86,7 +86,7 @@ export namespace TraefikDynamicConfig {
      * @returns Traefik router resource name
      */
     export function routerName(route: GatewayRoute): string {
-        return `platform-${sanitizeKey(route.serviceName)}-${sanitizeKey(route.ingress.host)}`;
+        return `naulite-${sanitizeKey(route.serviceName)}-${sanitizeKey(route.ingress.host)}`;
     }
 
     /**
@@ -106,7 +106,7 @@ export namespace TraefikDynamicConfig {
      * @returns Traefik middleware resource name
      */
     export function netbirdMiddlewareName(host: string): string {
-        return `platform-netbird-${sanitizeKey(host)}`;
+        return `naulite-netbird-${sanitizeKey(host)}`;
     }
 
     /**
@@ -116,7 +116,7 @@ export namespace TraefikDynamicConfig {
      * @param tlsByHost Installed TLS material keyed by host
      * @param netbirdEndpoint Public NetBird reverse-proxy endpoint
      * @param autoTlsHosts Hosts that should request automatic TLS
-     * @param options TLS rendering options derived from PLATFORM_TLS_MODE
+     * @param options TLS rendering options derived from NAULITE_TLS_MODE
      * @returns Traefik dynamic configuration payload
      */
     export function build(
@@ -130,6 +130,7 @@ export namespace TraefikDynamicConfig {
         const certResolver = options.certResolver ?? "letsencrypt";
         const useAcme = mode === "acme_tls" || mode === "acme_dns_cloudflare";
         const usePassthrough = mode === "passthrough";
+        const useSelfSigned = mode === "self_signed";
         const routers: Record<string, TraefikRouterDefinition> = {};
         const services: Record<string, TraefikServiceDefinition> = {};
         const middlewares: Record<string, TraefikMiddlewareDefinition> = {};
@@ -145,7 +146,7 @@ export namespace TraefikDynamicConfig {
                 headers: {
                     customRequestHeaders: {
                         "X-Forwarded-Host": route.ingress.host,
-                        "X-Platform-Netbird-Endpoint": netbirdEndpoint
+                        "X-Naulite-Netbird-Endpoint": netbirdEndpoint
                     }
                 }
             };
@@ -171,6 +172,8 @@ export namespace TraefikDynamicConfig {
             if (usePassthrough && wantsTls) {
                 router.tls = { passthrough: true };
             } else if (hasInlineTls) {
+                router.tls = {};
+            } else if (useSelfSigned && wantsTls) {
                 router.tls = {};
             } else if (useAcme && (autoTlsHosts.has(route.ingress.host) || route.ingress.tls?.enabled)) {
                 router.tls = { certResolver };

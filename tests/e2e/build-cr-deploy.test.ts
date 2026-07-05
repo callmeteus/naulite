@@ -54,7 +54,7 @@ describe("build container registry deploy", () => {
             },
             body: JSON.stringify({
                 manifestYaml,
-                buildContextRoot: "/platform/build-fixtures/minimal-web"
+                buildContextRoot: "/naulite/build-fixtures/minimal-web"
             })
         });
 
@@ -69,7 +69,7 @@ describe("build container registry deploy", () => {
 
         const imagesResponse = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/cr/images`, {
             headers: {
-                Authorization: "Bearer platform-test-agent-key"
+                Authorization: "Bearer naulite-test-agent-key"
             }
         });
         expect(imagesResponse.ok).toBe(true);

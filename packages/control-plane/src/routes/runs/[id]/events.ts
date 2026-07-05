@@ -6,8 +6,8 @@ import {
     PipelineEventSchema,
     PipelineRunEventBodySchema,
     RouteMessageResponseSchema
-} from "@platform/shared";
-import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+} from "@naulite/shared";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 import { ApplyService } from "../../../services/ApplyService";
 import { BuildService } from "../../../services/BuildService";
@@ -18,7 +18,7 @@ const PipelineEventQuerySchema = z.object({
 });
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("runs:read"),
     schema: {
         summary: "List pipeline run events",
         description: "Returns the timeline for a pipeline run.",
@@ -43,7 +43,7 @@ export const GET = defineRoute({
 });
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("runs:write"),
     schema: {
         summary: "Emit pipeline run event",
         description: "Appends a timeline event to a pipeline run.",

@@ -1,4 +1,4 @@
-import type { Secret, SecretUpsertInput } from "@platform/shared";
+import type { Secret, SecretUpsertInput } from "@naulite/shared";
 
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import { AesEncryption } from "../modules/secrets/AesEncryption";
@@ -138,5 +138,5 @@ export class SecretsService {
 export function resolveSecretMasterKey(): string {
     return process.env.SECRET_MASTER_KEY
         ?? process.env.ADMIN_API_KEY
-        ?? "platform-dev-secret-master-key";
+        ?? "naulite-dev-secret-master-key";
 }

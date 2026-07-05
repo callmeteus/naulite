@@ -1,7 +1,7 @@
 import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
-import { RouteMessageResponseSchema, SetupKeyResponseSchema } from "@platform/shared";
+import { RouteMessageResponseSchema, SetupKeyResponseSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
     preHandler: AuthPreHandlers.requireLocalBootstrapRequest(),

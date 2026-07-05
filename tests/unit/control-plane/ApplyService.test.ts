@@ -1,4 +1,4 @@
-import type { ExecutionOperation } from "@platform/shared";
+import type { ExecutionOperation } from "@naulite/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ControlPlaneService } from "../../../packages/control-plane/src/ControlPlaneService";
@@ -377,7 +377,7 @@ describe("ApplyService phase 1.2", () => {
                 manifestName: "minimal",
                 scope: "cluster",
                 nodeId: "agent-1",
-                mountPath: "/var/lib/platform/minimal/data",
+                mountPath: "/var/lib/naulite/minimal/data",
                 status: "bound",
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()

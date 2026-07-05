@@ -7,7 +7,7 @@ import {
     type PaginationQuery,
     type ProvisionNodeBodySchema,
     type MachineStatus
-} from "@platform/shared";
+} from "@naulite/shared";
 import type { z } from "zod";
 
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";

@@ -1,4 +1,4 @@
-import type { ManifestService, Node } from "@platform/shared";
+import type { ManifestService, Node } from "@naulite/shared";
 import { describe, expect, it } from "vitest";
 
 import { BuildService } from "../../../packages/control-plane/src/services/BuildService";
@@ -58,7 +58,7 @@ describe("BuildService", () => {
 
         expect(config?.buildRef).toBe("build://./api");
         expect(config?.contextPath).toBe("./api");
-        expect(config?.tags).toEqual(["platform/demo-api:latest"]);
+        expect(config?.tags).toEqual(["naulite/demo-api:latest"]);
         expect(config?.crRef).toBe("container-registry://demo-api:latest");
     });
 });

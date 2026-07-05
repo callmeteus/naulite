@@ -1,4 +1,4 @@
-import { NodeProvisionSchema, PaginatedListSchema, PaginationQuerySchema } from "@platform/shared";
+import { NodeProvisionSchema, PaginatedListSchema, PaginationQuerySchema } from "@naulite/shared";
 
 import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../ControlPlaneService";

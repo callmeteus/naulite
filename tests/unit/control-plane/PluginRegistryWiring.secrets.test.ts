@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PluginRegistry } from "@platform/shared";
+import { PluginRegistry } from "@naulite/shared";
 
 import { LocalSecretProvider } from "../../../packages/control-plane/src/modules/secrets/LocalSecretProvider";
 import { PluginSecretProviderAdapter } from "../../../packages/control-plane/src/modules/secrets/PluginSecretProviderAdapter";

@@ -32,8 +32,8 @@ export namespace RolloutWatcher {
             return;
         }
 
-        const timeoutMs = options.timeoutMs ?? Number(process.env.PLATFORM_ROLLOUT_TIMEOUT_MS ?? 300_000);
-        const intervalMs = options.intervalMs ?? Number(process.env.PLATFORM_ROLLOUT_POLL_MS ?? 5_000);
+        const timeoutMs = options.timeoutMs ?? Number(process.env.NAULITE_ROLLOUT_TIMEOUT_MS ?? 300_000);
+        const intervalMs = options.intervalMs ?? Number(process.env.NAULITE_ROLLOUT_POLL_MS ?? 5_000);
         const startedAt = Date.now();
 
         const existing = activeWatches.get(runId);

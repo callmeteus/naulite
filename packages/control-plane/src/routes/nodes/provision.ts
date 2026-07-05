@@ -1,7 +1,7 @@
 import {
     NodeProvisionSchema,
     ProvisionNodeBodySchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../ControlPlaneService";

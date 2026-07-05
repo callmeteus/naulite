@@ -1,9 +1,9 @@
 import { createHmac } from "node:crypto";
 
-import type { NotificationProvider, PipelineNotificationEvent } from "@platform/shared";
-import { PipelineNotificationPayload } from "@platform/shared";
+import type { NotificationProvider, PipelineNotificationEvent } from "@naulite/shared";
+import { PipelineNotificationPayload } from "@naulite/shared";
 
-const SIGNATURE_HEADER = "x-platform-signature";
+const SIGNATURE_HEADER = "x-naulite-signature";
 
 /**
  * Generic webhook notification provider for pipeline events.
@@ -74,8 +74,8 @@ export class WebhookNotificationProvider implements NotificationProvider {
  * Shared webhook notification provider instance resolved from environment.
  */
 export const webhookNotificationProvider = new WebhookNotificationProvider({
-    webhookUrl: process.env.PLATFORM_WEBHOOK_URL
+    webhookUrl: process.env.NAULITE_WEBHOOK_URL
         ?? process.env.WEBHOOK_URL
         ?? "",
-    webhookSecret: process.env.PLATFORM_WEBHOOK_SECRET
+    webhookSecret: process.env.NAULITE_WEBHOOK_SECRET
 });

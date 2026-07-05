@@ -1,6 +1,7 @@
 export * from "./schemas/index";
 export * from "./types/index";
 export * from "./providers/index";
+export * from "./auth/index";
 export { PluginRegistry } from "./plugins/PluginRegistry";
 export type { PluginRegistryEntry } from "./plugins/PluginRegistry";
 export { NetworkGroupId } from "./orchestration/NetworkGroupId";
@@ -10,14 +11,14 @@ export {
 } from "./manifest/resolveManifestBuild";
 export {
     CONTAINER_REGISTRY_SCHEME,
-    PLATFORM_CR_DOCKER_PREFIX,
+    NAULITE_CR_DOCKER_PREFIX,
     isContainerRegistryRef,
-    isPlatformCrDockerRef,
+    isNauliteCrDockerRef,
     parseContainerRegistryRef,
     resolveContainerRegistryImageName,
     resolveContainerRegistryImageRef,
     resolveDockerBuildTag,
-    resolvePlatformCrDockerRef,
+    resolveNauliteCrDockerRef,
     toContainerRegistryRef,
     toCrPullSpec
 } from "./manifest/resolveContainerRegistryImageRef";

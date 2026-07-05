@@ -1,5 +1,5 @@
 /**
- * Supported TLS termination modes for the Platform gateway.
+ * Supported TLS termination modes for the Naulite gateway.
  */
 export type TlsMode =
     | "acme_tls"
@@ -19,16 +19,16 @@ const VALID_MODES = new Set<TlsMode>([
 const DEFAULT_MODE: TlsMode = "acme_tls";
 
 /**
- * Resolves Platform TLS mode from environment variables.
+ * Resolves Naulite TLS mode from environment variables.
  */
 export namespace TlsConfig {
     /**
-     * Returns the active TLS mode from `PLATFORM_TLS_MODE`.
+     * Returns the active TLS mode from `NAULITE_TLS_MODE`.
      *
      * @returns Normalized TLS mode
      */
     export function resolveMode(): TlsMode {
-        const raw = process.env.PLATFORM_TLS_MODE?.trim().toLowerCase();
+        const raw = process.env.NAULITE_TLS_MODE?.trim().toLowerCase();
 
         if (!raw) {
             return DEFAULT_MODE;
@@ -36,7 +36,7 @@ export namespace TlsConfig {
 
         if (!VALID_MODES.has(raw as TlsMode)) {
             throw new Error(
-                `PLATFORM_TLS_MODE "${raw}" is invalid. Expected one of: ${[...VALID_MODES].join(", ")}.`
+                `NAULITE_TLS_MODE "${raw}" is invalid. Expected one of: ${[...VALID_MODES].join(", ")}.`
             );
         }
 

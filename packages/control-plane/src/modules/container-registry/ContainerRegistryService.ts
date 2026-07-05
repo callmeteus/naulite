@@ -8,8 +8,8 @@ import type {
     ContainerRegistryImage,
     PaginatedList,
     PaginationQuery
-} from "@platform/shared";
-import { buildPaginatedList, paginationOffset } from "@platform/shared";
+} from "@naulite/shared";
+import { buildPaginatedList, paginationOffset } from "@naulite/shared";
 
 import { ContainerRegistryImageModel } from "../../database/models/ContainerRegistryImageModel";
 import { ContainerRegistryBlobProvider } from "./ContainerRegistryBlobProvider";
@@ -236,7 +236,7 @@ export class ContainerRegistryService {
     static resolveDefaultDestination(): ContainerRegistryDestination {
         return {
             provider: "local",
-            path: process.env.PLATFORM_CONTAINER_REGISTRY_PATH ?? "./data/container-registry"
+            path: process.env.NAULITE_CONTAINER_REGISTRY_PATH ?? "./data/container-registry"
         };
     }
 

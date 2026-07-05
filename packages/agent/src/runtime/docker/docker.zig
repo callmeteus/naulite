@@ -200,8 +200,8 @@ pub const DockerClient = struct {
             return;
         }
 
-        if (std.mem.startsWith(u8, image, "platform-cr/")) {
-            std.log.debug("[docker] skip pull for local platform-cr image={s}", .{image});
+        if (std.mem.startsWith(u8, image, "naulite-cr/")) {
+            std.log.debug("[docker] skip pull for local naulite-cr image={s}", .{image});
             return;
         }
 
@@ -229,7 +229,7 @@ pub const DockerClient = struct {
         const source_tag = try std.fmt.allocPrint(self.allocator, "platform/{s}:{s}", .{ spec.name, spec.tag });
         defer self.allocator.free(source_tag);
 
-        const target_tag = try std.fmt.allocPrint(self.allocator, "platform-cr/{s}:{s}", .{ spec.name, spec.tag });
+        const target_tag = try std.fmt.allocPrint(self.allocator, "naulite-cr/{s}:{s}", .{ spec.name, spec.tag });
         defer self.allocator.free(target_tag);
 
         try runDockerTag(self.allocator, self.socket_path, source_tag, target_tag);
@@ -660,7 +660,7 @@ pub const DockerClient = struct {
             const spec = parseContainerRegistryRef(allocator, image) orelse return error.InvalidContainerRegistryRef;
             defer allocator.free(spec.name);
             defer allocator.free(spec.tag);
-            return std.fmt.allocPrint(allocator, "platform-cr/{s}:{s}", .{ spec.name, spec.tag });
+            return std.fmt.allocPrint(allocator, "naulite-cr/{s}:{s}", .{ spec.name, spec.tag });
         }
 
         return allocator.dupe(u8, image);

@@ -10,13 +10,17 @@ describe("PermissionCatalog", () => {
 
         expect(unique.size).toBe(permissions.length);
         expect(permissions).toContain("secrets:read");
-        expect(permissions).toContain("admin:users:write");
+        expect(permissions).toContain("metrics:read");
+        expect(permissions).toContain("workloads:write");
+        expect(permissions).toContain("admin:api-keys:write");
     });
 });
 
 describe("RolePermissions", () => {
     it("grants viewer read-only permissions", () => {
         expect(RolePermissions.roleHasPermission("viewer", "nodes:read")).toBe(true);
+        expect(RolePermissions.roleHasPermission("viewer", "secrets:read")).toBe(true);
+        expect(RolePermissions.roleHasPermission("viewer", "notifications:read")).toBe(false);
         expect(RolePermissions.roleHasPermission("viewer", "manifests:apply")).toBe(false);
         expect(RolePermissions.roleHasPermission("viewer", "admin:users:write")).toBe(false);
     });
@@ -24,6 +28,7 @@ describe("RolePermissions", () => {
     it("grants operator mutation permissions without admin user management", () => {
         expect(RolePermissions.roleHasPermission("operator", "manifests:apply")).toBe(true);
         expect(RolePermissions.roleHasPermission("operator", "nodes:provision")).toBe(true);
+        expect(RolePermissions.roleHasPermission("operator", "notifications:write")).toBe(true);
         expect(RolePermissions.roleHasPermission("operator", "admin:users:write")).toBe(false);
     });
 

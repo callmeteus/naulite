@@ -4,16 +4,16 @@ import {
     RouteErrorResponseSchema,
     SecretSchema,
     UpsertSecretBodySchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { LeaderPreHandlers } from "../../auth/LeaderPreHandlers";
 import { HTTP404Error } from "../../errors/TreatedError";
 import { defineRoute } from "../../routing/DefineRoute";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("secrets:read"),
     schema: {
         summary: "Get secret metadata",
         description: "Returns secret metadata by name without exposing secret values.",
@@ -40,7 +40,10 @@ export const GET = defineRoute({
 });
 
 export const PUT = defineRoute({
-    preHandler: [AuthPreHandlers.authorizedLocalOrApiKey, LeaderPreHandlers.requireLeader()],
+    preHandler: [
+        ...PermissionPreHandlers.authorizedWithPermission("secrets:write"),
+        LeaderPreHandlers.requireLeader()
+    ],
     schema: {
         summary: "Update secret",
         description: "Updates a cluster secret with encrypted values at rest.",
@@ -75,7 +78,10 @@ export const PUT = defineRoute({
 });
 
 export const DELETE = defineRoute({
-    preHandler: [AuthPreHandlers.authorizedLocalOrApiKey, LeaderPreHandlers.requireLeader()],
+    preHandler: [
+        ...PermissionPreHandlers.authorizedWithPermission("secrets:write"),
+        LeaderPreHandlers.requireLeader()
+    ],
     schema: {
         summary: "Delete secret",
         description: "Deletes a cluster secret by name.",

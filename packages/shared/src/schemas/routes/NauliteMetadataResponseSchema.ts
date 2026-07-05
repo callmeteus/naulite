@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 /**
- * Platform metadata exposed under /.well-known/platform.
+ * Naulite metadata exposed under /.well-known/naulite.
  */
-export const PlatformMetadataResponseSchema = z.object({
+export const NauliteMetadataResponseSchema = z.object({
     name: z.string(),
     version: z.string(),
     authRequired: z.boolean(),

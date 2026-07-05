@@ -9,8 +9,8 @@ import type {
     Secret,
     Service,
     Volume
-} from "@platform/shared";
-import { buildPaginatedList, paginationOffset } from "@platform/shared";
+} from "@naulite/shared";
+import { buildPaginatedList, paginationOffset } from "@naulite/shared";
 import { randomUUID } from "node:crypto";
 import { Op } from "sequelize";
 
@@ -707,7 +707,7 @@ export class ControlPlaneStore {
      * @returns Whether the key is valid and active
      */
     async validateApiKey(secret: string): Promise<boolean> {
-        const agentApiKey = process.env.PLATFORM_AGENT_API_KEY?.trim();
+        const agentApiKey = process.env.NAULITE_AGENT_API_KEY?.trim();
 
         if (agentApiKey && agentApiKey === secret) {
             return true;

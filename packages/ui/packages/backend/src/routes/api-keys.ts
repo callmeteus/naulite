@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { CreateApiKeyBodySchema } from "@platform/shared";
+import { CreateApiKeyBodySchema } from "@naulite/shared";
 
 /**
  * Registers API key management routes for the admin panel.

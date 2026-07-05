@@ -1,4 +1,4 @@
-import { LocalSecretProvider } from "@platform/control-plane";
+import { LocalSecretProvider } from "@naulite/control-plane";
 import { describe, expect, it } from "vitest";
 
 describe("LocalSecretProvider", () => {

@@ -15,7 +15,7 @@ export * from "./EnqueuedBackupRunSchema";
 export * from "./IngressRouteSchema";
 export * from "./AgentBootstrapResponseSchema";
 export * from "./SetupKeyResponseSchema";
-export * from "./PlatformMetadataResponseSchema";
+export * from "./NauliteMetadataResponseSchema";
 export * from "./HealthLiveResponseSchema";
 export * from "./HealthReadyResponseSchema";
 export * from "./HealthSummaryResponseSchema";

@@ -8,7 +8,7 @@ import {
     EnqueuedBackupRunSchema,
     RouteErrorResponseSchema,
     VolumeNameParamsSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const POST = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("backups:run"),

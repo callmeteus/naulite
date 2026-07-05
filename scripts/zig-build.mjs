@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const cacheDir = join(tmpdir(), "platform-zig-cache");
+const cacheDir = join(tmpdir(), "naulite-zig-cache");
 
 mkdirSync(cacheDir, { recursive: true });
 

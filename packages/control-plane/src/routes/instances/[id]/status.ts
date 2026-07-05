@@ -3,7 +3,7 @@ import {
     InstanceSchema,
     RouteErrorResponseSchema,
     UpdateInstanceStatusBodySchema
-} from "@platform/shared";
+} from "@naulite/shared";
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";

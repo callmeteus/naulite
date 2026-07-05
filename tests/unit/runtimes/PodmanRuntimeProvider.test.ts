@@ -16,7 +16,7 @@ const dockerRuntimeMocks = vi.hoisted(() => ({
     applyPlan: vi.fn(async () => undefined)
 }));
 
-vi.mock("@platform/runtime-docker", () => ({
+vi.mock("@naulite/runtime-docker", () => ({
     DockerRuntimeProvider: vi.fn(function DockerRuntimeProviderMock() {
         return dockerRuntimeMocks;
     })

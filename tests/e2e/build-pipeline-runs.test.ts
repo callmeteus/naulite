@@ -17,7 +17,7 @@ const minimalFixturePath = path.resolve(
 
 const agentAuthHeaders = {
     Accept: "application/json",
-    Authorization: "Bearer platform-test-agent-key",
+    Authorization: "Bearer naulite-test-agent-key",
     "Content-Type": "application/json"
 };
 
@@ -155,7 +155,7 @@ describe("build pipeline runs", () => {
             headers: agentAuthHeaders,
             body: JSON.stringify({
                 manifestYaml,
-                buildContextRoot: "/platform/build-fixtures/minimal-web"
+                buildContextRoot: "/naulite/build-fixtures/minimal-web"
             })
         });
         expect(applyResponse.ok).toBe(true);

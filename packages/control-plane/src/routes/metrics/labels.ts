@@ -1,14 +1,14 @@
 import { z } from "zod";
 
-import { PrometheusLabelsQuerySchema } from "@platform/shared";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PrometheusLabelsQuerySchema } from "@naulite/shared";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { PrometheusClient } from "../../metrics/PrometheusClient";
 import { defineRoute } from "../../routing/DefineRoute";
 
 const PrometheusQueryResponseSchema = z.record(z.string(), z.unknown());
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("metrics:read"),
     schema: {
         summary: "Prometheus label names",
         description: "Proxies Prometheus label discovery to the platform Prometheus server.",

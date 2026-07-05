@@ -6,8 +6,8 @@ import type {
     LogStreamOptions,
     PullImageOptions,
     RuntimeProvider
-} from "@platform/shared";
-import type { ExecutionPlan, InstanceHealth } from "@platform/shared";
+} from "@naulite/shared";
+import type { ExecutionPlan, InstanceHealth } from "@naulite/shared";
 
 /**
  * Options for constructing a Docker runtime provider.

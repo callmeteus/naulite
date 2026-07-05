@@ -7,7 +7,7 @@ import { DatabaseProvider } from "../../../packages/control-plane/src/database/D
 import { GatewayRouteService } from "../../../packages/control-plane/src/services/GatewayRouteService";
 import { LeaderElection } from "../../../packages/control-plane/src/services/LeaderElection";
 import { ControlPlaneSync } from "../../../packages/control-plane/src/services/ControlPlaneSync";
-import { createTraefikNetBirdGatewayProvider } from "@platform/gateway";
+import { createTraefikNetBirdGatewayProvider } from "@naulite/gateway";
 
 describe("GatewayRouteService", () => {
     let databaseProvider: DatabaseProvider;
@@ -20,7 +20,7 @@ describe("GatewayRouteService", () => {
     });
 
     it("persists routes and pushes Traefik config on the leader", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-gateway-route-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-gateway-route-"));
         storagePath = path.join(tempDir, "gateway.sqlite");
         databaseProvider = new DatabaseProvider();
         await databaseProvider.connect({ dialect: "sqlite", url: `sqlite://${storagePath}` });
@@ -28,7 +28,7 @@ describe("GatewayRouteService", () => {
 
         const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
         const traefik = createTraefikNetBirdGatewayProvider({
-            traefikDynamicConfigUrl: "http://traefik.test/platform/dynamic-config",
+            traefikDynamicConfigUrl: "http://traefik.test/naulite/dynamic-config",
             fetchImpl
         });
         const leaderElection = new LeaderElection(databaseProvider, "cp-test");

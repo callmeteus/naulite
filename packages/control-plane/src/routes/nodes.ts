@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { NodeSchema } from "@platform/shared";
+import { NodeSchema } from "@naulite/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
 import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";

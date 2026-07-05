@@ -1,4 +1,4 @@
-# Traefik static configuration for Platform gateway routes.
+# Traefik static configuration for Naulite gateway routes.
 # Dynamic routes are polled from the HTTP provider (control plane pushes via PUT to that store).
 
 global:
@@ -17,7 +17,7 @@ entryPoints:
 
 providers:
     http:
-        endpoint: "http://traefik-dynamic-config:8099/platform/dynamic-config"
+        endpoint: "http://traefik-dynamic-config:8099/naulite/dynamic-config"
         pollInterval: "2s"
         pollTimeout: "5s"
 

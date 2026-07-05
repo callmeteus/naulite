@@ -35,7 +35,7 @@ REQUIRE_DOCKER=true yarn test:e2e
 E2e tests use `tests/harness/LocalTestCluster.ts`, which starts:
 
 ```bash
-docker compose -f tests/fixtures/docker-compose.test-cluster.yml -p platform-test-cluster --profile real up -d --build
+docker compose -f tests/fixtures/docker-compose.test-cluster.yml -p naulite-test-cluster --profile real up -d --build
 ```
 
 By default use the **real** Traefik profile (Postgres, MinIO, Traefik, dynamic config store, HA control plane replicas, Zig agents). Set `TRAEFIK_USE_MOCK=true` only when you intentionally want the lightweight mock profile.

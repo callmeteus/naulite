@@ -8,11 +8,11 @@ set -euo pipefail
 #
 # Environment:
 #   COMPOSE_FILE - path to dogfood compose (default dogfood/docker-compose.yml)
-#   COMPOSE_PROJECT_NAME - docker compose project name (default platform-dogfood)
+#   COMPOSE_PROJECT_NAME - docker compose project name (default naulite-dogfood)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="${COMPOSE_FILE:-${ROOT_DIR}/dogfood/docker-compose.yml}"
-COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-platform-dogfood}"
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-naulite-dogfood}"
 
 leader_port=""
 for port in 18080 18081; do

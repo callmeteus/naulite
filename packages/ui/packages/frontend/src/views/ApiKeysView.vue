@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 
-import type { ApiKey } from "@platform/sdk";
+import type { ApiKey } from "@naulite/sdk";
 
-import { platformClient } from "../api/Client";
+import { nauliteClient } from "../api/Client";
 import { t } from "../ui/Translate";
 
 const keys = ref<ApiKey[]>([]);
@@ -23,7 +23,7 @@ async function refresh(): Promise<void> {
     error.value = null;
 
     try {
-        keys.value = await platformClient.listApiKeys();
+        keys.value = await nauliteClient.listApiKeys();
     } catch (err) {
         error.value = err instanceof Error ? err.message : String(err);
     } finally {
@@ -46,7 +46,7 @@ async function createKey(): Promise<void> {
     error.value = null;
 
     try {
-        const created = await platformClient.createApiKey(trimmedName);
+        const created = await nauliteClient.createApiKey(trimmedName);
         createdSecret.value = created.secret;
         name.value = "";
         await refresh();
@@ -67,7 +67,7 @@ async function revokeKey(apiKeyId: string): Promise<void> {
     error.value = null;
 
     try {
-        await platformClient.revokeApiKey(apiKeyId);
+        await nauliteClient.revokeApiKey(apiKeyId);
         await refresh();
     } catch (err) {
         error.value = err instanceof Error ? err.message : String(err);

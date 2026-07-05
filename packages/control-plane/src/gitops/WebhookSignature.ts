@@ -105,7 +105,7 @@ export namespace WebhookSignature {
         rawBody: Buffer,
         headers: Record<string, string | string[] | undefined>
     ): boolean {
-        const signatureHeader = readHeader(headers, "x-platform-signature");
+        const signatureHeader = readHeader(headers, "x-naulite-signature");
 
         if (!signatureHeader) {
             return false;

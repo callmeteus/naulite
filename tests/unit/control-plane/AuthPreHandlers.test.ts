@@ -31,7 +31,7 @@ describe("AuthPreHandlers", () => {
         const request = {
             ip: "203.0.113.10",
             headers: {
-                "x-platform-session": "session-token"
+                "x-naulite-session": "session-token"
             }
         } as FastifyRequest;
 
@@ -83,7 +83,7 @@ describe("AuthPreHandlers", () => {
         const request = {
             ip: "203.0.113.10",
             headers: {
-                "x-platform-session": "invalid-session"
+                "x-naulite-session": "invalid-session"
             }
         } as FastifyRequest;
 

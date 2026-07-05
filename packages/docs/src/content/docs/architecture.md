@@ -1,6 +1,6 @@
 ---
 title: Architecture
-description: Runtime components and request flows for Platform.
+description: Runtime components and request flows for Naulite.
 ---
 
 # Architecture

@@ -251,7 +251,7 @@ describe("gitops webhook signature integration", () => {
 
     it("accepts webhook requests with a valid generic signature", async () => {
         snapshotEnv();
-        const secret = "platform-secret";
+        const secret = "naulite-secret";
         process.env.GITOPS_WEBHOOK_SECRET = secret;
         process.env.GITOPS_WEBHOOK_PROVIDER = "generic";
 
@@ -277,7 +277,7 @@ describe("gitops webhook signature integration", () => {
             remoteAddress: "203.0.113.10",
             headers: {
                 "content-type": "application/json",
-                "x-platform-signature": digest
+                "x-naulite-signature": digest
             },
             payload: rawBody
         });

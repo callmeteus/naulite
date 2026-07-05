@@ -1,4 +1,4 @@
-import type { NotificationProvider, NodeProvisionerProvider, SecretProvider } from "@platform/shared";
+import type { NotificationProvider, NodeProvisionerProvider, SecretProvider } from "@naulite/shared";
 
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 import { BackupDestinationProvider } from "../modules/backup/BackupDestinationProvider";

@@ -1,15 +1,15 @@
-# @platform/docs
+# @naulite/docs
 
-English-only Platform documentation site built with [Astro](https://astro.build) and [Starlight](https://starlight.astro.build).
+English-only Naulite documentation site built with [Astro](https://astro.build) and [Starlight](https://starlight.astro.build).
 
 ## Commands
 
 From the `platform/` repository root:
 
 ```bash
-yarn workspace @platform/docs dev
-yarn workspace @platform/docs build
-yarn workspace @platform/docs preview
+yarn workspace @naulite/docs dev
+yarn workspace @naulite/docs build
+yarn workspace @naulite/docs preview
 ```
 
 Dev server defaults to `http://localhost:4321`.

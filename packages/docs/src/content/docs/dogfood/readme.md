@@ -63,8 +63,8 @@ yarn test:e2e
 Point the CLI or UI at a control plane:
 
 ```bash
-export PLATFORM_CP_URL=http://localhost:8080
-yarn workspace @platform/cli build:all
+export NAULITE_CP_URL=http://localhost:8080
+yarn workspace @naulite/cli build:all
 platform cluster status get
 ```
 
@@ -83,7 +83,7 @@ platform/                  # git + dev root (you are here)
         builders/          Docker and Kaniko build providers
         plugins/           Swappable extensions (e.g. s3-storage-provider)
         gateway/           Ingress gateway provider
-        docs/              This documentation site (@platform/docs)
+        docs/              This documentation site (@naulite/docs)
     tests/
         unit/              Pure and docker-backed unit tests (~72)
         e2e/               Black-box platform flows
@@ -95,7 +95,7 @@ platform/                  # git + dev root (you are here)
 
 - `CONTEXT.md` - canonical architecture and philosophy
 - `PROGRESS.md` - development log and phase status
-- This site (`yarn workspace @platform/docs dev`) - operations and reference guides
+- This site (`yarn workspace @naulite/docs dev`) - operations and reference guides
 
 ## Development
 
@@ -108,7 +108,7 @@ platform/                  # git + dev root (you are here)
 | `yarn test:e2e` | End-to-end smoke and flows |
 | `yarn dev` | Start package dev servers in parallel |
 | `yarn dev:docker` | Bootstrap NetBird + start full Docker stack (`bin/dev.sh` / `bin/dev.ps1`) |
-| `yarn workspace @platform/docs dev` | Start this documentation site locally |
+| `yarn workspace @naulite/docs dev` | Start this documentation site locally |
 
 ## License
 

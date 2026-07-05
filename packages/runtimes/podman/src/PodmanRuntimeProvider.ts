@@ -1,14 +1,14 @@
 import type Dockerode from "dockerode";
 
-import { DockerRuntimeProvider, type DockerRuntimeProviderOptions } from "@platform/runtime-docker";
+import { DockerRuntimeProvider, type DockerRuntimeProviderOptions } from "@naulite/runtime-docker";
 import type {
     CreateInstanceSpec,
     ExecResult,
     LogStreamOptions,
     PullImageOptions,
     RuntimeProvider
-} from "@platform/shared";
-import type { ExecutionPlan, InstanceHealth } from "@platform/shared";
+} from "@naulite/shared";
+import type { ExecutionPlan, InstanceHealth } from "@naulite/shared";
 
 /**
  * Options for constructing a Podman runtime provider.

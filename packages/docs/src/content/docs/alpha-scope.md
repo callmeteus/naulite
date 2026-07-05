@@ -1,11 +1,11 @@
 ---
 title: Alpha scope
-description: Boundaries for the Platform alpha integration wave.
+description: Boundaries for the Naulite alpha integration wave.
 ---
 
 # Alpha scope
 
-Platform V1 is a **working scaffold** for local development, integration testing, and internal dogfood - not a production-hardened product.
+Naulite V1 is a **working scaffold** for local development, integration testing, and internal dogfood - not a production-hardened product.
 
 ## In scope
 
@@ -19,7 +19,7 @@ Platform V1 is a **working scaffold** for local development, integration testing
 | Backups, log rotation, self-hosted NetBird | Implemented |
 | Docker Compose dogfood stack | Implemented |
 | CI (`verify` + `docker-smoke` jobs) | Implemented |
-| Consolidated docs (`@platform/docs`, this site) | Implemented |
+| Consolidated docs (`@naulite/docs`, this site) | Implemented |
 
 ## Out of scope (alpha)
 
@@ -31,7 +31,7 @@ Platform V1 is a **working scaffold** for local development, integration testing
 
 ## Documentation migration
 
-Legacy markdown under `platform/docs/*.md` is a one-line redirect to this package. Edit content in `packages/docs/src/content/docs/` and publish with `yarn workspace @platform/docs build`.
+Legacy markdown under `platform/docs/*.md` is a one-line redirect to this package. Edit content in `packages/docs/src/content/docs/` and publish with `yarn workspace @naulite/docs build`.
 
 ## Related
 

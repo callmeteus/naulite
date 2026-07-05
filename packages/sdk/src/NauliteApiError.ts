@@ -1,7 +1,7 @@
 /**
  * Error thrown when the control plane returns a non-success HTTP status.
  */
-export class PlatformApiError extends Error {
+export class NauliteApiError extends Error {
     /**
      * Creates a platform API error.
      * 
@@ -15,6 +15,6 @@ export class PlatformApiError extends Error {
         public readonly body?: unknown
     ) {
         super(message);
-        this.name = "PlatformApiError";
+        this.name = "NauliteApiError";
     }
 }

@@ -1,4 +1,4 @@
-import type { BackupTask } from "@platform/shared";
+import type { BackupTask } from "@naulite/shared";
 
 import { BackupRunModel } from "../database/models/index";
 import type { BackupOrchestrator } from "../modules/backup/BackupOrchestrator";

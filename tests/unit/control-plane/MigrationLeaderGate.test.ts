@@ -19,7 +19,7 @@ describe("Migration leader gate", () => {
     });
 
     it("reports no pending migrations after sqlite bootstrap migrate", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-migration-gate-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-migration-gate-"));
         databasePath = path.join(tempDir, "control-plane.db");
         const provider = new DatabaseProvider();
 
@@ -34,7 +34,7 @@ describe("Migration leader gate", () => {
     });
 
     it("detects pending migrations before migrate runs", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-migration-gate-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-migration-gate-"));
         databasePath = path.join(tempDir, "control-plane.db");
         const provider = new DatabaseProvider();
 
@@ -48,6 +48,22 @@ describe("Migration leader gate", () => {
 
         await provider.migrate();
         await expect(provider.hasPendingMigrations()).resolves.toBe(false);
+        await provider.disconnect();
+    });
+
+    it("waits until migrations are applied without running migrate", async () => {
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-migration-gate-"));
+        databasePath = path.join(tempDir, "control-plane.db");
+        const provider = new DatabaseProvider();
+
+        await provider.connect({
+            dialect: "sqlite",
+            url: `sqlite://${databasePath}`
+        });
+        await provider.migrate();
+
+        const runner = new MigrationRunner(provider.getSequelize(), provider.getDialect());
+        await expect(runner.waitUntilApplied(10, 1_000)).resolves.toBeUndefined();
         await provider.disconnect();
     });
 });

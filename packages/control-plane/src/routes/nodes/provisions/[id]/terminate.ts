@@ -1,4 +1,4 @@
-import { NodeProvisionSchema, IdParamsSchema } from "@platform/shared";
+import { NodeProvisionSchema, IdParamsSchema } from "@naulite/shared";
 
 import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../../../ControlPlaneService";

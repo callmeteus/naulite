@@ -1,4 +1,4 @@
-import type { BackupTask } from "@platform/shared";
+import type { BackupTask } from "@naulite/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -31,7 +31,7 @@ describe("BackupCompletionService", () => {
         nodeId: "node-1",
         destination: {
             provider: "local",
-            path: "/var/lib/platform/backups"
+            path: "/var/lib/naulite/backups"
         },
         resolvedSecrets: {}
     };
@@ -50,7 +50,7 @@ describe("BackupCompletionService", () => {
     it("completes a backup run when the agent response is valid", async () => {
         const orchestrator = {
             write: vi.fn(async () => ({
-                location: "/var/lib/platform/backups/task-1.tar.gz",
+                location: "/var/lib/naulite/backups/task-1.tar.gz",
                 provider: "local",
                 taskId: "task-1"
             }))
@@ -63,7 +63,7 @@ describe("BackupCompletionService", () => {
         });
 
         expect(result).toEqual({
-            location: "/var/lib/platform/backups/task-1.tar.gz",
+            location: "/var/lib/naulite/backups/task-1.tar.gz",
             provider: "local"
         });
         expect(orchestrator.write).toHaveBeenCalledWith(task, "/tmp/task-1.tar.gz");
@@ -71,7 +71,7 @@ describe("BackupCompletionService", () => {
             expect.objectContaining({
                 status: "succeeded",
                 payload: expect.objectContaining({
-                    location: "/var/lib/platform/backups/task-1.tar.gz",
+                    location: "/var/lib/naulite/backups/task-1.tar.gz",
                     provider: "local",
                     archivePath: "/tmp/task-1.tar.gz"
                 })
@@ -116,7 +116,7 @@ describe("BackupCompletionService", () => {
     it("stages archives from the agent before uploading to S3", async () => {
         const orchestrator = {
             write: vi.fn(async () => ({
-                location: "s3://platform-backups/daily/data-task-s3.tar.gz",
+                location: "s3://naulite-backups/daily/data-task-s3.tar.gz",
                 provider: "s3",
                 taskId: "task-s3"
             }))
@@ -126,7 +126,7 @@ describe("BackupCompletionService", () => {
             taskId: "task-s3",
             destination: {
                 provider: "s3",
-                bucket: "platform-backups",
+                bucket: "naulite-backups",
                 prefix: "daily",
                 region: "us-east-1",
                 endpoint: "http://minio:9000",
@@ -142,14 +142,14 @@ describe("BackupCompletionService", () => {
             {
                 taskId: "task-s3",
                 status: "completed",
-                archivePath: "/var/lib/platform/backups/task-s3.tar.gz"
+                archivePath: "/var/lib/naulite/backups/task-s3.tar.gz"
             },
             { agentUrl: "http://agent-node-a:9470" }
         );
 
         expect(mocks.stageFromAgent).toHaveBeenCalledWith(
             "http://agent-node-a:9470",
-            "/var/lib/platform/backups/task-s3.tar.gz"
+            "/var/lib/naulite/backups/task-s3.tar.gz"
         );
         expect(orchestrator.write).toHaveBeenCalledWith(s3Task, "/tmp/staged/task-1.tar.gz");
     });

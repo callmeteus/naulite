@@ -14,7 +14,7 @@ export function isLocalBootstrapRequest(request: FastifyRequest): boolean {
     }
 
     // Docker Desktop publishes container ports to the host via the compose bridge gateway.
-    if (process.env.PLATFORM_E2E_ALLOW_BRIDGE === "1" && ip.startsWith("172.")) {
+    if (process.env.NAULITE_E2E_ALLOW_BRIDGE === "1" && ip.startsWith("172.")) {
         return true;
     }
 
@@ -28,7 +28,7 @@ export function isLocalBootstrapRequest(request: FastifyRequest): boolean {
  * @returns Normalized control plane URL without trailing slash
  */
 export function resolvePublicControlPlaneUrl(request: FastifyRequest): string {
-    const configured = process.env.PLATFORM_PUBLIC_URL?.trim();
+    const configured = process.env.NAULITE_PUBLIC_URL?.trim();
 
     if (configured) {
         return configured.replace(/\/+$/, "");

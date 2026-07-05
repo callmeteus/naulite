@@ -1,1 +1,1 @@
-export { platformClient } from "../stores/Auth";
+export { nauliteClient } from "../stores/Auth";

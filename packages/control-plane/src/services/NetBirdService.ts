@@ -352,7 +352,7 @@ export class NetBirdService {
      * @returns Updated platform nodes group
      */
     async syncPlatformNodePeers(peerIds: string[]): Promise<NetBirdGroup> {
-        const group = await this.adapter.ensureGroup("platform-nodes");
+        const group = await this.adapter.ensureGroup("naulite-nodes");
         const uniquePeerIds = [...new Set(peerIds.filter((peerId) => peerId.length > 0))];
 
         if (uniquePeerIds.length === 0) {

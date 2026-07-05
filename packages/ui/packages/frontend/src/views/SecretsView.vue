@@ -2,9 +2,11 @@
 import { onMounted, ref } from "vue";
 
 import { t } from "../ui/Translate";
+import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 
 const store = useClusterStore();
+const auth = useAuthStore();
 const secretName = ref("");
 const secretDataJson = ref("{\n  \"password\": \"change-me\"\n}");
 const secretDescription = ref("");
@@ -79,7 +81,7 @@ async function deleteSecret(name: string): Promise<void> {
         <h2>{{ t("secrets") }}</h2>
         <p class="hint">{{ t("secretsHint") }}</p>
 
-        <form class="panel create-form" @submit.prevent="saveSecret">
+        <form v-if="auth.hasPermission('secrets:write')" class="panel create-form" @submit.prevent="saveSecret">
             <label for="secret-name">{{ t("secretName") }}</label>
             <input
                 id="secret-name"
@@ -119,7 +121,12 @@ async function deleteSecret(name: string): Promise<void> {
                         <td>{{ secret.scope }}</td>
                         <td>{{ secret.keys.join(", ") }}</td>
                         <td>
-                            <button type="button" class="danger" @click="deleteSecret(secret.name)">
+                            <button
+                                v-if="auth.hasPermission('secrets:write')"
+                                type="button"
+                                class="danger"
+                                @click="deleteSecret(secret.name)"
+                            >
                                 {{ t("deleteSecret") }}
                             </button>
                         </td>

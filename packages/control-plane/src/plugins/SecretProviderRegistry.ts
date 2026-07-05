@@ -1,4 +1,4 @@
-import type { SecretProvider as SharedSecretProvider } from "@platform/shared";
+import type { SecretProvider as SharedSecretProvider } from "@naulite/shared";
 
 /**
  * Registry for secret provider plugins discovered at runtime.

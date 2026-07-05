@@ -18,7 +18,7 @@ export namespace BackupArchiveStagingService {
     export async function stageFromAgent(agentUrl: string, archivePath: string): Promise<string> {
         console.debug("[backups] stage from agent archivePath=%s", archivePath);
         const archiveBytes = await AgentProxyService.fetchBackupArchive(agentUrl, archivePath);
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-backup-stage-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-backup-stage-"));
         const fileName = path.basename(archivePath);
         const stagedPath = path.join(tempDir, fileName.length > 0 ? fileName : "archive.tar.gz");
 

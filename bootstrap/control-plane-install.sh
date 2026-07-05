@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLATFORM_ROOT="${PLATFORM_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
-DOGFOOD_DIR="${PLATFORM_ROOT}/dogfood"
+NAULITE_ROOT="${NAULITE_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
+DOGFOOD_DIR="${NAULITE_ROOT}/dogfood"
 
 CP_HOST=""
 NETBIRD_DOMAIN="${NETBIRD_DOMAIN:-netbird.local}"
@@ -13,7 +13,7 @@ NETBIRD_SERVER_PORT="${NETBIRD_SERVER_PORT:-9081}"
 DRY_RUN=0
 
 log() {
-    printf '[platform-control-plane] %s\n' "$*"
+    printf '[naulite-control-plane] %s\n' "$*"
 }
 
 usage() {
@@ -129,14 +129,14 @@ prepare_env() {
         log "created dogfood/.env from dogfood/.env.example"
     fi
 
-    set_env_var "PLATFORM_PUBLIC_URL" "${CP_HOST}"
+    set_env_var "NAULITE_PUBLIC_URL" "${CP_HOST}"
     set_env_var "NETBIRD_PUBLIC_MANAGEMENT_URL" "${NETBIRD_PUBLIC_MANAGEMENT_URL}"
     set_env_var "NETBIRD_DOMAIN" "${NETBIRD_DOMAIN}"
     set_env_var "NETBIRD_HTTP_PROTOCOL" "${NETBIRD_HTTP_PROTOCOL}"
     set_env_var "NETBIRD_SERVER_PORT" "${NETBIRD_SERVER_PORT}"
-    set_env_var "PROMETHEUS_URL" "${PROMETHEUS_URL:-http://platform-prometheus:9090}"
-    set_env_var "PLATFORM_PROMETHEUS_FILE_SD_DIR" "${PLATFORM_PROMETHEUS_FILE_SD_DIR:-/var/lib/platform/prometheus/file_sd}"
-    set_env_var "PLATFORM_METRICS_SYNC_ENABLED" "${PLATFORM_METRICS_SYNC_ENABLED:-true}"
+    set_env_var "PROMETHEUS_URL" "${PROMETHEUS_URL:-http://naulite-prometheus:9090}"
+    set_env_var "NAULITE_PROMETHEUS_FILE_SD_DIR" "${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}"
+    set_env_var "NAULITE_METRICS_SYNC_ENABLED" "${NAULITE_METRICS_SYNC_ENABLED:-true}"
     set_env_var "POSTGRES_HA_ENABLED" "true"
 
     # shellcheck disable=SC1091
@@ -145,7 +145,7 @@ prepare_env() {
     set +a
 
     if ! grep -q "^DATABASE_URL=" "${DOGFOOD_DIR}/.env" 2>/dev/null; then
-        set_env_var "DATABASE_URL" "postgres://platform:${POSTGRES_PASSWORD:-platform}@pgpool:5432/platform"
+        set_env_var "DATABASE_URL" "postgres://naulite:${POSTGRES_PASSWORD:-naulite}@pgpool:5432/naulite"
     fi
 }
 
@@ -163,7 +163,7 @@ init_netbird() {
 
 start_stack() {
     log "starting platform metrics stack"
-    docker compose -f "${PLATFORM_ROOT}/packages/metrics/compose/metrics-stack.yml" up -d
+    docker compose -f "${NAULITE_ROOT}/packages/metrics/compose/metrics-stack.yml" up -d
 
     log "starting docker compose stack"
     cd "${DOGFOOD_DIR}"

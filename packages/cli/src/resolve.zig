@@ -59,10 +59,10 @@ fn resolveApiKey(
     environ_map: *const std.process.Environ.Map,
     credentials: ?credentials_mod.Credentials,
 ) ?[]const u8 {
-    if (environ_map.get("PLATFORM_API_KEY")) |value| {
+    if (environ_map.get("NAULITE_API_KEY")) |value| {
         return value;
     }
-    if (environ_map.get("PLATFORM_TOKEN")) |value| {
+    if (environ_map.get("NAULITE_TOKEN")) |value| {
         return value;
     }
     if (credentials) |saved| {
@@ -125,7 +125,7 @@ pub fn resolve(
         };
     }
 
-    if (environ_map.get("PLATFORM_CP_URL")) |env_url| {
+    if (environ_map.get("NAULITE_CP_URL")) |env_url| {
         return .{
             .config = .{
                 .base_url = try Config.trimTrailingSlashOwned(allocator, env_url),

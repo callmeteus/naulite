@@ -1,6 +1,6 @@
-# @platform/ui-backend
+# @naulite/ui-backend
 
-Fastify BFF for the admin dashboard. Exposes the HTTP surface the frontend expects and delegates to the control plane via `@platform/sdk`.
+Fastify BFF for the admin dashboard. Exposes the HTTP surface the frontend expects and delegates to the control plane via `@naulite/sdk`.
 
 ## Environment
 
@@ -14,5 +14,5 @@ Fastify BFF for the admin dashboard. Exposes the HTTP surface the frontend expec
 ## Development
 
 ```bash
-yarn workspace @platform/ui-backend dev
+yarn workspace @naulite/ui-backend dev
 ```

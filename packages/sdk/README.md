@@ -1,15 +1,15 @@
-# @platform/sdk
+# @naulite/sdk
 
-Typed HTTP client for the Platform control plane REST API.
+Typed HTTP client for the Naulite control plane REST API.
 
 See [CONTEXT.md](../../CONTEXT.md) for architecture and [PROGRESS.md](../../PROGRESS.md) for current development status.
 
 ## Usage
 
 ```typescript
-import { PlatformClient } from "@platform/sdk";
+import { NauliteClient } from "@naulite/sdk";
 
-const client = new PlatformClient({ baseUrl: "http://localhost:8080" });
+const client = new NauliteClient({ baseUrl: "http://localhost:8080" });
 const health = await client.getHealth();
 const nodes = await client.listNodes();
 ```

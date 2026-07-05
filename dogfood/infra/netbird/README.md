@@ -1,6 +1,6 @@
 # NetBird (self-hosted, internal)
 
-Official NetBird stack for Platform. Images: `netbirdio/netbird-server` and `netbirdio/dashboard`.
+Official NetBird stack for Naulite. Images: `netbirdio/netbird-server` and `netbirdio/dashboard`.
 
 NetBird runs on the internal Docker network. The dashboard is **not** exposed on host ports. The control plane bootstraps credentials automatically on first startup.
 
@@ -36,14 +36,14 @@ cd dogfood
 docker compose --profile traefik up -d --build
 ```
 
-The control plane pushes routes to `TRAEFIK_DYNAMIC_CONFIG_URL` (default `http://traefik-dynamic-config:8099/platform/dynamic-config`). Traefik polls the same endpoint via its HTTP provider (`dogfood/infra/traefik/traefik.yml`).
+The control plane pushes routes to `TRAEFIK_DYNAMIC_CONFIG_URL` (default `http://traefik-dynamic-config:8099/naulite/dynamic-config`). Traefik polls the same endpoint via its HTTP provider (`dogfood/infra/traefik/traefik.yml`).
 
 ### Smoke test (local ingress)
 
 1. Start the test cluster (real Traefik is the default; set `TRAEFIK_USE_MOCK=true` for the lightweight mock):
 
 ```bash
-docker compose -f tests/fixtures/docker-compose.test-cluster.yml -p platform-test-cluster --profile real up -d --build
+docker compose -f tests/fixtures/docker-compose.test-cluster.yml -p naulite-test-cluster --profile real up -d --build
 ```
 
 2. Apply a public ingress manifest and confirm the route:

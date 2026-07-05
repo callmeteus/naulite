@@ -1,6 +1,6 @@
-# Platform dogfood stack
+# Naulite dogfood stack
 
-Local full-stack environment for Platform development: HA control plane, Postgres, MinIO, UI, NetBird, agent, and optional Prometheus metrics.
+Local full-stack environment for Naulite development: HA control plane, Postgres, MinIO, UI, NetBird, agent, and optional Prometheus metrics.
 
 ## Quick start
 
@@ -49,10 +49,10 @@ Thin wrappers at `bin/dev.sh` and `bin/dev.ps1` delegate here.
 | `NETBIRD_API_URL` | `http://netbird-server/api` | Internal CP to NetBird API |
 | `NETBIRD_MANAGEMENT_URL` | `http://netbird-server` | Internal agent to NetBird management |
 | `NETBIRD_SETUP_KEY` | *(auto)* | Setup key for dogfood `agent-1` |
-| `PLATFORM_PUBLIC_URL` | *(empty)* | Public control plane URL for remote agents |
+| `NAULITE_PUBLIC_URL` | *(empty)* | Public control plane URL for remote agents |
 | `ADMIN_API_KEY` | *(auto)* | UI backend API key |
 | `POSTGRES_PASSWORD` | `platform` | Postgres password |
-| `PLATFORM_PROMETHEUS_HOST_PORT` | `19090` | Host port for included metrics stack |
+| `NAULITE_PROMETHEUS_HOST_PORT` | `19090` | Host port for included metrics stack |
 
 ## Endpoints (default)
 

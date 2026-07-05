@@ -1,4 +1,4 @@
-import type { ManifestService, Node, Service } from "@platform/shared";
+import type { ManifestService, Node, Service } from "@naulite/shared";
 
 /**
  * Node score computed by the scheduler.

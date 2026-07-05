@@ -1,4 +1,4 @@
-# @platform/gateway
+# @naulite/gateway
 
 Traefik `GatewayProvider` that publishes routes through a NetBird reverse proxy endpoint.
 

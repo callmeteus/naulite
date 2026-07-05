@@ -1,4 +1,4 @@
-import type { RuntimeProvider } from "@platform/shared";
+import type { RuntimeProvider } from "@naulite/shared";
 
 /**
  * Registry for container runtime providers available to the control plane.

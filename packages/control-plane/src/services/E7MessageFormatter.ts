@@ -1,1 +1,1 @@
-export { E7MessageFormatter } from "@platform/shared";
+export { E7MessageFormatter } from "@naulite/shared";

@@ -7,7 +7,7 @@ import type {
     BuilderProvider,
     DockerBuildOptions,
     KanikoBuildOptions
-} from "@platform/shared";
+} from "@naulite/shared";
 
 const execFileAsync = promisify(execFile);
 
@@ -66,7 +66,7 @@ export class DockerBuilderProvider implements BuilderProvider {
      */
     async buildWithKaniko(options: KanikoBuildOptions): Promise<BuildResult> {
         void options;
-        throw new Error("Kaniko builds are not supported by @platform/builder-docker");
+        throw new Error("Kaniko builds are not supported by @naulite/builder-docker");
     }
 }
 

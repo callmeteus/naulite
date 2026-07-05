@@ -5,8 +5,8 @@ import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import type { LeaderElection } from "./LeaderElection";
 
 const DEFAULT_SYNC_INTERVAL_MS = 30_000;
-const DEFAULT_FILE_SD_DIR = "/var/lib/platform/prometheus/file_sd";
-const TARGETS_FILE_NAME = "platform_targets.json";
+const DEFAULT_FILE_SD_DIR = "/var/lib/naulite/prometheus/file_sd";
+const TARGETS_FILE_NAME = "naulite_targets.json";
 
 /**
  * Prometheus file_sd target group entry.
@@ -130,7 +130,7 @@ export class MetricsSyncService {
             groups.push({
                 targets: [target],
                 labels: {
-                    job: "platform-agent",
+                    job: "naulite-agent",
                     node_id: node.id,
                     hostname: node.hostname
                 }
@@ -147,7 +147,7 @@ export class MetricsSyncService {
             groups.push({
                 targets: [target],
                 labels: {
-                    job: "platform-control-plane",
+                    job: "naulite-control-plane",
                     cp_instance_id: MetricsSyncService.extractCpInstanceId(cpUrl)
                 }
             });
@@ -162,7 +162,7 @@ export class MetricsSyncService {
      * @returns Whether metrics sync should run
      */
     static resolveEnabled(): boolean {
-        const raw = process.env.PLATFORM_METRICS_SYNC_ENABLED ?? "true";
+        const raw = process.env.NAULITE_METRICS_SYNC_ENABLED ?? "true";
         return raw.trim().toLowerCase() !== "false";
     }
 
@@ -172,7 +172,7 @@ export class MetricsSyncService {
      * @returns Writable file_sd directory path
      */
     static resolveFileSdDir(): string {
-        return process.env.PLATFORM_PROMETHEUS_FILE_SD_DIR ?? DEFAULT_FILE_SD_DIR;
+        return process.env.NAULITE_PROMETHEUS_FILE_SD_DIR ?? DEFAULT_FILE_SD_DIR;
     }
 
     /**

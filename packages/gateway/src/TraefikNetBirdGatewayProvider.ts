@@ -1,4 +1,4 @@
-import type { GatewayProvider, GatewayRoute, GatewayTlsMaterial, Ingress } from "@platform/shared";
+import type { GatewayProvider, GatewayRoute, GatewayTlsMaterial, Ingress } from "@naulite/shared";
 
 import { TraefikDynamicConfig } from "./TraefikDynamicConfig";
 
@@ -47,8 +47,8 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
         this.netbirdEndpoint = options.netbirdEndpoint ?? "https://netbird.local";
         this.traefikApiUrl = options.traefikApiUrl ?? "http://127.0.0.1:8080";
         this.traefikDynamicConfigUrl = options.traefikDynamicConfigUrl
-            ?? `${this.traefikApiUrl.replace(/\/+$/, "")}/platform/dynamic-config`;
-        this.tlsMode = options.tlsMode ?? process.env.PLATFORM_TLS_MODE?.trim().toLowerCase() ?? "acme_tls";
+            ?? `${this.traefikApiUrl.replace(/\/+$/, "")}/naulite/dynamic-config`;
+        this.tlsMode = options.tlsMode ?? process.env.NAULITE_TLS_MODE?.trim().toLowerCase() ?? "acme_tls";
         this.fetchImpl = options.fetchImpl ?? fetch;
     }
 

@@ -1,8 +1,8 @@
-import type { ApplyResponse, BackupRun, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, Instance, Node, NodeProvision, PipelineEvent, PipelineRun, Secret, Service, Volume } from "@platform/sdk";
-import type { BuildRequest, BuildResponse, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, ProvisionNodeInput } from "@platform/sdk";
+import type { ApplyResponse, BackupRun, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, Instance, Node, NodeProvision, PipelineEvent, PipelineRun, Secret, Service, Volume } from "@naulite/sdk";
+import type { BuildRequest, BuildResponse, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, ProvisionNodeInput } from "@naulite/sdk";
 import { reactive } from "vue";
 
-import { platformClient } from "../api/Client";
+import { nauliteClient } from "../api/Client";
 
 interface GitOpsRevision {
     id: string;
@@ -45,8 +45,8 @@ export const clusterStore = reactive({
 
         try {
             const [nodes, services] = await Promise.all([
-                platformClient.listNodes(),
-                platformClient.listServices()
+                nauliteClient.listNodes(),
+                nauliteClient.listServices()
             ]);
             this.nodes = nodes;
             this.services = services;
@@ -67,7 +67,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            this.backups = await platformClient.listBackups();
+            this.backups = await nauliteClient.listBackups();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
@@ -85,7 +85,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            this.instances = await platformClient.listInstances();
+            this.instances = await nauliteClient.listInstances();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
@@ -103,7 +103,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            this.volumes = await platformClient.listVolumes();
+            this.volumes = await nauliteClient.listVolumes();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
@@ -121,7 +121,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            this.secrets = await platformClient.listSecrets();
+            this.secrets = await nauliteClient.listSecrets();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
@@ -139,7 +139,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            this.clusterStatus = await platformClient.getClusterStatus();
+            this.clusterStatus = await nauliteClient.getClusterStatus();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
@@ -157,7 +157,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            const response = await platformClient.listGitOpsRevisions();
+            const response = await nauliteClient.listGitOpsRevisions();
             this.gitopsRevisions = response.revisions as unknown as GitOpsRevision[];
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
@@ -177,7 +177,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            await platformClient.rollbackGitOps(revisionId);
+            await nauliteClient.rollbackGitOps(revisionId);
             await this.refreshGitOpsRevisions();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
@@ -197,10 +197,10 @@ export const clusterStore = reactive({
 
         try {
             const [topology, devices, groups, acls] = await Promise.all([
-                platformClient.getNetBirdTopology(),
-                platformClient.listNetBirdDevices(),
-                platformClient.listNetBirdGroups(),
-                platformClient.listNetBirdAcls()
+                nauliteClient.getNetBirdTopology(),
+                nauliteClient.listNetBirdDevices(),
+                nauliteClient.listNetBirdGroups(),
+                nauliteClient.listNetBirdAcls()
             ]);
             this.netBirdTopology = topology;
             this.netBirdDevices = devices;
@@ -226,7 +226,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            await platformClient.upsertSecret({ name, data, description });
+            await nauliteClient.upsertSecret({ name, data, description });
             await this.refreshSecrets();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
@@ -247,7 +247,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            await platformClient.deleteSecret(name);
+            await nauliteClient.deleteSecret(name);
             await this.refreshSecrets();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
@@ -268,7 +268,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            await platformClient.runBackup(volumeName);
+            await nauliteClient.runBackup(volumeName);
             await this.refreshBackups();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
@@ -289,7 +289,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            await platformClient.restoreBackup(backupId);
+            await nauliteClient.restoreBackup(backupId);
             await this.refreshBackups();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
@@ -309,7 +309,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            this.containerRegistryImages = await platformClient.listContainerRegistryImages();
+            this.containerRegistryImages = await nauliteClient.listContainerRegistryImages();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
@@ -329,7 +329,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            await platformClient.deleteContainerRegistryImage(name, tag);
+            await nauliteClient.deleteContainerRegistryImage(name, tag);
             await this.refreshContainerRegistryImages();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
@@ -350,7 +350,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            this.runs = await platformClient.listRuns(query);
+            this.runs = await nauliteClient.listRuns(query);
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
@@ -365,7 +365,7 @@ export const clusterStore = reactive({
      * @returns Pipeline run detail
      */
     async getRun(runId: string): Promise<PipelineRun> {
-        return platformClient.getRun(runId);
+        return nauliteClient.getRun(runId);
     },
 
     /**
@@ -375,7 +375,7 @@ export const clusterStore = reactive({
      * @returns Pipeline events
      */
     async getRunEvents(runId: string): Promise<PipelineEvent[]> {
-        return platformClient.getRunEvents(runId);
+        return nauliteClient.getRunEvents(runId);
     },
 
     /**
@@ -389,7 +389,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            return await platformClient.triggerBuild(request);
+            return await nauliteClient.triggerBuild(request);
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
             throw err;
@@ -409,7 +409,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            return await platformClient.provisionNode(input);
+            return await nauliteClient.provisionNode(input);
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
             throw err;
@@ -425,7 +425,7 @@ export const clusterStore = reactive({
      * @returns Node provision record
      */
     async getNodeProvision(provisionId: string): Promise<NodeProvision> {
-        return platformClient.getNodeProvision(provisionId);
+        return nauliteClient.getNodeProvision(provisionId);
     },
 
     /**
@@ -438,7 +438,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            this.gatewayRoutes = await platformClient.listGatewayRoutes();
+            this.gatewayRoutes = await nauliteClient.listGatewayRoutes();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
@@ -457,7 +457,7 @@ export const clusterStore = reactive({
         this.error = "";
 
         try {
-            const result = await platformClient.applyManifest(manifestYaml);
+            const result = await nauliteClient.applyManifest(manifestYaml);
             this.lastApplyResult = result;
             await this.refreshOverview();
             return String(result.revision);

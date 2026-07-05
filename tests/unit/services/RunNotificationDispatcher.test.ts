@@ -1,12 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { NotificationProvider, PipelineNotificationEvent } from "@platform/shared";
+import type { NotificationProvider, PipelineNotificationEvent } from "@naulite/shared";
 
+vi.mock("../../../packages/control-plane/src/database/NotificationProviderFilterStore", () => ({
+    NotificationProviderFilterStore: {
+        getAllowedKinds: vi.fn(async () => null),
+        setAllowedKinds: vi.fn(async () => undefined)
+    }
+}));
+
+import { NotificationProviderFilterStore } from "../../../packages/control-plane/src/database/NotificationProviderFilterStore";
 import { RunNotificationDispatcher } from "../../../packages/control-plane/src/services/RunNotificationDispatcher";
 
 describe("RunNotificationDispatcher", () => {
     afterEach(() => {
         RunNotificationDispatcher.resetForTests();
+        vi.mocked(NotificationProviderFilterStore.getAllowedKinds).mockResolvedValue(null);
         vi.restoreAllMocks();
     });
 
@@ -29,6 +38,23 @@ describe("RunNotificationDispatcher", () => {
 
         expect(slack).toHaveBeenCalledWith(event);
         expect(webhook).toHaveBeenCalledWith(event);
+    });
+
+    it("skips providers when the event kind is not allowed", async () => {
+        vi.mocked(NotificationProviderFilterStore.getAllowedKinds).mockResolvedValue(["ci.pipeline.failed"]);
+        const slack = vi.fn(async () => undefined);
+        const event: PipelineNotificationEvent = {
+            kind: "image.pushed",
+            runId: "run-1",
+            serviceName: "api",
+            imageRef: "ghcr.io/acme/api:sha",
+            message: "Image pushed",
+            createdAt: "2026-07-02T12:34:00.000Z"
+        };
+
+        RunNotificationDispatcher.register("slack", { onPipelineEvent: slack });
+        await RunNotificationDispatcher.dispatch(event);
+        expect(slack).not.toHaveBeenCalled();
     });
 
     it("returns per-provider results for test pings", async () => {

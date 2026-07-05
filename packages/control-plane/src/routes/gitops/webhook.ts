@@ -1,4 +1,4 @@
-import { GitOpsWebhookBodySchema, LooseObjectSchema } from "@platform/shared";
+import { GitOpsWebhookBodySchema, LooseObjectSchema } from "@naulite/shared";
 
 import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { LeaderPreHandlers } from "../../auth/LeaderPreHandlers";

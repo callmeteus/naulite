@@ -45,7 +45,7 @@ export namespace TenantScope {
             return request.tenantId;
         }
 
-        const header = request.headers["x-platform-tenant-id"];
+        const header = request.headers["x-naulite-tenant-id"];
         const tenantId = typeof header === "string" ? header.trim() : "";
 
         return tenantId || null;

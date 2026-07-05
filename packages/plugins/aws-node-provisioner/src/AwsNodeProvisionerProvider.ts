@@ -12,7 +12,7 @@ import type {
     NodeProvisionerProvider,
     ProvisionedMachine,
     ProvisionSpec
-} from "@platform/shared";
+} from "@naulite/shared";
 
 /**
  * Options for the AWS EC2 node provisioner.
@@ -164,7 +164,7 @@ export class AwsNodeProvisionerProvider implements NodeProvisionerProvider {
  * Maps EC2 instance state names to platform machine status values.
  *
  * @param state EC2 instance state name
- * @returns Platform machine status
+ * @returns Naulite machine status
  */
 function mapEc2State(state: string | undefined): MachineStatus {
     switch (state) {

@@ -12,7 +12,7 @@ describe("SelfHostedNetBirdAdapter", () => {
             if (url.endsWith("/policies") && init?.method === "POST") {
                 return new Response(JSON.stringify({
                     id: "policy-1",
-                    name: "platform-network-demo",
+                    name: "naulite-network-demo",
                     rules: [{
                         id: "rule-1",
                         sources: ["group-1"],
@@ -33,7 +33,7 @@ describe("SelfHostedNetBirdAdapter", () => {
         });
 
         const acl = await adapter.ensurePolicy({
-            name: "platform-network-demo",
+            name: "naulite-network-demo",
             sourceGroupIds: ["group-1"],
             destinationGroupIds: ["group-1"],
             ports: ["8080"]
@@ -48,14 +48,14 @@ describe("SelfHostedNetBirdAdapter", () => {
         const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
             if (url.endsWith("/groups")) {
                 return new Response(JSON.stringify({
-                    items: [{ id: "group-1", name: "platform-nodes", peers: ["peer-1"] }]
+                    items: [{ id: "group-1", name: "naulite-nodes", peers: ["peer-1"] }]
                 }), { status: 200 });
             }
 
             if (url.endsWith("/groups/group-1") && init?.method === "PUT") {
                 return new Response(JSON.stringify({
                     id: "group-1",
-                    name: "platform-nodes",
+                    name: "naulite-nodes",
                     peers: ["peer-1", "peer-2"]
                 }), { status: 200 });
             }

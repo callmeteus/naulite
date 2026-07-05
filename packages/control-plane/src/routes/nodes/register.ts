@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { ClusterLabelsSchema, NodeResourcesSchema, NodeSchema } from "@platform/shared";
+import { ClusterLabelsSchema, NodeResourcesSchema, NodeSchema } from "@naulite/shared";
 import { z } from "zod";
 
 import { ControlPlaneService } from "../../ControlPlaneService";

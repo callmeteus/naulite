@@ -2,16 +2,16 @@ import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers
 import { BackupDispatchService } from "../../../services/BackupDispatchService";
 import { BackupRestoreService } from "../../../services/BackupRestoreService";
 import { ControlPlaneService } from "../../../ControlPlaneService";
-import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 import {
     BackupIdParamsSchema,
     LooseObjectSchema,
     RouteErrorResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("backups:restore"),
     schema: {
         summary: "Restore backup",
         description: "Restores an existing backup on the associated volume.",

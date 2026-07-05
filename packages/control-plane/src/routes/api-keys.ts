@@ -4,14 +4,14 @@ import {
     ApiKeySchema,
     CreatedApiKeySchema,
     CreateApiKeyBodySchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../ControlPlaneService";
 import { defineRoute } from "../routing/DefineRoute";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("admin:api-keys:read"),
     schema: {
         summary: "List API keys",
         description: "Lists active control plane API keys.",
@@ -27,7 +27,7 @@ export const GET = defineRoute({
 });
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("admin:api-keys:write"),
     schema: {
         summary: "Create API key",
         description: "Creates a new API key and returns the plaintext secret once.",

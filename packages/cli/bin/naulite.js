@@ -7,10 +7,10 @@ import { fileURLToPath } from "node:url";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(moduleDir, "..");
-const binaryName = process.platform === "win32" ? "platform.exe" : "platform";
+const binaryName = process.platform === "win32" ? "naulite.exe" : "naulite";
 
 const nativeCandidates = [
-    process.env.PLATFORM_CLI_NATIVE,
+    process.env.NAULITE_CLI_NATIVE,
     path.join(packageRoot, "native", binaryName),
     path.join(packageRoot, "zig-out", "bin", binaryName)
 ].filter((candidate): candidate is string => Boolean(candidate));
@@ -25,6 +25,6 @@ for (const candidate of nativeCandidates) {
 }
 
 process.stderr.write(
-    "[platform] Native CLI binary not found. Run `zig build` in packages/cli and `yarn copy:native`, or set PLATFORM_CLI_NATIVE.\n"
+    "[naulite] Native CLI binary not found. Run `zig build` in packages/cli and `yarn copy:native`, or set NAULITE_CLI_NATIVE.\n"
 );
 process.exit(1);

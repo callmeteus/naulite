@@ -2,13 +2,13 @@ import {
     PaginatedListSchema,
     PipelineRunListQuerySchema,
     PipelineRunSummarySchema
-} from "@platform/shared";
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
+} from "@naulite/shared";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
 import { PipelineRunService } from "../services/PipelineRunService";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("runs:read"),
     schema: {
         summary: "List pipeline runs",
         description: "Lists pipeline runs recorded by the control plane.",

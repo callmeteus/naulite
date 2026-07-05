@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { TraefikDynamicConfig, TraefikNetBirdGatewayProvider } from "@platform/gateway";
+import { TraefikDynamicConfig, TraefikNetBirdGatewayProvider } from "@naulite/gateway";
 
 describe("TraefikDynamicConfig", () => {
     it("builds router and service definitions for a public route", () => {
@@ -28,15 +28,15 @@ describe("TraefikDynamicConfig", () => {
             new Set(["app.example.com"])
         );
 
-        expect(Object.keys(configuration.http.routers)).toEqual(["platform-web-app-example-com"]);
-        expect(configuration.http.routers["platform-web-app-example-com"]).toEqual({
+        expect(Object.keys(configuration.http.routers)).toEqual(["naulite-web-app-example-com"]);
+        expect(configuration.http.routers["naulite-web-app-example-com"]).toEqual({
             rule: "Host(`app.example.com`)",
-            service: "platform-web-app-example-com-svc",
+            service: "naulite-web-app-example-com-svc",
             entryPoints: ["web", "websecure"],
-            middlewares: ["platform-netbird-app-example-com"],
+            middlewares: ["naulite-netbird-app-example-com"],
             tls: { certResolver: "letsencrypt" }
         });
-        expect(configuration.http.services["platform-web-app-example-com-svc"]).toEqual({
+        expect(configuration.http.services["naulite-web-app-example-com-svc"]).toEqual({
             loadBalancer: {
                 servers: [{ url: "http://agent-1:8080" }]
             }
@@ -77,7 +77,7 @@ describe("TraefikDynamicConfig", () => {
             { mode: "custom" }
         );
 
-        expect(configuration.http.routers["platform-api-api-example-com"].tls).toEqual({});
+        expect(configuration.http.routers["naulite-api-api-example-com"].tls).toEqual({});
         expect(configuration.tls?.certificates).toEqual([{
             cert: "-----BEGIN CERTIFICATE-----\ncert\n-----END CERTIFICATE-----",
             key: "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----",
@@ -112,9 +112,40 @@ describe("TraefikDynamicConfig", () => {
             { mode: "passthrough" }
         );
 
-        expect(configuration.http.routers["platform-api-api-example-com"].tls).toEqual({
+        expect(configuration.http.routers["naulite-api-api-example-com"].tls).toEqual({
             passthrough: true
         });
+        expect(configuration.tls).toBeUndefined();
+    });
+
+    it("enables TLS routers in self_signed mode when ingress TLS is enabled", () => {
+        const routes = new Map([
+            ["web:web-tls.test.local", {
+                serviceName: "web",
+                host: "web-tls.test.local",
+                route: {
+                    serviceName: "web",
+                    ingress: {
+                        host: "web-tls.test.local",
+                        exposure: "public" as const,
+                        tls: { enabled: true },
+                        paths: [{ path: "/", port: 80, protocol: "http" as const }]
+                    },
+                    targetHost: "agent-1",
+                    targetPort: 80
+                }
+            }]
+        ]);
+
+        const configuration = TraefikDynamicConfig.build(
+            routes,
+            new Map(),
+            "https://vpn.example.com",
+            new Set(),
+            { mode: "self_signed" }
+        );
+
+        expect(configuration.http.routers["naulite-web-web-tls-test-local"].tls).toEqual({});
         expect(configuration.tls).toBeUndefined();
     });
 });
@@ -125,7 +156,7 @@ describe("TraefikNetBirdGatewayProvider", () => {
         const provider = new TraefikNetBirdGatewayProvider({
             netbirdEndpoint: "https://vpn.example.com",
             traefikApiUrl: "http://traefik:8080",
-            traefikDynamicConfigUrl: "http://traefik:8080/platform/dynamic-config",
+            traefikDynamicConfigUrl: "http://traefik:8080/naulite/dynamic-config",
             fetchImpl
         });
 
@@ -142,7 +173,7 @@ describe("TraefikNetBirdGatewayProvider", () => {
 
         expect(fetchImpl).toHaveBeenCalledTimes(1);
         expect(fetchImpl).toHaveBeenCalledWith(
-            "http://traefik:8080/platform/dynamic-config",
+            "http://traefik:8080/naulite/dynamic-config",
             expect.objectContaining({ method: "PUT" })
         );
 
@@ -150,14 +181,14 @@ describe("TraefikNetBirdGatewayProvider", () => {
         const body = JSON.parse(String(requestInit.body)) as {
             http: { routers: Record<string, unknown> };
         };
-        expect(Object.keys(body.http.routers)).toContain("platform-api-api-example-com");
+        expect(Object.keys(body.http.routers)).toContain("naulite-api-api-example-com");
         expect(provider.listRoutes()).toHaveLength(1);
     });
 
     it("removes routes from the pushed dynamic configuration", async () => {
         const fetchImpl = vi.fn(async () => new Response("{}", { status: 200 }));
         const provider = new TraefikNetBirdGatewayProvider({
-            traefikDynamicConfigUrl: "http://traefik:8080/platform/dynamic-config",
+            traefikDynamicConfigUrl: "http://traefik:8080/naulite/dynamic-config",
             fetchImpl
         });
 
@@ -180,7 +211,7 @@ describe("TraefikNetBirdGatewayProvider", () => {
     it("throws when Traefik rejects the dynamic configuration push", async () => {
         const fetchImpl = vi.fn(async () => new Response("failed", { status: 500 }));
         const provider = new TraefikNetBirdGatewayProvider({
-            traefikDynamicConfigUrl: "http://traefik:8080/platform/dynamic-config",
+            traefikDynamicConfigUrl: "http://traefik:8080/naulite/dynamic-config",
             fetchImpl
         });
 

@@ -1,5 +1,5 @@
 {
-    "name": "platform",
+    "name": "naulite",
     "private": true,
     "type": "module",
     "workspaces": [

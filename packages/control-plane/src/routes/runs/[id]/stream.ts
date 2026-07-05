@@ -1,10 +1,10 @@
-import { IdParamsSchema, RouteMessageResponseSchema } from "@platform/shared";
-import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+import { IdParamsSchema, RouteMessageResponseSchema } from "@naulite/shared";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 import { PipelineRunService } from "../../../services/PipelineRunService";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("runs:read"),
     schema: {
         summary: "Stream pipeline run events",
         description: "Streams pipeline run events over Server-Sent Events.",

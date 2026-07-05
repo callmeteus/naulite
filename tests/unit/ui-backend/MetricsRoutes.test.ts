@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PlatformClient } from "../../../packages/sdk/src/PlatformClient";
+import { NauliteClient } from "../../../packages/sdk/src/NauliteClient";
 import { createApp } from "../../../packages/ui/packages/backend/src/App";
 
 describe("ui-backend metrics routes", () => {
@@ -19,8 +19,8 @@ describe("ui-backend metrics routes", () => {
                 status: "success",
                 data: { resultType: "matrix", result: [] }
             })),
-            getPrometheusMetrics: vi.fn(async () => "platform_nodes_total 1\n")
-        } as unknown as PlatformClient;
+            getPrometheusMetrics: vi.fn(async () => "naulite_nodes_total 1\n")
+        } as unknown as NauliteClient;
 
         const app = await createApp({
             adminApiKey: "secret-key",

@@ -1,4 +1,4 @@
-# @platform/plugin-s3-storage-provider
+# @naulite/plugin-s3-storage-provider
 
 S3-compatible object storage plugin for platform backups and the private container registry.
 
@@ -14,7 +14,7 @@ The manifest provider id remains `s3`:
 ```yaml
 destination:
   provider: s3
-  bucket: platform-storage
+  bucket: naulite-storage
   prefix: cluster-a
   region: us-east-1
   credentialsSecret:

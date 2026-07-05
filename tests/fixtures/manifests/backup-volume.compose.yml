@@ -6,7 +6,7 @@ volumes:
             schedule: "* * * * *"
             destination:
                 provider: local
-                path: /var/lib/platform/backups
+                path: /var/lib/naulite/backups
 
 services:
     app:

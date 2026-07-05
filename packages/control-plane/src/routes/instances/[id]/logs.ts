@@ -1,12 +1,12 @@
 import { AgentProxyService } from "../../../services/AgentProxyService";
 import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
 import { ControlPlaneService } from "../../../ControlPlaneService";
-import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
-import { IdParamsSchema, LooseObjectSchema } from "@platform/shared";
+import { IdParamsSchema, LooseObjectSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:read"),
     schema: {
         summary: "Get instance logs",
         description: "Fetches instance logs through the responsible agent.",

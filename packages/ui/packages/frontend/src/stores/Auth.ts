@@ -1,22 +1,34 @@
-import { PlatformClient } from "@platform/sdk";
-import type { AdminRole, AdminUser } from "@platform/sdk";
+import { NauliteClient } from "@naulite/sdk";
+import type { AdminRole, AdminUser, NaulitePermission } from "@naulite/sdk";
+import { RolePermissions } from "@naulite/shared";
 import { reactive } from "vue";
-
 const baseUrl = import.meta.env.VITE_ADMIN_API_URL ?? "/api";
+
+/**
+ * Rebuilds the shared BFF client with an optional CSRF token.
+ *
+ * @param csrfToken CSRF token for mutating browser requests
+ * @returns Configured platform client
+ */
+function createNauliteClient(csrfToken?: string): NauliteClient {
+    return new NauliteClient({
+        baseUrl,
+        credentials: "include",
+        csrfToken
+    });
+}
 
 /**
  * Shared SDK client for the admin API (BFF), not the control plane directly.
  */
-export const platformClient = new PlatformClient({
-    baseUrl,
-    credentials: "include"
-});
+export let nauliteClient = createNauliteClient();
 
 /**
  * Reactive authentication state for the admin dashboard.
  */
 export const authStore = reactive({
     user: null as AdminUser | null,
+    csrfToken: undefined as string | undefined,
     loading: false,
     error: "" as string,
     checked: false,
@@ -35,12 +47,16 @@ export const authStore = reactive({
         this.error = "";
 
         try {
-            const session = await platformClient.getSession();
+            const session = await nauliteClient.getSession();
             this.user = session.user;
+            this.csrfToken = session.csrfToken;
+            nauliteClient = createNauliteClient(session.csrfToken);
             this.checked = true;
             return this.user;
         } catch (err) {
             this.user = null;
+            this.csrfToken = undefined;
+            nauliteClient = createNauliteClient();
             this.checked = true;
             this.error = err instanceof Error ? err.message : String(err);
             return null;
@@ -61,8 +77,10 @@ export const authStore = reactive({
         this.error = "";
 
         try {
-            const response = await platformClient.login({ email, password });
+            const response = await nauliteClient.login({ email, password });
             this.user = response.user;
+            this.csrfToken = response.csrfToken;
+            nauliteClient = createNauliteClient(response.csrfToken);
             this.checked = true;
             return response.user;
         } catch (err) {
@@ -83,11 +101,13 @@ export const authStore = reactive({
         this.error = "";
 
         try {
-            await platformClient.logout();
+            await nauliteClient.logout();
         } catch (err) {
             this.error = err instanceof Error ? err.message : String(err);
         } finally {
             this.user = null;
+            this.csrfToken = undefined;
+            nauliteClient = createNauliteClient();
             this.checked = true;
             this.loading = false;
         }
@@ -101,6 +121,20 @@ export const authStore = reactive({
      */
     hasRole(...roles: AdminRole[]): boolean {
         return Boolean(this.user && roles.includes(this.user.role));
+    },
+
+    /**
+     * Returns whether the current user has a platform permission.
+     *
+     * @param permission Required permission
+     * @returns True when the user role includes the permission
+     */
+    hasPermission(permission: NaulitePermission): boolean {
+        if (!this.user) {
+            return false;
+        }
+
+        return RolePermissions.roleHasPermission(this.user.role as AdminRole, permission);
     },
 
     /**

@@ -23,8 +23,8 @@ function createNetBirdApplyContext(): ControlPlaneContext {
         protocol: "tcp" as const
     }));
     const syncPlatformNodePeers = vi.fn(async () => ({
-        id: "group-platform-nodes",
-        name: "platform-nodes",
+        id: "group-naulite-nodes",
+        name: "naulite-nodes",
         peers: ["peer-1"]
     }));
     const upsertRoute = vi.fn(async () => undefined);
@@ -237,12 +237,12 @@ describe("ApplyService NetBird and gateway provisioning", () => {
         expect(context.netBirdService.ensureInternalGroup).toHaveBeenCalledWith("internal-demo-internal");
         expect(context.netBirdService.ensureGroupAccessPolicy).toHaveBeenCalledWith(
             "group-demo-internal",
-            "platform-network-demo-internal",
+            "naulite-network-demo-internal",
             []
         );
         expect(context.netBirdService.ensureGroupAccessPolicy).toHaveBeenCalledWith(
             "group-internal-demo-internal",
-            "platform-exposure-internal-demo-internal",
+            "naulite-exposure-internal-demo-internal",
             ["8080"]
         );
         expect(context.netBirdService.syncPlatformNodePeers).toHaveBeenCalledWith(["peer-1"]);

@@ -5,7 +5,7 @@ description: Self-hosted NetBird requirements and control plane bootstrap.
 
 # NetBird
 
-Platform requires a **self-hosted NetBird** deployment. NetBird cloud (`api.netbird.io`, `*.netbird.io`) is not supported.
+Naulite requires a **self-hosted NetBird** deployment. NetBird cloud (`api.netbird.io`, `*.netbird.io`) is not supported.
 
 NetBird is an **internal platform component**. End users do not configure tokens or open the NetBird dashboard. The control plane bootstraps NetBird on first startup and stores credentials in the cluster secret `netbird/internal`.
 
@@ -29,7 +29,7 @@ NetBird is an **internal platform component**. End users do not configure tokens
 - `superadminEmail` - `superadmin@platform.internal`
 - `superadminPassword` - random password for the embedded IdP owner account
 
-Set `NETBIRD_TOKEN` only for one-time recovery when NetBird was initialized outside Platform.
+Set `NETBIRD_TOKEN` only for one-time recovery when NetBird was initialized outside Naulite.
 
 ## Automatic bootstrap
 
@@ -73,7 +73,7 @@ See `infra/netbird/README.md` for details.
 
 ## Unit tests
 
-The test cluster in `tests/fixtures/docker-compose.test-cluster.yml` uses `netbird-mock`. For CP unit tests without HTTP, set `PLATFORM_NETBIRD_MOCK=1`.
+The test cluster in `tests/fixtures/docker-compose.test-cluster.yml` uses `netbird-mock`. For CP unit tests without HTTP, set `NAULITE_NETBIRD_MOCK=1`.
 
 ## Control plane integration
 

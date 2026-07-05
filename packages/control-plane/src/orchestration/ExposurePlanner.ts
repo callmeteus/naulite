@@ -1,4 +1,4 @@
-import type { Manifest, NetworkExposure } from "@platform/shared";
+import type { Manifest, NetworkExposure } from "@naulite/shared";
 
 import { NetworkGroupId } from "./NetworkGroupId";
 

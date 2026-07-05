@@ -4,7 +4,7 @@ import { HTTP502Error } from "../errors/TreatedError";
  * Prometheus HTTP API client used by control plane PromQL proxy routes.
  */
 export namespace PrometheusClient {
-    const DEFAULT_PROMETHEUS_URL = "http://platform-prometheus:9090";
+    const DEFAULT_PROMETHEUS_URL = "http://naulite-prometheus:9090";
 
     /**
      * Resolves the configured Prometheus base URL.

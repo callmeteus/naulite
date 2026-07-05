@@ -58,11 +58,11 @@ describe("metrics route", () => {
 
         expect(response.statusCode).toBe(200);
         expect(response.headers["content-type"]).toContain("text/plain");
-        expect(response.body).toContain("platform_nodes_total 2");
-        expect(response.body).toContain("platform_nodes_online 1");
-        expect(response.body).toContain("platform_instances_running 1");
-        expect(response.body).toContain("platform_apply_revision 3");
-        expect(response.body).toContain("platform_control_plane_leader");
+        expect(response.body).toContain("naulite_nodes_total 2");
+        expect(response.body).toContain("naulite_nodes_online 1");
+        expect(response.body).toContain("naulite_instances_running 1");
+        expect(response.body).toContain("naulite_apply_revision 3");
+        expect(response.body).toContain("naulite_control_plane_leader");
 
         await app.close();
     });

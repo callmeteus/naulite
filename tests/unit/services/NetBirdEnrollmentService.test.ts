@@ -34,7 +34,7 @@ describe("NetBirdEnrollmentService", () => {
             createSetupKey: vi.fn(async () => ({
                 id: "key-1",
                 key: "generated-setup-key",
-                name: "platform-agents"
+                name: "naulite-agents"
             }))
         } as unknown as SelfHostedNetBirdAdapter;
 
@@ -42,7 +42,7 @@ describe("NetBirdEnrollmentService", () => {
         const setupKey = await service.ensureSetupKey();
 
         expect(setupKey).toBe("generated-setup-key");
-        expect(adapter.createSetupKey).toHaveBeenCalledWith("platform-agents");
+        expect(adapter.createSetupKey).toHaveBeenCalledWith("naulite-agents");
         expect(upsertClusterSecret).toHaveBeenCalledWith(expect.objectContaining({
             name: "netbird/setup-key",
             keys: ["key"],

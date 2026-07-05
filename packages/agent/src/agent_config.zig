@@ -89,7 +89,7 @@ pub fn resolveConfigPath(
     // Detected operating system family.
     os: bootstrap.OsFamily,
 ) ![]const u8 {
-    if (env_util.readEnvOptional(allocator, "PLATFORM_AGENT_CONFIG")) |override| {
+    if (env_util.readEnvOptional(allocator, "NAULITE_AGENT_CONFIG")) |override| {
         return override;
     }
 
@@ -98,7 +98,7 @@ pub fn resolveConfigPath(
             const program_data = std.c.getenv("PROGRAMDATA") orelse "C:\\ProgramData";
             break :blk try std.fs.path.join(allocator, &.{ std.mem.span(program_data), "Platform", "agent.json" });
         },
-        .linux, .macos, .unknown => try allocator.dupe(u8, "/var/lib/platform/agent.json"),
+        .linux, .macos, .unknown => try allocator.dupe(u8, "/var/lib/naulite/agent.json"),
     };
 }
 
@@ -270,7 +270,7 @@ fn applyEnvOverrides(
     os: bootstrap.OsFamily,
     config: *AgentConfig,
 ) !void {
-    if (env_util.readEnvOptional(allocator, "PLATFORM_CP_URL")) |value| {
+    if (env_util.readEnvOptional(allocator, "NAULITE_CP_URL")) |value| {
         try replaceString(allocator, &config.cp_url, value);
         allocator.free(value);
     }
@@ -309,7 +309,7 @@ fn applyEnvOverrides(
     if (env_util.readEnvOptional(allocator, "DOCKER_SOCKET")) |value| {
         try replaceString(allocator, &config.docker_socket, value);
         allocator.free(value);
-    } else if (env_util.readEnvOptional(allocator, "PLATFORM_DOCKER_SOCKET")) |value| {
+    } else if (env_util.readEnvOptional(allocator, "NAULITE_DOCKER_SOCKET")) |value| {
         try replaceString(allocator, &config.docker_socket, value);
         allocator.free(value);
     }
@@ -322,14 +322,14 @@ fn applyEnvOverrides(
     }
 
     const setup_key = env_util.readEnvOptional(allocator, "NETBIRD_SETUP_KEY") orelse
-        env_util.readEnvOptional(allocator, "PLATFORM_SETUP_KEY");
+        env_util.readEnvOptional(allocator, "NAULITE_SETUP_KEY");
     if (setup_key) |value| {
         try replaceOptionalString(allocator, &config.netbird_setup_key, value);
         allocator.free(value);
     }
 
-    const api_key = env_util.readEnvOptional(allocator, "PLATFORM_API_KEY") orelse
-        env_util.readEnvOptional(allocator, "PLATFORM_TOKEN");
+    const api_key = env_util.readEnvOptional(allocator, "NAULITE_API_KEY") orelse
+        env_util.readEnvOptional(allocator, "NAULITE_TOKEN");
     if (api_key) |value| {
         try replaceOptionalString(allocator, &config.api_key, value);
         allocator.free(value);

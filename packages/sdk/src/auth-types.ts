@@ -39,6 +39,22 @@ export interface AdminSession {
 }
 
 /**
+ * Admin BFF login response including CSRF token for browser mutations.
+ */
+export interface BffLoginResponse {
+    user: AdminUser;
+    csrfToken: string;
+}
+
+/**
+ * Admin BFF session response including CSRF token when authenticated.
+ */
+export interface BffSessionResponse {
+    user: AdminUser | null;
+    csrfToken?: string;
+}
+
+/**
  * Payload for creating a new admin user.
  */
 export interface CreateAdminUserInput {

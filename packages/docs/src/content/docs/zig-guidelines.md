@@ -1,6 +1,6 @@
 ---
 title: Zig code guidelines
-description: Comment and formatting conventions for Platform Zig packages.
+description: Comment and formatting conventions for Naulite Zig packages.
 ---
 
 # Zig code guidelines (Platform)

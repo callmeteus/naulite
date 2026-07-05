@@ -1,7 +1,7 @@
-name: platform-metrics
+name: naulite-metrics
 
 services:
-    platform-prometheus:
+    naulite-prometheus:
         image: prom/prometheus:v3.12.0
         restart: unless-stopped
         command:
@@ -10,10 +10,10 @@ services:
             - --web.enable-lifecycle
         volumes:
             - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-            - platform-prometheus-file-sd:/etc/prometheus/file_sd
-            - platform-prometheus-data:/prometheus
+            - naulite-prometheus-file-sd:/etc/prometheus/file_sd
+            - naulite-prometheus-data:/prometheus
         ports:
-            - "${PLATFORM_PROMETHEUS_HOST_PORT:-19090}:9090"
+            - "${NAULITE_PROMETHEUS_HOST_PORT:-19090}:9090"
         healthcheck:
             test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
             interval: 10s
@@ -21,5 +21,5 @@ services:
             retries: 6
 
 volumes:
-    platform-prometheus-data:
-    platform-prometheus-file-sd:
+    naulite-prometheus-data:
+    naulite-prometheus-file-sd:

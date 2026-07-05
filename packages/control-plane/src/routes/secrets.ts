@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { SecretSchema, UpsertSecretBodySchema } from "@platform/shared";
+import { SecretSchema, UpsertSecretBodySchema } from "@naulite/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
 import { LeaderPreHandlers } from "../auth/LeaderPreHandlers";

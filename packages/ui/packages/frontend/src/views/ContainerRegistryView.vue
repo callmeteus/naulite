@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 
-import { platformClient } from "../api/Client";
+import { nauliteClient } from "../api/Client";
 import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
+import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 
 const store = useClusterStore();
+const auth = useAuthStore();
 
 const {
     items: paginatedImages,
@@ -18,7 +20,7 @@ const {
     refresh,
     loading,
     error
-} = useServerPagination((page, limit) => platformClient.listContainerRegistryImagesPaginated({ page, limit }), 20);
+} = useServerPagination((page, limit) => nauliteClient.listContainerRegistryImagesPaginated({ page, limit }), 20);
 
 onMounted(() => {
     void refresh();
@@ -82,6 +84,7 @@ function formatSize(sizeBytes: number): string {
                         <td>{{ image.pushedAt }}</td>
                         <td>
                             <button
+                                v-if="auth.hasPermission('registry:write')"
                                 type="button"
                                 :disabled="store.loading"
                                 @click="deleteImage(image.name, image.tag)"

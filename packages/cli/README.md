@@ -1,6 +1,6 @@
-# @platform/cli
+# @naulite/cli
 
-Native Zig CLI for the Platform control plane, distributed via an NPM wrapper that spawns the compiled binary.
+Native Zig CLI for the Naulite control plane, distributed via an NPM wrapper that spawns the compiled binary.
 
 See [CONTEXT.md](../../CONTEXT.md) for architecture and [PROGRESS.md](../../PROGRESS.md) for current development status.
 
@@ -26,14 +26,14 @@ yarn copy:native
 From the monorepo root:
 
 ```bash
-yarn workspace @platform/cli build:all
+yarn workspace @naulite/cli build:all
 yarn link
 platform cluster status get
 ```
 
 The `platform` bin (`bin/platform.js`) tries, in order:
 
-1. `PLATFORM_CLI_NATIVE` when set
+1. `NAULITE_CLI_NATIVE` when set
 2. `packages/cli/native/platform[.exe]` (after `yarn copy:native`)
 3. `packages/cli/zig-out/bin/platform[.exe]` (after `zig build`)
 
@@ -97,10 +97,10 @@ platform cluster backups restore <backupId>
 
 | Variable | Description |
 |----------|-------------|
-| `PLATFORM_CP_URL` | Control plane base URL |
-| `PLATFORM_API_KEY` | API key secret for remote access |
-| `PLATFORM_TOKEN` | Alias for `PLATFORM_API_KEY` |
-| `PLATFORM_CLI_NATIVE` | Absolute path to a native `platform` binary |
+| `NAULITE_CP_URL` | Control plane base URL |
+| `NAULITE_API_KEY` | API key secret for remote access |
+| `NAULITE_TOKEN` | Alias for `NAULITE_API_KEY` |
+| `NAULITE_CLI_NATIVE` | Absolute path to a native `platform` binary |
 
 Credentials file: `~/.platform/credentials.json` with `{ "apiKey", "cpHost", "cpPort" }`.
 

@@ -84,7 +84,7 @@
     "buildProvider": "Provider (opcional)",
     "buildProviderPlaceholder": "docker",
     "buildRegistry": "Registro (opcional)",
-    "buildRegistryPlaceholder": "platform",
+    "buildRegistryPlaceholder": "naulite",
     "buildTrigger": "Disparar build",
     "buildStarted": "Build iniciado. Acompanhando o pipeline run.",
     "buildQueued": "Build enfileirado.",
@@ -160,5 +160,8 @@
     "notificationsEmpty": "Nenhum provedor de notificação registrado.",
     "notificationsTestResults": "Resultado do teste",
     "notificationsTestOk": "Entrega bem-sucedida",
-    "notificationsTestFailed": "Falha na entrega"
+    "notificationsTestFailed": "Falha na entrega",
+    "notificationsFilters": "Eventos permitidos",
+    "notificationsSaveFilters": "Salvar filtros",
+    "notificationsSavingFilters": "Salvando filtros..."
 }

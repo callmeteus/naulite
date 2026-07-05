@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { Op } from "sequelize";
 
-import type { Instance, Service } from "@platform/shared";
+import type { Instance, Service } from "@naulite/shared";
 
 import { InstanceModel, LogRotationRunModel, NodeModel, ServiceModel } from "../../database/models/index";
 import { AgentProxyService } from "../../services/AgentProxyService";

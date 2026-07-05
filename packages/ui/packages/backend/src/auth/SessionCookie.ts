@@ -1,12 +1,12 @@
 /**
  * HttpOnly session cookie used by the admin BFF.
  */
-export const PLATFORM_SESSION_COOKIE = "platform_session";
+export const NAULITE_SESSION_COOKIE = "naulite_session";
 
 /**
  * Default cookie lifetime in seconds (8 hours).
  */
-export const PLATFORM_SESSION_MAX_AGE_SECS = 8 * 60 * 60;
+export const NAULITE_SESSION_MAX_AGE_SECS = 8 * 60 * 60;
 
 /**
  * Parses a raw Cookie header into a key-value map.
@@ -43,7 +43,7 @@ export function parseCookies(header: string | undefined): Record<string, string>
  * @returns True when Secure cookies are enabled
  */
 export function resolveSecureCookies(): boolean {
-    const configured = process.env.PLATFORM_COOKIE_SECURE?.trim().toLowerCase();
+    const configured = process.env.NAULITE_COOKIE_SECURE?.trim().toLowerCase();
 
     if (configured === "true" || configured === "1") {
         return true;
@@ -63,9 +63,9 @@ export function resolveSecureCookies(): boolean {
  * @param maxAge Cookie max age in seconds
  * @returns Set-Cookie header value
  */
-export function buildSessionCookie(token: string, maxAge = PLATFORM_SESSION_MAX_AGE_SECS): string {
+export function buildSessionCookie(token: string, maxAge = NAULITE_SESSION_MAX_AGE_SECS): string {
     const secureFlag = resolveSecureCookies() ? "; Secure" : "";
-    return `${PLATFORM_SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secureFlag}`;
+    return `${NAULITE_SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secureFlag}`;
 }
 
 /**
@@ -75,5 +75,5 @@ export function buildSessionCookie(token: string, maxAge = PLATFORM_SESSION_MAX_
  */
 export function buildClearSessionCookie(): string {
     const secureFlag = resolveSecureCookies() ? "; Secure" : "";
-    return `${PLATFORM_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secureFlag}`;
+    return `${NAULITE_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secureFlag}`;
 }

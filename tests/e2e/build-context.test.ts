@@ -54,7 +54,7 @@ describe("build context sync", () => {
             },
             body: JSON.stringify({
                 manifestYaml,
-                buildContextRoot: "/platform/build-fixtures/minimal-web"
+                buildContextRoot: "/naulite/build-fixtures/minimal-web"
             })
         });
 

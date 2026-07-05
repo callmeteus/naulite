@@ -1,4 +1,4 @@
-import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@platform/shared";
+import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@naulite/shared";
 
 import { InfisicalApiClient, type InfisicalRawSecret } from "./InfisicalApiClient";
 import { InfisicalNotConfiguredError } from "./InfisicalNotConfiguredError";
@@ -195,7 +195,7 @@ export class InfisicalSecretProvider {
      *
      * @param entry Infisical raw secret entry
      * @param input Optional upsert input for scope metadata
-     * @returns Platform secret metadata
+     * @returns Naulite secret metadata
      */
     private toSecretMetadata(entry: InfisicalRawSecret, input?: SecretUpsertInput): Secret {
         const data = input?.data ?? this.parseSecretData(entry.secretValue);

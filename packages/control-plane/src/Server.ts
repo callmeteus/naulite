@@ -10,6 +10,8 @@ import { AdminBootstrap } from "./modules/admin/AdminBootstrap";
 import { ClusterStateService } from "./services/ClusterStateService";
 import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { ControlPlaneSyncSubscribers } from "./services/ControlPlaneSyncSubscribers";
+import { ControlPlaneInstanceId } from "./services/ControlPlaneInstanceId";
+import { LeaderElection } from "./services/LeaderElection";
 import { NetBirdBootstrap } from "./services/NetBirdBootstrap";
 
 /**
@@ -35,6 +37,67 @@ export interface ControlPlaneServer {
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 
 /**
+ * Applies migrations on the leader and waits on followers when PostgreSQL HA is enabled.
+ *
+ * @param databaseProvider Connected database provider
+ * @param instanceId Control plane instance identifier
+ * @returns Nothing.
+ */
+async function runMigrationsWithLeaderGate(
+    databaseProvider: DatabaseProvider,
+    instanceId: string
+): Promise<void> {
+    if (databaseProvider.getDialect() !== "postgresql") {
+        await databaseProvider.migrate();
+        return;
+    }
+
+    if (!await databaseProvider.hasLeaderElectionTable()) {
+        console.debug("[migrations] bootstrap leader table missing, running full migrate instanceId=%s", instanceId);
+        await databaseProvider.migrate();
+        return;
+    }
+
+    const bootstrapLeader = new LeaderElection(databaseProvider, instanceId);
+    bootstrapLeader.start();
+    await waitForLeaderElectionReady(bootstrapLeader, 20_000);
+
+    if (bootstrapLeader.isLeader()) {
+        console.debug("[migrations] leader applying pending migrations instanceId=%s", instanceId);
+        await databaseProvider.migrate();
+    } else {
+        console.debug("[migrations] follower waiting for migrations instanceId=%s", instanceId);
+        await databaseProvider.waitUntilMigrationsApplied();
+    }
+
+    bootstrapLeader.stop();
+}
+
+/**
+ * Waits until leader election completes its first lease attempt.
+ *
+ * @param leaderElection Leader election service
+ * @param timeoutMs Maximum wait time in milliseconds
+ * @returns Nothing.
+ */
+async function waitForLeaderElectionReady(
+    leaderElection: LeaderElection,
+    timeoutMs: number
+): Promise<void> {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+        if (leaderElection.isLeader()) {
+            return;
+        }
+
+        await new Promise((resolve) => {
+            setTimeout(resolve, 250);
+        });
+    }
+}
+
+/**
  * Boots the control plane HTTP server and background workers.
  * 
  * @param options Server startup options
@@ -44,12 +107,13 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     const host = options.host ?? process.env.HOST ?? "0.0.0.0";
     const port = Number(options.port ?? process.env.PORT ?? 8080);
     const packagesDir = options.packagesDir
-        ?? process.env.PLATFORM_PACKAGES_DIR
+        ?? process.env.NAULITE_PACKAGES_DIR
         ?? join(moduleDir, "..", "..");
     const databaseProvider = options.databaseProvider ?? new DatabaseProvider();
+    const instanceId = ControlPlaneInstanceId.resolve();
 
     await databaseProvider.connect(DatabaseProvider.resolveOptionsFromEnv());
-    await databaseProvider.migrate();
+    await runMigrationsWithLeaderGate(databaseProvider, instanceId);
     await AdminBootstrap.ensureFromEnv();
 
     const store = new ControlPlaneStore();
@@ -57,7 +121,8 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     const applyRevision = await ClusterStateService.loadApplyRevision();
     const context = createControlPlaneContext(databaseProvider, packagesDir, {
         netBirdCredentials,
-        applyRevision
+        applyRevision,
+        instanceId
     });
     await context.pluginLoader.load(context.pluginRegistry);
     PluginRegistryWiring.wire(context);

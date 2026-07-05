@@ -1,4 +1,4 @@
-import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask } from "@platform/shared";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask } from "@naulite/shared";
 
 import { BackupDestinationProvider } from "./BackupDestinationProvider";
 import { LocalBackupDestinationProvider } from "./LocalBackupDestinationProvider";

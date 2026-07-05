@@ -50,7 +50,7 @@ describeBootstrap("agent-install.sh", () => {
     });
 
     it("writes agent.json during dry-run when NetBird URL is provided", async () => {
-        const tempDir = await mkdtemp(path.join(tmpdir(), "platform-agent-config-"));
+        const tempDir = await mkdtemp(path.join(tmpdir(), "naulite-agent-config-"));
         tempDirs.push(tempDir);
         const configPath = path.join(tempDir, "agent.json");
 
@@ -79,7 +79,7 @@ describeBootstrap("agent-install.sh", () => {
     });
 
     it("fetches bootstrap settings from the control plane during dry-run", async () => {
-        const tempDir = await mkdtemp(path.join(tmpdir(), "platform-agent-config-"));
+        const tempDir = await mkdtemp(path.join(tmpdir(), "naulite-agent-config-"));
         tempDirs.push(tempDir);
         const configPath = path.join(tempDir, "agent.json");
 
@@ -114,7 +114,7 @@ describeBootstrap("agent-install.sh", () => {
     });
 
     it("logs netbird install intent during dry-run", async () => {
-        const tempDir = await mkdtemp(path.join(tmpdir(), "platform-agent-config-"));
+        const tempDir = await mkdtemp(path.join(tmpdir(), "naulite-agent-config-"));
         tempDirs.push(tempDir);
         const configPath = path.join(tempDir, "agent.json");
 
@@ -150,7 +150,7 @@ describeBootstrap("agent-install.sh", () => {
 function startMockControlPlane(setupKey: string): Promise<Server> {
     return new Promise((resolve, reject) => {
         const server = createServer((request, response) => {
-            if (request.url === "/bootstrap/agent" && request.headers["x-platform-setup-key"] === setupKey) {
+            if (request.url === "/bootstrap/agent" && request.headers["x-naulite-setup-key"] === setupKey) {
                 response.writeHead(200, { "content-type": "application/json" });
                 response.end(JSON.stringify({
                     cpUrl: "https://cp.example.com",

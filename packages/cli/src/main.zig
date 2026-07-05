@@ -379,37 +379,37 @@ fn sliceExecCommand(
 
 fn printUsage(writer: anytype) !void {
     try writer.writeAll(
-        \\platform - kubectl-style CLI for the Platform control plane
+        \\naulite - kubectl-style CLI for the Naulite control plane
         \\
         \\Usage:
-        \\  platform login --cp <netbird-ip> --key <secret> [--port <port>] [--tenant <slug>]
-        \\  platform [--url <url>] [--cp <host>] [--port <port>] cluster nodes get
-        \\  platform cluster services get|delete <name>|rotate-logs <name>
-        \\  platform cluster instances get|logs <id>|exec <id> -- <command...>
-        \\  platform cluster volumes get|delete <name>
-        \\  platform cluster secrets get|delete <name>
-        \\  platform cluster backups get|run <volume>|restore <backupId>
-        \\  platform cluster gitops get|rollback <revisionId>
-        \\  platform cluster netbird topology|devices|groups|acls
-        \\  platform cluster metrics get
-        \\  platform cluster status get
-        \\  platform cluster manifests apply -f <manifest.yml>
-        \\  platform cluster builds run --service <name> [--provider <name>] [--registry <name>]
-        \\  platform cluster registries get
-        \\  platform cluster ingress get
+        \\  naulite login --cp <netbird-ip> --key <secret> [--port <port>] [--tenant <slug>]
+        \\  naulite [--url <url>] [--cp <host>] [--port <port>] cluster nodes get
+        \\  naulite cluster services get|delete <name>|rotate-logs <name>
+        \\  naulite cluster instances get|logs <id>|exec <id> -- <command...>
+        \\  naulite cluster volumes get|delete <name>
+        \\  naulite cluster secrets get|delete <name>
+        \\  naulite cluster backups get|run <volume>|restore <backupId>
+        \\  naulite cluster gitops get|rollback <revisionId>
+        \\  naulite cluster netbird topology|devices|groups|acls
+        \\  naulite cluster metrics get
+        \\  naulite cluster status get
+        \\  naulite cluster manifests apply -f <manifest.yml>
+        \\  naulite cluster builds run --service <name> [--provider <name>] [--registry <name>]
+        \\  naulite cluster registries get
+        \\  naulite cluster ingress get
         \\
-        \\  platform runs list
-        \\  platform runs get <runId>
-        \\  platform runs logs <runId> [--step <name>]
+        \\  naulite runs list
+        \\  naulite runs get <runId>
+        \\  naulite runs logs <runId> [--step <name>]
         \\
         \\Remote access:
-        \\  Generate an API key in the panel, then run `platform login` with the NetBird IP.
+        \\  Generate an API key in the panel, then run `naulite login` with the NetBird IP.
         \\  When a local control plane is detected on port 8080, auth is skipped automatically.
         \\
         \\Environment:
-        \\  PLATFORM_CP_URL     Control plane base URL
-        \\  PLATFORM_API_KEY    API key secret for remote access
-        \\  PLATFORM_TOKEN      Alias for PLATFORM_API_KEY
+        \\  NAULITE_CP_URL     Control plane base URL
+        \\  NAULITE_API_KEY    API key secret for remote access
+        \\  NAULITE_TOKEN      Alias for NAULITE_API_KEY
         \\
     );
 }

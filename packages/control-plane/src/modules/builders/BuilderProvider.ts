@@ -2,7 +2,7 @@ import type {
     BuildResult,
     DockerBuildOptions,
     KanikoBuildOptions
-} from "@platform/shared";
+} from "@naulite/shared";
 
 /**
  * Abstract builder provider contract for Docker and Kaniko plugin implementations.

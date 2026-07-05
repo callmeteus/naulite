@@ -10,10 +10,10 @@ import { defineRoute } from "../../routing/DefineRoute";
 import {
     AgentBootstrapResponseSchema,
     RouteMessageResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 const AgentBootstrapHeadersSchema = z.object({
-    "x-platform-setup-key": z.string().min(1).optional()
+    "x-naulite-setup-key": z.string().min(1).optional()
 });
 
 export const GET = defineRoute({

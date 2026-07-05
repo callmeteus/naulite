@@ -1,5 +1,5 @@
 {
-    "name": "@platform/plugin-s3-storage-provider",
+    "name": "@naulite/plugin-s3-storage-provider",
     "version": "0.1.0",
     "private": true,
     "main": "./dist/index.js",
@@ -10,8 +10,8 @@
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.726.1",
-        "@platform/control-plane": "0.1.0",
-        "@platform/shared": "0.1.0"
+        "@naulite/control-plane": "0.1.0",
+        "@naulite/shared": "0.1.0"
     },
     "devDependencies": {
         "@types/node": "^22.10.5",

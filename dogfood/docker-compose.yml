@@ -44,7 +44,7 @@ services:
         working_dir: /work
         command: ["node", "render-traefik-config.mjs"]
         environment:
-            PLATFORM_TLS_MODE: ${PLATFORM_TLS_MODE:-acme_tls}
+            NAULITE_TLS_MODE: ${NAULITE_TLS_MODE:-acme_tls}
             ACME_EMAIL: ${ACME_EMAIL:-platform@localhost}
             ACME_CA_SERVER: ${ACME_CA_SERVER:-https://acme-staging-v02.api.letsencrypt.org/directory}
             CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:-}
@@ -87,26 +87,26 @@ services:
                 required: false
         environment:
             NODE_ENV: production
-            DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@pgpool:5432/platform
-            PLATFORM_PUBLIC_URL: ${PLATFORM_PUBLIC_URL:-}
+            DATABASE_URL: postgres://naulite:${POSTGRES_PASSWORD:-naulite}@pgpool:5432/naulite
+            NAULITE_PUBLIC_URL: ${NAULITE_PUBLIC_URL:-}
             NETBIRD_PUBLIC_MANAGEMENT_URL: ${NETBIRD_PUBLIC_MANAGEMENT_URL:-}
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
-            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
-            PLATFORM_TLS_MODE: ${PLATFORM_TLS_MODE:-acme_tls}
+            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/naulite/dynamic-config}
+            NAULITE_TLS_MODE: ${NAULITE_TLS_MODE:-acme_tls}
             CP_INSTANCE_ID: cp-1
             CP_PEER_URLS: http://control-plane-2:8080
             CP_PLUGINS: s3
             S3_ENDPOINT: http://minio:9000
             S3_FORCE_PATH_STYLE: "true"
-            PROMETHEUS_URL: ${PROMETHEUS_URL:-http://platform-prometheus:9090}
-            PLATFORM_PROMETHEUS_FILE_SD_DIR: ${PLATFORM_PROMETHEUS_FILE_SD_DIR:-/var/lib/platform/prometheus/file_sd}
-            PLATFORM_METRICS_SYNC_ENABLED: ${PLATFORM_METRICS_SYNC_ENABLED:-true}
+            PROMETHEUS_URL: ${PROMETHEUS_URL:-http://naulite-prometheus:9090}
+            NAULITE_PROMETHEUS_FILE_SD_DIR: ${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}
+            NAULITE_METRICS_SYNC_ENABLED: ${NAULITE_METRICS_SYNC_ENABLED:-true}
         ports:
             - "8080:8080"
         volumes:
             - cp-data-1:/var/lib/platform
-            - platform-prometheus-file-sd:/var/lib/platform/prometheus/file_sd
+            - naulite-prometheus-file-sd:/var/lib/naulite/prometheus/file_sd
         networks:
             - default
             - netbird
@@ -126,26 +126,26 @@ services:
                 required: false
         environment:
             NODE_ENV: production
-            DATABASE_URL: postgres://platform:${POSTGRES_PASSWORD:-platform}@pgpool:5432/platform
-            PLATFORM_PUBLIC_URL: ${PLATFORM_PUBLIC_URL:-}
+            DATABASE_URL: postgres://naulite:${POSTGRES_PASSWORD:-naulite}@pgpool:5432/naulite
+            NAULITE_PUBLIC_URL: ${NAULITE_PUBLIC_URL:-}
             NETBIRD_PUBLIC_MANAGEMENT_URL: ${NETBIRD_PUBLIC_MANAGEMENT_URL:-}
             NETBIRD_API_URL: ${NETBIRD_API_URL:-http://netbird-server/api}
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
-            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
-            PLATFORM_TLS_MODE: ${PLATFORM_TLS_MODE:-acme_tls}
+            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/naulite/dynamic-config}
+            NAULITE_TLS_MODE: ${NAULITE_TLS_MODE:-acme_tls}
             CP_INSTANCE_ID: cp-2
             CP_PEER_URLS: http://control-plane-1:8080
             CP_PLUGINS: s3
             S3_ENDPOINT: http://minio:9000
             S3_FORCE_PATH_STYLE: "true"
-            PROMETHEUS_URL: ${PROMETHEUS_URL:-http://platform-prometheus:9090}
-            PLATFORM_PROMETHEUS_FILE_SD_DIR: ${PLATFORM_PROMETHEUS_FILE_SD_DIR:-/var/lib/platform/prometheus/file_sd}
-            PLATFORM_METRICS_SYNC_ENABLED: ${PLATFORM_METRICS_SYNC_ENABLED:-true}
+            PROMETHEUS_URL: ${PROMETHEUS_URL:-http://naulite-prometheus:9090}
+            NAULITE_PROMETHEUS_FILE_SD_DIR: ${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}
+            NAULITE_METRICS_SYNC_ENABLED: ${NAULITE_METRICS_SYNC_ENABLED:-true}
         ports:
             - "8081:8080"
         volumes:
             - cp-data-2:/var/lib/platform
-            - platform-prometheus-file-sd:/var/lib/platform/prometheus/file_sd
+            - naulite-prometheus-file-sd:/var/lib/naulite/prometheus/file_sd
         networks:
             - default
             - netbird
@@ -193,11 +193,11 @@ services:
         environment:
             NODE_ID: agent-1
             HOSTNAME: agent-1
-            PLATFORM_CP_URL: http://control-plane-1:8080
+            NAULITE_CP_URL: http://control-plane-1:8080
             AGENT_URL: http://agent-1:9470
             AGENT_PORT: "9470"
             AGENT_VERSION: zig-0.1.0
-            PLATFORM_AGENT_CONFIG: /var/lib/platform/agent.json
+            NAULITE_AGENT_CONFIG: /var/lib/naulite/agent.json
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
             NETBIRD_SETUP_KEY: ${NETBIRD_SETUP_KEY:-}
         volumes:
@@ -218,4 +218,4 @@ volumes:
     cp-data-2:
     traefik-acme:
     agent-data-1:
-    platform-prometheus-file-sd:
+    naulite-prometheus-file-sd:

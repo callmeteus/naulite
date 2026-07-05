@@ -5,7 +5,7 @@ description: Control plane and agent bootstrap scripts, environment variables, a
 
 # Install
 
-Platform ships one-liner installers under `bootstrap/` at the repository root. They detect the host OS, prepare Docker Compose (control plane) or a systemd/Windows service (agent), and wire NetBird enrollment.
+Naulite ships one-liner installers under `bootstrap/` at the repository root. They detect the host OS, prepare Docker Compose (control plane) or a systemd/Windows service (agent), and wire NetBird enrollment.
 
 ## Control plane
 
@@ -24,7 +24,7 @@ Windows:
 The script:
 
 1. Copies `dogfood/.env.example` to `dogfood/.env` when missing
-2. Writes `PLATFORM_PUBLIC_URL` and NetBird public URLs
+2. Writes `NAULITE_PUBLIC_URL` and NetBird public URLs
 3. Initializes NetBird config when absent
 4. Starts the metrics stack and `docker compose up -d --build` under `dogfood/`
 5. Waits for `GET /health`
@@ -60,20 +60,20 @@ Windows:
 The script:
 
 1. Optionally calls `GET /bootstrap/agent` with `X-Platform-Setup-Key` to resolve `netbirdManagementUrl`
-2. Writes `/var/lib/platform/agent.json` (or `%ProgramData%\Platform\agent.json` on Windows)
+2. Writes `/var/lib/naulite/agent.json` (or `%ProgramData%\naulite\agent.json` on Windows)
 3. Installs or builds the Zig agent binary
-4. Starts a systemd or Windows service with `PLATFORM_AGENT_CONFIG` pointing at the JSON file
+4. Starts a systemd or Windows service with `NAULITE_AGENT_CONFIG` pointing at the JSON file
 
 ### Agent options
 
 | Flag / env | Purpose |
 |------------|---------|
-| `--host` / `PLATFORM_CP_URL` | Control plane base URL |
-| `--setup-key` / `PLATFORM_SETUP_KEY` | NetBird enrollment setup key |
-| `--provision-id` / `PLATFORM_PROVISION_ID` | Correlates cloud-init provisioning with agent registration |
-| `--node-id` / `PLATFORM_NODE_ID` | Pre-assigned node id from provision flow |
-| `--labels` / `PLATFORM_LABELS` | JSON node labels for scheduling |
-| `--capabilities` / `PLATFORM_CAPABILITIES` | JSON capability list |
+| `--host` / `NAULITE_CP_URL` | Control plane base URL |
+| `--setup-key` / `NAULITE_SETUP_KEY` | NetBird enrollment setup key |
+| `--provision-id` / `NAULITE_PROVISION_ID` | Correlates cloud-init provisioning with agent registration |
+| `--node-id` / `NAULITE_NODE_ID` | Pre-assigned node id from provision flow |
+| `--labels` / `NAULITE_LABELS` | JSON node labels for scheduling |
+| `--capabilities` / `NAULITE_CAPABILITIES` | JSON capability list |
 | `--dry-run` | Parse arguments and write config only |
 
 ## Environment variables
@@ -85,16 +85,16 @@ The script:
 | `DATABASE_URL` | SQLite path when unset | `postgres://` or `postgresql://` for HA; otherwise SQLite |
 | `DATABASE_PATH` | `./data/control-plane.db` | SQLite file when `DATABASE_URL` is not PostgreSQL |
 | `DATABASE_SSL` | `false` | Enable TLS for external PostgreSQL (e.g. RDS) |
-| `PLATFORM_PUBLIC_URL` | empty | Public URL returned to enrolling agents |
+| `NAULITE_PUBLIC_URL` | empty | Public URL returned to enrolling agents |
 | `CP_INSTANCE_ID` | random | Unique id for this control plane replica |
 | `CP_PEER_URLS` | empty | Comma-separated peer URLs for HA sync |
-| `PLATFORM_MULTI_TENANT` | `false` | When `true`, enables tenant-scoped data access |
-| `PLATFORM_API_KEY_ROTATION_ENABLED` | `false` | When `true`, allows `POST /api-keys/:id/rotate` |
-| `PLATFORM_API_KEY_ROTATION_GRACE_SECONDS` | `86400` | Grace period for the previous key hash after rotation |
+| `NAULITE_MULTI_TENANT` | `false` | When `true`, enables tenant-scoped data access |
+| `NAULITE_API_KEY_ROTATION_ENABLED` | `false` | When `true`, allows `POST /api-keys/:id/rotate` |
+| `NAULITE_API_KEY_ROTATION_GRACE_SECONDS` | `86400` | Grace period for the previous key hash after rotation |
 | `NETBIRD_MANAGEMENT_URL` | internal compose URL | Self-hosted NetBird management (required) |
 | `NETBIRD_PUBLIC_MANAGEMENT_URL` | derived | Public NetBird URL for agent enrollment |
 | `ADMIN_API_KEY` | auto-created in dogfood | Service token for admin API and metrics |
-| `PLATFORM_TLS_MODE` | `acme_tls` | Traefik TLS mode (`acme_tls`, `acme_dns_cloudflare`, `passthrough`, `self_signed`, `custom`) |
+| `NAULITE_TLS_MODE` | `acme_tls` | Traefik TLS mode (`acme_tls`, `acme_dns_cloudflare`, `passthrough`, `self_signed`, `custom`) |
 | `ACME_EMAIL` | `platform@localhost` | ACME registration email for Let's Encrypt |
 | `ACME_CA_SERVER` | Let's Encrypt staging | ACME directory URL |
 | `CF_DNS_API_TOKEN` | empty | Cloudflare DNS token when using `acme_dns_cloudflare` |
@@ -105,9 +105,9 @@ See [TLS modes](/get-started/tls/) for mode details and manifest secret referenc
 
 | Variable | Purpose |
 |----------|---------|
-| `PLATFORM_CP_URL` | Control plane base URL (runtime override) |
-| `PLATFORM_AGENT_CONFIG` | Path to persisted `agent.json` |
-| `PLATFORM_NODE_LABELS` | Optional JSON labels for scheduling |
+| `NAULITE_CP_URL` | Control plane base URL (runtime override) |
+| `NAULITE_AGENT_CONFIG` | Path to persisted `agent.json` |
+| `NAULITE_NODE_LABELS` | Optional JSON labels for scheduling |
 | `NETBIRD_SETUP_KEY` | NetBird enrollment key |
 | `NETBIRD_MANAGEMENT_URL` | Self-hosted NetBird management URL |
 
@@ -123,14 +123,14 @@ bash bootstrap/agent-install.sh --dry-run \
   --setup-key <key> \
   --config-path /tmp/agent.json
 
-PLATFORM_ROOT=/tmp/platform-bootstrap bash bootstrap/control-plane-install.sh --dry-run \
+NAULITE_ROOT=/tmp/naulite-bootstrap bash bootstrap/control-plane-install.sh --dry-run \
   --host https://cp.example.com
 ```
 
 ## Post-install verification
 
 ```bash
-export PLATFORM_CP_URL=https://cp.example.com
+export NAULITE_CP_URL=https://cp.example.com
 platform cluster status get
 platform cluster nodes get
 ```

@@ -1,4 +1,4 @@
-import type { BackupTask, Node, Volume } from "@platform/shared";
+import type { BackupTask, Node, Volume } from "@naulite/shared";
 
 import { AgentProxyService } from "./AgentProxyService";
 
@@ -43,7 +43,7 @@ export namespace BackupDispatchService {
             retention: volume.backup?.retention,
             destination: volume.backup?.destination ?? {
                 provider: "local",
-                path: "/var/lib/platform/backups"
+                path: "/var/lib/naulite/backups"
             },
             resolvedSecrets: {},
             status: "pending"
@@ -88,7 +88,7 @@ export namespace BackupDispatchService {
             throw new Error(`Node ${node.id} does not expose an agent URL.`);
         }
 
-        const archivePath = input.archivePath ?? `/var/lib/platform/backups/${input.backupId}.tar.gz`;
+        const archivePath = input.archivePath ?? `/var/lib/naulite/backups/${input.backupId}.tar.gz`;
         const mountPath = input.mountPath ?? volumeMountPath(input.volumeName);
 
         return AgentProxyService.postTask(node.agentUrl, "/tasks/backup/restore", {
@@ -106,6 +106,6 @@ export namespace BackupDispatchService {
      * @returns Absolute mount path on the agent
      */
     export function volumeMountPath(volumeName: string): string {
-        return `/var/lib/platform/volumes/${volumeName}`;
+        return `/var/lib/naulite/volumes/${volumeName}`;
     }
 }

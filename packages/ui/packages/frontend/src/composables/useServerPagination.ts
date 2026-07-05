@@ -1,4 +1,4 @@
-import type { PaginatedResponse } from "@platform/sdk";
+import type { PaginatedResponse } from "@naulite/sdk";
 import { computed, ref, type Ref } from "vue";
 
 /**

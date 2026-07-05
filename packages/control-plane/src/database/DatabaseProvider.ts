@@ -3,7 +3,7 @@ import type {
     DatabaseDialect,
     DatabaseMigrationResult,
     DatabaseProvider as DatabaseProviderContract
-} from "@platform/shared";
+} from "@naulite/shared";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Sequelize } from "sequelize-typescript";
@@ -112,6 +112,37 @@ export class DatabaseProvider implements DatabaseProviderContract {
     async hasPendingMigrations(): Promise<boolean> {
         const runner = new MigrationRunner(this.getSequelize(), this.dialect);
         return runner.hasPendingMigrations();
+    }
+
+    /**
+     * Waits until all migrations are applied on a follower instance.
+     *
+     * @param pollMs Poll interval in milliseconds
+     * @param timeoutMs Maximum wait time in milliseconds
+     * @returns Nothing.
+     */
+    async waitUntilMigrationsApplied(pollMs = 1_000, timeoutMs = 300_000): Promise<void> {
+        const runner = new MigrationRunner(this.getSequelize(), this.dialect);
+        await runner.waitUntilApplied(pollMs, timeoutMs);
+    }
+
+    /**
+     * Reports whether the leader election table exists in PostgreSQL.
+     *
+     * @returns Whether leader election schema is present
+     */
+    async hasLeaderElectionTable(): Promise<boolean> {
+        if (this.dialect !== "postgresql") {
+            return true;
+        }
+
+        try {
+            const queryInterface = this.getSequelize().getQueryInterface();
+            const tables = await queryInterface.showAllTables();
+            return tables.includes("control_plane_leaders");
+        } catch {
+            return false;
+        }
     }
 
     /**

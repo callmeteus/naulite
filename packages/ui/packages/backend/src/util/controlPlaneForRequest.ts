@@ -1,4 +1,4 @@
-import type { PlatformClient } from "@platform/sdk";
+import type { NauliteClient } from "@naulite/sdk";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 /**
@@ -8,7 +8,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
  * @param request Incoming Fastify request
  * @returns Session-aware platform client
  */
-export function controlPlaneForRequest(app: FastifyInstance, request: FastifyRequest): PlatformClient {
+export function controlPlaneForRequest(app: FastifyInstance, request: FastifyRequest): NauliteClient {
     if (request.sessionToken) {
         return app.controlPlane.withSession(request.sessionToken);
     }

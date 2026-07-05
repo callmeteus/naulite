@@ -31,7 +31,7 @@ export class NetBirdEnrollmentService {
             return existing.key;
         }
 
-        const created = await this.adapter.createSetupKey("platform-agents");
+        const created = await this.adapter.createSetupKey("naulite-agents");
         await this.store.upsertClusterSecret({
             name: SETUP_KEY_SECRET_NAME,
             keys: ["key"],

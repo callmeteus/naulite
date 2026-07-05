@@ -19,13 +19,13 @@ jobs:
             matrix:
                 include:
                     - dockerfile: packages/agent/Dockerfile
-                      image: platform-agent
+                      image: naulite-agent
                     - dockerfile: packages/control-plane/Dockerfile
-                      image: platform-control-plane
+                      image: naulite-control-plane
                     - dockerfile: packages/ui/Dockerfile
-                      image: platform-ui
+                      image: naulite-ui
                     - dockerfile: packages/ui/packages/backend/Dockerfile
-                      image: platform-ui-backend
+                      image: naulite-ui-backend
 
         steps:
             - name: Checkout

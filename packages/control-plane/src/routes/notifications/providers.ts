@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 import { NotificationProviderEnvStatus } from "../../services/NotificationProviderEnvStatus";
@@ -23,10 +22,7 @@ const NotificationProvidersResponseSchema = z.object({
 });
 
 export const GET = defineRoute({
-    preHandler: [
-        AuthPreHandlers.authorizedLocalOrApiKey,
-        PermissionPreHandlers.requirePermission("notifications:write")
-    ],
+    preHandler: PermissionPreHandlers.authorizedWithPermission("notifications:read"),
     schema: {
         summary: "List notification providers",
         description: "Lists registered notification providers and their environment configuration status.",

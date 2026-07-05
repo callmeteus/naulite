@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
-import type { NodeProvision } from "@platform/sdk";
-import { platformClient } from "../api/Client";
+import type { NodeProvision } from "@naulite/sdk";
+import { nauliteClient } from "../api/Client";
 import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
@@ -27,7 +27,7 @@ const {
     refresh: refreshHistory,
     loading: historyLoading,
     error: historyError
-} = useServerPagination((page, limit) => platformClient.listNodeProvisions({ page, limit }), 10);
+} = useServerPagination((page, limit) => nauliteClient.listNodeProvisions({ page, limit }), 10);
 
 const stepStates = computed(() => {
     const status = activeProvision.value?.status ?? "pending";
@@ -130,7 +130,7 @@ async function terminateProvision(): Promise<void> {
         return;
     }
 
-    const updated = await platformClient.terminateNodeProvision(activeProvision.value.id);
+    const updated = await nauliteClient.terminateNodeProvision(activeProvision.value.id);
     activeProvision.value = updated;
     stopPolling();
     await refreshHistory();

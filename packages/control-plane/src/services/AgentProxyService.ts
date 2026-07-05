@@ -1,4 +1,4 @@
-import type { Instance, Node } from "@platform/shared";
+import type { Instance, Node } from "@naulite/shared";
 
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 

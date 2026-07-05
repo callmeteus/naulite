@@ -1,0 +1,14 @@
+name: ingress-tls
+services:
+  web:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    ingress:
+      exposure: public
+      host: web-tls.test.local
+      tls:
+        enabled: true
+      paths:
+        - path: /
+          port: 80

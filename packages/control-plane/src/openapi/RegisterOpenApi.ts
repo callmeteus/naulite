@@ -13,7 +13,7 @@ export async function registerOpenApi(app: FastifyInstance): Promise<void> {
         openapi: {
             openapi: "3.1.0",
             info: {
-                title: "Platform Control Plane API",
+                title: "Naulite Control Plane API",
                 description: "Distributed orchestration control plane HTTP API.",
                 version: "0.1.0"
             },

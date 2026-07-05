@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../../../packages/ui/packages/backend/src/App";
-import { buildSessionCookie, PLATFORM_SESSION_COOKIE } from "../../../packages/ui/packages/backend/src/auth/SessionCookie";
-import { PLATFORM_CSRF_COOKIE } from "../../../packages/ui/packages/backend/src/auth/CsrfProtection";
+import { buildSessionCookie, NAULITE_SESSION_COOKIE } from "../../../packages/ui/packages/backend/src/auth/SessionCookie";
+import { NAULITE_CSRF_COOKIE } from "../../../packages/ui/packages/backend/src/auth/CsrfProtection";
 
 describe("ui-backend auth", () => {
     afterEach(() => {
@@ -112,7 +112,7 @@ describe("ui-backend auth routes", () => {
         delete process.env.ADMIN_API_KEY;
     });
 
-    it("proxies login, me, and logout with platform_session cookie", async () => {
+    it("proxies login, me, and logout with naulite_session cookie", async () => {
         const app = await createApp({
             adminApiKey: "secret-key",
             logger: false
@@ -158,7 +158,7 @@ describe("ui-backend auth routes", () => {
         expect(loginResponse.json().csrfToken).toBeTruthy();
         const setCookie = loginResponse.headers["set-cookie"];
         const cookieHeader = Array.isArray(setCookie) ? setCookie.join(";") : String(setCookie ?? "");
-        expect(cookieHeader).toContain("platform_session=");
+        expect(cookieHeader).toContain("naulite_session=");
 
         const csrfToken = loginResponse.json().csrfToken;
 
@@ -166,18 +166,19 @@ describe("ui-backend auth routes", () => {
             method: "GET",
             url: "/auth/me",
             headers: {
-                cookie: buildSessionCookie("session-abc")
+                cookie: `${buildSessionCookie("session-abc")}; ${NAULITE_CSRF_COOKIE}=${encodeURIComponent(csrfToken)}`
             }
         });
 
         expect(meResponse.statusCode).toBe(200);
         expect(meResponse.json().user.role).toBe("admin");
+        expect(meResponse.json().csrfToken).toBe(csrfToken);
 
         const logoutResponse = await app.inject({
             method: "POST",
             url: "/auth/logout",
             headers: {
-                cookie: `${PLATFORM_SESSION_COOKIE}=${encodeURIComponent("session-abc")}; ${PLATFORM_CSRF_COOKIE}=${encodeURIComponent(csrfToken)}`,
+                cookie: `${NAULITE_SESSION_COOKIE}=${encodeURIComponent("session-abc")}; ${NAULITE_CSRF_COOKIE}=${encodeURIComponent(csrfToken)}`,
                 "x-csrf-token": csrfToken
             }
         });

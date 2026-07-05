@@ -1,5 +1,5 @@
-import { Scheduler } from "@platform/control-plane";
-import type { ManifestService, Node, Service } from "@platform/shared";
+import { Scheduler } from "@naulite/control-plane";
+import type { ManifestService, Node, Service } from "@naulite/shared";
 import { describe, expect, it } from "vitest";
 
 function buildNode(overrides: Partial<Node> = {}): Node {

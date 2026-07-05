@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { PlatformClient } from "@platform/sdk";
+import { NauliteClient } from "@naulite/sdk";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { LocalTestCluster } from "../harness/LocalTestCluster";
@@ -13,7 +13,7 @@ const fixturePath = path.resolve(
 
 describe("apply minimal manifest via SDK", () => {
     let dockerEnabled = false;
-    let client: PlatformClient;
+    let client: NauliteClient;
 
     beforeAll(async () => {
         dockerEnabled = await LocalTestCluster.isDockerAvailable();
@@ -25,7 +25,7 @@ describe("apply minimal manifest via SDK", () => {
         try {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
-            client = new PlatformClient({
+            client = new NauliteClient({
                 baseUrl: LocalTestCluster.getControlPlaneUrl()
             });
         } catch (err) {

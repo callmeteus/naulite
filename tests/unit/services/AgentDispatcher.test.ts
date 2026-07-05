@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExecutionPlan, Node } from "@platform/shared";
+import type { ExecutionPlan, Node } from "@naulite/shared";
 
 import { AgentDispatcher } from "../../../packages/control-plane/src/services/AgentDispatcher";
 

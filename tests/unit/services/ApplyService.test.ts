@@ -1,4 +1,4 @@
-import type { ExecutionOperation } from "@platform/shared";
+import type { ExecutionOperation } from "@naulite/shared";
 import { describe, expect, it } from "vitest";
 
 import { ApplyService } from "../../../packages/control-plane/src/services/ApplyService";

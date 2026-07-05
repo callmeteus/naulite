@@ -1,5 +1,5 @@
-import type { NotificationProvider, PipelineNotificationEvent } from "@platform/shared";
-import { E7MessageFormatter } from "@platform/shared";
+import type { NotificationProvider, PipelineNotificationEvent } from "@naulite/shared";
+import { E7MessageFormatter } from "@naulite/shared";
 
 /**
  * Slack webhook notification provider for pipeline events.
@@ -61,7 +61,7 @@ export class SlackNotificationProvider implements NotificationProvider {
  * Shared Slack notification provider instance resolved from environment.
  */
 export const slackNotificationProvider = new SlackNotificationProvider({
-    webhookUrl: process.env.PLATFORM_SLACK_WEBHOOK_URL
+    webhookUrl: process.env.NAULITE_SLACK_WEBHOOK_URL
         ?? process.env.SLACK_WEBHOOK_URL
         ?? ""
 });

@@ -16,21 +16,24 @@ On SQLite, the runner calls `sequelize.sync()` and records a single `001-initial
 Versioned SQL files live under `packages/control-plane/src/database/migrations/postgresql/`. On each startup:
 
 1. Every control plane instance connects to PostgreSQL
-2. Instances contend for a **PostgreSQL advisory lock** (`0x504c5446`) so only one runs migrations at a time
-3. Pending `.sql` files are applied in sorted order
+2. On the **first boot** (before `control_plane_leaders` exists), any instance may run the full migration chain
+3. On subsequent boots, **leader election starts first**:
+   - The elected **leader** runs pending migrations under the PostgreSQL advisory lock (`0x504c5446`)
+   - **Followers** skip `migrate()` and poll `waitUntilMigrationsApplied()` until `schema_migrations` is up to date
 4. Each applied migration is recorded in `schema_migrations`
-5. The lock is released in a `finally` block
+5. The advisory lock is released in a `finally` block
 
-This design supports **zero-downtime rolling deploys**: followers start, block on the advisory lock, and proceed once the leader finishes pending migrations.
+This design supports **zero-downtime rolling deploys**: followers wait without blocking on the advisory lock, then start once the leader finishes pending migrations.
 
-## Leader-only mutating routes
+## Leader-only migration gate
 
-Schema migration is not the same as leader election, but both coordinate through PostgreSQL:
+Schema migration is coordinated with leader election:
 
-- Migrations: advisory lock - any instance may hold the lock first
-- Leader election: lease row in `control_plane_leaders` - one leader for schedulers and guarded routes
+- **Bootstrap**: first PostgreSQL startup creates `control_plane_leaders` via the normal migration chain
+- **Steady state**: only the lease holder calls `migrate()`; followers call `waitUntilMigrationsApplied()`
+- **Leader election**: lease row in `control_plane_leaders` - one leader for schedulers and guarded routes
 
-During a rolling upgrade, deploy control plane replicas one at a time. The first instance to acquire the advisory lock applies pending SQL; others wait briefly then start serving traffic.
+During a rolling upgrade, deploy control plane replicas one at a time. The elected leader applies pending SQL; followers poll until complete, then serve traffic.
 
 ## Adding a new migration
 

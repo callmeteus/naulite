@@ -1,5 +1,5 @@
 {
-    "name": "@platform/runtime-podman",
+    "name": "@naulite/runtime-podman",
     "version": "0.1.0",
     "private": true,
     "main": "./dist/index.js",
@@ -9,8 +9,8 @@
         "lint": "eslint src/"
     },
     "dependencies": {
-        "@platform/runtime-docker": "0.1.0",
-        "@platform/shared": "0.1.0",
+        "@naulite/runtime-docker": "0.1.0",
+        "@naulite/shared": "0.1.0",
         "dockerode": "^4.0.4"
     },
     "devDependencies": {

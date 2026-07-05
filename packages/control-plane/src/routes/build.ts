@@ -1,5 +1,5 @@
 import { ControlPlaneService } from "../ControlPlaneService";
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
 import { BuildService, BuildServiceError } from "../services/BuildService";
 import {
@@ -7,10 +7,10 @@ import {
     BuildWaitQuerySchema,
     LooseObjectSchema,
     RouteErrorResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("runs:write"),
     schema: {
         summary: "Trigger service build",
         description: "Requests a service image build on a node with the builder capability.",

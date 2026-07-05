@@ -17,7 +17,7 @@ pub const Response = struct {
     body: []const u8,
 };
 
-/// HTTP client for the Platform control plane API.
+/// HTTP client for the Naulite control plane API.
 pub const Client = struct {
     // The allocator to use.
     allocator: std.mem.Allocator,
@@ -122,7 +122,7 @@ pub const Client = struct {
         }
 
         if (self.config.tenant_slug) |tenant_slug| {
-            extra_headers[header_count] = .{ .name = "X-Platform-Tenant", .value = tenant_slug };
+            extra_headers[header_count] = .{ .name = "X-Naulite-Tenant", .value = tenant_slug };
             header_count += 1;
         }
 

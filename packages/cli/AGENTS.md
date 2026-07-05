@@ -1,6 +1,6 @@
-# @platform/cli - Agent Guidelines
+# @naulite/cli - Agent Guidelines
 
-Native Zig CLI for the Platform control plane. English code and comments.
+Native Zig CLI for the Naulite control plane. English code and comments.
 
 ## Toolchain
 

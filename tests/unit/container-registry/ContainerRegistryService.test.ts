@@ -30,7 +30,7 @@ describe("ContainerRegistryService", () => {
      * @returns Configured container registry service
      */
     async function createService(): Promise<ContainerRegistryService> {
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-cr-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-cr-"));
         databaseProvider = new DatabaseProvider();
         await databaseProvider.connect({
             dialect: "sqlite",

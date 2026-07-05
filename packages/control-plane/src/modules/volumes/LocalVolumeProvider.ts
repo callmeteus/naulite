@@ -1,7 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
-import type { ProvisionVolumeOptions, Volume } from "@platform/shared";
+import type { ProvisionVolumeOptions, Volume } from "@naulite/shared";
 
 import { VolumeProvider } from "./VolumeProvider";
 

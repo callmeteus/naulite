@@ -6,7 +6,7 @@ export const CONTAINER_REGISTRY_SCHEME = "container-registry://";
 /**
  * Docker image prefix used after loading an image from the platform container registry.
  */
-export const PLATFORM_CR_DOCKER_PREFIX = "platform-cr/";
+export const NAULITE_CR_DOCKER_PREFIX = "naulite-cr/";
 
 /**
  * Parsed name and tag from a container registry image reference.
@@ -75,10 +75,10 @@ export function toCrPullSpec(ref: string): ParsedContainerRegistryRef | null {
  * Returns whether a Docker image reference was produced by the platform container registry pull path.
  *
  * @param ref Docker image reference
- * @returns True when the ref uses the `platform-cr/` prefix
+ * @returns True when the ref uses the `naulite-cr/` prefix
  */
-export function isPlatformCrDockerRef(ref: string): boolean {
-    return ref.startsWith(PLATFORM_CR_DOCKER_PREFIX);
+export function isNauliteCrDockerRef(ref: string): boolean {
+    return ref.startsWith(NAULITE_CR_DOCKER_PREFIX);
 }
 
 /**
@@ -117,7 +117,7 @@ export function resolveContainerRegistryImageRef(
  * @returns Docker image tag for `docker build -t`
  */
 export function resolveDockerBuildTag(manifestName: string, serviceName: string, tag = "latest"): string {
-    return `platform/${manifestName}-${serviceName}:${tag}`;
+    return `naulite/${manifestName}-${serviceName}:${tag}`;
 }
 
 /**
@@ -126,8 +126,8 @@ export function resolveDockerBuildTag(manifestName: string, serviceName: string,
  * @param manifestName Manifest name
  * @param serviceName Service name
  * @param tag Image tag
- * @returns Docker image reference with the `platform-cr/` prefix
+ * @returns Docker image reference with the `naulite-cr/` prefix
  */
-export function resolvePlatformCrDockerRef(manifestName: string, serviceName: string, tag = "latest"): string {
-    return `${PLATFORM_CR_DOCKER_PREFIX}${manifestName}-${serviceName}:${tag}`;
+export function resolveNauliteCrDockerRef(manifestName: string, serviceName: string, tag = "latest"): string {
+    return `${NAULITE_CR_DOCKER_PREFIX}${manifestName}-${serviceName}:${tag}`;
 }

@@ -1,4 +1,4 @@
-import type { Node, Volume } from "@platform/shared";
+import type { Node, Volume } from "@naulite/shared";
 import { describe, expect, it } from "vitest";
 
 import { BackupDispatchService } from "../../../packages/control-plane/src/services/BackupDispatchService";
@@ -53,7 +53,7 @@ describe("BackupDispatchService", () => {
             name: "data",
             manifestName: "minimal",
             scope: "cluster",
-            mountPath: "/var/lib/platform/minimal/data",
+            mountPath: "/var/lib/naulite/minimal/data",
             status: "ready",
             nodeId: "node-b",
             createdAt: new Date().toISOString(),
@@ -69,7 +69,7 @@ describe("BackupDispatchService", () => {
             name: "data",
             manifestName: "minimal",
             scope: "cluster",
-            mountPath: "/var/lib/platform/minimal/data",
+            mountPath: "/var/lib/naulite/minimal/data",
             status: "ready",
             nodeId: "node-a",
             backup: {
@@ -78,7 +78,7 @@ describe("BackupDispatchService", () => {
                 excludes: ["data/tmp/**"],
                 destination: {
                     provider: "local",
-                    path: "/var/lib/platform/backups"
+                    path: "/var/lib/naulite/backups"
                 }
             },
             createdAt: new Date().toISOString(),

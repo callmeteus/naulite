@@ -1,5 +1,5 @@
 {
-    "name": "@platform/runtime-docker",
+    "name": "@naulite/runtime-docker",
     "version": "0.1.0",
     "private": true,
     "main": "./dist/index.js",
@@ -9,7 +9,7 @@
         "lint": "eslint src/"
     },
     "dependencies": {
-        "@platform/shared": "0.1.0",
+        "@naulite/shared": "0.1.0",
         "dockerode": "^4.0.4"
     },
     "devDependencies": {

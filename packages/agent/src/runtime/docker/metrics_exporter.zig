@@ -69,7 +69,7 @@ pub fn formatPrometheusText(allocator: std.mem.Allocator) ![]u8 {
     const snapshot = shared_state.snapshot orelse {
         return try std.fmt.allocPrint(
             allocator,
-            "# HELP platform_agent_up Agent process is running.\n# TYPE platform_agent_up gauge\nplatform_agent_up 1\n",
+            "# HELP naulite_agent_up Agent process is running.\n# TYPE naulite_agent_up gauge\nnaulite_agent_up 1\n",
             .{},
         );
     };
@@ -85,7 +85,7 @@ fn backgroundLoop(
     defer allocator.free(node_id);
     defer allocator.free(docker_socket);
 
-    const interval_secs = env_util.readEnvU16("PLATFORM_METRICS_INTERVAL_SECS", 15);
+    const interval_secs = env_util.readEnvU16("NAULITE_METRICS_INTERVAL_SECS", 15);
 
     while (true) {
         collectOnce(allocator, node_id, docker_socket) catch |err| {
@@ -251,31 +251,31 @@ fn renderPrometheus(allocator: std.mem.Allocator, snapshot: Snapshot) ![]u8 {
     const node_label = try escapeLabelValue(allocator, snapshot.node_id);
     defer allocator.free(node_label);
 
-    try appendMetricHeader(&output, allocator, "platform_agent_up", "gauge", "Agent process is running.");
-    try appendLine(&output, allocator, "platform_agent_up{{node_id=\"{s}\"}} 1\n", .{node_label});
+    try appendMetricHeader(&output, allocator, "naulite_agent_up", "gauge", "Agent process is running.");
+    try appendLine(&output, allocator, "naulite_agent_up{{node_id=\"{s}\"}} 1\n", .{node_label});
 
-    try appendMetricHeader(&output, allocator, "platform_node_cpu_millis_total", "gauge", "Total schedulable CPU capacity in millicores.");
-    try appendLine(&output, allocator, "platform_node_cpu_millis_total{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.cpu_millis_total });
+    try appendMetricHeader(&output, allocator, "naulite_node_cpu_millis_total", "gauge", "Total schedulable CPU capacity in millicores.");
+    try appendLine(&output, allocator, "naulite_node_cpu_millis_total{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.cpu_millis_total });
 
-    try appendMetricHeader(&output, allocator, "platform_node_cpu_millis_used", "gauge", "Estimated CPU usage in millicores.");
-    try appendLine(&output, allocator, "platform_node_cpu_millis_used{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.cpu_millis_used });
+    try appendMetricHeader(&output, allocator, "naulite_node_cpu_millis_used", "gauge", "Estimated CPU usage in millicores.");
+    try appendLine(&output, allocator, "naulite_node_cpu_millis_used{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.cpu_millis_used });
 
-    try appendMetricHeader(&output, allocator, "platform_node_memory_mb_total", "gauge", "Total host memory in megabytes.");
-    try appendLine(&output, allocator, "platform_node_memory_mb_total{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.memory_mb_total });
+    try appendMetricHeader(&output, allocator, "naulite_node_memory_mb_total", "gauge", "Total host memory in megabytes.");
+    try appendLine(&output, allocator, "naulite_node_memory_mb_total{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.memory_mb_total });
 
-    try appendMetricHeader(&output, allocator, "platform_node_memory_mb_used", "gauge", "Memory used by running containers in megabytes.");
-    try appendLine(&output, allocator, "platform_node_memory_mb_used{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.memory_mb_used });
+    try appendMetricHeader(&output, allocator, "naulite_node_memory_mb_used", "gauge", "Memory used by running containers in megabytes.");
+    try appendLine(&output, allocator, "naulite_node_memory_mb_used{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.memory_mb_used });
 
-    try appendMetricHeader(&output, allocator, "platform_node_disk_mb_total", "gauge", "Total disk capacity in megabytes for Docker data.");
-    try appendLine(&output, allocator, "platform_node_disk_mb_total{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.disk_mb_total });
+    try appendMetricHeader(&output, allocator, "naulite_node_disk_mb_total", "gauge", "Total disk capacity in megabytes for Docker data.");
+    try appendLine(&output, allocator, "naulite_node_disk_mb_total{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.disk_mb_total });
 
-    try appendMetricHeader(&output, allocator, "platform_node_disk_mb_used", "gauge", "Disk used by Docker layers and volumes in megabytes.");
-    try appendLine(&output, allocator, "platform_node_disk_mb_used{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.disk_mb_used });
+    try appendMetricHeader(&output, allocator, "naulite_node_disk_mb_used", "gauge", "Disk used by Docker layers and volumes in megabytes.");
+    try appendLine(&output, allocator, "naulite_node_disk_mb_used{{node_id=\"{s}\"}} {d}\n", .{ node_label, snapshot.node_resources.disk_mb_used });
 
-    try appendMetricHeader(&output, allocator, "platform_instance_cpu_percent", "gauge", "Container CPU utilization percent.");
-    try appendMetricHeader(&output, allocator, "platform_instance_memory_bytes", "gauge", "Container memory usage in bytes.");
-    try appendMetricHeader(&output, allocator, "platform_instance_network_rx_bytes", "counter", "Container network receive bytes.");
-    try appendMetricHeader(&output, allocator, "platform_instance_network_tx_bytes", "counter", "Container network transmit bytes.");
+    try appendMetricHeader(&output, allocator, "naulite_instance_cpu_percent", "gauge", "Container CPU utilization percent.");
+    try appendMetricHeader(&output, allocator, "naulite_instance_memory_bytes", "gauge", "Container memory usage in bytes.");
+    try appendMetricHeader(&output, allocator, "naulite_instance_network_rx_bytes", "counter", "Container network receive bytes.");
+    try appendMetricHeader(&output, allocator, "naulite_instance_network_tx_bytes", "counter", "Container network transmit bytes.");
 
     for (snapshot.instances) |instance| {
         const instance_label = try escapeLabelValue(allocator, instance.instance_id);
@@ -283,25 +283,25 @@ fn renderPrometheus(allocator: std.mem.Allocator, snapshot: Snapshot) ![]u8 {
         const service_label = try escapeLabelValue(allocator, instance.service_name);
         defer allocator.free(service_label);
 
-        try appendLine(&output, allocator, "platform_instance_cpu_percent{{node_id=\"{s}\",instance_id=\"{s}\",service_name=\"{s}\"}} {d:.4}\n", .{
+        try appendLine(&output, allocator, "naulite_instance_cpu_percent{{node_id=\"{s}\",instance_id=\"{s}\",service_name=\"{s}\"}} {d:.4}\n", .{
             node_label,
             instance_label,
             service_label,
             instance.cpu_percent,
         });
-        try appendLine(&output, allocator, "platform_instance_memory_bytes{{node_id=\"{s}\",instance_id=\"{s}\",service_name=\"{s}\"}} {d}\n", .{
+        try appendLine(&output, allocator, "naulite_instance_memory_bytes{{node_id=\"{s}\",instance_id=\"{s}\",service_name=\"{s}\"}} {d}\n", .{
             node_label,
             instance_label,
             service_label,
             instance.memory_bytes,
         });
-        try appendLine(&output, allocator, "platform_instance_network_rx_bytes{{node_id=\"{s}\",instance_id=\"{s}\",service_name=\"{s}\"}} {d}\n", .{
+        try appendLine(&output, allocator, "naulite_instance_network_rx_bytes{{node_id=\"{s}\",instance_id=\"{s}\",service_name=\"{s}\"}} {d}\n", .{
             node_label,
             instance_label,
             service_label,
             instance.network_rx_bytes,
         });
-        try appendLine(&output, allocator, "platform_instance_network_tx_bytes{{node_id=\"{s}\",instance_id=\"{s}\",service_name=\"{s}\"}} {d}\n", .{
+        try appendLine(&output, allocator, "naulite_instance_network_tx_bytes{{node_id=\"{s}\",instance_id=\"{s}\",service_name=\"{s}\"}} {d}\n", .{
             node_label,
             instance_label,
             service_label,
@@ -386,6 +386,6 @@ test "renderPrometheus includes node and instance metrics" {
     const text = try renderPrometheus(allocator, snapshot);
     defer allocator.free(text);
 
-    try std.testing.expect(std.mem.indexOf(u8, text, "platform_node_cpu_millis_total{node_id=\"node-1\"} 4000") != null);
-    try std.testing.expect(std.mem.indexOf(u8, text, "platform_instance_cpu_percent{node_id=\"node-1\",instance_id=\"demo-api-1\",service_name=\"api\"}") != null);
+    try std.testing.expect(std.mem.indexOf(u8, text, "naulite_node_cpu_millis_total{node_id=\"node-1\"} 4000") != null);
+    try std.testing.expect(std.mem.indexOf(u8, text, "naulite_instance_cpu_percent{node_id=\"node-1\",instance_id=\"demo-api-1\",service_name=\"api\"}") != null);
 }

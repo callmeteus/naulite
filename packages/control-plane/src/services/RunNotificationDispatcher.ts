@@ -1,4 +1,6 @@
-import type { NotificationProvider, PipelineNotificationEvent } from "@platform/shared";
+import type { NotificationProvider, PipelineNotificationEvent } from "@naulite/shared";
+
+import { NotificationProviderFilterStore } from "../database/NotificationProviderFilterStore";
 
 /**
  * Dispatches pipeline notifications to registered notification providers.
@@ -57,8 +59,21 @@ export namespace RunNotificationDispatcher {
             return;
         }
 
-        await Promise.all([...providers.values()].map(async (provider) => {
+        await Promise.all([...providers.entries()].map(async ([id, provider]) => {
             try {
+                let allowedKinds: Awaited<ReturnType<typeof NotificationProviderFilterStore.getAllowedKinds>> = null;
+
+                try {
+                    allowedKinds = await NotificationProviderFilterStore.getAllowedKinds(id);
+                } catch (filterErr) {
+                    console.debug("[pipeline] notification filter lookup failed id=%s: %O", id, filterErr);
+                }
+
+                if (allowedKinds && !allowedKinds.includes(event.kind)) {
+                    console.debug("[pipeline] notification filtered id=%s kind=%s", id, event.kind);
+                    return;
+                }
+
                 await provider.onPipelineEvent(event);
             } catch (err) {
                 console.error("[pipeline] notification provider failed: %O", err);
@@ -97,7 +112,7 @@ export namespace RunNotificationDispatcher {
         return {
             kind: "ci.build.submitted",
             runId: "notification-test",
-            serviceName: "platform",
+            serviceName: "naulite",
             imageRef: "ghcr.io/example/platform:test",
             branch: "main",
             message: "Teste de notificação da plataforma.",

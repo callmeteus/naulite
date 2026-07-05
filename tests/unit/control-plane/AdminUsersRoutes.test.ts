@@ -58,7 +58,7 @@ describe("admin users routes", () => {
             method: "POST",
             url: "/admin/users",
             headers: {
-                "x-platform-session": "session-token"
+                "x-naulite-session": "session-token"
             },
             payload: {
                 email: "new@example.com",
@@ -85,7 +85,7 @@ describe("admin users routes", () => {
             method: "GET",
             url: "/admin/users",
             headers: {
-                "x-platform-session": "session-token"
+                "x-naulite-session": "session-token"
             }
         });
 

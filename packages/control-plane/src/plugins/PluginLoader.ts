@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { PluginRegistry, type PluginRegistration } from "@platform/shared";
+import { PluginRegistry, type PluginRegistration } from "@naulite/shared";
 
 import type { LoadedPluginModule } from "./LoadedPluginRegistration";
 

@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const binaryName = process.platform === "win32" ? "platform.exe" : "platform";
+const binaryName = process.platform === "win32" ? "naulite.exe" : "naulite";
 const source = path.join(packageRoot, "zig-out", "bin", binaryName);
 const targetDir = path.join(packageRoot, "native");
 const target = path.join(targetDir, binaryName);

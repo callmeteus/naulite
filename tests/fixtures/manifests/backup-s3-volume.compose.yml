@@ -6,7 +6,7 @@ volumes:
             schedule: "* * * * *"
             destination:
                 provider: s3
-                bucket: platform-backups
+                bucket: naulite-backups
                 prefix: e2e
                 region: us-east-1
                 endpoint: http://minio:9000

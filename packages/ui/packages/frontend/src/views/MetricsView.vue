@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
-import type { PromQLSeries } from "@platform/sdk";
+import type { PromQLSeries } from "@naulite/sdk";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 
-import { platformClient } from "../api/Client";
+import { nauliteClient } from "../api/Client";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
@@ -165,28 +165,28 @@ async function refreshMetrics(): Promise<void> {
         const range = lastHourRange();
 
         const [clusterCpu, clusterMem, nodeCpu, nodeMem, instanceCpu, instanceMem] = await Promise.all([
-            platformClient.queryMetricsRange(
-                "sum(platform_node_cpu_millis_used)",
+            nauliteClient.queryMetricsRange(
+                "sum(naulite_node_cpu_millis_used)",
                 range.start,
                 range.end
             ),
-            platformClient.queryMetricsRange(
-                "sum(platform_node_memory_mb_used)",
+            nauliteClient.queryMetricsRange(
+                "sum(naulite_node_memory_mb_used)",
                 range.start,
                 range.end
             ),
-            platformClient.queryMetricsRange(
-                "platform_node_cpu_millis_used",
+            nauliteClient.queryMetricsRange(
+                "naulite_node_cpu_millis_used",
                 range.start,
                 range.end
             ),
-            platformClient.queryMetricsRange(
-                "platform_node_memory_mb_used",
+            nauliteClient.queryMetricsRange(
+                "naulite_node_memory_mb_used",
                 range.start,
                 range.end
             ),
-            platformClient.queryMetrics("platform_instance_cpu_percent"),
-            platformClient.queryMetrics("platform_instance_memory_bytes")
+            nauliteClient.queryMetrics("naulite_instance_cpu_percent"),
+            nauliteClient.queryMetrics("naulite_instance_memory_bytes")
         ]);
 
         clusterCpuPlot = renderPlot(

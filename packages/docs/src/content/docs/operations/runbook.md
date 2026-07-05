@@ -1,11 +1,11 @@
 ---
 title: Operations runbook
-description: Incident response procedures for Platform clusters.
+description: Incident response procedures for Naulite clusters.
 ---
 
 # Operations runbook
 
-Incident-focused procedures for operators running a Platform dogfood or staging cluster. For installation, database setup, and first apply, start with [Get started](/get-started/).
+Incident-focused procedures for operators running a Naulite dogfood or staging cluster. For installation, database setup, and first apply, start with [Get started](/get-started/).
 
 ## Health checks
 
@@ -15,7 +15,7 @@ Incident-focused procedures for operators running a Platform dogfood or staging 
 | `GET /health/ready` | Readiness (database and dependencies) |
 | `GET /health/live` | Lightweight alive probe |
 
-From the CLI (with `PLATFORM_CP_URL` set):
+From the CLI (with `NAULITE_CP_URL` set):
 
 ```bash
 platform cluster status get

@@ -1,16 +1,16 @@
 import { AgentProxyService } from "../../../services/AgentProxyService";
 import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
 import { ControlPlaneService } from "../../../ControlPlaneService";
-import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 import {
     ExecInstanceBodySchema,
     IdParamsSchema,
     LooseObjectSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:write"),
     schema: {
         summary: "Execute instance command",
         description: "Executes a command in an instance through the responsible agent.",

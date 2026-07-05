@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import type { Node } from "@platform/shared";
+import type { Node } from "@naulite/shared";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { DatabaseProvider } from "../../../packages/control-plane/src/database/DatabaseProvider";
@@ -49,7 +49,7 @@ describe("NodeHealthWatcher", () => {
     }
 
     it("emits disk pressure when usage crosses the threshold", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-node-watcher-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-node-watcher-"));
         const storagePath = path.join(tempDir, "control-plane.db");
         databaseProvider = new DatabaseProvider();
         await databaseProvider.connect({ dialect: "sqlite", url: `sqlite://${storagePath}` });

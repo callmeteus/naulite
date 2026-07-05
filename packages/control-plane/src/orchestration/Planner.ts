@@ -6,8 +6,8 @@ import type {
     ManifestService,
     Service,
     Volume
-} from "@platform/shared";
-import { isContainerRegistryRef } from "@platform/shared";
+} from "@naulite/shared";
+import { isContainerRegistryRef } from "@naulite/shared";
 
 /**
  * Resource diff between desired and actual cluster state.
@@ -197,7 +197,7 @@ export class Planner {
             name: volumeName,
             manifestName: manifest.name,
             scope: "cluster" as const,
-            mountPath: `/var/lib/platform/${manifest.name}/${volumeName}`,
+            mountPath: `/var/lib/naulite/${manifest.name}/${volumeName}`,
             status: "pending" as const,
             backup: volume.backup,
             createdAt: now,

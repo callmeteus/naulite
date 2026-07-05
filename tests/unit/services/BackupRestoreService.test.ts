@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 
-import type { BackupTask, Node } from "@platform/shared";
+import type { BackupTask, Node } from "@naulite/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -42,7 +42,7 @@ describe("BackupRestoreService", () => {
     beforeEach(() => {
         mocks.postBinary.mockReset();
         mocks.dispatchRestoreTask.mockReset();
-        mocks.postBinary.mockResolvedValue({ storedPath: "/var/lib/platform/backups/run-1.tar.gz" });
+        mocks.postBinary.mockResolvedValue({ storedPath: "/var/lib/naulite/backups/run-1.tar.gz" });
         mocks.dispatchRestoreTask.mockResolvedValue({
             backupId: "run-1",
             volumeName: "app-data",
@@ -67,10 +67,10 @@ describe("BackupRestoreService", () => {
                 status: "succeeded",
                 payload: {
                     provider: "s3",
-                    location: "s3://platform-backups/e2e/app-data-run-1.tar.gz",
+                    location: "s3://naulite-backups/e2e/app-data-run-1.tar.gz",
                     destination: {
                         provider: "s3",
-                        bucket: "platform-backups",
+                        bucket: "naulite-backups",
                         prefix: "e2e",
                         region: "us-east-1",
                         endpoint: "http://minio:9000",
@@ -88,7 +88,7 @@ describe("BackupRestoreService", () => {
                 volumeName: "app-data",
                 destination: expect.objectContaining({ provider: "s3" })
             }),
-            "s3://platform-backups/e2e/app-data-run-1.tar.gz"
+            "s3://naulite-backups/e2e/app-data-run-1.tar.gz"
         );
         expect(mocks.postBinary).toHaveBeenCalledWith(
             node.agentUrl,
@@ -99,7 +99,7 @@ describe("BackupRestoreService", () => {
         expect(mocks.dispatchRestoreTask).toHaveBeenCalledWith(node, {
             backupId: "run-1",
             volumeName: "app-data",
-            archivePath: "/var/lib/platform/backups/run-1.tar.gz",
+            archivePath: "/var/lib/naulite/backups/run-1.tar.gz",
             mountPath: undefined
         });
         expect(result).toEqual({
@@ -122,8 +122,8 @@ describe("BackupRestoreService", () => {
                 status: "succeeded",
                 payload: {
                     provider: "local",
-                    archivePath: "/var/lib/platform/backups/run-2.tar.gz",
-                    location: "/var/lib/platform/backups/data-run-2.tar.gz"
+                    archivePath: "/var/lib/naulite/backups/run-2.tar.gz",
+                    location: "/var/lib/naulite/backups/data-run-2.tar.gz"
                 }
             },
             node,
@@ -135,7 +135,7 @@ describe("BackupRestoreService", () => {
         expect(mocks.dispatchRestoreTask).toHaveBeenCalledWith(node, {
             backupId: "run-2",
             volumeName: "app-data",
-            archivePath: "/var/lib/platform/backups/run-2.tar.gz",
+            archivePath: "/var/lib/naulite/backups/run-2.tar.gz",
             mountPath: undefined
         });
     });
@@ -156,7 +156,7 @@ describe("BackupRestoreService", () => {
                         provider: "s3",
                         destination: {
                             provider: "s3",
-                            bucket: "platform-backups",
+                            bucket: "naulite-backups",
                             prefix: "e2e",
                             region: "us-east-1",
                             credentialsSecret: { secretName: "s3-creds" }
@@ -178,7 +178,7 @@ describe("BackupRestoreService", () => {
                 nodeId: "node-1",
                 destination: {
                     provider: "s3",
-                    bucket: "platform-backups",
+                    bucket: "naulite-backups",
                     prefix: "e2e",
                     region: "us-east-1",
                     credentialsSecret: { secretName: "s3-creds" }
@@ -191,7 +191,7 @@ describe("BackupRestoreService", () => {
 
         expect(task.destination).toEqual({
             provider: "s3",
-            bucket: "platform-backups",
+            bucket: "naulite-backups",
             prefix: "e2e",
             region: "us-east-1",
             credentialsSecret: { secretName: "s3-creds" }

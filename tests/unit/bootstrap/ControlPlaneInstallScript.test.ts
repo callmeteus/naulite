@@ -65,7 +65,7 @@ describeBootstrap("control-plane-install.sh", () => {
                 "9443"
             ],
             {
-                PLATFORM_ROOT: tempRoot
+                NAULITE_ROOT: tempRoot
             }
         );
 
@@ -73,16 +73,16 @@ describeBootstrap("control-plane-install.sh", () => {
         expect(result.stdout).toContain("dry-run complete");
 
         const envContents = await readFile(path.join(tempRoot, "dogfood", ".env"), "utf8");
-        expect(envContents).toContain("PLATFORM_PUBLIC_URL=https://cp.example.com");
+        expect(envContents).toContain("NAULITE_PUBLIC_URL=https://cp.example.com");
         expect(envContents).toContain("NETBIRD_PUBLIC_MANAGEMENT_URL=https://vpn.example.com");
         expect(envContents).toContain("NETBIRD_DOMAIN=vpn.example.com");
         expect(envContents).toContain("NETBIRD_HTTP_PROTOCOL=https");
         expect(envContents).toContain("NETBIRD_SERVER_PORT=9443");
-        expect(envContents).toContain("PROMETHEUS_URL=http://platform-prometheus:9090");
-        expect(envContents).toContain("PLATFORM_PROMETHEUS_FILE_SD_DIR=/var/lib/platform/prometheus/file_sd");
-        expect(envContents).toContain("PLATFORM_METRICS_SYNC_ENABLED=true");
+        expect(envContents).toContain("PROMETHEUS_URL=http://naulite-prometheus:9090");
+        expect(envContents).toContain("NAULITE_PROMETHEUS_FILE_SD_DIR=/var/lib/naulite/prometheus/file_sd");
+        expect(envContents).toContain("NAULITE_METRICS_SYNC_ENABLED=true");
         expect(envContents).toContain("POSTGRES_HA_ENABLED=true");
-        expect(envContents).toContain("DATABASE_URL=postgres://platform:platform@pgpool:5432/platform");
+        expect(envContents).toContain("DATABASE_URL=postgres://naulite:naulite@pgpool:5432/naulite");
     });
 
     it("creates .env from .env.example when missing", async () => {
@@ -97,7 +97,7 @@ describeBootstrap("control-plane-install.sh", () => {
                 "http://localhost:8080"
             ],
             {
-                PLATFORM_ROOT: tempRoot
+                NAULITE_ROOT: tempRoot
             }
         );
 
@@ -105,6 +105,6 @@ describeBootstrap("control-plane-install.sh", () => {
         expect(result.stdout).toContain("created dogfood/.env from dogfood/.env.example");
 
         const envContents = await readFile(path.join(tempRoot, "dogfood", ".env"), "utf8");
-        expect(envContents).toContain("PLATFORM_PUBLIC_URL=http://localhost:8080");
+        expect(envContents).toContain("NAULITE_PUBLIC_URL=http://localhost:8080");
     });
 });

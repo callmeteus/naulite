@@ -41,7 +41,7 @@ pub fn credentialsPath(
     environ_map: *const std.process.Environ.Map,
 ) ![]const u8 {
     const home = environ_map.get("USERPROFILE") orelse environ_map.get("HOME") orelse ".";
-    return std.fs.path.join(allocator, &.{ home, ".platform", "credentials.json" });
+    return std.fs.path.join(allocator, &.{ home, ".naulite", "credentials.json" });
 }
 
 /// Loads saved CLI credentials when the file exists.

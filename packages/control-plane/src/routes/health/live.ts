@@ -1,5 +1,5 @@
 import { defineRoute } from "../../routing/DefineRoute";
-import { HealthLiveResponseSchema } from "@platform/shared";
+import { HealthLiveResponseSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
     schema: {

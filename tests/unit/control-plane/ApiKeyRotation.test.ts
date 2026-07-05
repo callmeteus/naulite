@@ -20,7 +20,7 @@ describe("API key rotation", () => {
     });
 
     it("accepts the previous key hash during the grace period", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-api-key-rotation-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-api-key-rotation-"));
         databasePath = path.join(tempDir, "control-plane.db");
         const provider = new DatabaseProvider();
 
@@ -46,7 +46,7 @@ describe("API key rotation", () => {
     });
 
     it("returns null when rotating a missing api key", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-api-key-rotation-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-api-key-rotation-"));
         databasePath = path.join(tempDir, "control-plane.db");
         const provider = new DatabaseProvider();
 

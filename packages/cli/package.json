@@ -1,10 +1,10 @@
 {
-    "name": "@platform/cli",
+    "name": "@naulite/cli",
     "version": "0.1.0",
     "private": true,
     "type": "module",
     "bin": {
-        "platform": "./bin/platform.js"
+        "naulite": "./bin/naulite.js"
     },
     "files": [
         "bin",

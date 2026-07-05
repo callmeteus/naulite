@@ -2,8 +2,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { BackupOrchestrator } from "@platform/control-plane";
-import type { BackupTask } from "@platform/shared";
+import { BackupOrchestrator } from "@naulite/control-plane";
+import type { BackupTask } from "@naulite/shared";
 import { afterEach, describe, expect, it } from "vitest";
 
 describe("BackupOrchestrator", () => {
@@ -17,7 +17,7 @@ describe("BackupOrchestrator", () => {
     });
 
     it("writes a backup archive through the built-in local provider", async () => {
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-backup-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-backup-"));
         const archivePath = path.join(tempDir, "source.tar.gz");
         const destinationDir = path.join(tempDir, "backups");
         await writeFile(archivePath, "backup-payload");
@@ -45,7 +45,7 @@ describe("BackupOrchestrator", () => {
     });
 
     it("throws when the destination provider is not registered", async () => {
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-backup-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-backup-"));
         const archivePath = path.join(tempDir, "source.tar.gz");
         await writeFile(archivePath, "backup-payload");
 

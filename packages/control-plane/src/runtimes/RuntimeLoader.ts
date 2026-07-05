@@ -1,6 +1,6 @@
-import { createContainerdRuntimeProvider } from "@platform/runtime-containerd";
-import { createDockerRuntimeProvider } from "@platform/runtime-docker";
-import { createPodmanRuntimeProvider } from "@platform/runtime-podman";
+import { createContainerdRuntimeProvider } from "@naulite/runtime-containerd";
+import { createDockerRuntimeProvider } from "@naulite/runtime-docker";
+import { createPodmanRuntimeProvider } from "@naulite/runtime-podman";
 
 import { RuntimeRegistry } from "./RuntimeRegistry";
 

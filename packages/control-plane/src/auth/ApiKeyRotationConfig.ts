@@ -8,14 +8,14 @@ export namespace ApiKeyRotationConfig {
      * @returns Whether API key rotation is enabled
      */
     export function isEnabled(): boolean {
-        return process.env.PLATFORM_API_KEY_ROTATION_ENABLED === "true";
+        return process.env.NAULITE_API_KEY_ROTATION_ENABLED === "true";
     }
 
     /**
      * @returns Grace period in seconds for the previous key hash
      */
     export function gracePeriodSeconds(): number {
-        const configured = Number(process.env.PLATFORM_API_KEY_ROTATION_GRACE_SECONDS ?? DEFAULT_GRACE_SECONDS);
+        const configured = Number(process.env.NAULITE_API_KEY_ROTATION_GRACE_SECONDS ?? DEFAULT_GRACE_SECONDS);
 
         if (!Number.isFinite(configured) || configured <= 0) {
             return DEFAULT_GRACE_SECONDS;

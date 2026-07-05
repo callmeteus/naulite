@@ -1,13 +1,13 @@
-# Platform UI
+# Naulite UI
 
-Web dashboard for Platform. Split into a Vue frontend and a Fastify admin API (BFF).
+Web dashboard for Naulite. Split into a Vue frontend and a Fastify admin API (BFF).
 
 ## Packages
 
 | Package | Path | Role |
 |---------|------|------|
-| `@platform/ui-frontend` | `packages/frontend` | Vue 3 SPA served by nginx |
-| `@platform/ui-backend` | `packages/backend` | Admin API; calls control plane with service credentials |
+| `@naulite/ui-frontend` | `packages/frontend` | Vue 3 SPA served by nginx |
+| `@naulite/ui-backend` | `packages/backend` | Admin API; calls control plane with service credentials |
 
 The browser talks only to `/api` on the UI host. nginx proxies that to `ui-backend`, which calls the control plane over the Docker network with `ADMIN_API_KEY`.
 
@@ -15,13 +15,13 @@ The browser talks only to `/api` on the UI host. nginx proxies that to `ui-backe
 
 ```bash
 # Terminal 1 - control plane
-yarn workspace @platform/control-plane start
+yarn workspace @naulite/control-plane start
 
 # Terminal 2 - admin API
-yarn workspace @platform/ui-backend dev
+yarn workspace @naulite/ui-backend dev
 
 # Terminal 3 - frontend
-yarn workspace @platform/ui-frontend dev
+yarn workspace @naulite/ui-frontend dev
 ```
 
 Vite proxies `/api` to `http://localhost:3001` (admin API). Local dev against a loopback control plane does not require `ADMIN_API_KEY`.

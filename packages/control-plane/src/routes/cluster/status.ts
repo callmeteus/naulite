@@ -1,10 +1,10 @@
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
-import { LooseObjectSchema } from "@platform/shared";
+import { LooseObjectSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("metrics:read"),
     schema: {
         summary: "Get cluster status",
         description: "Returns a consolidated view of cluster health, leader, and inventory.",

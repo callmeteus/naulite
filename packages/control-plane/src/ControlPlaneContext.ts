@@ -1,11 +1,11 @@
-import { createDockerBuilderProvider } from "@platform/builder-docker";
-import { createKanikoBuilderProvider } from "@platform/builder-kaniko";
-import { PluginRegistry } from "@platform/shared";
+import { createDockerBuilderProvider } from "@naulite/builder-docker";
+import { createKanikoBuilderProvider } from "@naulite/builder-kaniko";
+import { PluginRegistry } from "@naulite/shared";
 import {
     createTraefikNetBirdGatewayProvider,
     type TraefikNetBirdGatewayProvider
-} from "@platform/gateway";
-import type { BuilderProvider } from "@platform/shared";
+} from "@naulite/gateway";
+import type { BuilderProvider } from "@naulite/shared";
 
 import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import type { DatabaseProvider } from "./database/DatabaseProvider";
@@ -107,7 +107,7 @@ export function createControlPlaneContext(
         store,
         netBirdEnrollment,
         nodeProvisionerRegistry,
-        () => process.env.PLATFORM_PUBLIC_URL?.replace(/\/+$/, "") ?? "http://localhost:8080"
+        () => process.env.NAULITE_PUBLIC_URL?.replace(/\/+$/, "") ?? "http://localhost:8080"
     );
     const builderProviders = createBuilderProviders();
     const backupOrchestrator = createBackupOrchestrator();

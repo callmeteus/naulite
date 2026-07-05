@@ -1,5 +1,5 @@
 import { Planner } from "../../../packages/control-plane/src/orchestration/Planner";
-import type { Manifest, Service } from "@platform/shared";
+import type { Manifest, Service } from "@naulite/shared";
 import { describe, expect, it } from "vitest";
 
 function buildManifest(overrides: Partial<Manifest> = {}): Manifest {
@@ -199,7 +199,7 @@ describe("Planner phase 1.1", () => {
                 name: "data",
                 manifestName: "minimal",
                 scope: "cluster",
-                mountPath: "/var/lib/platform/minimal/data",
+                mountPath: "/var/lib/naulite/minimal/data",
                 status: "ready",
                 createdAt: now,
                 updatedAt: now
@@ -237,7 +237,7 @@ describe("Planner phase 1.1", () => {
                 name: "data",
                 manifestName: "minimal",
                 scope: "cluster",
-                mountPath: "/var/lib/platform/minimal/data",
+                mountPath: "/var/lib/naulite/minimal/data",
                 status: "bound",
                 createdAt: now,
                 updatedAt: now

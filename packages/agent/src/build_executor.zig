@@ -275,7 +275,7 @@ fn pushImageToRegistry(
     api_key: ?[]const u8,
 ) !void {
     const io = blocking_io.io();
-    const archive_path = try std.fmt.allocPrint(allocator, "/tmp/platform-build-{s}-{s}.tar", .{ cr_name, cr_tag });
+    const archive_path = try std.fmt.allocPrint(allocator, "/tmp/naulite-build-{s}-{s}.tar", .{ cr_name, cr_tag });
     defer allocator.free(archive_path);
 
     if (std.Io.Dir.cwd().access(io, archive_path, .{})) |_| {
@@ -305,7 +305,7 @@ fn resolveContextPath(
     // The name of the service.
     service_name: []const u8,
 ) ![]u8 {
-    const synced_path = try std.fmt.allocPrint(allocator, "/var/lib/platform/builds/{s}", .{service_name});
+    const synced_path = try std.fmt.allocPrint(allocator, "/var/lib/naulite/builds/{s}", .{service_name});
     errdefer allocator.free(synced_path);
 
     // Prefer synced build context when the control plane already pushed an archive.
@@ -455,7 +455,7 @@ test "resolveImageRef defaults to platform tag" {
     const image_ref = try resolveImageRef(allocator, object, "api");
     defer allocator.free(image_ref);
 
-    try std.testing.expectEqualStrings("platform/api:latest", image_ref);
+    try std.testing.expectEqualStrings("naulite/api:latest", image_ref);
 }
 
 test "resolveContextPath defaults to service build directory" {
@@ -466,5 +466,5 @@ test "resolveContextPath defaults to service build directory" {
     const context_path = try resolveContextPath(allocator, object, "api");
     defer allocator.free(context_path);
 
-    try std.testing.expectEqualStrings("/var/lib/platform/builds/api", context_path);
+    try std.testing.expectEqualStrings("/var/lib/naulite/builds/api", context_path);
 }

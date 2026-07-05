@@ -1,5 +1,5 @@
 {
-    "name": "@platform/plugin-aws-node-provisioner",
+    "name": "@naulite/plugin-aws-node-provisioner",
     "version": "0.1.0",
     "private": true,
     "main": "./dist/index.js",
@@ -10,7 +10,7 @@
     },
     "dependencies": {
         "@aws-sdk/client-ec2": "^3.726.1",
-        "@platform/shared": "0.1.0"
+        "@naulite/shared": "0.1.0"
     },
     "devDependencies": {
         "@types/node": "^22.10.5",

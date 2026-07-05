@@ -23,7 +23,7 @@ describe("PipelineRunService", () => {
      * @returns Nothing.
      */
     async function connectDatabase(): Promise<void> {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-pipeline-runs-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-pipeline-runs-"));
         storagePath = path.join(tempDir, "control-plane.db");
         databaseProvider = new DatabaseProvider();
         await databaseProvider.connect({ dialect: "sqlite", url: `sqlite://${storagePath}` });
@@ -36,7 +36,7 @@ describe("PipelineRunService", () => {
         const run = await PipelineRunService.createRun({
             kind: "ci_build",
             serviceName: "api",
-            imageRef: "platform/api:latest"
+            imageRef: "naulite/api:latest"
         });
 
         expect(run.id).toBeTruthy();

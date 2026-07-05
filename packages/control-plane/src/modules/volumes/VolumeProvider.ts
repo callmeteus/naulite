@@ -1,4 +1,4 @@
-import type { ProvisionVolumeOptions, Volume } from "@platform/shared";
+import type { ProvisionVolumeOptions, Volume } from "@naulite/shared";
 
 /**
  * Abstract volume provider contract for local and plugin storage backends.

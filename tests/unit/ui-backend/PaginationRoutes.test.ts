@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PlatformClient } from "../../../packages/sdk/src/PlatformClient";
+import { NauliteClient } from "../../../packages/sdk/src/NauliteClient";
 import { createApp } from "../../../packages/ui/packages/backend/src/App";
 
 describe("ui-backend pagination routes", () => {
@@ -18,7 +18,7 @@ describe("ui-backend pagination routes", () => {
                 limit: 20,
                 hasMore: false
             }))
-        } as unknown as PlatformClient;
+        } as unknown as NauliteClient;
 
         const app = await createApp({
             adminApiKey: "secret-key",
@@ -69,7 +69,7 @@ describe("ui-backend pagination routes", () => {
                 createdAt: "2026-07-02T00:00:00.000Z",
                 updatedAt: "2026-07-02T00:00:00.000Z"
             }))
-        } as unknown as PlatformClient;
+        } as unknown as NauliteClient;
 
         const app = await createApp({
             adminApiKey: "secret-key",

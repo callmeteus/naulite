@@ -2,13 +2,13 @@ import {
     ContainerRegistryImageSchema,
     PaginatedListSchema,
     PaginationQuerySchema
-} from "@platform/shared";
+} from "@naulite/shared";
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
     schema: {
         summary: "List container registry images",
         description: "Lists docker save tarballs stored in the platform container registry.",

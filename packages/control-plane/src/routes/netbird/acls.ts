@@ -1,10 +1,10 @@
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
-import { NetBirdAclsListResponseSchema } from "@platform/shared";
+import { NetBirdAclsListResponseSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("netbird:read"),
     schema: {
         summary: "List NetBird ACLs",
         description: "Lists access rules from self-hosted NetBird.",

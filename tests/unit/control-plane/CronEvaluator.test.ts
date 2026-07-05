@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CronEvaluator } from "@platform/control-plane";
+import { CronEvaluator } from "@naulite/control-plane";
 
 describe("CronEvaluator", () => {
     it("matches exact minute and hour schedules", () => {

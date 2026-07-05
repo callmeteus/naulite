@@ -1,6 +1,6 @@
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
-import { HealthReadyResponseSchema } from "@platform/shared";
+import { HealthReadyResponseSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
     schema: {

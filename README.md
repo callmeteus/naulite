@@ -56,8 +56,8 @@ yarn test:e2e
 Point the CLI or UI at a control plane:
 
 ```bash
-export PLATFORM_CP_URL=http://localhost:8080
-yarn workspace @platform/cli build:all
+export NAULITE_CP_URL=http://localhost:8080
+yarn workspace @naulite/cli build:all
 platform cluster status get
 ```
 

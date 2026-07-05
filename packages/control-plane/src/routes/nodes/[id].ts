@@ -2,14 +2,14 @@ import {
     IdParamsSchema,
     NodeSchema,
     RouteMessageResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:read"),
     schema: {
         summary: "Get node",
         description: "Returns node details by identifier.",

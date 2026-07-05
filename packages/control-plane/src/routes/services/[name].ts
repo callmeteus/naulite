@@ -1,14 +1,14 @@
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 import {
     DeletedByNameResponseSchema,
     NameParamsSchema,
     RouteErrorResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const DELETE = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:write"),
     schema: {
         summary: "Delete service",
         description: "Deletes a cluster service by name.",

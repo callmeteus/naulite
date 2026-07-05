@@ -6,12 +6,12 @@ const NOTIFICATION_PROVIDER_ENV: Record<string, {
     secretVars: string[];
 }> = {
     slack: {
-        urlVars: ["PLATFORM_SLACK_WEBHOOK_URL", "SLACK_WEBHOOK_URL"],
+        urlVars: ["NAULITE_SLACK_WEBHOOK_URL", "SLACK_WEBHOOK_URL"],
         secretVars: []
     },
     webhook: {
-        urlVars: ["PLATFORM_WEBHOOK_URL", "WEBHOOK_URL"],
-        secretVars: ["PLATFORM_WEBHOOK_SECRET"]
+        urlVars: ["NAULITE_WEBHOOK_URL", "WEBHOOK_URL"],
+        secretVars: ["NAULITE_WEBHOOK_SECRET"]
     }
 };
 

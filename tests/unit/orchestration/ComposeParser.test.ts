@@ -6,7 +6,7 @@ import {
     InvalidManifestDocumentError,
     ManifestValidationError,
     YamlParseError
-} from "@platform/control-plane";
+} from "@naulite/control-plane";
 import { describe, expect, it } from "vitest";
 
 const fixturePath = path.resolve(

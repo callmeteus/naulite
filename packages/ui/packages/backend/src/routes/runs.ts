@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { z } from "zod";
 
-import { PipelineRunKindSchema, PipelineRunListQuerySchema, PipelineRunStatusSchema } from "@platform/shared";
+import { PipelineRunKindSchema, PipelineRunListQuerySchema, PipelineRunStatusSchema } from "@naulite/shared";
 
 import { controlPlaneForRequest } from "../util/controlPlaneForRequest";
 import { paginateArray } from "../util/paginateArray";

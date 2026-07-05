@@ -14,7 +14,7 @@ $PlatformRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
 function Write-Log {
     param([string]$Message)
-    Write-Host "[platform-control-plane] $Message"
+    Write-Host "[naulite-control-plane] $Message"
 }
 
 function Set-EnvVar {
@@ -126,7 +126,7 @@ function Ensure-AdminKey {
 
 $HostUrl = $HostUrl.TrimEnd("/")
 Ensure-Docker
-Set-EnvVar -Key "PLATFORM_PUBLIC_URL" -Value $HostUrl
+Set-EnvVar -Key "NAULITE_PUBLIC_URL" -Value $HostUrl
 Set-EnvVar -Key "NETBIRD_DOMAIN" -Value $NetbirdDomain
 Set-EnvVar -Key "NETBIRD_HTTP_PROTOCOL" -Value $NetbirdHttpProtocol
 Set-EnvVar -Key "NETBIRD_SERVER_PORT" -Value "$NetbirdServerPort"

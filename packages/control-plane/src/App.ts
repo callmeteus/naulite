@@ -26,7 +26,7 @@ export interface CreateAppOptions {
  */
 export async function createApp(options: CreateAppOptions = {}): Promise<FastifyInstance> {
     const databaseProvider = options.databaseProvider ?? new DatabaseProvider();
-    const packagesDir = options.packagesDir ?? process.env.PLATFORM_PACKAGES_DIR ?? "./packages";
+    const packagesDir = options.packagesDir ?? process.env.NAULITE_PACKAGES_DIR ?? "./packages";
     const context = options.context ?? createControlPlaneContext(databaseProvider, packagesDir);
     const app = Fastify({
         logger: options.logger ?? true

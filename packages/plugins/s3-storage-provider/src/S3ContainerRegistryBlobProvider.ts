@@ -1,7 +1,7 @@
 import type { Readable } from "node:stream";
 
-import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, S3ContainerRegistryDestination } from "@platform/shared";
-import { ContainerRegistryBlobProvider } from "@platform/control-plane";
+import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, S3ContainerRegistryDestination } from "@naulite/shared";
+import { ContainerRegistryBlobProvider } from "@naulite/control-plane";
 
 import { S3ObjectStore, type S3ObjectStoreOptions } from "./S3ObjectStore";
 

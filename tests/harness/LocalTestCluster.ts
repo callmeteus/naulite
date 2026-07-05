@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import https from "node:https";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -26,7 +27,7 @@ export class LocalTestCluster {
         "tests/fixtures/docker-compose.test-cluster.yml"
     );
 
-    private static readonly projectName = "platform-test-cluster";
+    private static readonly projectName = "naulite-test-cluster";
 
     private static readonly controlPlanePorts: Record<string, number> = {
         "cp-1": 18_080,
@@ -49,8 +50,8 @@ export class LocalTestCluster {
         const useMock = this.usesTraefikMock();
         const traefikProfile = useMock ? "mock" : "real";
         const traefikDynamicConfigUrl = useMock
-            ? "http://traefik-mock:8099/platform/dynamic-config"
-            : "http://traefik-dynamic-config:8099/platform/dynamic-config";
+            ? "http://traefik-mock:8099/naulite/dynamic-config"
+            : "http://traefik-dynamic-config:8099/naulite/dynamic-config";
 
         await execFileAsync(
             "docker",
@@ -276,7 +277,7 @@ export class LocalTestCluster {
      * @returns Control plane URL
      */
     static getControlPlaneUrl(): string {
-        return process.env.PLATFORM_CP_URL ?? "http://localhost:18080";
+        return process.env.NAULITE_CP_URL ?? "http://localhost:18080";
     }
 
     /**
@@ -295,6 +296,103 @@ export class LocalTestCluster {
      */
     static getTraefikHttpUrl(): string {
         return process.env.TRAEFIK_HTTP_URL ?? "http://127.0.0.1:19080";
+    }
+
+    /**
+     * Returns the host-mapped Traefik HTTPS entrypoint URL for TLS ingress e2e checks.
+     *
+     * @returns Traefik websecure entrypoint URL
+     */
+    static getTraefikHttpsUrl(): string {
+        return process.env.TRAEFIK_HTTPS_URL ?? "https://127.0.0.1:19443";
+    }
+
+    /**
+     * Performs an HTTPS request against Traefik ignoring self-signed certificate errors.
+     *
+     * @param requestPath Request path on the Traefik HTTPS entrypoint
+     * @param host Host header value
+     * @returns Minimal HTTP response wrapper
+     */
+    static fetchTraefikHttps(
+        requestPath: string,
+        host: string
+    ): Promise<{ ok: boolean; status: number; text: () => Promise<string> }> {
+        const url = new URL(`${this.getTraefikHttpsUrl()}${requestPath}`);
+
+        return new Promise((resolve, reject) => {
+            const request = https.request({
+                hostname: url.hostname,
+                port: url.port || 443,
+                path: `${url.pathname}${url.search}`,
+                method: "GET",
+                headers: {
+                    Host: host
+                },
+                rejectUnauthorized: false
+            }, (response) => {
+                const chunks: Buffer[] = [];
+                response.on("data", (chunk) => {
+                    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+                });
+                response.on("end", () => {
+                    const body = Buffer.concat(chunks).toString("utf8");
+                    const status = response.statusCode ?? 500;
+                    resolve({
+                        ok: status >= 200 && status < 300,
+                        status,
+                        text: async () => body
+                    });
+                });
+            });
+
+            request.on("error", reject);
+            request.end();
+        });
+    }
+
+    /**
+     * Waits until the public ingress route serves HTTPS through Traefik.
+     *
+     * @param host Ingress host header value
+     * @param timeoutMs Maximum wait time in milliseconds
+     * @returns Nothing.
+     */
+    static async waitForTraefikIngressTls(host: string, timeoutMs = 120_000): Promise<void> {
+        const traefikUrl = this.getTraefikHttpsUrl();
+        const controlPlaneUrl = this.getControlPlaneUrl();
+        const startedAt = Date.now();
+
+        while (Date.now() - startedAt < timeoutMs) {
+            try {
+                const instancesResponse = await fetch(`${controlPlaneUrl}/instances`);
+                if (instancesResponse.ok) {
+                    const instances = await instancesResponse.json() as Array<{
+                        serviceName: string;
+                        status: string;
+                    }>;
+                    const running = instances.some((instance) => {
+                        return instance.serviceName === "web" && instance.status === "running";
+                    });
+
+                    if (running) {
+                        const ingressResponse = await this.fetchTraefikHttps("/", host);
+
+                        if (ingressResponse.ok) {
+                            return;
+                        }
+                    }
+                }
+            } catch {
+                // Retry until timeout.
+            }
+
+            await new Promise((resolve) => {
+                setTimeout(resolve, 2_000);
+            });
+        }
+
+        throw new Error(`TLS ingress for host ${host} did not become reachable through Traefik at ${traefikUrl}`);
     }
 
     /**

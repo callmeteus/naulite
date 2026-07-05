@@ -11,10 +11,10 @@ Container images are published to GitHub Container Registry (GHCR) by the Releas
 
 | Image | Dockerfile |
 |-------|------------|
-| `ghcr.io/<owner>/platform-agent` | `packages/agent/Dockerfile` |
-| `ghcr.io/<owner>/platform-control-plane` | `packages/control-plane/Dockerfile` |
-| `ghcr.io/<owner>/platform-ui` | `packages/ui/Dockerfile` |
-| `ghcr.io/<owner>/platform-ui-backend` | `packages/ui/packages/backend/Dockerfile` |
+| `ghcr.io/<owner>/naulite-agent` | `packages/agent/Dockerfile` |
+| `ghcr.io/<owner>/naulite-control-plane` | `packages/control-plane/Dockerfile` |
+| `ghcr.io/<owner>/naulite-ui` | `packages/ui/Dockerfile` |
+| `ghcr.io/<owner>/naulite-ui-backend` | `packages/ui/packages/backend/Dockerfile` |
 
 Replace `<owner>` with the GitHub organization or user that owns the repository.
 
@@ -53,4 +53,16 @@ Before changing a pinned tag:
 3. Update the compose/manifest and this table in the same PR.
 4. Note the registry URL used for verification in the PR description.
 
-Platform images published to GHCR use semver from git tags or commit SHA (see above). CI runs Trivy on built Platform images (`platform-agent`, `platform-control-plane`, `platform-ui`, `platform-ui-backend`) and fails on **CRITICAL** vulnerabilities (`.github/workflows/ci.yml`, job `image-scan`).
+Naulite images published to GHCR use semver from git tags or commit SHA (see above). CI runs Trivy on built Naulite images (`naulite-agent`, `naulite-control-plane`, `naulite-ui`, `naulite-ui-backend`) and fails on **CRITICAL** vulnerabilities (`.github/workflows/ci.yml`, job `image-scan`).
+
+## SBOM artifacts
+
+The CI `image-scan` job also generates a **CycloneDX SBOM** per image (`format: cyclonedx`) and uploads it as a GitHub Actions artifact (`sbom-<image>.cyclonedx.json`, retained 90 days).
+
+Use these artifacts for:
+
+- Supply-chain audits and compliance requests
+- Correlating image tags with dependency inventories at build time
+- Feeding external scanners that accept CycloneDX JSON
+
+SBOM generation runs after the vulnerability scan on the same built image matrix row. It does not replace the CRITICAL gate - both steps must pass.

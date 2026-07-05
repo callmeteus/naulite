@@ -5,7 +5,7 @@ description: Control plane leader election and PostgreSQL HA recovery procedures
 
 # Failover
 
-Platform HA depends on two layers: **control plane leader election** (application coordination) and **PostgreSQL availability** (persistent state). Both must be healthy for mutating API calls and background schedulers to succeed.
+Naulite HA depends on two layers: **control plane leader election** (application coordination) and **PostgreSQL availability** (persistent state). Both must be healthy for mutating API calls and background schedulers to succeed.
 
 ## Control plane leader election
 
@@ -27,7 +27,7 @@ Only the elected leader runs leader-only work:
 
 ```bash
 curl -s -H "Authorization: Bearer $ADMIN_API_KEY" \
-  "$PLATFORM_CP_URL/health/ready"
+  "$NAULITE_CP_URL/health/ready"
 ```
 
 Check control plane logs for `[leader] acquired lease instanceId=...` on the active replica. Followers log sync events with `[sync] leader changed`.

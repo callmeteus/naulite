@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 
 
-import { PlatformClient } from "../../../packages/sdk/src/PlatformClient";
+import { NauliteClient } from "../../../packages/sdk/src/NauliteClient";
 
 import { createApp } from "../../../packages/ui/packages/backend/src/App";
 
@@ -18,7 +18,7 @@ import { createApp } from "../../../packages/ui/packages/backend/src/App";
 
  */
 
-function createMockControlPlane(): PlatformClient {
+function createMockControlPlane(): NauliteClient {
 
     return {
 
@@ -40,9 +40,9 @@ function createMockControlPlane(): PlatformClient {
 
             sizeBytes: 1024,
 
-            destination: { provider: "local", path: "/var/lib/platform/cr" },
+            destination: { provider: "local", path: "/var/lib/naulite/cr" },
 
-            location: "/var/lib/platform/cr/api/latest.tar",
+            location: "/var/lib/naulite/cr/api/latest.tar",
 
             pushedAt: "2026-07-02T00:00:00.000Z"
 
@@ -80,7 +80,7 @@ function createMockControlPlane(): PlatformClient {
 
         }))
 
-    } as unknown as PlatformClient;
+    } as unknown as NauliteClient;
 
 }
 
@@ -188,9 +188,9 @@ describe("ui-backend build, container registry, and provision routes", () => {
 
             sizeBytes: 1024,
 
-            destination: { provider: "local", path: "/var/lib/platform/cr" },
+            destination: { provider: "local", path: "/var/lib/naulite/cr" },
 
-            location: "/var/lib/platform/cr/api/latest.tar",
+            location: "/var/lib/naulite/cr/api/latest.tar",
 
             pushedAt: "2026-07-02T00:00:00.000Z"
 

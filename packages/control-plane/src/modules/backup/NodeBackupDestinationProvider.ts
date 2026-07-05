@@ -2,7 +2,7 @@ import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 
-import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, NodeBackupDestination } from "@platform/shared";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, NodeBackupDestination } from "@naulite/shared";
 
 import { BackupDestinationProvider } from "./BackupDestinationProvider";
 

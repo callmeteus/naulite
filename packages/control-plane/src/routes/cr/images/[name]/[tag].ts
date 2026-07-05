@@ -2,7 +2,7 @@ import type { FastifyRequest } from "fastify";
 import { Readable } from "node:stream";
 
 import { ControlPlaneService } from "../../../../ControlPlaneService";
-import { AuthPreHandlers } from "../../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
 import { HTTP400Error } from "../../../../errors/TreatedError";
 import { defineRoute } from "../../../../routing/DefineRoute";
 import {
@@ -10,10 +10,10 @@ import {
     CrImageNameTagParamsSchema,
     CrImagePushResponseSchema,
     RouteErrorResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
     schema: {
         summary: "Pull container registry image",
         description: "Proxies a docker save tarball stream for the requested image.",
@@ -44,7 +44,7 @@ export const GET = defineRoute({
 });
 
 export const HEAD = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
     schema: {
         summary: "Head container registry image",
         description: "Returns metadata headers for a stored container image blob.",
@@ -74,7 +74,7 @@ export const HEAD = defineRoute({
 });
 
 export const PUT = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("registry:write"),
     schema: {
         summary: "Push container registry image",
         description: "Proxies an upload stream and stores a docker save tarball for the requested image.",
@@ -116,7 +116,7 @@ function resolveUploadStream(req: FastifyRequest): Readable {
 }
 
 export const DELETE = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("registry:write"),
     schema: {
         summary: "Delete container registry image",
         description: "Deletes image metadata and the backing blob from the configured destination.",

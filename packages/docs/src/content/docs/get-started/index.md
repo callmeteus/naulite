@@ -1,11 +1,11 @@
 ---
 title: Get started
-description: What Platform is, who it is for, and prerequisites before you install a cluster.
+description: What Naulite is, who it is for, and prerequisites before you install a cluster.
 ---
 
 # Get started
 
-Platform is a distributed orchestration system for Compose-compatible workloads. You describe desired state in YAML manifests; the control plane validates, plans, and schedules work; agents on each node execute the resulting plans against Docker (or other registered runtimes).
+Naulite is a distributed orchestration system for Compose-compatible workloads. You describe desired state in YAML manifests; the control plane validates, plans, and schedules work; agents on each node execute the resulting plans against Docker (or other registered runtimes).
 
 ## What you get
 
@@ -16,7 +16,7 @@ Platform is a distributed orchestration system for Compose-compatible workloads.
 | **Agents** | Zig executors that run containers, builds, backups, and log rotation on nodes |
 | **CLI and dashboard** | `platform` commands and a Vue admin UI for operators |
 
-Platform is a **working alpha scaffold** for local development, integration testing, and internal dogfood. Production hardening (SLOs, full multi-tenant isolation, managed Postgres failover automation) is follow-up work beyond this wave.
+Naulite is a **working alpha scaffold** for local development, integration testing, and internal dogfood. Production hardening (SLOs, full multi-tenant isolation, managed Postgres failover automation) is follow-up work beyond this wave.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ Platform is a **working alpha scaffold** for local development, integration test
 
 - **Docker** and the **Docker Compose** plugin
 - **Linux, macOS, or Windows** with PowerShell for the Windows installers
-- A reachable **public URL** for agent enrollment (`PLATFORM_PUBLIC_URL`)
+- A reachable **public URL** for agent enrollment (`NAULITE_PUBLIC_URL`)
 - **Self-hosted NetBird** management (cloud `api.netbird.io` is rejected)
 
 ### Agent nodes
@@ -36,7 +36,7 @@ Platform is a **working alpha scaffold** for local development, integration test
 ### Operator workstation
 
 - Node.js 22+ and Yarn (for building the CLI and docs locally)
-- `platform` CLI built from `packages/cli` with `PLATFORM_CP_URL` pointing at your cluster
+- `platform` CLI built from `packages/cli` with `NAULITE_CP_URL` pointing at your cluster
 
 ## Next steps
 

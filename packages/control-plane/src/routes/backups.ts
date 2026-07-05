@@ -2,13 +2,13 @@ import {
     BackupRunSummarySchema,
     PaginatedListSchema,
     PaginationQuerySchema
-} from "@platform/shared";
+} from "@naulite/shared";
 import { ControlPlaneService } from "../ControlPlaneService";
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("backups:read"),
     schema: {
         summary: "List backup runs",
         description: "Lists backup runs recorded by the control plane.",

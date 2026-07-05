@@ -1,6 +1,6 @@
 ---
 title: Load and chaos testing
-description: Local k6 load tests and chaos scripts for Platform cluster resilience.
+description: Local k6 load tests and chaos scripts for Naulite cluster resilience.
 ---
 
 # Load and chaos testing
@@ -21,7 +21,7 @@ Example invocation once scripts exist:
 
 ```bash
 k6 run scripts/load/health.js \
-  -e PLATFORM_CP_URL=http://localhost:8080 \
+  -e NAULITE_CP_URL=http://localhost:8080 \
   -e ADMIN_API_KEY=$ADMIN_API_KEY
 ```
 

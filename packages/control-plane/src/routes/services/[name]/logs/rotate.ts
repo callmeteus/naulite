@@ -1,15 +1,15 @@
 import { AgentProxyError, AgentProxyService } from "../../../../services/AgentProxyService";
 import { ControlPlaneService } from "../../../../ControlPlaneService";
-import { AuthPreHandlers } from "../../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../../routing/DefineRoute";
 import {
     LooseObjectSchema,
     NameParamsSchema,
     RouteErrorResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:write"),
     schema: {
         summary: "Rotate service logs",
         description: "Dispatches log rotation to the agent responsible for the service.",

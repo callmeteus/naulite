@@ -4,7 +4,7 @@ import { HTTP403Error } from "../errors/TreatedError";
 import { AdminAuditService } from "../modules/admin/AdminAuditService";
 
 import { AuthPreHandlers } from "./AuthPreHandlers";
-import type { PlatformPermission } from "./PermissionCatalog";
+import type { NaulitePermission } from "./PermissionCatalog";
 import { RolePermissions } from "./RolePermissions";
 
 /**
@@ -17,7 +17,7 @@ export namespace PermissionPreHandlers {
      * @param permission Required permission
      * @returns Fastify preHandler list
      */
-    export function authorizedWithPermission(permission: PlatformPermission): preHandlerHookHandler[] {
+    export function authorizedWithPermission(permission: NaulitePermission): preHandlerHookHandler[] {
         return [
             AuthPreHandlers.authorizedLocalOrApiKey,
             requirePermission(permission)
@@ -30,7 +30,7 @@ export namespace PermissionPreHandlers {
      * @param permission Required permission
      * @returns Fastify preHandler
      */
-    export function requirePermission(permission: PlatformPermission): preHandlerHookHandler {
+    export function requirePermission(permission: NaulitePermission): preHandlerHookHandler {
         return async (request) => {
             enforcePermission(request, permission);
         };
@@ -43,7 +43,7 @@ export namespace PermissionPreHandlers {
      * @param permission Required permission
      * @returns Nothing.
      */
-    export function enforcePermission(request: FastifyRequest, permission: PlatformPermission): void {
+    export function enforcePermission(request: FastifyRequest, permission: NaulitePermission): void {
         const role = request.role;
 
         if (!role) {
@@ -65,4 +65,4 @@ export namespace PermissionPreHandlers {
     }
 }
 
-export type { PlatformPermission };
+export type { NaulitePermission };

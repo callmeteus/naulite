@@ -8,7 +8,7 @@ import {
 } from "../../../packages/control-plane/src/bootstrap/BootstrapUrls";
 
 const ENV_KEYS = [
-    "PLATFORM_PUBLIC_URL",
+    "NAULITE_PUBLIC_URL",
     "NETBIRD_PUBLIC_MANAGEMENT_URL",
     "NETBIRD_MANAGEMENT_URL"
 ] as const;
@@ -48,9 +48,9 @@ describe("bootstrapUrls", () => {
         restoreEnv();
     });
 
-    it("prefers PLATFORM_PUBLIC_URL over forwarded headers", () => {
+    it("prefers NAULITE_PUBLIC_URL over forwarded headers", () => {
         snapshotEnv();
-        process.env.PLATFORM_PUBLIC_URL = "https://cp.example.com/";
+        process.env.NAULITE_PUBLIC_URL = "https://cp.example.com/";
 
         const url = resolvePublicControlPlaneUrl({
             headers: {
@@ -65,7 +65,7 @@ describe("bootstrapUrls", () => {
 
     it("builds control plane URL from forwarded headers when env is unset", () => {
         snapshotEnv();
-        delete process.env.PLATFORM_PUBLIC_URL;
+        delete process.env.NAULITE_PUBLIC_URL;
 
         const url = resolvePublicControlPlaneUrl({
             headers: {
@@ -101,7 +101,7 @@ describe("bootstrap routes", () => {
 
     it("returns agent bootstrap bundle for a valid setup key without API auth", async () => {
         snapshotEnv();
-        process.env.PLATFORM_PUBLIC_URL = "https://cp.example.com";
+        process.env.NAULITE_PUBLIC_URL = "https://cp.example.com";
         process.env.NETBIRD_PUBLIC_MANAGEMENT_URL = "https://vpn.example.com";
 
         const context = createBootstrapTestContext();
@@ -112,7 +112,7 @@ describe("bootstrap routes", () => {
             url: "/bootstrap/agent",
             remoteAddress: "203.0.113.10",
             headers: {
-                "x-platform-setup-key": "setup-key-valid"
+                "x-naulite-setup-key": "setup-key-valid"
             }
         });
 
@@ -158,7 +158,7 @@ describe("bootstrap routes", () => {
             url: "/bootstrap/agent",
             remoteAddress: "203.0.113.10",
             headers: {
-                "x-platform-setup-key": "wrong-key"
+                "x-naulite-setup-key": "wrong-key"
             }
         });
 
@@ -183,7 +183,7 @@ describe("bootstrap routes", () => {
             url: "/bootstrap/agent",
             remoteAddress: "203.0.113.10",
             headers: {
-                "x-platform-setup-key": "setup-key-valid"
+                "x-naulite-setup-key": "setup-key-valid"
             }
         });
 

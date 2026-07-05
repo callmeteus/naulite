@@ -12,13 +12,13 @@ export namespace AdminBootstrap {
      * @returns Whether a bootstrap user was created
      */
     export async function ensureFromEnv(): Promise<boolean> {
-        const password = process.env.PLATFORM_BOOTSTRAP_ADMIN_PASSWORD?.trim();
+        const password = process.env.NAULITE_BOOTSTRAP_ADMIN_PASSWORD?.trim();
 
         if (!password) {
             return false;
         }
 
-        const username = process.env.PLATFORM_BOOTSTRAP_ADMIN_USERNAME?.trim() || DEFAULT_BOOTSTRAP_USERNAME;
+        const username = process.env.NAULITE_BOOTSTRAP_ADMIN_USERNAME?.trim() || DEFAULT_BOOTSTRAP_USERNAME;
         const created = await AdminService.createBootstrapUser({
             username,
             password,

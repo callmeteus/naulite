@@ -1,4 +1,4 @@
-import type { NodeProvisionerProvider } from "@platform/shared";
+import type { NodeProvisionerProvider } from "@naulite/shared";
 
 /**
  * Registry for node provisioner plugins discovered at runtime.

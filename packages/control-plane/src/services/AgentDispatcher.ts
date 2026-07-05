@@ -1,4 +1,4 @@
-import type { ExecutionPlan, Node } from "@platform/shared";
+import type { ExecutionPlan, Node } from "@naulite/shared";
 
 /**
  * Result of dispatching an execution plan to a node agent.

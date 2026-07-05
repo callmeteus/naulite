@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { PlatformClient } from "@platform/sdk";
+import { NauliteClient } from "@naulite/sdk";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { LocalTestCluster } from "../harness/LocalTestCluster";
@@ -13,7 +13,7 @@ const fixturePath = path.resolve(
 
 describe("gitops rollback", () => {
     let dockerEnabled = false;
-    let client: PlatformClient;
+    let client: NauliteClient;
     let controlPlaneUrl = "";
 
     beforeAll(async () => {
@@ -27,7 +27,7 @@ describe("gitops rollback", () => {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
             controlPlaneUrl = LocalTestCluster.getControlPlaneUrl();
-            client = new PlatformClient({ baseUrl: controlPlaneUrl });
+            client = new NauliteClient({ baseUrl: controlPlaneUrl });
         } catch (err) {
             LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;

@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 
-import type { BackupTask, Node, Volume } from "@platform/shared";
+import type { BackupTask, Node, Volume } from "@naulite/shared";
 
 import type { BackupOrchestrator } from "../modules/backup/BackupOrchestrator";
 import { AgentProxyService } from "./AgentProxyService";

@@ -1,6 +1,6 @@
 ---
 title: First workload
-description: Apply your first manifest to a Platform cluster with the CLI.
+description: Apply your first manifest to a Naulite cluster with the CLI.
 ---
 
 # First workload
@@ -9,8 +9,8 @@ After the [control plane and agents are installed](/get-started/install/) and [d
 
 ## Prerequisites
 
-- `PLATFORM_CP_URL` set to your control plane base URL
-- CLI built: `yarn workspace @platform/cli build:all`
+- `NAULITE_CP_URL` set to your control plane base URL
+- CLI built: `yarn workspace @naulite/cli build:all`
 - At least one agent node `online` in `platform cluster nodes get`
 
 ## Minimal apply

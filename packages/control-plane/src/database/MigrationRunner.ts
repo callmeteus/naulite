@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
-import type { DatabaseDialect, DatabaseMigrationResult } from "@platform/shared";
+import type { DatabaseDialect, DatabaseMigrationResult } from "@naulite/shared";
 import type { Sequelize } from "sequelize";
 
 import { SchemaMigrationModel } from "./models/index";
@@ -82,6 +82,28 @@ export class MigrationRunner {
         const expected = await this.listExpectedMigrationNames();
         const applied = new Set(await this.listAppliedMigrationNames());
         return expected.some((name) => !applied.has(name));
+    }
+
+    /**
+     * Waits until all expected migrations are applied without acquiring the advisory lock.
+     *
+     * @param pollMs Poll interval in milliseconds
+     * @param timeoutMs Maximum wait time in milliseconds
+     * @returns Nothing.
+     */
+    async waitUntilApplied(pollMs = 1_000, timeoutMs = 300_000): Promise<void> {
+        const startedAt = Date.now();
+
+        while (await this.hasPendingMigrations()) {
+            if (Date.now() - startedAt > timeoutMs) {
+                throw new Error("Timed out waiting for database migrations to be applied.");
+            }
+
+            console.debug("[migrations] waiting for leader to apply pending migrations dialect=%s", this.dialect);
+            await new Promise((resolve) => {
+                setTimeout(resolve, pollMs);
+            });
+        }
     }
 
     /**

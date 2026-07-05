@@ -2,8 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import type { ListPipelineRunsQuery, PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus } from "@platform/sdk";
-import { platformClient } from "../api/Client";
+import type { ListPipelineRunsQuery, PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus } from "@naulite/sdk";
+import { nauliteClient } from "../api/Client";
 import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
@@ -39,7 +39,7 @@ const {
         page,
         limit
     };
-    return platformClient.listRunsPaginated(query);
+    return nauliteClient.listRunsPaginated(query);
 }, 15);
 
 const selectedStep = computed(() => {
@@ -203,7 +203,7 @@ async function startLiveUpdates(runId: string): Promise<void> {
     streamActive.value = true;
 
     try {
-        for await (const event of platformClient.streamRunEvents(runId)) {
+        for await (const event of nauliteClient.streamRunEvents(runId)) {
             if (streamAbort) {
                 break;
             }

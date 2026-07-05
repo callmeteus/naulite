@@ -22,7 +22,7 @@ describe("pagination list endpoints", () => {
      * @returns Nothing.
      */
     async function connectDatabase(): Promise<void> {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-pagination-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-pagination-"));
         databaseProvider = new DatabaseProvider();
         await databaseProvider.connect({
             dialect: "sqlite",

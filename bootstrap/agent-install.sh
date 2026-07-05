@@ -2,15 +2,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLATFORM_ROOT="${PLATFORM_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
+NAULITE_ROOT="${NAULITE_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 
 AGENT_VERSION="${AGENT_VERSION:-zig-0.1.0}"
 NETBIRD_VERSION="${NETBIRD_VERSION:-0.35.2}"
-INSTALL_DIR="${INSTALL_DIR:-/opt/platform-agent}"
-BIN_PATH="${INSTALL_DIR}/bin/platform-agent"
-SERVICE_NAME="${SERVICE_NAME:-platform-agent}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/naulite-agent}"
+BIN_PATH="${INSTALL_DIR}/bin/naulite-agent"
+SERVICE_NAME="${SERVICE_NAME:-naulite-agent}"
 AGENT_PORT="${AGENT_PORT:-9470}"
-CONFIG_PATH="${CONFIG_PATH:-/var/lib/platform/agent.json}"
+CONFIG_PATH="${CONFIG_PATH:-/var/lib/naulite/agent.json}"
 
 CP_HOST=""
 SETUP_KEY=""
@@ -23,7 +23,7 @@ DRY_RUN=0
 INSTALL_NETBIRD=0
 
 log() {
-    printf '[platform-agent] %s\n' "$*"
+    printf '[naulite-agent] %s\n' "$*"
 }
 
 usage() {
@@ -38,8 +38,8 @@ Options:
   --management-url <url>           Alias for --netbird-management-url
   --url <url>                      Alias for --netbird-management-url
   --agent-port <port>              Agent HTTP listen port (default: 9470)
-  --install-dir <path>             Install directory (default: /opt/platform-agent)
-  --config-path <path>             Agent JSON config path (default: /var/lib/platform/agent.json)
+  --install-dir <path>             Install directory (default: /opt/naulite-agent)
+  --config-path <path>             Agent JSON config path (default: /var/lib/naulite/agent.json)
   --install-netbird                Install pinned NetBird CLI on Linux (default version: 0.35.2)
   --dry-run                        Validate input, fetch bootstrap data, write config only
   -h, --help                       Show this help
@@ -74,7 +74,7 @@ parse_args() {
                 ;;
             --install-dir)
                 INSTALL_DIR="${2:-}"
-                BIN_PATH="${INSTALL_DIR}/bin/platform-agent"
+                BIN_PATH="${INSTALL_DIR}/bin/naulite-agent"
                 shift 2
                 ;;
             --config-path)
@@ -102,14 +102,14 @@ parse_args() {
     done
 
     if [[ -z "${CP_HOST}" || -z "${SETUP_KEY}" ]]; then
-        CP_HOST="${CP_HOST:-${PLATFORM_CP_URL:-}}"
-        SETUP_KEY="${SETUP_KEY:-${PLATFORM_SETUP_KEY:-}}"
+        CP_HOST="${CP_HOST:-${NAULITE_CP_URL:-}}"
+        SETUP_KEY="${SETUP_KEY:-${NAULITE_SETUP_KEY:-}}"
     fi
 
-    PROVISION_ID="${PROVISION_ID:-${PLATFORM_PROVISION_ID:-}}"
-    NODE_ID="${NODE_ID:-${PLATFORM_NODE_ID:-}}"
-    LABELS_JSON="${LABELS_JSON:-${PLATFORM_LABELS:-}}"
-    CAPABILITIES_JSON="${CAPABILITIES_JSON:-${PLATFORM_CAPABILITIES:-}}"
+    PROVISION_ID="${PROVISION_ID:-${NAULITE_PROVISION_ID:-}}"
+    NODE_ID="${NODE_ID:-${NAULITE_NODE_ID:-}}"
+    LABELS_JSON="${LABELS_JSON:-${NAULITE_LABELS:-}}"
+    CAPABILITIES_JSON="${CAPABILITIES_JSON:-${NAULITE_CAPABILITIES:-}}"
 
     if [[ -z "${CP_HOST}" || -z "${SETUP_KEY}" ]]; then
         log "--host and --setup-key are required"
@@ -150,11 +150,11 @@ fetch_bootstrap_bundle() {
     log "fetching bootstrap settings from ${CP_HOST}/bootstrap/agent"
     local curl_args=(
         -sf
-        -H "X-Platform-Setup-Key: ${SETUP_KEY}"
+        -H "X-Naulite-Setup-Key: ${SETUP_KEY}"
     )
 
     if [[ -n "${PROVISION_ID}" ]]; then
-        curl_args+=(-H "X-Platform-Provision-Id: ${PROVISION_ID}")
+        curl_args+=(-H "X-Naulite-Provision-Id: ${PROVISION_ID}")
     fi
 
     response="$(curl "${curl_args[@]}" "${CP_HOST}/bootstrap/agent")"
@@ -283,11 +283,11 @@ install_binary() {
 
     mkdir -p "${INSTALL_DIR}/bin"
 
-    if command -v zig >/dev/null 2>&1 && [[ -f "${PLATFORM_ROOT}/packages/agent/build.zig" ]]; then
+    if command -v zig >/dev/null 2>&1 && [[ -f "${NAULITE_ROOT}/packages/agent/build.zig" ]]; then
         log "building agent from source with zig"
-        pushd "${PLATFORM_ROOT}/packages/agent" >/dev/null
+        pushd "${NAULITE_ROOT}/packages/agent" >/dev/null
         zig build -Doptimize=ReleaseSafe
-        install -m 0755 zig-out/bin/platform-agent "${BIN_PATH}"
+        install -m 0755 zig-out/bin/naulite-agent "${BIN_PATH}"
         popd >/dev/null
     else
         log "zig not found; place a prebuilt binary at ${BIN_PATH}"
@@ -301,14 +301,14 @@ install_binary() {
 install_systemd_unit() {
     cat >/etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
-Description=Platform Agent
+Description=Naulite Agent
 After=network-online.target docker.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 ExecStart=${BIN_PATH}
-Environment=PLATFORM_AGENT_CONFIG=${CONFIG_PATH}
+Environment=NAULITE_AGENT_CONFIG=${CONFIG_PATH}
 Restart=on-failure
 RestartSec=5
 
@@ -327,7 +327,7 @@ main() {
     if [[ "${DRY_RUN}" -eq 1 ]]; then
         local os
         os="$(detect_os)"
-        log "dry-run installing platform-agent ${AGENT_VERSION}"
+        log "dry-run installing naulite-agent ${AGENT_VERSION}"
         fetch_bootstrap_bundle
         write_agent_config "${os}"
         install_netbird
@@ -340,7 +340,7 @@ main() {
     local os
     os="$(detect_os)"
 
-    log "installing platform-agent ${AGENT_VERSION}"
+    log "installing naulite-agent ${AGENT_VERSION}"
     fetch_bootstrap_bundle
     write_agent_config "${os}"
     install_netbird
@@ -354,7 +354,7 @@ main() {
         install_systemd_unit
         log "service ${SERVICE_NAME} started; config=${CONFIG_PATH}"
     else
-        log "systemd not found; run manually: PLATFORM_AGENT_CONFIG=${CONFIG_PATH} ${BIN_PATH}"
+        log "systemd not found; run manually: NAULITE_AGENT_CONFIG=${CONFIG_PATH} ${BIN_PATH}"
     fi
 }
 

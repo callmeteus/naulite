@@ -9,7 +9,7 @@ import {
     type Manifest,
     type ManifestService,
     type Node
-} from "@platform/shared";
+} from "@naulite/shared";
 
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 
@@ -451,8 +451,8 @@ export namespace BuildService {
                 crRef: buildConfig.crRef,
                 provider: providerId,
                 registry: options.registry,
-                cpUrl: process.env.PLATFORM_PUBLIC_URL?.replace(/\/+$/, "") ?? "http://localhost:8080",
-                apiKey: process.env.PLATFORM_AGENT_API_KEY?.trim()
+                cpUrl: process.env.NAULITE_PUBLIC_URL?.replace(/\/+$/, "") ?? "http://localhost:8080",
+                apiKey: process.env.NAULITE_AGENT_API_KEY?.trim()
             }) as {
                 taskId?: string;
                 status?: string;

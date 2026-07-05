@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PluginRegistry } from "@platform/shared";
+import { PluginRegistry } from "@naulite/shared";
 
 import { BackupOrchestrator } from "../../../packages/control-plane/src/modules/backup/BackupOrchestrator";
 import type { ControlPlaneContext } from "../../../packages/control-plane/src/ControlPlaneContext";

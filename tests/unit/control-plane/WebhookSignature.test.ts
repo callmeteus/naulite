@@ -70,7 +70,7 @@ describe("WebhookSignature", () => {
             secret,
             rawBody,
             headers: {
-                "x-platform-signature": digest
+                "x-naulite-signature": digest
             }
         });
 
@@ -83,7 +83,7 @@ describe("WebhookSignature", () => {
             secret: "   ",
             rawBody,
             headers: {
-                "x-platform-signature": "abc"
+                "x-naulite-signature": "abc"
             }
         });
 

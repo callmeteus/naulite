@@ -33,7 +33,7 @@ control-plane-2 ──┼──> pgpool ──> postgres-primary
 Configure every control plane replica with the same URL:
 
 ```bash
-DATABASE_URL=postgres://platform:<password>@pgpool:5432/platform
+DATABASE_URL=postgres://naulite:<password>@pgpool:5432/naulite
 ```
 
 Why pgpool:

@@ -1,14 +1,14 @@
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 import {
     EnsureNetBirdGroupBodySchema,
     NetBirdGroupResponseSchema,
     NetBirdGroupsListResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("netbird:read"),
     schema: {
         summary: "List NetBird groups",
         description: "Lists groups managed by self-hosted NetBird.",
@@ -26,7 +26,7 @@ export const GET = defineRoute({
 });
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("netbird:write"),
     schema: {
         summary: "Ensure NetBird group",
         description: "Creates or returns an internal NetBird group by name.",

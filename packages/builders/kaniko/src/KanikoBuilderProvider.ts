@@ -3,7 +3,7 @@ import type {
     BuilderProvider,
     DockerBuildOptions,
     KanikoBuildOptions
-} from "@platform/shared";
+} from "@naulite/shared";
 
 /**
  * Kaniko builder provider with stubbed build execution.
@@ -17,7 +17,7 @@ export class KanikoBuilderProvider implements BuilderProvider {
      */
     async buildWithDocker(options: DockerBuildOptions): Promise<BuildResult> {
         void options;
-        throw new Error("Docker engine builds are not supported by @platform/builder-kaniko");
+        throw new Error("Docker engine builds are not supported by @naulite/builder-kaniko");
     }
 
     /**

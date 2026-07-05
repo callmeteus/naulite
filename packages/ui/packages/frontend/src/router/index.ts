@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import type { NaulitePermission } from "@naulite/sdk";
 
 import AdminUsersView from "../views/AdminUsersView.vue";
 import ApiKeysView from "../views/ApiKeysView.vue";
@@ -30,25 +31,25 @@ const router = createRouter({
     routes: [
         { path: "/login", component: LoginView, meta: { public: true } },
         { path: "/", redirect: "/nodes" },
-        { path: "/nodes", component: NodesView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/services", component: ServicesView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/instances", component: InstancesView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/volumes", component: VolumesView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/secrets", component: SecretsView, meta: { roles: ["admin"] } },
-        { path: "/cluster", component: ClusterView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/metrics", component: MetricsView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/gitops", component: GitOpsView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/deploy", component: DeployView, meta: { roles: ["operator", "admin"] } },
-        { path: "/build", component: BuildView, meta: { roles: ["operator", "admin"] } },
-        { path: "/provision", component: ProvisionView, meta: { roles: ["operator", "admin"] } },
-        { path: "/runs", component: RunsView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/gateway-routes", component: GatewayRoutesView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/container-registry", component: ContainerRegistryView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/backups", component: BackupsView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/netbird", component: NetBirdView, meta: { roles: ["viewer", "operator", "admin"] } },
-        { path: "/notifications", component: NotificationsView, meta: { roles: ["operator", "admin"] } },
-        { path: "/api-keys", component: ApiKeysView, meta: { roles: ["admin"] } },
-        { path: "/admin-users", component: AdminUsersView, meta: { roles: ["admin"] } }
+        { path: "/nodes", component: NodesView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
+        { path: "/services", component: ServicesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
+        { path: "/instances", component: InstancesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
+        { path: "/volumes", component: VolumesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
+        { path: "/secrets", component: SecretsView, meta: { permissions: ["secrets:read"] satisfies NaulitePermission[] } },
+        { path: "/cluster", component: ClusterView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
+        { path: "/metrics", component: MetricsView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
+        { path: "/gitops", component: GitOpsView, meta: { permissions: ["gitops:read"] satisfies NaulitePermission[] } },
+        { path: "/deploy", component: DeployView, meta: { permissions: ["manifests:apply"] satisfies NaulitePermission[] } },
+        { path: "/build", component: BuildView, meta: { permissions: ["runs:write"] satisfies NaulitePermission[] } },
+        { path: "/provision", component: ProvisionView, meta: { permissions: ["nodes:provision"] satisfies NaulitePermission[] } },
+        { path: "/runs", component: RunsView, meta: { permissions: ["runs:read"] satisfies NaulitePermission[] } },
+        { path: "/gateway-routes", component: GatewayRoutesView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },
+        { path: "/container-registry", component: ContainerRegistryView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },
+        { path: "/backups", component: BackupsView, meta: { permissions: ["backups:read"] satisfies NaulitePermission[] } },
+        { path: "/netbird", component: NetBirdView, meta: { permissions: ["netbird:read"] satisfies NaulitePermission[] } },
+        { path: "/notifications", component: NotificationsView, meta: { permissions: ["notifications:read"] satisfies NaulitePermission[] } },
+        { path: "/api-keys", component: ApiKeysView, meta: { permissions: ["admin:api-keys:read"] satisfies NaulitePermission[] } },
+        { path: "/admin-users", component: AdminUsersView, meta: { permissions: ["admin:users:read"] satisfies NaulitePermission[] } }
     ]
 });
 
@@ -68,9 +69,9 @@ router.beforeEach(async (to) => {
         };
     }
 
-    const roles = to.meta.roles as string[] | undefined;
+    const permissions = to.meta.permissions as NaulitePermission[] | undefined;
 
-    if (roles && !roles.includes(user.role)) {
+    if (permissions && !permissions.every((permission) => auth.hasPermission(permission))) {
         return "/nodes";
     }
 

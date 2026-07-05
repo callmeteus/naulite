@@ -61,7 +61,7 @@ describe("WebhookNotificationProvider", () => {
 
         const [, init] = fetchImpl.mock.calls[0] ?? [];
         const headers = init?.headers as Record<string, string>;
-        expect(headers["x-platform-signature"]).toMatch(/^sha256=[a-f0-9]{64}$/);
+        expect(headers["x-naulite-signature"]).toMatch(/^sha256=[a-f0-9]{64}$/);
     });
 
     it("skips delivery when webhook URL is unset", async () => {

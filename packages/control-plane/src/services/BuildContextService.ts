@@ -51,7 +51,7 @@ export namespace BuildContextService {
      * @returns Gzip tarball bytes
      */
     export async function createContextArchive(contextDir: string): Promise<Buffer> {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-build-context-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-build-context-"));
         const archivePath = path.join(tempDir, "context.tar.gz");
 
         try {

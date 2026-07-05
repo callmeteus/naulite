@@ -46,7 +46,7 @@ const RouteContext = struct {
 
 /// Builds the JSON body for GET /health.
 pub fn healthResponseBody() []const u8 {
-    return "{\"status\":\"ok\",\"service\":\"platform-agent\"}";
+    return "{\"status\":\"ok\",\"service\":\"naulite-agent\"}";
 }
 
 /// Handles an HTTP request and returns a response without binding a socket.

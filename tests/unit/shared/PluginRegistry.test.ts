@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { PluginRegistry } from "@platform/shared";
-import type { PluginRegistration } from "@platform/shared";
+import { PluginRegistry } from "@naulite/shared";
+import type { PluginRegistration } from "@naulite/shared";
 
 interface TestPlugin extends PluginRegistration {
     label: string;

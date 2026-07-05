@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 
-import { platformClient } from "../api/Client";
+import { nauliteClient } from "../api/Client";
 import { useServerPagination } from "../composables/useServerPagination";
 import { t } from "../ui/Translate";
+import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 
 const store = useClusterStore();
+const auth = useAuthStore();
 const volumeName = ref("");
 
 const {
@@ -19,7 +21,7 @@ const {
     refresh,
     loading,
     error
-} = useServerPagination((page, limit) => platformClient.listBackupsPaginated({ page, limit }), 20);
+} = useServerPagination((page, limit) => nauliteClient.listBackupsPaginated({ page, limit }), 20);
 
 onMounted(() => {
     void refresh();
@@ -59,7 +61,7 @@ async function restoreBackup(backupId: string): Promise<void> {
         <p v-if="loading || store.loading">{{ t("loading") }}</p>
         <p v-else-if="store.error || error" class="error">{{ store.error || error }}</p>
         <div v-else class="panel">
-            <form class="actions" @submit.prevent="runBackup">
+            <form v-if="auth.hasPermission('backups:run')" class="actions" @submit.prevent="runBackup">
                 <input
                     v-model="volumeName"
                     type="text"
@@ -87,6 +89,7 @@ async function restoreBackup(backupId: string): Promise<void> {
                         <td>{{ backup.destination ?? "-" }}</td>
                         <td>
                             <button
+                                v-if="auth.hasPermission('backups:restore')"
                                 type="button"
                                 :disabled="store.loading || backup.status === 'running'"
                                 @click="restoreBackup(backup.id)"

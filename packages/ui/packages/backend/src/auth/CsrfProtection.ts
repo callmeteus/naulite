@@ -7,12 +7,12 @@ import { parseCookies } from "./SessionCookie";
 /**
  * Cookie name for the CSRF double-submit token.
  */
-export const PLATFORM_CSRF_COOKIE = "platform_csrf";
+export const NAULITE_CSRF_COOKIE = "naulite_csrf";
 
 /**
  * Header name clients must send on mutating BFF requests.
  */
-export const PLATFORM_CSRF_HEADER = "x-csrf-token";
+export const NAULITE_CSRF_HEADER = "x-csrf-token";
 
 /**
  * CSRF double-submit validation for browser sessions.
@@ -36,7 +36,7 @@ export namespace CsrfProtection {
      */
     export function buildCsrfCookie(token: string, secure: boolean): string {
         const secureFlag = secure ? "; Secure" : "";
-        return `${PLATFORM_CSRF_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/${secureFlag}`;
+        return `${NAULITE_CSRF_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/${secureFlag}`;
     }
 
     /**
@@ -47,7 +47,7 @@ export namespace CsrfProtection {
      */
     export function buildClearCsrfCookie(secure: boolean): string {
         const secureFlag = secure ? "; Secure" : "";
-        return `${PLATFORM_CSRF_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secureFlag}`;
+        return `${NAULITE_CSRF_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secureFlag}`;
     }
 
     /**
@@ -78,8 +78,8 @@ export namespace CsrfProtection {
      */
     export function isValid(request: FastifyRequest): boolean {
         const cookies = parseCookies(request.headers.cookie);
-        const cookieToken = cookies[PLATFORM_CSRF_COOKIE];
-        const headerToken = request.headers[PLATFORM_CSRF_HEADER];
+        const cookieToken = cookies[NAULITE_CSRF_COOKIE];
+        const headerToken = request.headers[NAULITE_CSRF_HEADER];
 
         if (!cookieToken || typeof headerToken !== "string") {
             return false;

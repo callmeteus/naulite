@@ -28,15 +28,15 @@ describe("DockerBuilderProvider", () => {
         const result = await provider.buildWithDocker({
             contextPath: "/tmp/context",
             dockerfile: "Dockerfile",
-            tags: ["platform/demo-api:latest"]
+            tags: ["naulite/demo-api:latest"]
         });
 
-        expect(result.imageRef).toBe("platform/demo-api:latest");
+        expect(result.imageRef).toBe("naulite/demo-api:latest");
         expect(result.logs).toContain("build ok");
         expect(result.durationMs).toBeGreaterThanOrEqual(0);
         expect(execFileMock).toHaveBeenCalledWith(
             "docker",
-            expect.arrayContaining(["build", "-t", "platform/demo-api:latest"]),
+            expect.arrayContaining(["build", "-t", "naulite/demo-api:latest"]),
             expect.objectContaining({ maxBuffer: 10 * 1024 * 1024 })
         );
     });
@@ -46,7 +46,7 @@ describe("DockerBuilderProvider", () => {
 
         await expect(provider.buildWithKaniko({
             contextUri: "s3://bucket/context",
-            destination: "platform/demo-api:latest"
+            destination: "naulite/demo-api:latest"
         })).rejects.toThrow("Kaniko builds are not supported");
     });
 });

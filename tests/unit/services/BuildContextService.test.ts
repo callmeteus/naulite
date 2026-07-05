@@ -8,7 +8,7 @@ import { BuildContextService } from "../../../packages/control-plane/src/service
 
 describe("BuildContextService", () => {
     it("creates a tarball for a local build context directory", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-build-context-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-build-context-"));
         const contextDir = path.join(tempDir, "ctx");
         await mkdir(contextDir, { recursive: true });
         await writeFile(path.join(contextDir, "Dockerfile"), "FROM nginx:alpine\n");
@@ -18,7 +18,7 @@ describe("BuildContextService", () => {
     });
 
     it("rejects context paths outside the configured root", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-build-context-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-build-context-"));
         await expect(
             BuildContextService.resolveLocalContextPath(tempDir, "../outside")
         ).rejects.toThrow("escapes the configured context root");

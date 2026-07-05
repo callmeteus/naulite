@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { CsrfProtection } from "../auth/CsrfProtection";
-import { buildClearSessionCookie, buildSessionCookie, resolveSecureCookies } from "../auth/SessionCookie";
+import { CsrfProtection, NAULITE_CSRF_COOKIE } from "../auth/CsrfProtection";
+import { buildClearSessionCookie, buildSessionCookie, parseCookies, resolveSecureCookies } from "../auth/SessionCookie";
 import { RolePreHandlers } from "../auth/RolePreHandlers";
 
 const LoginBodySchema = z.object({
@@ -59,6 +59,12 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
             return { user: null };
         }
 
-        return { user };
+        const cookies = parseCookies(request.headers.cookie);
+        const csrfToken = cookies[NAULITE_CSRF_COOKIE];
+
+        return {
+            user,
+            csrfToken: csrfToken || undefined
+        };
     });
 }

@@ -35,24 +35,24 @@ export namespace NodeProvisionUserDataTemplate {
         return `#!/bin/bash
 set -euo pipefail
 
-export PLATFORM_CP_URL="${escapeShell(input.cpUrl)}"
-export PLATFORM_SETUP_KEY="${escapeShell(input.setupKey)}"
-export PLATFORM_PROVISION_ID="${escapeShell(input.provisionId)}"
-export PLATFORM_NODE_ID="${escapeShell(input.nodeId)}"
-export PLATFORM_LABELS='${escapeSingleQuoted(labelsJson)}'
-export PLATFORM_CAPABILITIES='${escapeSingleQuoted(capabilitiesJson)}'
+export NAULITE_CP_URL="${escapeShell(input.cpUrl)}"
+export NAULITE_SETUP_KEY="${escapeShell(input.setupKey)}"
+export NAULITE_PROVISION_ID="${escapeShell(input.provisionId)}"
+export NAULITE_NODE_ID="${escapeShell(input.nodeId)}"
+export NAULITE_LABELS='${escapeSingleQuoted(labelsJson)}'
+export NAULITE_CAPABILITIES='${escapeSingleQuoted(capabilitiesJson)}'
 
 if ! command -v docker >/dev/null 2>&1; then
     curl -fsSL https://get.docker.com | sh
     systemctl enable --now docker || true
 fi
 
-cat >/tmp/platform-agent-install.sh <<'PLATFORM_AGENT_INSTALL_EOF'
+cat >/tmp/naulite-agent-install.sh <<'NAULITE_AGENT_INSTALL_EOF'
 ${agentInstallScript}
-PLATFORM_AGENT_INSTALL_EOF
-chmod +x /tmp/platform-agent-install.sh
+NAULITE_AGENT_INSTALL_EOF
+chmod +x /tmp/naulite-agent-install.sh
 
-/tmp/platform-agent-install.sh \\
+/tmp/naulite-agent-install.sh \\
     --host "${escapeShell(input.cpUrl)}" \\
     --setup-key "${escapeShell(input.setupKey)}"
 `;

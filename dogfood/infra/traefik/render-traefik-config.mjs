@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Renders traefik.yml from traefik.yml.template based on PLATFORM_TLS_MODE.
+ * Renders traefik.yml from traefik.yml.template based on NAULITE_TLS_MODE.
  *
  * Environment:
- * - PLATFORM_TLS_MODE: acme_tls | acme_dns_cloudflare | passthrough | self_signed | custom
+ * - NAULITE_TLS_MODE: acme_tls | acme_dns_cloudflare | passthrough | self_signed | custom
  * - ACME_EMAIL: contact email for ACME registration
  * - ACME_CA_SERVER: ACME directory URL (staging or production)
  * - CF_DNS_API_TOKEN: Cloudflare API token for DNS-01 challenge
@@ -23,11 +23,11 @@ const VALID_MODES = new Set([
     "custom"
 ]);
 
-const mode = (process.env.PLATFORM_TLS_MODE ?? "acme_tls").trim().toLowerCase();
+const mode = (process.env.NAULITE_TLS_MODE ?? "acme_tls").trim().toLowerCase();
 
 if (!VALID_MODES.has(mode)) {
     console.error(
-        `[traefik-render] invalid PLATFORM_TLS_MODE="${mode}"; expected one of: ${[...VALID_MODES].join(", ")}`
+        `[traefik-render] invalid NAULITE_TLS_MODE="${mode}"; expected one of: ${[...VALID_MODES].join(", ")}`
     );
     process.exit(1);
 }

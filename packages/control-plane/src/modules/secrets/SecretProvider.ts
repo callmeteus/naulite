@@ -1,4 +1,4 @@
-import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@platform/shared";
+import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@naulite/shared";
 
 /**
  * Abstract secret provider contract for local and plugin backends.

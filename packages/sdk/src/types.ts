@@ -14,12 +14,12 @@ import type {
     Secret,
     Service,
     Volume
-} from "@platform/shared";
+} from "@naulite/shared";
 
 /**
  * Well-known platform discovery payload.
  */
-export interface PlatformDiscovery {
+export interface NauliteDiscovery {
     name: string;
     version: string;
     authRequired: boolean;
@@ -27,17 +27,23 @@ export interface PlatformDiscovery {
     localBypass: boolean;
 }
 
-export type { AdminLoginInput, AdminLoginResponse, AdminRole, AdminSession, AdminUser, CreateAdminUserInput, DisableAdminUserInput } from "./auth-types";
+export type { AdminLoginInput, AdminLoginResponse, AdminRole, AdminSession, AdminUser, BffLoginResponse, BffSessionResponse, CreateAdminUserInput, DisableAdminUserInput } from "./auth-types";
 export type { PaginatedResponse, PaginationQuery } from "./pagination-types";
 export type { PromQLInstantResponse, PromQLRangeResponse, PromQLSample, PromQLSeries } from "./metrics-types";
 
 /**
+ * Header name for CSRF double-submit protection on the admin BFF.
+ */
+export const NAULITE_CSRF_HEADER = "x-csrf-token";
+
+/**
  * Options for creating a platform HTTP client.
  */
-export interface PlatformClientOptions {
+export interface NauliteClientOptions {
     baseUrl: string;
     token?: string;
     sessionToken?: string;
+    csrfToken?: string;
     credentials?: "omit" | "same-origin" | "include";
     fetchImpl?: typeof fetch;
 }
@@ -339,6 +345,37 @@ export interface NotificationTestResult {
     id: string;
     ok: boolean;
     error?: string;
+}
+
+/**
+ * Pipeline event kinds used for notification filters.
+ */
+export type PipelineEventKind =
+    | "ci.build.submitted"
+    | "image.build.started"
+    | "build.step.started"
+    | "build.step.finished"
+    | "image.pushed"
+    | "rollout.started"
+    | "rollout.finished"
+    | "ci.build.finished"
+    | "ci.pipeline.failed"
+    | "gitops.sync.started"
+    | "infra.sync.finished"
+    | "node.disk_pressure"
+    | "node.disk_pressure.cleared"
+    | "node.left_cluster"
+    | "node.joined_cluster"
+    | "deploy.step.started"
+    | "deploy.step.finished"
+    | "deploy.step.failed";
+
+/**
+ * Notification provider event filter configuration.
+ */
+export interface NotificationProviderFilters {
+    providerId: string;
+    allowedKinds: PipelineEventKind[];
 }
 
 export type {

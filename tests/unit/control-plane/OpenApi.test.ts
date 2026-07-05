@@ -37,7 +37,7 @@ describe("control plane OpenAPI", () => {
         };
 
         expect(body.openapi).toBe("3.1.0");
-        expect(body.info?.title).toBe("Platform Control Plane API");
+        expect(body.info?.title).toBe("Naulite Control Plane API");
 
         await app.close();
     });

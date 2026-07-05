@@ -1,4 +1,4 @@
-# Platform Agent
+# Naulite Agent
 
 Zig worker agent for Docker runtime operations and NetBird mesh enrollment.
 

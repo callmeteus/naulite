@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { Op } from "sequelize";
 
-import type { BackupTask, Volume } from "@platform/shared";
+import type { BackupTask, Volume } from "@naulite/shared";
 
 import { BackupRunModel, NodeModel, VolumeModel } from "../../database/models/index";
 import { AgentProxyService } from "../../services/AgentProxyService";
@@ -187,7 +187,7 @@ export class BackupScheduler {
                     retention: payload.retention,
                     destination: payload.destination ?? {
                         provider: "local",
-                        path: "/var/lib/platform/backups"
+                        path: "/var/lib/naulite/backups"
                     },
                     resolvedSecrets: payload.resolvedSecrets,
                     status: "running"

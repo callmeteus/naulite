@@ -1,11 +1,11 @@
 ---
 title: Manifest reference
-description: Compose YAML with platform-specific extensions.
+description: Compose YAML with naulite-specific extensions.
 ---
 
 # Manifest reference
 
-Platform manifests are Compose YAML files with platform-specific extensions parsed only by the control plane.
+Naulite manifests are Compose YAML files with naulite-specific extensions parsed only by the control plane.
 
 ## Top-level fields
 

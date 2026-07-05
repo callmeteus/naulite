@@ -8,7 +8,7 @@ param(
     [string]$NetbirdManagementUrl = "",
     [string]$AgentVersion = "zig-0.1.0",
     [string]$InstallDir = "C:\Program Files\PlatformAgent",
-    [string]$ServiceName = "platform-agent",
+    [string]$ServiceName = "naulite-agent",
     [int]$AgentPort = 9470,
     [string]$ConfigPath = ""
 )
@@ -24,7 +24,7 @@ $PlatformRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
 function Write-Log {
     param([string]$Message)
-    Write-Host "[platform-agent] $Message"
+    Write-Host "[naulite-agent] $Message"
 }
 
 function Get-BootstrapBundle {
@@ -33,7 +33,7 @@ function Get-BootstrapBundle {
   }
 
   Write-Log "fetching bootstrap settings from $HostUrl/bootstrap/agent"
-  $headers = @{ "X-Platform-Setup-Key" = $SetupKey }
+  $headers = @{ "X-Naulite-Setup-Key" = $SetupKey }
   $response = Invoke-RestMethod -Uri "$HostUrl/bootstrap/agent" -Headers $headers -Method Get
   $script:NetbirdManagementUrl = $response.netbirdManagementUrl
 
@@ -64,7 +64,7 @@ function Write-AgentConfig {
 }
 
 function Install-AgentBinary {
-    $binPath = Join-Path $InstallDir "platform-agent.exe"
+    $binPath = Join-Path $InstallDir "naulite-agent.exe"
     $agentRoot = Join-Path $PlatformRoot "packages\agent"
 
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -74,7 +74,7 @@ function Install-AgentBinary {
         Push-Location $agentRoot
         try {
             zig build -Doptimize=ReleaseSafe
-            Copy-Item -Force (Join-Path $agentRoot "zig-out\bin\platform-agent.exe") $binPath
+            Copy-Item -Force (Join-Path $agentRoot "zig-out\bin\naulite-agent.exe") $binPath
         }
         finally {
             Pop-Location
@@ -103,10 +103,10 @@ function Install-WindowsService {
 
     $bin = "`"$BinaryPath`""
     sc.exe create $ServiceName binPath= $bin start= auto | Out-Null
-    sc.exe description $ServiceName "Platform node agent for control plane orchestration" | Out-Null
+    sc.exe description $ServiceName "Naulite node agent for control plane orchestration" | Out-Null
 
     [System.Environment]::SetEnvironmentVariable(
-        "PLATFORM_AGENT_CONFIG",
+        "NAULITE_AGENT_CONFIG",
         $ConfigPath,
         [System.EnvironmentVariableTarget]::Machine
     )
@@ -115,7 +115,7 @@ function Install-WindowsService {
 }
 
 $HostUrl = $HostUrl.TrimEnd("/")
-Write-Log "installing platform-agent $AgentVersion"
+Write-Log "installing naulite-agent $AgentVersion"
 Get-BootstrapBundle
 Write-AgentConfig
 $binaryPath = Install-AgentBinary

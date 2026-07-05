@@ -1,7 +1,7 @@
-import type { AdminRole, AdminUser } from "@platform/sdk";
+import type { AdminRole, AdminUser } from "@naulite/sdk";
 import type { FastifyRequest, preHandlerHookHandler } from "fastify";
 
-import { PLATFORM_SESSION_COOKIE, parseCookies } from "./SessionCookie";
+import { NAULITE_SESSION_COOKIE, parseCookies } from "./SessionCookie";
 
 /**
  * Route-level role authorization pre-handlers for the admin BFF.
@@ -65,7 +65,7 @@ export namespace RolePreHandlers {
      */
     export function readSessionToken(request: FastifyRequest): string | undefined {
         const cookies = parseCookies(request.headers.cookie);
-        const cookieValue = cookies[PLATFORM_SESSION_COOKIE];
+        const cookieValue = cookies[NAULITE_SESSION_COOKIE];
 
         if (typeof cookieValue === "string" && cookieValue.length > 0) {
             return cookieValue;
@@ -92,7 +92,7 @@ function hasRole(request: FastifyRequest, ...roles: AdminRole[]): boolean {
  */
 export const SERVICE_ADMIN_USER: AdminUser = {
     id: "service-admin",
-    email: "service@platform.local",
+    email: "service@naulite.local",
     role: "admin",
     tenantId: null,
     createdAt: new Date(0).toISOString()

@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import type { GatewayRoute, Ingress, PaginatedList, PaginationQuery } from "@platform/shared";
-import { buildPaginatedList, paginationOffset } from "@platform/shared";
-import type { TraefikNetBirdGatewayProvider } from "@platform/gateway";
+import type { GatewayRoute, Ingress, PaginatedList, PaginationQuery } from "@naulite/shared";
+import { buildPaginatedList, paginationOffset } from "@naulite/shared";
+import type { TraefikNetBirdGatewayProvider } from "@naulite/gateway";
 
 import { GatewayRouteModel } from "../database/models/index";
 import { ControlPlaneSync } from "./ControlPlaneSync";

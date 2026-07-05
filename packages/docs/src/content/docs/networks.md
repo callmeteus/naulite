@@ -5,7 +5,7 @@ description: Compose networking with automatic NetBird group management.
 
 # Networks
 
-Platform networks extend Compose networking with automatic NetBird group management.
+Naulite networks extend Compose networking with automatic NetBird group management.
 
 ## User-facing model
 
@@ -40,7 +40,7 @@ Examples:
 - `rushpedia` + `internal` -> `rushpedia-internal`
 - `bookstore` + `app` -> `bookstore-app`
 
-Implementation: `NetworkGroupId.generate()` in `@platform/shared`.
+Implementation: `NetworkGroupId.generate()` in `@naulite/shared`.
 
 ## Local networks
 

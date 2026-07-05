@@ -1,6 +1,6 @@
-import type { ExecutionOperation, Instance, IngressTls, Manifest, ManifestService, Node, SecretFilter } from "@platform/shared";
-import { resolveManifestBuild } from "@platform/shared";
-import type { GatewayTlsMaterial } from "@platform/shared";
+import type { ExecutionOperation, Instance, IngressTls, Manifest, ManifestService, Node, SecretFilter } from "@naulite/shared";
+import { resolveManifestBuild } from "@naulite/shared";
+import type { GatewayTlsMaterial } from "@naulite/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
 import type { ControlPlaneContext } from "../ControlPlaneContext";
@@ -685,7 +685,7 @@ export namespace ApplyService {
             const group = await ControlPlaneService.NetBird.ensureInternalGroup(groupName);
             await ControlPlaneService.NetBird.ensureGroupAccessPolicy(
                 group.id,
-                `platform-network-${groupName}`
+                `naulite-network-${groupName}`
             );
         }
 
@@ -693,7 +693,7 @@ export namespace ApplyService {
             const group = await ControlPlaneService.NetBird.ensureInternalGroup(entry.netbirdGroupName);
             await ControlPlaneService.NetBird.ensureGroupAccessPolicy(
                 group.id,
-                `platform-exposure-${entry.netbirdGroupName}`,
+                `naulite-exposure-${entry.netbirdGroupName}`,
                 [String(entry.exposure.port)]
             );
         }

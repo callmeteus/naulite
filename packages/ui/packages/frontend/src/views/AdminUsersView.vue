@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 
-import type { AdminRole, AdminUser } from "@platform/sdk";
-import { platformClient } from "../api/Client";
+import type { AdminRole, AdminUser } from "@naulite/sdk";
+import { nauliteClient } from "../api/Client";
 import { t } from "../ui/Translate";
 
 const users = ref<AdminUser[]>([]);
@@ -27,7 +27,7 @@ async function refreshUsers(): Promise<void> {
     error.value = "";
 
     try {
-        users.value = await platformClient.listAdminUsers();
+        users.value = await nauliteClient.listAdminUsers();
     } catch (err) {
         error.value = err instanceof Error ? err.message : String(err);
     } finally {
@@ -52,7 +52,7 @@ async function createUser(): Promise<void> {
     message.value = "";
 
     try {
-        await platformClient.createAdminUser({
+        await nauliteClient.createAdminUser({
             email: trimmedEmail,
             password: password.value,
             role: role.value
@@ -80,7 +80,7 @@ async function disableUser(userId: string): Promise<void> {
     error.value = "";
 
     try {
-        await platformClient.disableAdminUser(userId);
+        await nauliteClient.disableAdminUser(userId);
         await refreshUsers();
     } catch (err) {
         error.value = err instanceof Error ? err.message : String(err);

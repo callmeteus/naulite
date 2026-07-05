@@ -3,7 +3,7 @@ const std = @import("std");
 const process_cmd = @import("process_cmd.zig");
 const blocking_io = @import("blocking_io.zig");
 
-const default_build_root = "/var/lib/platform/builds";
+const default_build_root = "/var/lib/naulite/builds";
 
 /// Result of a build context sync received from the control plane.
 pub const BuildContextResult = struct {

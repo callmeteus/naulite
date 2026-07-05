@@ -1,9 +1,9 @@
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { PrometheusMetrics } from "../metrics/PrometheusMetrics";
 import { defineRoute } from "../routing/DefineRoute";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("metrics:read"),
     schema: {
         summary: "Prometheus metrics",
         description: "Returns cluster inventory metrics in Prometheus text exposition format.",

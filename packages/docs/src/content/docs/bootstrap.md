@@ -19,7 +19,7 @@ Bootstrap scripts install platform nodes and register agents with the control pl
 
 ## Scripts
 
-| Script | Platform | Purpose |
+| Script | Naulite | Purpose |
 |--------|----------|---------|
 | `bootstrap/control-plane-install.sh` | Linux / macOS | Install control plane stack (Docker Compose) |
 | `bootstrap/control-plane-install.ps1` | Windows | Install control plane stack (Docker Compose) |
@@ -44,7 +44,7 @@ Windows:
 
 The script:
 
-1. Writes `PLATFORM_PUBLIC_URL` (and optional NetBird public URLs) to `.env`
+1. Writes `NAULITE_PUBLIC_URL` (and optional NetBird public URLs) to `.env`
 2. Initializes NetBird config when missing
 3. Runs `docker compose up -d --build`
 4. Waits for `/health`
@@ -71,9 +71,9 @@ Windows:
 The script:
 
 1. Optionally calls `GET /bootstrap/agent` with `X-Platform-Setup-Key` to resolve `netbirdManagementUrl`
-2. Writes `/var/lib/platform/agent.json` (or `%ProgramData%\Platform\agent.json` on Windows)
+2. Writes `/var/lib/naulite/agent.json` (or `%ProgramData%\naulite\agent.json` on Windows)
 3. Installs or builds the Zig agent binary
-4. Starts a systemd or Windows service with `PLATFORM_AGENT_CONFIG` pointing at the JSON file
+4. Starts a systemd or Windows service with `NAULITE_AGENT_CONFIG` pointing at the JSON file
 
 ## Public routes
 
@@ -98,7 +98,7 @@ bash bootstrap/agent-install.sh --dry-run \
   --setup-key <key> \
   --config-path /tmp/agent.json
 
-PLATFORM_ROOT=/tmp/platform-bootstrap bash bootstrap/control-plane-install.sh --dry-run \
+NAULITE_ROOT=/tmp/naulite-bootstrap bash bootstrap/control-plane-install.sh --dry-run \
   --host https://cp.example.com
 ```
 
@@ -108,14 +108,14 @@ Dry-run executes argument parsing and config/env writes only. Unit tests in `tes
 
 | Variable | Purpose |
 |----------|---------|
-| `PLATFORM_CP_URL` | Control plane base URL (agent runtime override) |
-| `PLATFORM_PUBLIC_URL` | Public control plane URL returned to enrolling agents |
-| `PLATFORM_BOOTSTRAP_TOKEN` | Reserved for future scoped enrollment tokens |
-| `PLATFORM_NODE_LABELS` | Optional JSON labels for scheduling |
+| `NAULITE_CP_URL` | Control plane base URL (agent runtime override) |
+| `NAULITE_PUBLIC_URL` | Public control plane URL returned to enrolling agents |
+| `NAULITE_BOOTSTRAP_TOKEN` | Reserved for future scoped enrollment tokens |
+| `NAULITE_NODE_LABELS` | Optional JSON labels for scheduling |
 | `NETBIRD_MANAGEMENT_URL` | Self-hosted NetBird management URL (control plane internal) |
 | `NETBIRD_PUBLIC_MANAGEMENT_URL` | Public NetBird URL returned to enrolling agents |
 | `NETBIRD_SETUP_KEY` | NetBird enrollment key for the node |
-| `PLATFORM_AGENT_CONFIG` | Override path for persisted agent JSON |
+| `NAULITE_AGENT_CONFIG` | Override path for persisted agent JSON |
 
 NetBird cloud (`api.netbird.io`) is not supported. See [NetBird](/netbird/).
 
@@ -123,12 +123,12 @@ NetBird cloud (`api.netbird.io`) is not supported. See [NetBird](/netbird/).
 
 The Zig agent writes a JSON snapshot of its identity and connectivity settings to disk so it can reconnect after restart without re-supplying environment variables.
 
-| Platform | Default path |
+| Naulite | Default path |
 |----------|--------------|
-| Linux / macOS | `/var/lib/platform/agent.json` |
-| Windows | `%ProgramData%\Platform\agent.json` |
+| Linux / macOS | `/var/lib/naulite/agent.json` |
+| Windows | `%ProgramData%\naulite\agent.json` |
 
-Override with `PLATFORM_AGENT_CONFIG`.
+Override with `NAULITE_AGENT_CONFIG`.
 
 ### Precedence
 

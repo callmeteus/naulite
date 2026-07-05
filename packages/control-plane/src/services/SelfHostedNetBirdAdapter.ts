@@ -129,7 +129,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
             method: "POST",
             body: JSON.stringify({
                 name: input.name,
-                description: `Managed by Platform for ${input.name}`,
+                description: `Managed by Naulite for ${input.name}`,
                 enabled: true,
                 source_posture_checks: [],
                 rules: [{

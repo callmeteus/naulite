@@ -1,8 +1,8 @@
 import { rename, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 
-import type { LogRotationProvider, LogRotationResult } from "@platform/shared";
-import type { LogRotationPolicy, LogRotationTask } from "@platform/shared";
+import type { LogRotationProvider, LogRotationResult } from "@naulite/shared";
+import type { LogRotationPolicy, LogRotationTask } from "@naulite/shared";
 
 import { CronEvaluator } from "./CronEvaluator";
 

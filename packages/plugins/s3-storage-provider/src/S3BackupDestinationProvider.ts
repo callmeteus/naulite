@@ -1,5 +1,5 @@
-import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, S3BackupDestination } from "@platform/shared";
-import { BackupDestinationProvider } from "@platform/control-plane";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, S3BackupDestination } from "@naulite/shared";
+import { BackupDestinationProvider } from "@naulite/control-plane";
 
 import { S3ObjectStore, type S3ObjectStoreOptions } from "./S3ObjectStore";
 

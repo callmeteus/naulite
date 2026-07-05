@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
 
@@ -17,7 +17,7 @@ const RevokeApiKeyNotFoundSchema = z.object({
 });
 
 export const DELETE = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("admin:api-keys:write"),
     schema: {
         summary: "Revoke API key",
         description: "Revokes an API key by identifier.",

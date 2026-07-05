@@ -1,4 +1,4 @@
-import type { Secret, SecretUpsertInput } from "@platform/shared";
+import type { Secret, SecretUpsertInput } from "@naulite/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { PostgresSecretProvider } from "../../../packages/control-plane/src/modules/secrets/PostgresSecretProvider";

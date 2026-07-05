@@ -1,5 +1,5 @@
 {
-    "name": "@platform/ui-backend",
+    "name": "@naulite/ui-backend",
     "version": "0.1.0",
     "private": true,
     "type": "module",
@@ -11,8 +11,8 @@
         "dev": "tsc -p tsconfig.json && node ../../../../scripts/fix-esm-imports.mjs dist && node dist/Server.js"
     },
     "dependencies": {
-        "@platform/sdk": "0.1.0",
-        "@platform/shared": "0.1.0",
+        "@naulite/sdk": "0.1.0",
+        "@naulite/shared": "0.1.0",
         "fastify": "^5.2.0",
         "zod": "^3.24.1"
     },

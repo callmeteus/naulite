@@ -69,9 +69,9 @@ export namespace NetBirdConfig {
     /**
      * Returns whether the test mock adapter should be used.
      * 
-     * @returns Whether PLATFORM_NETBIRD_MOCK is enabled
+     * @returns Whether NAULITE_NETBIRD_MOCK is enabled
      */
     export function useMockAdapter(): boolean {
-        return process.env.PLATFORM_NETBIRD_MOCK === "1";
+        return process.env.NAULITE_NETBIRD_MOCK === "1";
     }
 }

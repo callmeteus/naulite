@@ -1,10 +1,13 @@
 import { AdminUserMapper, type ControlPlaneAdminUser } from "./AdminUserMapper";
-import { PlatformApiError } from "./PlatformApiError";
+import { NAULITE_CSRF_HEADER } from "./CsrfConstants";
+import { NauliteApiError } from "./NauliteApiError";
 import type {
     AdminLoginInput,
     AdminLoginResponse,
     AdminSession,
     AdminUser,
+    BffLoginResponse,
+    BffSessionResponse,
     ApiKey,
     ApplyResponse,
     ApplyResultPayload,
@@ -34,14 +37,16 @@ import type {
     ListPipelineRunsQuery,
     LogsResponse,
     NotificationProviderStatus,
+    NotificationProviderFilters,
     NotificationTestResult,
+    PipelineEventKind,
     NetBirdAcl,
     NodeProvision,
     NetBirdDevice,
     NetBirdGroup,
     NetBirdTopology,
-    PlatformClientOptions,
-    PlatformDiscovery,
+    NauliteClientOptions,
+    NauliteDiscovery,
     PromQLInstantResponse,
     PromQLRangeResponse,
     ProvisionNodeInput,
@@ -56,10 +61,11 @@ import type { Node } from "./types";
 /**
  * Typed HTTP client for all control plane REST routes.
  */
-export class PlatformClient {
+export class NauliteClient {
     private readonly baseUrl: string;
     private readonly token?: string;
     private readonly sessionToken?: string;
+    private readonly csrfToken?: string;
     private readonly credentials?: "omit" | "same-origin" | "include";
     private readonly fetchImpl: typeof fetch;
 
@@ -68,10 +74,11 @@ export class PlatformClient {
      * 
      * @param options Client configuration
      */
-    constructor(options: PlatformClientOptions) {
+    constructor(options: NauliteClientOptions) {
         this.baseUrl = options.baseUrl.replace(/\/$/, "");
         this.token = options.token;
         this.sessionToken = options.sessionToken;
+        this.csrfToken = options.csrfToken;
         this.credentials = options.credentials;
         this.fetchImpl = options.fetchImpl ?? fetch;
     }
@@ -82,11 +89,29 @@ export class PlatformClient {
      * @param sessionToken Opaque platform session token
      * @returns Cloned client with session forwarding enabled
      */
-    withSession(sessionToken: string): PlatformClient {
-        return new PlatformClient({
+    withSession(sessionToken: string): NauliteClient {
+        return new NauliteClient({
             baseUrl: this.baseUrl,
             token: this.token,
             sessionToken,
+            csrfToken: this.csrfToken,
+            credentials: this.credentials,
+            fetchImpl: this.fetchImpl
+        });
+    }
+
+    /**
+     * Returns a client clone that sends the CSRF header on mutating BFF requests.
+     *
+     * @param csrfToken CSRF token from login or session recovery
+     * @returns Cloned client with CSRF forwarding enabled
+     */
+    withCsrf(csrfToken: string): NauliteClient {
+        return new NauliteClient({
+            baseUrl: this.baseUrl,
+            token: this.token,
+            sessionToken: this.sessionToken,
+            csrfToken,
             credentials: this.credentials,
             fetchImpl: this.fetchImpl
         });
@@ -107,8 +132,8 @@ export class PlatformClient {
      * @param input Login credentials
      * @returns Authenticated user profile
      */
-    async login(input: AdminLoginInput): Promise<{ user: AdminUser }> {
-        return this.request<{ user: AdminUser }>("POST", "/auth/login", input);
+    async login(input: AdminLoginInput): Promise<BffLoginResponse> {
+        return this.request<BffLoginResponse>("POST", "/auth/login", input);
     }
 
     /**
@@ -125,8 +150,8 @@ export class PlatformClient {
      *
      * @returns Session user or null when unauthenticated
      */
-    async getSession(): Promise<{ user: AdminUser | null }> {
-        return this.request<{ user: AdminUser | null }>("GET", "/auth/me");
+    async getSession(): Promise<BffSessionResponse> {
+        return this.request<BffSessionResponse>("GET", "/auth/me");
     }
 
     /**
@@ -313,6 +338,37 @@ export class PlatformClient {
      */
     async testNotificationProviders(): Promise<{ providers: NotificationTestResult[] }> {
         return this.request<{ providers: NotificationTestResult[] }>("POST", "/notifications/test");
+    }
+
+    /**
+     * Returns allowed pipeline event kinds for a notification provider.
+     *
+     * @param providerId Notification provider identifier
+     * @returns Provider filter configuration
+     */
+    async getNotificationProviderFilters(providerId: string): Promise<NotificationProviderFilters> {
+        return this.request<NotificationProviderFilters>(
+            "GET",
+            `/notifications/providers/${encodeURIComponent(providerId)}/filters`
+        );
+    }
+
+    /**
+     * Updates allowed pipeline event kinds for a notification provider.
+     *
+     * @param providerId Notification provider identifier
+     * @param allowedKinds Pipeline event kinds to deliver
+     * @returns Updated provider filter configuration
+     */
+    async updateNotificationProviderFilters(
+        providerId: string,
+        allowedKinds: PipelineEventKind[]
+    ): Promise<NotificationProviderFilters> {
+        return this.request<NotificationProviderFilters>(
+            "PATCH",
+            `/notifications/providers/${encodeURIComponent(providerId)}/filters`,
+            { allowedKinds }
+        );
     }
 
     /**
@@ -555,7 +611,7 @@ export class PlatformClient {
         };
 
         if (this.sessionToken) {
-            headers["X-Platform-Session"] = this.sessionToken;
+            headers["X-Naulite-Session"] = this.sessionToken;
         }
 
         if (this.token) {
@@ -580,7 +636,7 @@ export class PlatformClient {
         };
 
         if (this.sessionToken) {
-            headers["X-Platform-Session"] = this.sessionToken;
+            headers["X-Naulite-Session"] = this.sessionToken;
         }
 
         if (this.token) {
@@ -593,7 +649,7 @@ export class PlatformClient {
         );
 
         if (!response.ok || !response.body) {
-            throw new PlatformApiError(response.status, `SSE stream failed with status ${response.status}`);
+            throw new NauliteApiError(response.status, `SSE stream failed with status ${response.status}`);
         }
 
         const reader = response.body.getReader();
@@ -917,8 +973,8 @@ export class PlatformClient {
      * 
      * @returns Well-known platform metadata
      */
-    async getPlatformDiscovery(): Promise<PlatformDiscovery> {
-        return this.request<PlatformDiscovery>("GET", "/.well-known/platform");
+    async getNauliteDiscovery(): Promise<NauliteDiscovery> {
+        return this.request<NauliteDiscovery>("GET", "/.well-known/naulite");
     }
 
     /**
@@ -996,7 +1052,7 @@ export class PlatformClient {
         };
 
         if (this.sessionToken) {
-            headers["X-Platform-Session"] = this.sessionToken;
+            headers["X-Naulite-Session"] = this.sessionToken;
         }
 
         if (this.token) {
@@ -1013,7 +1069,7 @@ export class PlatformClient {
         );
 
         if (!response.ok) {
-            throw new PlatformApiError(
+            throw new NauliteApiError(
                 response.status,
                 `Request failed with status ${response.status}`
             );
@@ -1024,7 +1080,7 @@ export class PlatformClient {
         const contentType = response.headers.get("Content-Type");
 
         if (!digest || !contentLength || !contentType) {
-            throw new PlatformApiError(
+            throw new NauliteApiError(
                 response.status,
                 "Container registry HEAD response is missing required headers."
             );
@@ -1060,7 +1116,7 @@ export class PlatformClient {
      * @returns Parsed JSON response
      */
     private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-        const headers = this.buildAuthHeaders(body !== undefined);
+        const headers = this.buildAuthHeaders(method, body !== undefined);
 
         const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
             method,
@@ -1081,7 +1137,7 @@ export class PlatformClient {
                     ? parsed.message
                     : `Request failed with status ${response.status}`;
 
-            throw new PlatformApiError(response.status, message, parsed);
+            throw new NauliteApiError(response.status, message, parsed);
         }
 
         return parsed as T;
@@ -1163,7 +1219,7 @@ export class PlatformClient {
      * @param hasJsonBody Whether the request includes a JSON body
      * @returns Header map
      */
-    private buildAuthHeaders(hasJsonBody: boolean): Record<string, string> {
+    private buildAuthHeaders(method: string, hasJsonBody: boolean): Record<string, string> {
         const headers: Record<string, string> = {
             Accept: "application/json"
         };
@@ -1173,14 +1229,34 @@ export class PlatformClient {
         }
 
         if (this.sessionToken) {
-            headers["X-Platform-Session"] = this.sessionToken;
+            headers["X-Naulite-Session"] = this.sessionToken;
         }
 
         if (this.token) {
             headers.Authorization = `Bearer ${this.token}`;
         }
 
+        if (
+            this.csrfToken &&
+            this.credentials === "include" &&
+            !this.token &&
+            this.requiresCsrfHeader(method)
+        ) {
+            headers[NAULITE_CSRF_HEADER] = this.csrfToken;
+        }
+
         return headers;
+    }
+
+    /**
+     * Returns whether the HTTP method requires CSRF protection on the BFF.
+     *
+     * @param method HTTP method
+     * @returns True for mutating methods
+     */
+    private requiresCsrfHeader(method: string): boolean {
+        const normalized = method.toUpperCase();
+        return normalized !== "GET" && normalized !== "HEAD" && normalized !== "OPTIONS";
     }
 
     /**
@@ -1196,7 +1272,7 @@ export class PlatformClient {
         };
 
         if (this.sessionToken) {
-            headers["X-Platform-Session"] = this.sessionToken;
+            headers["X-Naulite-Session"] = this.sessionToken;
         }
 
         if (this.token) {
@@ -1231,12 +1307,12 @@ export class PlatformClient {
                 }
             }
 
-            throw new PlatformApiError(response.status, message);
+            throw new NauliteApiError(response.status, message);
         }
 
         return text;
     }
 }
 
-export { PlatformApiError } from "./PlatformApiError";
+export { NauliteApiError } from "./NauliteApiError";
 export type * from "./types";

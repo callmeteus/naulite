@@ -23,7 +23,7 @@ describe("E7MessageFormatter", () => {
             kind: "ci.pipeline.failed",
             runId: "api-def45",
             serviceName: "api",
-            imageRef: "platform/api:latest",
+            imageRef: "naulite/api:latest",
             stepName: "yarn-install-build",
             exitCode: 1,
             failureLog: "error: install failed",

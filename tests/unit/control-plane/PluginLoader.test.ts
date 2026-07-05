@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { PluginLoader } from "../../../packages/control-plane/src/plugins/PluginLoader";
-import { PluginRegistry } from "@platform/shared";
+import { PluginRegistry } from "@naulite/shared";
 
 describe("PluginLoader", () => {
     let tempDir = "";
@@ -18,7 +18,7 @@ describe("PluginLoader", () => {
     });
 
     it("discovers plugin default exports from packages/plugins/*/dist/index.js", async () => {
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-plugin-loader-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-plugin-loader-"));
         const pluginDir = path.join(tempDir, "plugins", "demo-plugin", "dist");
         await mkdir(pluginDir, { recursive: true });
         await writeFile(path.join(pluginDir, "index.js"), `
@@ -42,7 +42,7 @@ describe("PluginLoader", () => {
     });
 
     it("ignores plugin directories without a built dist entrypoint", async () => {
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-plugin-loader-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-plugin-loader-"));
         await mkdir(path.join(tempDir, "plugins", "broken-plugin"), { recursive: true });
 
         const registry = await new PluginLoader(tempDir).load(new PluginRegistry());

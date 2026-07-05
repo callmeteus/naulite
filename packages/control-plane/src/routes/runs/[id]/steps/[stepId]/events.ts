@@ -2,8 +2,8 @@ import {
     IdParamsSchema,
     PipelineStepEventBodySchema,
     RouteMessageResponseSchema
-} from "@platform/shared";
-import { AuthPreHandlers } from "../../../../../auth/AuthPreHandlers";
+} from "@naulite/shared";
+import { PermissionPreHandlers } from "../../../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../../../routing/DefineRoute";
 import { PipelineRunService } from "../../../../../services/PipelineRunService";
 
@@ -12,7 +12,7 @@ const StepParamsSchema = IdParamsSchema.extend({
 });
 
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("runs:write"),
     schema: {
         summary: "Emit pipeline step event",
         description: "Transitions a pipeline step and appends timeline metadata.",

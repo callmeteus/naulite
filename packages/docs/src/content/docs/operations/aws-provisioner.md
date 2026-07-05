@@ -5,7 +5,7 @@ description: IAM permissions and EC2 provisioning flow for cloud agent nodes.
 
 # AWS node provisioner
 
-Platform can launch EC2 worker nodes through the `@platform/plugin-aws-node-provisioner` plugin. The control plane renders cloud-init userData that embeds `bootstrap/agent-install.sh` and registers the node with a provision-scoped NetBird setup key.
+Naulite can launch EC2 worker nodes through the `@naulite/plugin-aws-node-provisioner` plugin. The control plane renders cloud-init userData that embeds `bootstrap/agent-install.sh` and registers the node with a provision-scoped NetBird setup key.
 
 ## End-to-end flow
 
@@ -113,8 +113,8 @@ Restrict agent ingress to the control plane security group or NetBird mesh CIDR.
 
 `NodeProvisionUserDataTemplate` injects:
 
-- `PLATFORM_CP_URL`, `PLATFORM_SETUP_KEY`, `PLATFORM_PROVISION_ID`, `PLATFORM_NODE_ID`
-- `PLATFORM_LABELS`, `PLATFORM_CAPABILITIES` as JSON
+- `NAULITE_CP_URL`, `NAULITE_SETUP_KEY`, `NAULITE_PROVISION_ID`, `NAULITE_NODE_ID`
+- `NAULITE_LABELS`, `NAULITE_CAPABILITIES` as JSON
 - Embedded `agent-install.sh` executed after optional Docker install
 
 ## Termination

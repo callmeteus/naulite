@@ -2,8 +2,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { PolicyLogRotationProvider } from "@platform/control-plane";
-import type { LogRotationTask } from "@platform/shared";
+import { PolicyLogRotationProvider } from "@naulite/control-plane";
+import type { LogRotationTask } from "@naulite/shared";
 import { afterEach, describe, expect, it } from "vitest";
 
 describe("PolicyLogRotationProvider", () => {
@@ -28,7 +28,7 @@ describe("PolicyLogRotationProvider", () => {
         };
         expect(provider.isDue(policy, dueAt)).toBe(true);
 
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-log-rotation-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-log-rotation-"));
         const logPath = path.join(tempDir, "app.log");
         policy.paths = [logPath];
         await writeFile(logPath, "log-line-1\nlog-line-2\n");
@@ -57,7 +57,7 @@ describe("PolicyLogRotationProvider", () => {
             compress: false
         }, new Date())).toBe(false);
 
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-log-rotation-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-log-rotation-"));
         const logPath = path.join(tempDir, "debug.log");
         await writeFile(logPath, "debug output");
 

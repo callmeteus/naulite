@@ -348,7 +348,7 @@ pub const DockerApi = struct {
         return self.request("GET", "/v1.44/system/df", null);
     }
 
-    /// Lists platform-managed running containers with instance metadata.
+    /// Lists naulite-managed running containers with instance metadata.
     pub fn listManagedContainers(self: *const DockerApi) ![]ManagedContainer {
         var response = try self.request("GET", "/v1.44/containers/json", null);
         defer response.deinit(self.allocator);
@@ -909,7 +909,7 @@ pub const DockerApi = struct {
             return std.mem.eql(u8, value, "true");
         }
 
-        if (std.mem.startsWith(u8, container_name, "platform-")) {
+        if (std.mem.startsWith(u8, container_name, "naulite-")) {
             return false;
         }
 

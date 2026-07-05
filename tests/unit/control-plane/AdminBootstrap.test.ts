@@ -11,8 +11,8 @@ vi.mock("../../../packages/control-plane/src/modules/admin/AdminService", () => 
 
 describe("AdminBootstrap", () => {
     afterEach(() => {
-        delete process.env.PLATFORM_BOOTSTRAP_ADMIN_USERNAME;
-        delete process.env.PLATFORM_BOOTSTRAP_ADMIN_PASSWORD;
+        delete process.env.NAULITE_BOOTSTRAP_ADMIN_USERNAME;
+        delete process.env.NAULITE_BOOTSTRAP_ADMIN_PASSWORD;
         vi.clearAllMocks();
     });
 
@@ -24,8 +24,8 @@ describe("AdminBootstrap", () => {
     });
 
     it("seeds the first admin user from env when bootstrap password is set", async () => {
-        process.env.PLATFORM_BOOTSTRAP_ADMIN_USERNAME = "bootstrap-admin";
-        process.env.PLATFORM_BOOTSTRAP_ADMIN_PASSWORD = "bootstrap-password";
+        process.env.NAULITE_BOOTSTRAP_ADMIN_USERNAME = "bootstrap-admin";
+        process.env.NAULITE_BOOTSTRAP_ADMIN_PASSWORD = "bootstrap-password";
 
         vi.mocked(AdminService.createBootstrapUser).mockResolvedValue({
             id: "user-1",

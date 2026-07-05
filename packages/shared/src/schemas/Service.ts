@@ -37,7 +37,7 @@ export const ServiceStatusSchema = z.enum([
 ]);
 
 /**
- * Platform service definition derived from a manifest.
+ * Naulite service definition derived from a manifest.
  */
 export const ServiceSchema = z.object({
     id: z.string().min(1),

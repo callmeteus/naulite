@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { BuildServiceBodySchema } from "@platform/shared";
+import { BuildServiceBodySchema } from "@naulite/shared";
 
 /**
  * Registers build action routes for the admin panel.

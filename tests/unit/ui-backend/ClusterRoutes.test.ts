@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PlatformClient } from "../../../packages/sdk/src/PlatformClient";
+import { NauliteClient } from "../../../packages/sdk/src/NauliteClient";
 import { createApp } from "../../../packages/ui/packages/backend/src/App";
 
 /**
@@ -8,7 +8,7 @@ import { createApp } from "../../../packages/ui/packages/backend/src/App";
  *
  * @returns Mocked platform client
  */
-function createMockControlPlane(): PlatformClient {
+function createMockControlPlane(): NauliteClient {
     return {
         listNodes: vi.fn(async () => []),
         listBackups: vi.fn(async () => []),
@@ -35,8 +35,8 @@ function createMockControlPlane(): PlatformClient {
         listNetBirdDevices: vi.fn(async () => [{ id: "dev-1", name: "agent-1" }]),
         listNetBirdGroups: vi.fn(async () => [{ id: "grp-1", name: "app-web" }]),
         listNetBirdAcls: vi.fn(async () => [{ id: "acl-1", name: "default" }]),
-        getPrometheusMetrics: vi.fn(async () => "platform_nodes_total 1\n")
-    } as unknown as PlatformClient;
+        getPrometheusMetrics: vi.fn(async () => "naulite_nodes_total 1\n")
+    } as unknown as NauliteClient;
 }
 
 describe("ui-backend cluster routes", () => {
@@ -128,7 +128,7 @@ describe("ui-backend cluster routes", () => {
             headers: { authorization: "Bearer secret-key" }
         });
         expect(metricsResponse.statusCode).toBe(200);
-        expect(metricsResponse.body).toBe("platform_nodes_total 1\n");
+        expect(metricsResponse.body).toBe("naulite_nodes_total 1\n");
 
         await app.close();
     });

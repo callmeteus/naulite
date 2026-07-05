@@ -4,7 +4,7 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import type { Readable } from "node:stream";
 
-import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, LocalContainerRegistryDestination } from "@platform/shared";
+import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, LocalContainerRegistryDestination } from "@naulite/shared";
 
 import { ContainerRegistryBlobProvider } from "./ContainerRegistryBlobProvider";
 

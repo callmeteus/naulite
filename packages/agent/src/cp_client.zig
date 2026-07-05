@@ -178,7 +178,7 @@ fn formatResourcesJson(allocator: std.mem.Allocator, resources: docker.ResourceS
 }
 
 fn buildLabelsJson(allocator: std.mem.Allocator) ![]const u8 {
-    if (env_util.readEnvOptional(allocator, "PLATFORM_NODE_LABELS")) |raw| {
+    if (env_util.readEnvOptional(allocator, "NAULITE_NODE_LABELS")) |raw| {
         defer allocator.free(raw);
         return try allocator.dupe(u8, raw);
     }
@@ -187,7 +187,7 @@ fn buildLabelsJson(allocator: std.mem.Allocator) ![]const u8 {
 }
 
 fn buildCapabilitiesJson(allocator: std.mem.Allocator) ![]const u8 {
-    if (env_util.readEnvOptional(allocator, "PLATFORM_CAPABILITIES")) |raw| {
+    if (env_util.readEnvOptional(allocator, "NAULITE_CAPABILITIES")) |raw| {
         defer allocator.free(raw);
 
         var list = std.ArrayListUnmanaged([]const u8).empty;
@@ -613,7 +613,7 @@ fn getRegistryImageIo(
     const path = try std.fmt.allocPrint(allocator, "{s}/cr/images/{s}/{s}", .{ cp_url, name, tag });
     defer allocator.free(path);
 
-    const archive_path = try std.fmt.allocPrint(allocator, "/tmp/platform-cr-{s}-{s}.tar", .{ name, tag });
+    const archive_path = try std.fmt.allocPrint(allocator, "/tmp/naulite-cr-{s}-{s}.tar", .{ name, tag });
     defer allocator.free(archive_path);
 
     if (std.Io.Dir.cwd().access(io, archive_path, .{})) |_| {

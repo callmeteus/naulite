@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { PaginatedListSchema, PaginationQuerySchema } from "@platform/shared";
+import { PaginatedListSchema, PaginationQuerySchema } from "@naulite/shared";
 
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 
 const GatewayRouteSummarySchema = z.object({
@@ -17,7 +17,7 @@ const GatewayRouteSummarySchema = z.object({
 });
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
     schema: {
         summary: "List gateway routes",
         description: "Lists Traefik gateway routes persisted by the control plane.",

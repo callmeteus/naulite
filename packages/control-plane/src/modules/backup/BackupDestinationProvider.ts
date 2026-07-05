@@ -1,4 +1,4 @@
-import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask } from "@platform/shared";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask } from "@naulite/shared";
 
 /**
  * Abstract backup destination provider contract for local and plugin backends.

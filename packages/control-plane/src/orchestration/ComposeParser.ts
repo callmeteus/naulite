@@ -1,4 +1,4 @@
-import { ManifestSchema, type Manifest, type ManifestBuild, type ManifestService, type NetworkExposure } from "@platform/shared";
+import { ManifestSchema, type Manifest, type ManifestBuild, type ManifestService, type NetworkExposure } from "@naulite/shared";
 import { parse as parseYaml } from "yaml";
 import { ZodError } from "zod";
 
@@ -79,7 +79,7 @@ export class ComposeParser {
      * @returns Manifest service definition
      */
     private static mapService(rawService: Record<string, unknown>): ManifestService {
-        const platform = (rawService["x-platform"] ?? rawService.xPlatform ?? {}) as Record<string, unknown>;
+        const platform = (rawService["x-naulite"] ?? rawService.xNaulite ?? {}) as Record<string, unknown>;
 
         return {
             image: rawService.image as string | undefined,
@@ -103,7 +103,7 @@ export class ComposeParser {
      * Maps compose build block and legacy buildOptions into a unified build object.
      *
      * @param rawService Raw compose service object
-     * @param platform Parsed x-platform extension block
+     * @param platform Parsed x-naulite extension block
      * @returns Manifest build definition
      */
     private static mapBuild(
@@ -208,7 +208,7 @@ export class ComposeParser {
         const volumes: Manifest["volumes"] = {};
 
         for (const [volumeName, rawVolume] of Object.entries(rawVolumes)) {
-            const platform = (rawVolume["x-platform"] ?? rawVolume.xPlatform ?? {}) as Record<string, unknown>;
+            const platform = (rawVolume["x-naulite"] ?? rawVolume.xNaulite ?? {}) as Record<string, unknown>;
             volumes[volumeName] = {
                 driver: rawVolume.driver as string | undefined,
                 backup: (platform.backup ?? rawVolume.backup) as Manifest["volumes"][string]["backup"]
@@ -228,7 +228,7 @@ export class ComposeParser {
         const networks: Manifest["networks"] = {};
 
         for (const [networkName, rawNetwork] of Object.entries(rawNetworks)) {
-            const platform = (rawNetwork["x-platform"] ?? rawNetwork.xPlatform ?? {}) as Record<string, unknown>;
+            const platform = (rawNetwork["x-naulite"] ?? rawNetwork.xNaulite ?? {}) as Record<string, unknown>;
             networks[networkName] = {
                 local: Boolean(platform.local ?? rawNetwork.local ?? false),
                 driver: (rawNetwork.driver as string | undefined) ?? (platform.driver as string | undefined)

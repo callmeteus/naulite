@@ -1,4 +1,4 @@
-import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@platform/shared";
+import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@naulite/shared";
 
 import type { SecretsService } from "../../services/SecretsService";
 import { SecretProvider } from "./SecretProvider";

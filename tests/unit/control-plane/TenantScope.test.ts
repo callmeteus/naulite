@@ -6,19 +6,19 @@ import { TenantScope } from "../../../packages/control-plane/src/modules/tenant/
 
 describe("TenantScope", () => {
     it("does not scope queries when multi-tenant mode is disabled", () => {
-        const previous = process.env.PLATFORM_MULTI_TENANT;
-        process.env.PLATFORM_MULTI_TENANT = "false";
+        const previous = process.env.NAULITE_MULTI_TENANT;
+        process.env.NAULITE_MULTI_TENANT = "false";
 
         const scoped = TenantScope.applyTenantFilter({ status: "active" }, "tenant-1");
 
         expect(scoped).toEqual({ status: "active" });
 
-        process.env.PLATFORM_MULTI_TENANT = previous;
+        process.env.NAULITE_MULTI_TENANT = previous;
     });
 
     it("adds tenant id to queries when multi-tenant mode is enabled", () => {
-        const previous = process.env.PLATFORM_MULTI_TENANT;
-        process.env.PLATFORM_MULTI_TENANT = "true";
+        const previous = process.env.NAULITE_MULTI_TENANT;
+        process.env.NAULITE_MULTI_TENANT = "true";
 
         const scoped = TenantScope.applyTenantFilter({ status: "active" }, "tenant-1");
 
@@ -27,14 +27,14 @@ describe("TenantScope", () => {
             tenantId: "tenant-1"
         });
 
-        process.env.PLATFORM_MULTI_TENANT = previous;
+        process.env.NAULITE_MULTI_TENANT = previous;
     });
 
     it("resolves tenant id from request context or header", () => {
         const request = {
             tenantId: "from-session",
             headers: {
-                "x-platform-tenant-id": "from-header"
+                "x-naulite-tenant-id": "from-header"
             }
         } as FastifyRequest;
 
@@ -42,7 +42,7 @@ describe("TenantScope", () => {
 
         const headerOnlyRequest = {
             headers: {
-                "x-platform-tenant-id": "from-header"
+                "x-naulite-tenant-id": "from-header"
             }
         } as FastifyRequest;
 

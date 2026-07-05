@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ProvisionNodeBodySchema } from "@platform/shared";
+import { ProvisionNodeBodySchema } from "@naulite/shared";
 
 import { controlPlaneForRequest } from "../util/controlPlaneForRequest";
 import { paginateArray, parsePaginationQuery } from "../util/paginateArray";

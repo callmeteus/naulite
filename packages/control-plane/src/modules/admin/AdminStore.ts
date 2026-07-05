@@ -341,7 +341,7 @@ function mapAdminUser(row: AdminUserModel): AdminUserPublic {
  * @returns Session TTL in seconds
  */
 function resolveSessionTtlSeconds(): number {
-    const configured = Number(process.env.PLATFORM_SESSION_TTL_SECONDS ?? DEFAULT_SESSION_TTL_SECONDS);
+    const configured = Number(process.env.NAULITE_SESSION_TTL_SECONDS ?? DEFAULT_SESSION_TTL_SECONDS);
 
     if (!Number.isFinite(configured) || configured <= 0) {
         return DEFAULT_SESSION_TTL_SECONDS;

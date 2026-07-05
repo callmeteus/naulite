@@ -17,7 +17,7 @@ describe("pipeline events flow", () => {
     });
 
     it("persists agent-style step events through the run API model", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-pipeline-e2e-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-pipeline-e2e-"));
         const storagePath = path.join(tempDir, "control-plane.db");
         databaseProvider = new DatabaseProvider();
         await databaseProvider.connect({ dialect: "sqlite", url: `sqlite://${storagePath}` });
@@ -26,7 +26,7 @@ describe("pipeline events flow", () => {
         const run = await PipelineRunService.createRun({
             kind: "ci_build",
             serviceName: "api",
-            imageRef: "platform/api:latest"
+            imageRef: "naulite/api:latest"
         });
 
         await PipelineRunService.transitionStep(run.id, "docker-build", "running", {

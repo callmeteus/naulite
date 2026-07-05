@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { Manifest } from "@platform/shared";
+import type { Manifest } from "@naulite/shared";
 
 import { GitRevisionModel } from "../database/models/index";
 import { ComposeParser } from "../orchestration/ComposeParser";

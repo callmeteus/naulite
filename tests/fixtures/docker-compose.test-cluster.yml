@@ -2,13 +2,13 @@ services:
     postgres:
         image: postgres:16-alpine
         environment:
-            POSTGRES_USER: platform
-            POSTGRES_PASSWORD: platform
-            POSTGRES_DB: platform
+            POSTGRES_USER: naulite
+            POSTGRES_PASSWORD: naulite
+            POSTGRES_DB: naulite
         ports:
             - "55432:5432"
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U platform"]
+            test: ["CMD-SHELL", "pg_isready -U naulite"]
             interval: 5s
             timeout: 5s
             retries: 10
@@ -35,7 +35,7 @@ services:
               mc alias set local http://minio:9000 minio minioadmin && break;
               sleep 2;
             done &&
-            mc mb local/platform-backups --ignore-existing
+            mc mb local/naulite-backups --ignore-existing
             "
 
     traefik-dynamic-config:
@@ -79,24 +79,25 @@ services:
             context: ../..
             dockerfile: packages/control-plane/Dockerfile
         environment:
-            DATABASE_URL: postgres://platform:platform@postgres:5432/platform
+            DATABASE_URL: postgres://naulite:naulite@postgres:5432/naulite
             CP_INSTANCE_ID: cp-1
             NETBIRD_API_URL: http://127.0.0.1:1/api
             NETBIRD_MANAGEMENT_URL: http://127.0.0.1:1
-            PLATFORM_NETBIRD_MOCK: "1"
-            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
-            PLATFORM_BUILD_CONTEXT_ROOT: /platform/build-fixtures
+            NAULITE_NETBIRD_MOCK: "1"
+            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/naulite/dynamic-config}
+            NAULITE_BUILD_CONTEXT_ROOT: /naulite/build-fixtures
             S3_ENDPOINT: http://minio:9000
             S3_FORCE_PATH_STYLE: "true"
             AWS_ACCESS_KEY_ID: minio
             AWS_SECRET_ACCESS_KEY: minioadmin
             AWS_REGION: us-east-1
-            PLATFORM_PUBLIC_URL: http://control-plane-1:8080
-            PLATFORM_AGENT_API_KEY: platform-test-agent-key
-            PLATFORM_E2E_ALLOW_BRIDGE: "1"
-            PLATFORM_CONTAINER_REGISTRY_PATH: /data/container-registry
+            NAULITE_PUBLIC_URL: http://control-plane-1:8080
+            NAULITE_AGENT_API_KEY: naulite-test-agent-key
+            NAULITE_E2E_ALLOW_BRIDGE: "1"
+            NAULITE_TLS_MODE: self_signed
+            NAULITE_CONTAINER_REGISTRY_PATH: /data/container-registry
         volumes:
-            - ./build-context:/platform/build-fixtures:ro
+            - ./build-context:/naulite/build-fixtures:ro
             - cp-cr-data:/data/container-registry
         ports:
             - "18080:8080"
@@ -117,24 +118,25 @@ services:
             context: ../..
             dockerfile: packages/control-plane/Dockerfile
         environment:
-            DATABASE_URL: postgres://platform:platform@postgres:5432/platform
+            DATABASE_URL: postgres://naulite:naulite@postgres:5432/naulite
             CP_INSTANCE_ID: cp-2
             NETBIRD_API_URL: http://127.0.0.1:1/api
             NETBIRD_MANAGEMENT_URL: http://127.0.0.1:1
-            PLATFORM_NETBIRD_MOCK: "1"
-            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/platform/dynamic-config}
-            PLATFORM_BUILD_CONTEXT_ROOT: /platform/build-fixtures
+            NAULITE_NETBIRD_MOCK: "1"
+            TRAEFIK_DYNAMIC_CONFIG_URL: ${TRAEFIK_DYNAMIC_CONFIG_URL:-http://traefik-dynamic-config:8099/naulite/dynamic-config}
+            NAULITE_BUILD_CONTEXT_ROOT: /naulite/build-fixtures
             S3_ENDPOINT: http://minio:9000
             S3_FORCE_PATH_STYLE: "true"
             AWS_ACCESS_KEY_ID: minio
             AWS_SECRET_ACCESS_KEY: minioadmin
             AWS_REGION: us-east-1
-            PLATFORM_PUBLIC_URL: http://control-plane-1:8080
-            PLATFORM_AGENT_API_KEY: platform-test-agent-key
-            PLATFORM_E2E_ALLOW_BRIDGE: "1"
-            PLATFORM_CONTAINER_REGISTRY_PATH: /data/container-registry
+            NAULITE_PUBLIC_URL: http://control-plane-1:8080
+            NAULITE_AGENT_API_KEY: naulite-test-agent-key
+            NAULITE_E2E_ALLOW_BRIDGE: "1"
+            NAULITE_TLS_MODE: self_signed
+            NAULITE_CONTAINER_REGISTRY_PATH: /data/container-registry
         volumes:
-            - ./build-context:/platform/build-fixtures:ro
+            - ./build-context:/naulite/build-fixtures:ro
             - cp-cr-data:/data/container-registry
         ports:
             - "18081:8080"
@@ -157,13 +159,13 @@ services:
         environment:
             NODE_ID: agent-builder
             HOSTNAME: agent-builder
-            PLATFORM_CP_URL: http://control-plane-1:8080
+            NAULITE_CP_URL: http://control-plane-1:8080
             AGENT_URL: http://agent-builder:9470
             AGENT_PORT: "9470"
             AGENT_VERSION: zig-0.1.0
-            PLATFORM_NODE_LABELS: "{\"role\":\"builder\"}"
-            PLATFORM_CAPABILITIES: "docker,builder"
-            PLATFORM_API_KEY: platform-test-agent-key
+            NAULITE_NODE_LABELS: "{\"role\":\"builder\"}"
+            NAULITE_CAPABILITIES: "docker,builder"
+            NAULITE_API_KEY: naulite-test-agent-key
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
@@ -179,13 +181,13 @@ services:
         environment:
             NODE_ID: agent-worker
             HOSTNAME: agent-worker
-            PLATFORM_CP_URL: http://control-plane-1:8080
+            NAULITE_CP_URL: http://control-plane-1:8080
             AGENT_URL: http://agent-worker:9470
             AGENT_PORT: "9470"
             AGENT_VERSION: zig-0.1.0
-            PLATFORM_NODE_LABELS: "{\"role\":\"worker\"}"
-            PLATFORM_CAPABILITIES: "docker"
-            PLATFORM_API_KEY: platform-test-agent-key
+            NAULITE_NODE_LABELS: "{\"role\":\"worker\"}"
+            NAULITE_CAPABILITIES: "docker"
+            NAULITE_API_KEY: naulite-test-agent-key
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:

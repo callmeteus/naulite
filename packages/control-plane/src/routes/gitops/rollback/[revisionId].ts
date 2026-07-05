@@ -1,16 +1,19 @@
 import { ApplyService } from "../../../services/ApplyService";
 import { ControlPlaneService } from "../../../ControlPlaneService";
-import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { LeaderPreHandlers } from "../../../auth/LeaderPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 import {
     LooseObjectSchema,
     RevisionIdParamsSchema,
     RouteErrorResponseSchema
-} from "@platform/shared";
+} from "@naulite/shared";
 
 export const POST = defineRoute({
-    preHandler: [AuthPreHandlers.authorizedLocalOrApiKey, LeaderPreHandlers.requireLeader()],
+    preHandler: [
+        ...PermissionPreHandlers.authorizedWithPermission("gitops:rollback"),
+        LeaderPreHandlers.requireLeader()
+    ],
     schema: {
         summary: "Rollback GitOps revision",
         description: "Reapplies a previous manifest revision in the cluster.",

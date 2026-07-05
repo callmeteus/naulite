@@ -72,16 +72,16 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Build agent image
-              run: docker build -t platform-agent -f packages/agent/Dockerfile .
+              run: docker build -t naulite-agent -f packages/agent/Dockerfile .
 
             - name: Build control-plane image
-              run: docker build -t platform-control-plane -f packages/control-plane/Dockerfile .
+              run: docker build -t naulite-control-plane -f packages/control-plane/Dockerfile .
 
             - name: Build UI image
-              run: docker build -t platform-ui -f packages/ui/Dockerfile .
+              run: docker build -t naulite-ui -f packages/ui/Dockerfile .
 
             - name: Build UI backend image
-              run: docker build -t platform-ui-backend -f packages/ui/packages/backend/Dockerfile .
+              run: docker build -t naulite-ui-backend -f packages/ui/packages/backend/Dockerfile .
 
     image-scan:
         needs: docker-smoke
@@ -92,13 +92,13 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    - image: platform-agent
+                    - image: naulite-agent
                       dockerfile: packages/agent/Dockerfile
-                    - image: platform-control-plane
+                    - image: naulite-control-plane
                       dockerfile: packages/control-plane/Dockerfile
-                    - image: platform-ui
+                    - image: naulite-ui
                       dockerfile: packages/ui/Dockerfile
-                    - image: platform-ui-backend
+                    - image: naulite-ui-backend
                       dockerfile: packages/ui/packages/backend/Dockerfile
 
         steps:
@@ -117,3 +117,17 @@ jobs:
                   ignore-unfixed: true
                   vuln-type: os,library
                   severity: CRITICAL
+
+            - name: Generate SBOM with Trivy
+              uses: aquasecurity/trivy-action@v0.36.0
+              with:
+                  image-ref: ${{ matrix.image }}
+                  format: cyclonedx
+                  output: sbom-${{ matrix.image }}.cyclonedx.json
+
+            - name: Upload SBOM artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: sbom-${{ matrix.image }}
+                  path: sbom-${{ matrix.image }}.cyclonedx.json
+                  retention-days: 90

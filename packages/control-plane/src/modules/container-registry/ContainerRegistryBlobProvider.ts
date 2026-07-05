@@ -3,7 +3,7 @@ import type {
     ContainerRegistryBlobWriteInput,
     ContainerRegistryBlobWriteResult,
     ContainerRegistryDestination
-} from "@platform/shared";
+} from "@naulite/shared";
 import type { Readable } from "node:stream";
 
 /**

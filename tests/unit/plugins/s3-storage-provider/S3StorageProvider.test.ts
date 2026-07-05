@@ -4,10 +4,10 @@ import path from "node:path";
 import { Readable } from "node:stream";
 
 import { PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
-import type { BackupTask } from "@platform/shared";
+import type { BackupTask } from "@naulite/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@platform/control-plane", () => {
+vi.mock("@naulite/control-plane", () => {
     class BackupDestinationProvider {
         readonly id = "mock-backup";
     }
@@ -34,7 +34,7 @@ describe("S3BackupDestinationProvider", () => {
     });
 
     it("uploads a backup archive through a mocked S3 client", async () => {
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-s3-backup-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-s3-backup-"));
         const archivePath = path.join(tempDir, "source.tar.gz");
         await writeFile(archivePath, "s3-backup-payload");
 
@@ -49,7 +49,7 @@ describe("S3BackupDestinationProvider", () => {
             nodeId: "node-a",
             destination: {
                 provider: "s3",
-                bucket: "platform-backups",
+                bucket: "naulite-backups",
                 prefix: "daily",
                 region: "us-east-1",
                 credentialsSecret: {
@@ -65,7 +65,7 @@ describe("S3BackupDestinationProvider", () => {
 
         expect(send).toHaveBeenCalledTimes(1);
         expect(send.mock.calls[0]?.[0]).toBeInstanceOf(PutObjectCommand);
-        expect(result.location).toBe("s3://platform-backups/daily/data-task-s3-1.tar.gz");
+        expect(result.location).toBe("s3://naulite-backups/daily/data-task-s3-1.tar.gz");
         expect(result.sizeBytes).toBe(Buffer.byteLength("s3-backup-payload"));
         expect(await provider.validate(task)).toBe(true);
     });
@@ -115,7 +115,7 @@ describe("S3BackupDestinationProvider", () => {
             nodeId: "node-a",
             destination: {
                 provider: "s3",
-                bucket: "platform-backups",
+                bucket: "naulite-backups",
                 prefix: "daily",
                 region: "eu-west-1",
                 endpoint: "http://minio:9000",
@@ -128,7 +128,7 @@ describe("S3BackupDestinationProvider", () => {
             }
         };
 
-        const result = await provider.read(task, "s3://platform-backups/daily/data-task-s3-read.tar.gz");
+        const result = await provider.read(task, "s3://naulite-backups/daily/data-task-s3-read.tar.gz");
         const bytes = await readStream(result.stream);
 
         expect(bytes).toEqual(payload);
@@ -150,13 +150,13 @@ async function readStream(stream: Readable): Promise<Buffer> {
 describe("S3ObjectStore", () => {
     it("preserves endpoint and region metadata when parsing locations", () => {
         const store = new S3ObjectStore();
-        const parsed = store.parseLocation("s3://platform-backups/e2e/data.tar.gz", {
+        const parsed = store.parseLocation("s3://naulite-backups/e2e/data.tar.gz", {
             region: "eu-west-1",
             endpoint: "http://minio:9000"
         });
 
         expect(parsed.config).toEqual({
-            bucket: "platform-backups",
+            bucket: "naulite-backups",
             region: "eu-west-1",
             endpoint: "http://minio:9000"
         });
@@ -178,7 +178,7 @@ describe("S3ContainerRegistryBlobProvider", () => {
             tag: "v1",
             destination: {
                 provider: "s3",
-                bucket: "platform-cr",
+                bucket: "naulite-cr",
                 prefix: "cluster-a",
                 region: "us-east-1",
                 credentialsSecret: {

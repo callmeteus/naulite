@@ -28,7 +28,7 @@ The control plane can proxy read-only queries to a Prometheus HTTP API for dashb
 
 | Variable | Default |
 |----------|---------|
-| `PROMETHEUS_URL` | `http://platform-prometheus:9090` |
+| `PROMETHEUS_URL` | `http://naulite-prometheus:9090` |
 
 Proxy routes forward `GET` requests under `/api/v1/` to the configured base URL. Upstream failures return `502` with a treated error payload.
 

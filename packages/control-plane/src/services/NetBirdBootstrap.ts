@@ -38,7 +38,7 @@ namespace Errors {
  */
 export namespace NetBirdBootstrap {
     const SUPERADMIN_EMAIL = "superadmin@platform.internal";
-    const SUPERADMIN_NAME = "Platform Superadmin";
+    const SUPERADMIN_NAME = "Naulite Superadmin";
     const PAT_EXPIRE_DAYS = 365;
     const POLL_INTERVAL_MS = 2000;
     const MAX_POLL_ATTEMPTS = 60;

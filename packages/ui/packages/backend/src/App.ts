@@ -1,9 +1,12 @@
-import { PlatformApiError, PlatformClient } from "@platform/sdk";
+import { NauliteApiError, NauliteClient } from "@naulite/sdk";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { AuthPreHandlers } from "./auth/AuthPreHandlers";
 import { CsrfProtection } from "./auth/CsrfProtection";
-import { RolePreHandlers } from "./auth/RolePreHandlers";
+import {
+    PermissionPreHandlers,
+    resolveBffRoutePermissions
+} from "./auth/PermissionPreHandlers";
 import { resolveConfigFromEnv } from "./Config";
 import { registerRoutes } from "./routes/index";
 
@@ -24,7 +27,7 @@ export interface CreateAppOptions {
  */
 export async function createApp(options: CreateAppOptions = {}): Promise<FastifyInstance> {
     const envConfig = resolveConfigFromEnv();
-    const controlPlane = new PlatformClient({
+    const controlPlane = new NauliteClient({
         baseUrl: options.controlPlaneUrl ?? envConfig.controlPlaneUrl,
         token: options.adminApiKey ?? envConfig.adminApiKey
     });
@@ -69,38 +72,10 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
 
         const path = request.url.split("?")[0] ?? request.url;
         const method = request.method.toUpperCase();
+        const requiredPermissions = resolveBffRoutePermissions(path, method);
 
         try {
-            if (path.startsWith("/admin/users") || path.startsWith("/api-keys") || path.startsWith("/secrets")) {
-                if (!RolePreHandlers.canAdmin(request)) {
-                    throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
-                }
-                return;
-            }
-
-            if (path.startsWith("/notifications")) {
-                if (!RolePreHandlers.canOperate(request)) {
-                    throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
-                }
-                return;
-            }
-
-            if (
-                method === "POST" &&
-                (path === "/apply" ||
-                    path === "/build" ||
-                    path === "/notifications/test" ||
-                    path === "/nodes/provision" ||
-                    path.startsWith("/backups/") ||
-                    (path.startsWith("/nodes/provisions/") && path.endsWith("/terminate")))
-            ) {
-                if (!RolePreHandlers.canOperate(request)) {
-                    throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
-                }
-                return;
-            }
-
-            if (!RolePreHandlers.canView(request)) {
+            if (!PermissionPreHandlers.hasEveryPermission(request, requiredPermissions)) {
                 throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
             }
         } catch (error) {
@@ -115,7 +90,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     });
 
     app.setErrorHandler((error, _request, reply) => {
-        if (error instanceof PlatformApiError) {
+        if (error instanceof NauliteApiError) {
             reply.code(error.status);
             return {
                 message: error.message

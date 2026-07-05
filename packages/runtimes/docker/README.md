@@ -1,4 +1,4 @@
-# @platform/runtime-docker
+# @naulite/runtime-docker
 
 Docker engine `RuntimeProvider` implementation backed by dockerode.
 

@@ -10,7 +10,7 @@ import type { AdminRole } from "./AdminAuthTypes";
 import { adminRoleMeetsMinimum } from "./AdminAuthTypes";
 import { attachRequestAuth } from "./RequestAuth";
 
-const SESSION_HEADER = "x-platform-session";
+const SESSION_HEADER = "x-naulite-session";
 
 /**
  * Options for {@link AuthPreHandlers.checkAuthorized}.
@@ -74,14 +74,14 @@ export namespace AuthPreHandlers {
      */
     export function checkAgentSetupKey(secretName = "netbird/setup-key"): preHandlerHookHandler {
         return async (request) => {
-            const headerKey = request.headers["x-platform-setup-key"];
+            const headerKey = request.headers["x-naulite-setup-key"];
             const setupKey = typeof headerKey === "string" ? headerKey.trim() : "";
 
             if (!setupKey) {
                 throw new HTTP401Error("Missing setup key.");
             }
 
-            const provisionHeader = request.headers["x-platform-provision-id"];
+            const provisionHeader = request.headers["x-naulite-provision-id"];
             const provisionId = typeof provisionHeader === "string" ? provisionHeader.trim() : "";
 
             if (provisionId) {

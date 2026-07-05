@@ -1,5 +1,5 @@
-import { ExposurePlanner } from "@platform/control-plane";
-import type { Manifest, NetworkExposure } from "@platform/shared";
+import { ExposurePlanner } from "@naulite/control-plane";
+import type { Manifest, NetworkExposure } from "@naulite/shared";
 import { describe, expect, it } from "vitest";
 
 describe("ExposurePlanner", () => {

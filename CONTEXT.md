@@ -1,4 +1,4 @@
-# Platform Context
+# Naulite Context
 
 Canonical architecture and philosophy for the distributed orchestration platform monorepo.
 

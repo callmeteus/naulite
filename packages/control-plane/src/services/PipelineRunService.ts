@@ -9,8 +9,8 @@ import type {
     PipelineRunStatus,
     PipelineStep,
     PaginatedList
-} from "@platform/shared";
-import { buildPaginatedList, paginationOffset } from "@platform/shared";
+} from "@naulite/shared";
+import { buildPaginatedList, paginationOffset } from "@naulite/shared";
 import { Op } from "sequelize";
 
 import {

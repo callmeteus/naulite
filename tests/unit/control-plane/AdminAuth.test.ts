@@ -130,7 +130,7 @@ describe("admin auth routes", () => {
             method: "GET",
             url: "/admin/me",
             headers: {
-                "x-platform-session": "session-token"
+                "x-naulite-session": "session-token"
             }
         });
 
@@ -150,7 +150,7 @@ describe("admin auth routes", () => {
             method: "POST",
             url: "/admin/logout",
             headers: {
-                "x-platform-session": "session-token"
+                "x-naulite-session": "session-token"
             }
         });
 

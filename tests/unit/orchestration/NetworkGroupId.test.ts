@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NetworkGroupId } from "@platform/shared";
+import { NetworkGroupId } from "@naulite/shared";
 
 describe("NetworkGroupId", () => {
     it("generates a NetBird group id from manifest name and network key", () => {

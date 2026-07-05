@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { CreatedApiKeySchema } from "@platform/shared";
+import { CreatedApiKeySchema } from "@naulite/shared";
 
 import { ApiKeyRotationConfig } from "../../../auth/ApiKeyRotationConfig";
-import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { HTTP404Error, HTTP503Error } from "../../../errors/TreatedError";
 import { defineRoute } from "../../../routing/DefineRoute";
@@ -20,7 +20,7 @@ const RotateApiKeyDisabledSchema = z.object({
  * Rotates an API key when rotation is enabled in platform configuration.
  */
 export const POST = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("admin:api-keys:write"),
     schema: {
         summary: "Rotate API key",
         description: "Creates a successor API key and keeps the previous key valid during the grace period.",
@@ -36,7 +36,7 @@ export const POST = defineRoute({
     async handler(req) {
         if (!ApiKeyRotationConfig.isEnabled()) {
             throw new HTTP503Error("API key rotation is disabled.", {
-                flag: "PLATFORM_API_KEY_ROTATION_ENABLED"
+                flag: "NAULITE_API_KEY_ROTATION_ENABLED"
             });
         }
 

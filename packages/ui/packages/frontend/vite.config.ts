@@ -10,8 +10,8 @@ export default defineConfig({
     plugins: [vue()],
     resolve: {
         alias: {
-            "@platform/sdk": path.resolve(rootDir, "../../../sdk/src/index.ts"),
-            "@platform/shared": path.resolve(rootDir, "../../../shared/src/index.ts")
+            "@naulite/sdk": path.resolve(rootDir, "../../../sdk/src/index.ts"),
+            "@naulite/shared": path.resolve(rootDir, "../../../shared/src/index.ts")
         }
     },
     server: {

@@ -1,5 +1,5 @@
-import { Planner } from "@platform/control-plane";
-import type { Manifest } from "@platform/shared";
+import { Planner } from "@naulite/control-plane";
+import type { Manifest } from "@naulite/shared";
 import { describe, expect, it } from "vitest";
 
 function buildManifest(overrides: Partial<Manifest> = {}): Manifest {

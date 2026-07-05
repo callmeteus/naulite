@@ -1,4 +1,4 @@
-import type { Node } from "@platform/shared";
+import type { Node } from "@naulite/shared";
 
 import { PipelineRunService } from "./PipelineRunService";
 
@@ -17,7 +17,7 @@ export namespace NodeHealthWatcher {
      */
     export async function onHeartbeat(node: Node): Promise<void> {
         const pool = PipelineRunService.resolvePoolFromLabels(node.labels);
-        const threshold = Number(process.env.PLATFORM_NODE_DISK_PRESSURE_RATIO ?? 0.85);
+        const threshold = Number(process.env.NAULITE_NODE_DISK_PRESSURE_RATIO ?? 0.85);
         const diskTotal = node.resources.diskMbTotal;
         const diskUsed = node.resources.diskMbUsed;
         const usageRatio = diskTotal > 0 ? diskUsed / diskTotal : 0;

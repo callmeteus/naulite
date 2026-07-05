@@ -32,7 +32,7 @@ describe("container registry routes", () => {
      * @returns Fastify app and backing service
      */
     async function createRegistryApp() {
-        tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-cr-routes-"));
+        tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-cr-routes-"));
         databaseProvider = new DatabaseProvider();
         await databaseProvider.connect({
             dialect: "sqlite",

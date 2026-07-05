@@ -4,7 +4,7 @@ import type {
     SecretFilter,
     SecretProvider as SharedSecretProvider,
     SecretUpsertInput
-} from "@platform/shared";
+} from "@naulite/shared";
 
 import { SecretProvider } from "./SecretProvider";
 

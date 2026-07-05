@@ -20,7 +20,7 @@ describe("MigrationRunner", () => {
     });
 
     it("syncs sqlite schema and records the initial migration", async () => {
-        const tempDir = await mkdtemp(path.join(os.tmpdir(), "platform-migrations-"));
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-migrations-"));
         databasePath = path.join(tempDir, "control-plane.db");
         const provider = new DatabaseProvider();
 

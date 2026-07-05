@@ -1,6 +1,6 @@
 # Postgres HA (dogfood)
 
-Primary + streaming replica + Pgpool-II for local Platform dogfood.
+Primary + streaming replica + Pgpool-II for local Naulite dogfood.
 
 ## Services
 

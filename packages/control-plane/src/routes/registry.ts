@@ -1,10 +1,10 @@
 import { ControlPlaneService } from "../ControlPlaneService";
-import { AuthPreHandlers } from "../auth/AuthPreHandlers";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
-import { RegistryListResponseSchema } from "@platform/shared";
+import { RegistryListResponseSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
-    preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
+    preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
     schema: {
         summary: "List registries",
         description: "Lists registries referenced by the most recently applied manifests.",

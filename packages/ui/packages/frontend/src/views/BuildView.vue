@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-import type { PipelineEvent, PipelineRun } from "@platform/sdk";
-import { platformClient } from "../api/Client";
+import type { PipelineEvent, PipelineRun } from "@naulite/sdk";
+import { nauliteClient } from "../api/Client";
 import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
@@ -102,7 +102,7 @@ async function startLiveUpdates(runId: string): Promise<void> {
     streamActive.value = true;
 
     try {
-        for await (const event of platformClient.streamRunEvents(runId)) {
+        for await (const event of nauliteClient.streamRunEvents(runId)) {
             if (streamAbort) {
                 break;
             }

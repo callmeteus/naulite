@@ -33,7 +33,7 @@ pub const BackupRestoreResult = struct {
     error_message: ?[]const u8,
 };
 
-const default_backup_root = "/var/lib/platform/backups";
+const default_backup_root = "/var/lib/naulite/backups";
 
 /// Executes a backup task JSON payload from the control plane.
 pub fn executeBackupTask(
@@ -270,7 +270,7 @@ fn resolveMountPath(
         };
     }
 
-    return try std.fmt.allocPrint(allocator, "/var/lib/platform/volumes/{s}", .{volume_name});
+    return try std.fmt.allocPrint(allocator, "/var/lib/naulite/volumes/{s}", .{volume_name});
 }
 
 fn resolveArchivePath(
@@ -348,7 +348,7 @@ test "resolveMountPath defaults to volume directory" {
     const mount_path = try resolveMountPath(allocator, object, "postgres-data");
     defer allocator.free(mount_path);
 
-    try std.testing.expectEqualStrings("/var/lib/platform/volumes/postgres-data", mount_path);
+    try std.testing.expectEqualStrings("/var/lib/naulite/volumes/postgres-data", mount_path);
 }
 
 test "resolveArchivePath defaults to backup root" {
@@ -359,5 +359,5 @@ test "resolveArchivePath defaults to backup root" {
     const archive_path = try resolveArchivePath(allocator, object, "run-123");
     defer allocator.free(archive_path);
 
-    try std.testing.expectEqualStrings("/var/lib/platform/backups/run-123.tar.gz", archive_path);
+    try std.testing.expectEqualStrings("/var/lib/naulite/backups/run-123.tar.gz", archive_path);
 }

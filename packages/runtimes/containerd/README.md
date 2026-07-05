@@ -1,4 +1,4 @@
-# @platform/runtime-containerd
+# @naulite/runtime-containerd
 
 containerd `RuntimeProvider` stub that returns `RuntimeNotConfiguredError` until a nerdctl-backed implementation is added.
 

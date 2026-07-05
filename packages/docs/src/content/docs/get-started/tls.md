@@ -1,11 +1,11 @@
 ---
 title: TLS modes
-description: Configure Traefik TLS termination for Platform ingress with PLATFORM_TLS_MODE.
+description: Configure Traefik TLS termination for Naulite ingress with NAULITE_TLS_MODE.
 ---
 
 # TLS modes
 
-Platform exposes public ingress through Traefik. Set `PLATFORM_TLS_MODE` on the control plane and in `dogfood/.env` to choose how certificates are provisioned.
+Naulite exposes public ingress through Traefik. Set `NAULITE_TLS_MODE` on the control plane and in `dogfood/.env` to choose how certificates are provisioned.
 
 | Mode | Purpose |
 |------|---------|
@@ -19,7 +19,7 @@ Platform exposes public ingress through Traefik. Set `PLATFORM_TLS_MODE` on the 
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `PLATFORM_TLS_MODE` | No (`acme_tls`) | Active TLS mode |
+| `NAULITE_TLS_MODE` | No (`acme_tls`) | Active TLS mode |
 | `ACME_EMAIL` | ACME modes | Contact email for Let's Encrypt |
 | `ACME_CA_SERVER` | No | ACME directory URL (staging by default in dogfood) |
 | `CF_DNS_API_TOKEN` | `acme_dns_cloudflare` | Cloudflare API token with DNS edit permission |

@@ -1,7 +1,7 @@
 import { RunInstancesCommand, DescribeImagesCommand, TerminateInstancesCommand } from "@aws-sdk/client-ec2";
 import { describe, expect, it, vi } from "vitest";
 
-import { AwsNodeProvisionerProvider } from "@platform/plugin-aws-node-provisioner";
+import { AwsNodeProvisionerProvider } from "@naulite/plugin-aws-node-provisioner";
 
 describe("AwsNodeProvisionerProvider", () => {
     it("launches instances with base64 userData via mocked EC2", async () => {
