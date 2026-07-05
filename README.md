@@ -184,7 +184,7 @@ Common scripts:
 ## Documentation
 
 * [CONTEXT.md](CONTEXT.md) - Architecture and product philosophy.
-* [PROGRESS.md](PROGRESS.md) - Development phase log.
+* [CHANGELOG.md](CHANGELOG.md) - Release and development history.
 * [packages/docs/src/content/docs/bootstrap.md](packages/docs/src/content/docs/bootstrap.md) - Bootstrap details.
 * [packages/docs/src/content/docs/get-started/install.md](packages/docs/src/content/docs/get-started/install.md) - Installation guide.
 * [packages/docs/src/content/docs/operations/runbook.md](packages/docs/src/content/docs/operations/runbook.md) - Operations runbook.

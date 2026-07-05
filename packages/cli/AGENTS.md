@@ -14,7 +14,7 @@ Native Zig CLI for the Naulite control plane. English code and comments.
 | `src/main.zig` | Entry point, global flags, login, dispatch |
 | `src/commands.zig` | Control plane command handlers |
 | `src/resolve.zig` | Local vs remote CP resolution |
-| `src/credentials.zig` | `~/.platform/credentials.json` load/save |
+| `src/credentials.zig` | `~/.naulite/credentials.json` load/save |
 | `src/control_plane_client.zig` | HTTP client (auth + tenant headers) |
 | `src/config.zig` | Resolved connection settings |
 | `src/io_output.zig` | Buffered stdout/stderr writers |

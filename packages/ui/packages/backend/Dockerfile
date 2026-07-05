@@ -13,9 +13,9 @@ COPY packages/shared ./packages/shared
 COPY packages/sdk ./packages/sdk
 COPY packages/ui/packages/backend ./packages/ui/packages/backend
 
-RUN yarn workspace @platform/shared build \
-    && yarn workspace @platform/sdk build \
-    && yarn workspace @platform/ui-backend build
+RUN yarn workspace @naulite/shared build \
+    && yarn workspace @naulite/sdk build \
+    && yarn workspace @naulite/ui-backend build
 
 FROM node:22-bookworm-slim AS runtime
 

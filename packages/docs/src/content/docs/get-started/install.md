@@ -9,7 +9,7 @@ Naulite ships one-liner installers under `bootstrap/` at the repository root. Th
 
 ## Control plane
 
-From the platform monorepo root on a Docker host:
+From the naulite monorepo root on a Docker host:
 
 ```bash
 sudo bash bootstrap/control-plane-install.sh --host https://cp.example.com
@@ -131,8 +131,8 @@ NAULITE_ROOT=/tmp/naulite-bootstrap bash bootstrap/control-plane-install.sh --dr
 
 ```bash
 export NAULITE_CP_URL=https://cp.example.com
-platform cluster status get
-platform cluster nodes get
+naulite cluster status get
+naulite cluster nodes get
 ```
 
 Nodes should report `online` after the first heartbeat. Continue with [database setup](/get-started/database/) and [your first workload](/get-started/first-workload/).

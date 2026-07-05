@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * @todo rename platform prefix after final platform name is chosen
- * Parsed Dockerfile step marker name (`# platform:step <name>`).
+ * Parsed Dockerfile step marker name (`# naulite:step <name>`).
  */
 export const DockerfileStepNameSchema = z.string().regex(
     /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/,
@@ -22,4 +22,4 @@ export const DockerfileStepMarkerSchema = z.object({
  * @todo rename platform prefix after final platform name is chosen
  * Exact comment prefix scanned in Dockerfiles.
  */
-export const DOCKERFILE_STEP_COMMENT_PREFIX = "# platform:step ";
+export const DOCKERFILE_STEP_COMMENT_PREFIX = "# naulite:step ";

@@ -37,18 +37,18 @@ COPY packages/plugins/notification-webhook ./packages/plugins/notification-webho
 COPY bootstrap ./bootstrap
 COPY scripts ./scripts
 
-RUN yarn workspace @platform/shared build \
-    && yarn workspace @platform/gateway build \
-    && yarn workspace @platform/builder-docker build \
-    && yarn workspace @platform/builder-kaniko build \
-    && yarn workspace @platform/runtime-docker build \
-    && yarn workspace @platform/runtime-podman build \
-    && yarn workspace @platform/runtime-containerd build \
-    && yarn workspace @platform/plugin-s3-storage-provider build \
-    && yarn workspace @platform/plugin-aws-node-provisioner build \
-    && yarn workspace @platform/plugin-notification-slack build \
-    && yarn workspace @platform/plugin-notification-webhook build \
-    && yarn workspace @platform/control-plane build
+RUN yarn workspace @naulite/shared build \
+    && yarn workspace @naulite/gateway build \
+    && yarn workspace @naulite/builder-docker build \
+    && yarn workspace @naulite/builder-kaniko build \
+    && yarn workspace @naulite/runtime-docker build \
+    && yarn workspace @naulite/runtime-podman build \
+    && yarn workspace @naulite/runtime-containerd build \
+    && yarn workspace @naulite/plugin-s3-storage-provider build \
+    && yarn workspace @naulite/plugin-aws-node-provisioner build \
+    && yarn workspace @naulite/plugin-notification-slack build \
+    && yarn workspace @naulite/plugin-notification-webhook build \
+    && yarn workspace @naulite/control-plane build
 
 FROM node:22-bookworm-slim AS runtime
 

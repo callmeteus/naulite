@@ -5,7 +5,7 @@ description: Reference Compose manifests with platform extensions for common dep
 
 # Manifest examples
 
-These samples were previously under `platform/examples/manifests/`. Use them as starting points for `platform cluster apply` or GitOps repositories.
+These samples were previously under `platform/examples/manifests/`. Use them as starting points for `naulite cluster manifests apply` or GitOps repositories.
 
 ## minimal.compose.yml
 
@@ -505,7 +505,7 @@ volumes:
 ## Apply
 
 ```bash
-platform cluster apply -f minimal.compose.yml
+naulite cluster manifests apply -f minimal.compose.yml
 ```
 
 See the [Manifest reference](/manifest/) for field documentation and [First workload](/get-started/first-workload/) for a step-by-step first apply.

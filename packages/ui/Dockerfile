@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json yarn.lock turbo.json tsconfig.base.json ./
 COPY packages ./packages
 RUN yarn install --frozen-lockfile || yarn install
-RUN yarn workspace @platform/ui-frontend build
+RUN yarn workspace @naulite/ui-frontend build
 
 FROM nginx:alpine
 COPY packages/ui/nginx.conf /etc/nginx/conf.d/default.conf

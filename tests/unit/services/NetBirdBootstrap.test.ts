@@ -11,7 +11,7 @@ describe("NetBirdBootstrap", () => {
         const store = {
             getClusterSecretValues: vi.fn(async () => ({
                 apiToken: "nbp_cached",
-                superadminEmail: "superadmin@platform.internal",
+                superadminEmail: "superadmin@naulite.internal",
                 superadminPassword: "cached-password"
             })),
             upsertClusterSecret: vi.fn()
@@ -40,7 +40,7 @@ describe("NetBirdBootstrap", () => {
             if (url.endsWith("/setup") && init?.method === "POST") {
                 return new Response(JSON.stringify({
                     user_id: "user-1",
-                    email: "superadmin@platform.internal",
+                    email: "superadmin@naulite.internal",
                     personal_access_token: "nbp_generated"
                 }), { status: 200 });
             }
@@ -78,7 +78,7 @@ describe("NetBirdBootstrap", () => {
             if (url.endsWith("/setup")) {
                 stored = {
                     apiToken: "nbp_from_peer",
-                    superadminEmail: "superadmin@platform.internal",
+                    superadminEmail: "superadmin@naulite.internal",
                     superadminPassword: "peer-password"
                 };
                 return new Response(JSON.stringify({ message: "setup already completed" }), { status: 409 });

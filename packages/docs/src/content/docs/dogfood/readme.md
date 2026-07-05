@@ -1,15 +1,15 @@
 ---
 title: Dogfood README
-description: Mirror of the platform repository root README for dogfood operators.
+description: Mirror of the naulite repository root README for dogfood operators.
 ---
 
-# Platform
+# Naulite
 
 Distributed orchestration platform for Compose-compatible workloads. Users describe desired state in manifests; the control plane plans and schedules; agents execute on nodes.
 
 ## Repository root
 
-This directory (`platform/`) is the **git repository root** and the working directory for all development. Clone the repo, run `yarn install`, `yarn build`, tests, and Docker dogfood from here - not from the parent `Hytale/` workspace folder.
+This directory (`naulite/`) is the **git repository root** and the working directory for all development. Clone the repo, run `yarn install`, `yarn build`, tests, and Docker dogfood from here - not from the parent `Hytale/` workspace folder.
 
 ## V1 status
 
@@ -19,11 +19,11 @@ V1 is a **working scaffold**, not a production-ready product:
 - **Intended use:** local development, integration testing, and internal dogfood.
 - **Not yet production-hardened:** operational runbooks, multi-tenant hardening, and production SLOs are follow-up work beyond this scaffold.
 
-See `PROGRESS.md` for the phase log and `CONTEXT.md` for architecture.
+See `CHANGELOG.md` for the phase log and `CONTEXT.md` for architecture.
 
 ## Features
 
-- Compose-based manifests with platform extensions (cluster labels, ingress, backups, log rotation, networks)
+- Compose-based manifests with naulite extensions (cluster labels, ingress, backups, log rotation, networks)
 - Pluggable providers for runtime, builds, gateway, secrets, volumes, and backup destinations
 - Hierarchical CLI (`naulite cluster ...`) and Vue dashboard
 - HA control plane with SQLite or PostgreSQL (Sequelize ORM)
@@ -65,13 +65,13 @@ Point the CLI or UI at a control plane:
 ```bash
 export NAULITE_CP_URL=http://localhost:8080
 yarn workspace @naulite/cli build:all
-platform cluster status get
+naulite cluster status get
 ```
 
 ## Repository layout
 
 ```
-platform/                  # git + dev root (you are here)
+naulite/                  # git + dev root (you are here)
     packages/
         shared/            Domain schemas and provider interfaces
         cli/               Zig CLI; strings in src/i18n.zig
@@ -86,7 +86,7 @@ platform/                  # git + dev root (you are here)
         docs/              This documentation site (@naulite/docs)
     tests/
         unit/              Pure and docker-backed unit tests (~72)
-        e2e/               Black-box platform flows
+        e2e/               Black-box naulite flows
         harness/           LocalTestCluster lifecycle helpers
         fixtures/          Docker compose stack and manifests
 ```
@@ -94,7 +94,7 @@ platform/                  # git + dev root (you are here)
 ## Documentation
 
 - `CONTEXT.md` - canonical architecture and philosophy
-- `PROGRESS.md` - development log and phase status
+- `CHANGELOG.md` - development log and phase status
 - This site (`yarn workspace @naulite/docs dev`) - operations and reference guides
 
 ## Development

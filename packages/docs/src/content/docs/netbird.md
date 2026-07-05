@@ -26,7 +26,7 @@ NetBird is an **internal platform component**. End users do not configure tokens
 `NETBIRD_TOKEN` is **not** required for normal operation. The control plane creates the first owner user and personal access token via `POST /api/setup` when `NB_SETUP_PAT_ENABLED=true` on `netbird-server`, then persists:
 
 - `apiToken` - NetBird API personal access token (365-day internal PAT)
-- `superadminEmail` - `superadmin@platform.internal`
+- `superadminEmail` - `superadmin@naulite.internal`
 - `superadminPassword` - random password for the embedded IdP owner account
 
 Set `NETBIRD_TOKEN` only for one-time recovery when NetBird was initialized outside Naulite.

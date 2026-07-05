@@ -19,7 +19,7 @@ entryPoints:
 
 providers:
     http:
-        endpoint: "http://traefik-dynamic-config:8099/platform/dynamic-config"
+        endpoint: "http://traefik-dynamic-config:8099/naulite/dynamic-config"
         pollInterval: "2s"
         pollTimeout: "5s"
 

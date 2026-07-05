@@ -111,9 +111,9 @@ function buildTlsStores() {
             defaultGeneratedCert:
                 resolver: ""
                 domain:
-                    main: "platform.local"
+                    main: "naulite.local"
                     sans:
-                        - "*.platform.local"
+                        - "*.naulite.local"
 `;
 }
 

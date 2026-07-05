@@ -29,14 +29,14 @@ See `CONTEXT.md` at the repository root for the canonical overview. This documen
 
 ### CLI and UI
 
-- CLI is implemented in Zig (`packages/cli/src/`); NPM install via `bin/platform.js` spawning the native binary
+- CLI is implemented in Zig (`packages/cli/src/`); NPM install via `bin/naulite.js` spawning the native binary
 - Strings live in `src/i18n.zig`
 - UI uses Vue 3, Vite, a `reactive()` cluster store (`packages/ui/packages/frontend/src/stores/Cluster.ts`), and the same SDK through a dev proxy
 
 ## Deploy flow
 
 1. User or GitOps delivers a manifest to the control plane.
-2. Parser validates Compose and platform extensions.
+2. Parser validates Compose and naulite extensions.
 3. Planner diffs desired vs actual cluster state.
 4. Scheduler selects nodes using CPU, memory, disk, labels, and capabilities.
 5. Control plane sends execution plans to agents.

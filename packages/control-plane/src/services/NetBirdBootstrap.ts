@@ -37,7 +37,7 @@ namespace Errors {
  * Bootstraps self-hosted NetBird and persists internal credentials as cluster secrets.
  */
 export namespace NetBirdBootstrap {
-    const SUPERADMIN_EMAIL = "superadmin@platform.internal";
+    const SUPERADMIN_EMAIL = "superadmin@naulite.internal";
     const SUPERADMIN_NAME = "Naulite Superadmin";
     const PAT_EXPIRE_DAYS = 365;
     const POLL_INTERVAL_MS = 2000;

@@ -31,7 +31,7 @@ Naulite V1 is a **working scaffold** for local development, integration testing,
 
 ## Documentation migration
 
-Legacy markdown under `platform/docs/*.md` is a one-line redirect to this package. Edit content in `packages/docs/src/content/docs/` and publish with `yarn workspace @naulite/docs build`.
+Legacy markdown under `naulite/docs/*.md` is a one-line redirect to this package. Edit content in `packages/docs/src/content/docs/` and publish with `yarn workspace @naulite/docs build`.
 
 ## Related
 

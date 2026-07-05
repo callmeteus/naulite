@@ -54,16 +54,16 @@ RUN apt-get update \
     && rm -f /tmp/netbird.deb \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid "${DOCKER_GID}" docker \
-    && groupadd --system --gid 1000 platform \
-    && useradd --system --uid 1000 --gid platform --home-dir /var/lib/platform --shell /usr/sbin/nologin platform \
-    && usermod -aG docker platform \
-    && mkdir -p /var/lib/platform \
-    && chown -R platform:platform /var/lib/platform
+    && groupadd --system --gid 1000 naulite \
+    && useradd --system --uid 1000 --gid naulite --home-dir /var/lib/naulite --shell /usr/sbin/nologin naulite \
+    && usermod -aG docker naulite \
+    && mkdir -p /var/lib/naulite \
+    && chown -R naulite:naulite /var/lib/naulite
 
-COPY --from=builder /build/packages/agent/zig-out/bin/platform-agent /usr/local/bin/platform-agent
+COPY --from=builder /build/packages/agent/zig-out/bin/naulite-agent /usr/local/bin/naulite-agent
 
 EXPOSE 9470
 
-USER platform
+USER naulite
 
-CMD ["platform-agent"]
+CMD ["naulite-agent"]

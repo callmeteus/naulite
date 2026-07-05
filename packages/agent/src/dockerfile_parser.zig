@@ -1,7 +1,7 @@
 const std = @import("std");
 
 // @todo rename platform prefix after final platform name is chosen
-const step_prefix = "# platform:step ";
+const step_prefix = "# naulite:step ";
 
 /// Parsed Dockerfile build step marker.
 pub const StepMarker = struct {
@@ -97,9 +97,9 @@ test "parse platform step comments" {
     const allocator = std.testing.allocator;
     const dockerfile =
         \\FROM node:22
-        \\# platform:step pre-build
+        \\# naulite:step pre-build
         \\RUN ./pre-build.sh
-        \\# platform:step yarn-install-build
+        \\# naulite:step yarn-install-build
         \\RUN yarn install
     ;
 

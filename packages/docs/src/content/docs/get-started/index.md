@@ -14,7 +14,7 @@ Naulite is a distributed orchestration system for Compose-compatible workloads. 
 | **Manifests** | Compose YAML plus platform extensions (ingress, backups, cluster labels, networks) |
 | **Control plane** | HTTP API, orchestration, GitOps, leader election, admin auth |
 | **Agents** | Zig executors that run containers, builds, backups, and log rotation on nodes |
-| **CLI and dashboard** | `platform` commands and a Vue admin UI for operators |
+| **CLI and dashboard** | `naulite` commands and a Vue admin UI for operators |
 
 Naulite is a **working alpha scaffold** for local development, integration testing, and internal dogfood. Production hardening (SLOs, full multi-tenant isolation, managed Postgres failover automation) is follow-up work beyond this wave.
 
@@ -36,7 +36,7 @@ Naulite is a **working alpha scaffold** for local development, integration testi
 ### Operator workstation
 
 - Node.js 22+ and Yarn (for building the CLI and docs locally)
-- `platform` CLI built from `packages/cli` with `NAULITE_CP_URL` pointing at your cluster
+- `naulite` CLI built from `packages/cli` with `NAULITE_CP_URL` pointing at your cluster
 
 ## Next steps
 

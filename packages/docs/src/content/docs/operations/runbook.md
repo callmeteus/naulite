@@ -18,8 +18,8 @@ Incident-focused procedures for operators running a Naulite dogfood or staging c
 From the CLI (with `NAULITE_CP_URL` set):
 
 ```bash
-platform cluster status get
-platform cluster nodes get
+naulite cluster status get
+naulite cluster nodes get
 ```
 
 Nodes should report `online` after the first heartbeat post-bootstrap.
@@ -28,10 +28,10 @@ Nodes should report `online` after the first heartbeat post-bootstrap.
 
 | Task | Command |
 |------|---------|
-| List backup runs | `platform cluster backups get` |
-| Trigger backup | `platform cluster backups run <volumeName>` |
-| Restore | `platform cluster backups restore <backupId>` |
-| Rotate logs | `platform cluster services rotate-logs <serviceName>` |
+| List backup runs | `naulite cluster backups get` |
+| Trigger backup | `naulite cluster backups run <volumeName>` |
+| Restore | `naulite cluster backups restore <backupId>` |
+| Rotate logs | `naulite cluster services rotate-logs <serviceName>` |
 
 See [Backups](/backups/) and [Log rotation](/log-rotation/).
 
@@ -53,7 +53,7 @@ Dogfood uses service-token auth via `ADMIN_API_KEY` in `.env`. See [Admin authen
 ## Escalation data to collect
 
 1. Control plane logs and `GET /health/ready` response
-2. Affected node id and `platform cluster nodes get` output
+2. Affected node id and `naulite cluster nodes get` output
 3. Recent apply revision id and manifest name
 4. Agent logs on the scheduled node
 5. Leader instance id and Postgres connectivity if HA symptoms appear

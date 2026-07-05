@@ -1,4 +1,4 @@
-name: platform
+name: naulite
 
 include:
     - path: infra/postgres-ha/docker-compose.yml
@@ -8,7 +8,7 @@ include:
     - path: ../packages/metrics/compose/metrics-stack.yml
       project_directory: ../packages/metrics/compose
 
-platform:
+naulite:
     version: 0.1.0
     plugins:
         enabled:
@@ -105,7 +105,7 @@ services:
         ports:
             - "8080:8080"
         volumes:
-            - cp-data-1:/var/lib/platform
+            - cp-data-1:/var/lib/naulite
             - naulite-prometheus-file-sd:/var/lib/naulite/prometheus/file_sd
         networks:
             - default
@@ -144,7 +144,7 @@ services:
         ports:
             - "8081:8080"
         volumes:
-            - cp-data-2:/var/lib/platform
+            - cp-data-2:/var/lib/naulite
             - naulite-prometheus-file-sd:/var/lib/naulite/prometheus/file_sd
         networks:
             - default
@@ -201,7 +201,7 @@ services:
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
             NETBIRD_SETUP_KEY: ${NETBIRD_SETUP_KEY:-}
         volumes:
-            - agent-data-1:/var/lib/platform
+            - agent-data-1:/var/lib/naulite
             - /var/run/docker.sock:/var/run/docker.sock
         depends_on:
             control-plane-1:

@@ -407,8 +407,8 @@ pub const DockerApi = struct {
             }
 
             const labels = item.object.get("Labels");
-            const instance_id = readLabelValue(labels, "platform.instance.id") orelse container_name;
-            const service_name = readLabelValue(labels, "platform.service.name") orelse "-";
+            const instance_id = readLabelValue(labels, "naulite.instance.id") orelse container_name;
+            const service_name = readLabelValue(labels, "naulite.service.name") orelse "-";
 
             try containers.append(self.allocator, .{
                 .docker_id = try self.allocator.dupe(u8, docker_id),
@@ -905,7 +905,7 @@ pub const DockerApi = struct {
 
     /// Returns whether a container should be included in platform metrics.
     fn isPlatformManagedContainer(container_name: []const u8, labels: ?std.json.Value) bool {
-        if (readLabelValue(labels, "platform.managed")) |value| {
+        if (readLabelValue(labels, "naulite.managed")) |value| {
             return std.mem.eql(u8, value, "true");
         }
 

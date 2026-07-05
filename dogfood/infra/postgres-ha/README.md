@@ -16,7 +16,7 @@ Apps connect to **`pgpool:5432`**, not the backends directly.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `POSTGRES_PASSWORD` | `platform` | App user password (`platform` database user) |
+| `POSTGRES_PASSWORD` | `naulite` | App user password (`naulite` database user) |
 | `POSTGRES_REPLICATION_USER` | `replicator` | Replication role created on primary init |
 | `POSTGRES_REPLICATION_PASSWORD` | `replicator` | Password for the replication user |
 | `POSTGRES_HA_ENABLED` | `true` | Flag written by bootstrap install script |

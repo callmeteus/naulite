@@ -11,7 +11,7 @@ After the [control plane and agents are installed](/get-started/install/) and [d
 
 - `NAULITE_CP_URL` set to your control plane base URL
 - CLI built: `yarn workspace @naulite/cli build:all`
-- At least one agent node `online` in `platform cluster nodes get`
+- At least one agent node `online` in `naulite cluster nodes get`
 
 ## Minimal apply
 
@@ -31,14 +31,14 @@ services:
 Save as `minimal.compose.yml` and apply:
 
 ```bash
-platform cluster apply -f minimal.compose.yml
+naulite cluster manifests apply -f minimal.compose.yml
 ```
 
 ## Verify scheduling
 
 ```bash
-platform cluster status get
-platform cluster services get
+naulite cluster status get
+naulite cluster services get
 ```
 
 The planner assigns services to nodes that satisfy `cluster.labels` and `capabilities` when present. An unlabeled minimal manifest schedules on any online agent with Docker available.

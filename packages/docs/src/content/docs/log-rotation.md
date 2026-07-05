@@ -39,7 +39,7 @@ services:
 ## CLI operations
 
 ```bash
-platform cluster services rotate-logs <serviceName>
+naulite cluster services rotate-logs <serviceName>
 ```
 
 ## UI

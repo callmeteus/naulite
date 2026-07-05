@@ -4,7 +4,7 @@ English-only Naulite documentation site built with [Astro](https://astro.build) 
 
 ## Commands
 
-From the `platform/` repository root:
+From the `naulite/` repository root:
 
 ```bash
 yarn workspace @naulite/docs dev

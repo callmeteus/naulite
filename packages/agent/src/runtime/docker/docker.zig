@@ -226,7 +226,7 @@ pub const DockerClient = struct {
 
         try runDockerLoad(self.allocator, self.socket_path, archive_path);
 
-        const source_tag = try std.fmt.allocPrint(self.allocator, "platform/{s}:{s}", .{ spec.name, spec.tag });
+        const source_tag = try std.fmt.allocPrint(self.allocator, "naulite/{s}:{s}", .{ spec.name, spec.tag });
         defer self.allocator.free(source_tag);
 
         const target_tag = try std.fmt.allocPrint(self.allocator, "naulite-cr/{s}:{s}", .{ spec.name, spec.tag });
@@ -415,7 +415,7 @@ pub const DockerClient = struct {
     ) ![]u8 {
         return std.fmt.allocPrint(
             allocator,
-            "{{\"platform.managed\":\"true\",\"platform.instance.id\":\"{s}\",\"platform.service.name\":\"{s}\"}}",
+            "{{\"naulite.managed\":\"true\",\"naulite.instance.id\":\"{s}\",\"naulite.service.name\":\"{s}\"}}",
             .{ instance_id, service_name },
         );
     }

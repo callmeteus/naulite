@@ -1,6 +1,6 @@
 # Naulite Context
 
-Canonical architecture and philosophy for the distributed orchestration platform monorepo.
+Canonical architecture and philosophy for the Naulite monorepo.
 
 ## Vision
 
@@ -21,7 +21,7 @@ Low-level orchestration primitives, custom resource APIs, operator frameworks, a
 | Package | Responsibility |
 |---------|----------------|
 | `shared` | Zod schemas, domain types, provider interfaces, plugin registry |
-| `cli` | Zig CLI (`zig build`); NPM wrapper in `bin/platform.js`; strings in `src/i18n.zig` |
+| `cli` | Zig CLI (`zig build`); NPM wrapper in `bin/naulite.js`; strings in `src/i18n.zig` |
 | `sdk` | Typed HTTP client for control plane routes |
 | `ui` | Web dashboard (`ui-frontend` + `ui-backend` BFF); cluster state via Vue `reactive()` (`stores/Cluster.ts`); strings in `packages/ui/packages/frontend/src/ui/en.json` |
 | `control-plane` | Fastify API, Sequelize ORM (`sequelize-typescript`), orchestration, GitOps, schedulers |
@@ -102,4 +102,4 @@ See `docs/backups.md` and `docs/log-rotation.md`.
 - [Log rotation](docs/log-rotation.md)
 - [Bootstrap](docs/bootstrap.md)
 - [Admin authentication](docs/admin-auth.md)
-- [Development progress](PROGRESS.md)
+- [Changelog](CHANGELOG.md)

@@ -4,7 +4,7 @@ Local full-stack environment for Naulite development: HA control plane, Postgres
 
 ## Quick start
 
-From the platform monorepo root:
+From the naulite monorepo root:
 
 ```bash
 yarn dev:docker
@@ -51,7 +51,7 @@ Thin wrappers at `bin/dev.sh` and `bin/dev.ps1` delegate here.
 | `NETBIRD_SETUP_KEY` | *(auto)* | Setup key for dogfood `agent-1` |
 | `NAULITE_PUBLIC_URL` | *(empty)* | Public control plane URL for remote agents |
 | `ADMIN_API_KEY` | *(auto)* | UI backend API key |
-| `POSTGRES_PASSWORD` | `platform` | Postgres password |
+| `POSTGRES_PASSWORD` | `naulite` | Postgres password |
 | `NAULITE_PROMETHEUS_HOST_PORT` | `19090` | Host port for included metrics stack |
 
 ## Endpoints (default)

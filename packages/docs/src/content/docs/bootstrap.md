@@ -30,7 +30,7 @@ Bootstrap scripts install platform nodes and register agents with the control pl
 
 ## Control plane one-liner
 
-From the platform monorepo root on a Docker host:
+From the naulite monorepo root on a Docker host:
 
 ```bash
 sudo bash bootstrap/control-plane-install.sh --host https://cp.example.com
@@ -156,7 +156,7 @@ On startup the agent persists the merged configuration. After a successful `POST
 ## Post-bootstrap verification
 
 ```bash
-platform cluster nodes get
+naulite cluster nodes get
 ```
 
 The node should report `online` with resource telemetry after the first heartbeat.

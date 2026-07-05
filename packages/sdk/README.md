@@ -2,7 +2,7 @@
 
 Typed HTTP client for the Naulite control plane REST API.
 
-See [CONTEXT.md](../../CONTEXT.md) for architecture and [PROGRESS.md](../../PROGRESS.md) for current development status.
+See [CONTEXT.md](../../CONTEXT.md) for architecture and [CHANGELOG.md](../../CHANGELOG.md) for current development status.
 
 ## Usage
 

@@ -256,7 +256,7 @@ export namespace BuildService {
             return {
                 imageRef: manifest.services[serviceName]
                     ? resolveServiceImageRef(manifest.name, serviceName, manifest.services[serviceName])
-                    : `platform/${serviceName}:latest`,
+                    : `naulite/${serviceName}:latest`,
                 logs: [],
                 durationMs: 0,
                 runId: enqueued.runId,
@@ -406,7 +406,7 @@ export namespace BuildService {
             const result = await provider.buildWithKaniko({
                 contextUri: buildConfig.contextPath,
                 dockerfile: buildConfig.dockerfile,
-                destination: buildConfig.tags[0] ?? `platform/${buildConfig.serviceName}:latest`
+                destination: buildConfig.tags[0] ?? `naulite/${buildConfig.serviceName}:latest`
             });
 
             await PipelineRunService.completeRun(runId, "succeeded");

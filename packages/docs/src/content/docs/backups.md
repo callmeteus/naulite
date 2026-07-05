@@ -48,9 +48,9 @@ volumes:
 ## CLI operations
 
 ```bash
-platform cluster backups get
-platform cluster backups run <volumeName>
-platform cluster backups restore <backupId>
+naulite cluster backups get
+naulite cluster backups run <volumeName>
+naulite cluster backups restore <backupId>
 ```
 
 ## Restore

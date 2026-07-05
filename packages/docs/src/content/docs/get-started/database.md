@@ -49,13 +49,13 @@ Leader election, `ControlPlaneSync` event polling, and migration advisory locks 
 Point `DATABASE_URL` at your managed instance or RDS endpoint instead of the bundled stack:
 
 ```bash
-DATABASE_URL=postgres://platform:<password>@mydb.abc123.us-east-1.rds.amazonaws.com:5432/platform
+DATABASE_URL=postgres://naulite:<password>@mydb.abc123.us-east-1.rds.amazonaws.com:5432/naulite
 DATABASE_SSL=true
 ```
 
 Checklist:
 
-- Create the `platform` database and a dedicated user with DDL rights for migrations
+- Create the `naulite` database and a dedicated user with DDL rights for migrations
 - Enable SSL (`DATABASE_SSL=true`) for remote endpoints
 - Run **at least two** control plane replicas behind a load balancer
 - Ensure network reachability from every control plane host to the database security group

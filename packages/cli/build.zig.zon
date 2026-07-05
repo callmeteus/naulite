@@ -1,5 +1,5 @@
 .{
-    .name = .platform_cli,
+    .name = .naulite_cli,
     .version = "0.1.0",
     .fingerprint = 0xfed0a32f7a6dc4d4,
     .minimum_zig_version = "0.16.0",

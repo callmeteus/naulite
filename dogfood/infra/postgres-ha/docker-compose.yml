@@ -4,7 +4,7 @@ services:
         restart: unless-stopped
         environment:
             POSTGRES_USER: naulite
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-naulite}
             POSTGRES_DB: naulite
             POSTGRES_REPLICATION_USER: ${POSTGRES_REPLICATION_USER:-replicator}
             POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-replicator}
@@ -14,7 +14,7 @@ services:
             - ./init/primary:/docker-entrypoint-initdb.d:ro
             - ./init/primary-entrypoint.sh:/primary-entrypoint.sh:ro
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U naulite -d platform"]
+            test: ["CMD-SHELL", "pg_isready -U naulite -d naulite"]
             interval: 5s
             timeout: 3s
             retries: 10
@@ -27,7 +27,7 @@ services:
                 condition: service_healthy
         environment:
             POSTGRES_USER: naulite
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-naulite}
             POSTGRES_PRIMARY_HOST: postgres-primary
             POSTGRES_REPLICATION_USER: ${POSTGRES_REPLICATION_USER:-replicator}
             POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-replicator}
@@ -36,7 +36,7 @@ services:
             - postgres-replica-data:/var/lib/postgresql/data
             - ./init/replica-entrypoint.sh:/replica-entrypoint.sh:ro
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U naulite -d platform"]
+            test: ["CMD-SHELL", "pg_isready -U naulite -d naulite"]
             interval: 5s
             timeout: 3s
             retries: 20
@@ -52,8 +52,8 @@ services:
             postgres-replica:
                 condition: service_healthy
         environment:
-            POSTGRES_USERNAME: platform
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+            POSTGRES_USERNAME: naulite
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-naulite}
             PGPOOL_PARAMS_PORT: "5432"
             PGPOOL_PARAMS_BACKEND_HOSTNAME0: postgres-primary
             PGPOOL_PARAMS_BACKEND_PORT0: "5432"
@@ -63,15 +63,15 @@ services:
             PGPOOL_PARAMS_BACKEND_FLAG1: DISALLOW_TO_FAILOVER
             PGPOOL_PARAMS_FAILOVER_ON_BACKEND_ERROR: "off"
             PGPOOL_PARAMS_HEALTH_CHECK_PERIOD: "10"
-            PGPOOL_PARAMS_HEALTH_CHECK_USER: platform
-            PGPOOL_PARAMS_HEALTH_CHECK_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+            PGPOOL_PARAMS_HEALTH_CHECK_USER: naulite
+            PGPOOL_PARAMS_HEALTH_CHECK_PASSWORD: ${POSTGRES_PASSWORD:-naulite}
         ports:
             - "5432:5432"
         healthcheck:
             test:
                 [
                     "CMD-SHELL",
-                    "PGPASSWORD=$${POSTGRES_PASSWORD:-platform} pg_isready -h 127.0.0.1 -p 5432 -U platform -d platform",
+                    "PGPASSWORD=$${POSTGRES_PASSWORD:-naulite} pg_isready -h 127.0.0.1 -p 5432 -U naulite -d naulite",
                 ]
             interval: 5s
             timeout: 3s

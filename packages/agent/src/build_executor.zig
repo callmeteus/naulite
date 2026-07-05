@@ -362,7 +362,7 @@ fn resolveImageRef(
         };
     }
 
-    return try std.fmt.allocPrint(allocator, "platform/{s}:latest", .{service_name});
+    return try std.fmt.allocPrint(allocator, "naulite/{s}:latest", .{service_name});
 }
 
 /// Reads a string field from a JSON object.
