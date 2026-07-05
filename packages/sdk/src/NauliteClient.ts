@@ -70,7 +70,7 @@ function resolveFetchImpl(fetchImpl?: typeof fetch): typeof fetch {
         return fetchImpl;
     }
 
-    return (input, init) => fetch(input, init);
+    return globalThis.fetch.bind(globalThis);
 }
 
 /**

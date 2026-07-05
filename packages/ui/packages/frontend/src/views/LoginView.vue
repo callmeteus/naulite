@@ -32,24 +32,46 @@ async function submitLogin(): Promise<void> {
 
 <template>
     <section class="login-page">
-        <div class="panel login-panel">
-            <h2>{{ t("loginTitle") }}</h2>
-            <p class="hint">{{ t("loginHint") }}</p>
-            <p v-if="auth.error" class="error">{{ auth.error }}</p>
+        <div class="login-shell">
+            <header class="login-brand">
+                <p class="login-logo">Naulite</p>
+                <p class="login-tagline">{{ t("loginTagline") }}</p>
+            </header>
 
-            <form class="create-form" @submit.prevent="submitLogin">
-                <label>
-                    {{ t("loginEmail") }}
-                    <input v-model="email" type="email" autocomplete="username" />
-                </label>
-                <label>
-                    {{ t("loginPassword") }}
-                    <input v-model="password" type="password" autocomplete="current-password" />
-                </label>
-                <button type="submit" :disabled="auth.loading || !email.trim() || !password">
-                    {{ t("loginSubmit") }}
-                </button>
-            </form>
+            <div class="panel login-panel">
+                <h2>{{ t("loginTitle") }}</h2>
+                <p class="login-hint">{{ t("loginHint") }}</p>
+
+                <div v-if="auth.error" class="login-error" role="alert">
+                    {{ auth.error }}
+                </div>
+
+                <form class="login-form" @submit.prevent="submitLogin">
+                    <label>
+                        <span>{{ t("loginEmail") }}</span>
+                        <input
+                            v-model="email"
+                            type="email"
+                            autocomplete="username"
+                            :placeholder="t('loginEmailPlaceholder')"
+                            :disabled="auth.loading"
+                        />
+                    </label>
+                    <label>
+                        <span>{{ t("loginPassword") }}</span>
+                        <input
+                            v-model="password"
+                            type="password"
+                            autocomplete="current-password"
+                            :placeholder="t('loginPasswordPlaceholder')"
+                            :disabled="auth.loading"
+                        />
+                    </label>
+                    <button type="submit" :disabled="auth.loading || !email.trim() || !password">
+                        {{ auth.loading ? t("loginSubmitting") : t("loginSubmit") }}
+                    </button>
+                </form>
+            </div>
         </div>
     </section>
 </template>
