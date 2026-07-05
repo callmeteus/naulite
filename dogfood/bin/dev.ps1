@@ -92,6 +92,11 @@ if (-not $env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD) {
     Set-DotEnvVar -Key "NAULITE_BOOTSTRAP_ADMIN_PASSWORD" -Value $env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD -Path $envFile
 }
 
+if (-not $env:NAULITE_UI_HOST_PORT) {
+    $env:NAULITE_UI_HOST_PORT = "13000"
+    Set-DotEnvVar -Key "NAULITE_UI_HOST_PORT" -Value $env:NAULITE_UI_HOST_PORT -Path $envFile
+}
+
 $netbirdConfig = Join-Path $dogfood "infra\netbird\config.yaml"
 if (-not (Test-Path $netbirdConfig)) {
     if (-not $env:NETBIRD_DOMAIN) {
@@ -176,10 +181,11 @@ if (-not $env:NETBIRD_SETUP_KEY) {
 
 $uiLoginEmail = if ($env:NAULITE_BOOTSTRAP_ADMIN_USERNAME) { $env:NAULITE_BOOTSTRAP_ADMIN_USERNAME } else { "admin@naulite.local" }
 $uiLoginPassword = if ($env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD) { $env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD } else { "naulite-dev" }
+$uiHostPort = if ($env:NAULITE_UI_HOST_PORT) { $env:NAULITE_UI_HOST_PORT } else { "13000" }
 
 Write-Host ""
 Write-Host "[dev] Stack is up."
-Write-Host "  UI:              http://localhost:3000"
+Write-Host "  UI:              http://localhost:${uiHostPort}"
 Write-Host "  UI login email:  $uiLoginEmail"
 Write-Host "  UI login password: $uiLoginPassword"
 Write-Host "  Control plane:   http://localhost:8080"

@@ -53,6 +53,7 @@ Thin wrappers at `bin/dev.sh` and `bin/dev.ps1` delegate here.
 | `ADMIN_API_KEY` | *(auto)* | UI backend API key |
 | `NAULITE_BOOTSTRAP_ADMIN_USERNAME` | `admin@naulite.local` | First UI login email (seeded when no users exist) |
 | `NAULITE_BOOTSTRAP_ADMIN_PASSWORD` | `naulite-dev` | First UI login password |
+| `NAULITE_UI_HOST_PORT` | `13000` | Host port for the admin UI (avoids clashes with local apps on 3000) |
 | `POSTGRES_PASSWORD` | `naulite` | Postgres password |
 | `NAULITE_PROMETHEUS_HOST_PORT` | `19090` | Host port for included metrics stack |
 
@@ -60,7 +61,7 @@ Thin wrappers at `bin/dev.sh` and `bin/dev.ps1` delegate here.
 
 | Service | URL |
 |---------|-----|
-| UI | http://localhost:3000 (login: `admin@naulite.local` / `naulite-dev`) |
+| UI | http://localhost:13000 (login: `admin@naulite.local` / `naulite-dev`) |
 | Control plane | http://localhost:8080 |
 | Control plane (peer) | http://localhost:8081 |
 | Agent | http://localhost:9470/health |

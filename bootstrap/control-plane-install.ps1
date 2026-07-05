@@ -152,7 +152,7 @@ try {
 
     Write-Host ""
     Write-Host "Control plane is ready."
-    Write-Host "  UI:            http://localhost:3000"
+    Write-Host "  UI:            http://localhost:13000"
     Write-Host "  Control plane: http://localhost:8080"
     Write-Host "  Public URL:    $HostUrl"
     Write-Host ""

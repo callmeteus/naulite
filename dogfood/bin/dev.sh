@@ -65,6 +65,11 @@ if [[ -z "${NAULITE_BOOTSTRAP_ADMIN_PASSWORD:-}" ]]; then
     set_env_var "NAULITE_BOOTSTRAP_ADMIN_PASSWORD" "${NAULITE_BOOTSTRAP_ADMIN_PASSWORD}"
 fi
 
+if [[ -z "${NAULITE_UI_HOST_PORT:-}" ]]; then
+    export NAULITE_UI_HOST_PORT="13000"
+    set_env_var "NAULITE_UI_HOST_PORT" "${NAULITE_UI_HOST_PORT}"
+fi
+
 NETBIRD_CONFIG="$DOGFOOD/infra/netbird/config.yaml"
 if [[ ! -f "$NETBIRD_CONFIG" ]]; then
     export NETBIRD_DOMAIN="${NETBIRD_DOMAIN:-netbird.local}"
@@ -139,10 +144,11 @@ fi
 
 login_email="${NAULITE_BOOTSTRAP_ADMIN_USERNAME:-admin@naulite.local}"
 login_password="${NAULITE_BOOTSTRAP_ADMIN_PASSWORD:-naulite-dev}"
+ui_host_port="${NAULITE_UI_HOST_PORT:-13000}"
 
 echo ""
 echo "[dev] Stack is up."
-echo "  UI:              http://localhost:3000"
+echo "  UI:              http://localhost:${ui_host_port}"
 echo "  UI login email:  ${login_email}"
 echo "  UI login password: ${login_password}"
 echo "  Control plane:   http://localhost:8080"

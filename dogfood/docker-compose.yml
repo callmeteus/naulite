@@ -172,7 +172,7 @@ services:
         depends_on:
             - ui-backend
         ports:
-            - "3000:80"
+            - "${NAULITE_UI_HOST_PORT:-13000}:80"
 
     agent-1:
         build:

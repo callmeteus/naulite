@@ -282,7 +282,7 @@ print_next_steps() {
 
 Control plane is ready.
 
-  UI:            http://localhost:3000
+  UI:            http://localhost:13000
   Control plane: http://localhost:8080
   Public URL:    ${CP_HOST}
   NetBird:       ${NETBIRD_PUBLIC_MANAGEMENT_URL}
