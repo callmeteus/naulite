@@ -3,8 +3,10 @@ import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
+import type { Sequelize } from "sequelize";
 
 import { DatabaseProvider } from "../../../packages/control-plane/src/database/DatabaseProvider";
+import { MigrationRunner } from "../../../packages/control-plane/src/database/MigrationRunner";
 import { ClusterStateModel } from "../../../packages/control-plane/src/database/models/ClusterStateModel";
 import { ControlPlaneLeaderModel } from "../../../packages/control-plane/src/database/models/ControlPlaneLeaderModel";
 
@@ -41,5 +43,14 @@ describe("MigrationRunner", () => {
         expect(clusterStateTable).toBe(true);
 
         await provider.disconnect();
+    });
+
+    it("lists postgresql migrations for models added after the initial schema", async () => {
+        const runner = new MigrationRunner({} as Sequelize, "postgresql");
+
+        const expected = await runner.listExpectedMigrationNames();
+
+        expect(expected).toContain("010-node-provisions");
+        expect(expected).toContain("011-container-registry-images");
     });
 });
