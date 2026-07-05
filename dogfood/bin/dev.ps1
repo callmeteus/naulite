@@ -82,6 +82,16 @@ if (-not $env:NETBIRD_PUBLIC_MANAGEMENT_URL) {
     Write-Host "[dev] Derived NETBIRD_PUBLIC_MANAGEMENT_URL=$derivedUrl"
 }
 
+if (-not $env:NAULITE_BOOTSTRAP_ADMIN_USERNAME) {
+    $env:NAULITE_BOOTSTRAP_ADMIN_USERNAME = "admin@naulite.local"
+    Set-DotEnvVar -Key "NAULITE_BOOTSTRAP_ADMIN_USERNAME" -Value $env:NAULITE_BOOTSTRAP_ADMIN_USERNAME -Path $envFile
+}
+
+if (-not $env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD) {
+    $env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD = "naulite-dev"
+    Set-DotEnvVar -Key "NAULITE_BOOTSTRAP_ADMIN_PASSWORD" -Value $env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD -Path $envFile
+}
+
 $netbirdConfig = Join-Path $dogfood "infra\netbird\config.yaml"
 if (-not (Test-Path $netbirdConfig)) {
     if (-not $env:NETBIRD_DOMAIN) {
@@ -164,9 +174,14 @@ if (-not $env:NETBIRD_SETUP_KEY) {
     Write-Host "[dev] NETBIRD_SETUP_KEY already set in .env"
 }
 
+$uiLoginEmail = if ($env:NAULITE_BOOTSTRAP_ADMIN_USERNAME) { $env:NAULITE_BOOTSTRAP_ADMIN_USERNAME } else { "admin@naulite.local" }
+$uiLoginPassword = if ($env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD) { $env:NAULITE_BOOTSTRAP_ADMIN_PASSWORD } else { "naulite-dev" }
+
 Write-Host ""
 Write-Host "[dev] Stack is up."
 Write-Host "  UI:              http://localhost:3000"
+Write-Host "  UI login email:  $uiLoginEmail"
+Write-Host "  UI login password: $uiLoginPassword"
 Write-Host "  Control plane:   http://localhost:8080"
 Write-Host "  Agent health:    http://localhost:9470/health"
 Write-Host "  NetBird (host):  $($env:NETBIRD_PUBLIC_MANAGEMENT_URL)"

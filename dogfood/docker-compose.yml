@@ -97,6 +97,8 @@ services:
             NAULITE_PROMETHEUS_FILE_SD_DIR: ${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}
             NAULITE_METRICS_SYNC_ENABLED: ${NAULITE_METRICS_SYNC_ENABLED:-true}
             NAULITE_E2E_ALLOW_BRIDGE: ${NAULITE_E2E_ALLOW_BRIDGE:-1}
+            NAULITE_BOOTSTRAP_ADMIN_USERNAME: ${NAULITE_BOOTSTRAP_ADMIN_USERNAME:-admin@naulite.local}
+            NAULITE_BOOTSTRAP_ADMIN_PASSWORD: ${NAULITE_BOOTSTRAP_ADMIN_PASSWORD:-naulite-dev}
         ports:
             - "8080:8080"
         volumes:
@@ -137,6 +139,8 @@ services:
             NAULITE_PROMETHEUS_FILE_SD_DIR: ${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}
             NAULITE_METRICS_SYNC_ENABLED: ${NAULITE_METRICS_SYNC_ENABLED:-true}
             NAULITE_E2E_ALLOW_BRIDGE: ${NAULITE_E2E_ALLOW_BRIDGE:-1}
+            NAULITE_BOOTSTRAP_ADMIN_USERNAME: ${NAULITE_BOOTSTRAP_ADMIN_USERNAME:-admin@naulite.local}
+            NAULITE_BOOTSTRAP_ADMIN_PASSWORD: ${NAULITE_BOOTSTRAP_ADMIN_PASSWORD:-naulite-dev}
         ports:
             - "8081:8080"
         volumes:
