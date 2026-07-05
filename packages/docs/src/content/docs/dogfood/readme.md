@@ -25,7 +25,7 @@ See `PROGRESS.md` for the phase log and `CONTEXT.md` for architecture.
 
 - Compose-based manifests with platform extensions (cluster labels, ingress, backups, log rotation, networks)
 - Pluggable providers for runtime, builds, gateway, secrets, volumes, and backup destinations
-- kubectl-style CLI and Vue dashboard
+- Hierarchical CLI (`naulite cluster ...`) and Vue dashboard
 - HA control plane with SQLite or PostgreSQL (Sequelize ORM)
 - NetBird integration for private networking and ingress (self-hosted only; see [NetBird](/netbird/))
 - GitOps apply and rollback

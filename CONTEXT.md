@@ -4,7 +4,7 @@ Canonical architecture and philosophy for the distributed orchestration platform
 
 ## Vision
 
-Users describe desired state in Compose-compatible manifests. The **control plane** parses manifests, plans changes, schedules work, and coordinates cluster state. **Agents** execute plans on nodes via pluggable runtime providers. No Kubernetes concepts are exposed or required.
+Users describe desired state in Compose-compatible manifests. The **control plane** parses manifests, plans changes, schedules work, and coordinates cluster state. **Agents** execute plans on nodes via pluggable runtime providers. The platform stays Compose-native instead of exposing cluster orchestration primitives.
 
 ## Philosophy
 
@@ -14,7 +14,7 @@ Users describe desired state in Compose-compatible manifests. The **control plan
 
 ## What we are not building
 
-Pods, ReplicaSets, DaemonSets, StatefulSets, CRDs, Operators, Admission Controllers, Kubernetes Services, CSI, CNI, kube-proxy, Helm, or gRPC control APIs.
+Low-level orchestration primitives, custom resource APIs, operator frameworks, admission webhooks, or gRPC control APIs.
 
 ## Package map
 

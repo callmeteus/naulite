@@ -19,7 +19,7 @@
 
 naulite lets you run a small self-hosted platform from a control plane plus one or more agents. You describe services with Compose-compatible manifests, the control plane plans the desired state, and agents execute workloads on the nodes where they run.
 
-It is designed for teams that want a lightweight deployment layer with GitOps, private networking, backups, logs, metrics, and container registry flows without adopting a full Kubernetes cluster.
+It is designed for teams that want a lightweight deployment layer with GitOps, private networking, backups, logs, metrics, and container registry flows without a heavyweight orchestration stack.
 
 ```text
   [ Developer / GitOps / CLI / UI ]
@@ -130,7 +130,7 @@ naulite is organized as a TypeScript/Zig monorepo:
 
 ## CLI
 
-The CLI follows a kubectl-style shape:
+The CLI uses hierarchical resource commands:
 
 ```bash
 naulite login --cp 100.64.0.10 --key <api-key>

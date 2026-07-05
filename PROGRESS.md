@@ -131,7 +131,7 @@
 - `bin/dev.sh` / `bin/dev.ps1`: NetBird config bootstrap, `docker compose up`, auto `ADMIN_API_KEY` when missing
 - NetBird credentials bootstrapped automatically into cluster secret `netbird/internal` (no manual token)
 - Providers: runtimes (`packages/runtimes/*`), builders (`packages/builders/*`), gateway, `plugin-s3-storage-provider`; local backup/secrets/volumes/log-rotation live in `control-plane/src/modules/`
-- `@naulite/cli` + `@naulite/sdk`: kubectl-style commands via typed HTTP client
+- `@naulite/cli` + `@naulite/sdk`: hierarchical resource commands via typed HTTP client
 - `@naulite/ui-frontend` / `@naulite/ui-backend`: Vue 3 dashboard + Fastify admin BFF (nodes, services, deploy, backups, container registry); cluster state via Vue `reactive()`
 - Tests: 183 unit tests, e2e harness with real control plane + Zig agent (`LocalTestCluster`)
 - Examples: minimal, app-with-db, rushpedia overlays, minecraft, with-defaults

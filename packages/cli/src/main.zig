@@ -379,7 +379,7 @@ fn sliceExecCommand(
 
 fn printUsage(writer: anytype) !void {
     try writer.writeAll(
-        \\naulite - kubectl-style CLI for the Naulite control plane
+        \\naulite - hierarchical CLI for the Naulite control plane
         \\
         \\Usage:
         \\  naulite login --cp <netbird-ip> --key <secret> [--port <port>] [--tenant <slug>]
