@@ -1,31 +1,170 @@
-# Platform
+<div align="center">
 
-Distributed orchestration platform for Compose-compatible workloads. Users describe desired state in manifests; the control plane plans and schedules; agents execute on nodes.
+# naulite
 
-## Repository root
+**A self-hosted orchestration control plane for Compose-compatible workloads, private agents, GitOps rollouts, and operational automation.**
 
-This directory (`platform/`) is the **git repository root** and the working directory for all development. Clone the repo, run `yarn install`, `yarn build`, tests, and Docker dogfood from here - not from the parent `Hytale/` workspace folder.
+[![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg)](#)
+[![Zig](https://img.shields.io/badge/Agent-Zig-orange.svg)](#)
+[![NPM Workspaces](https://img.shields.io/badge/NPM-Workspaces-blue.svg)](#)
+[![Vitest](https://img.shields.io/badge/Tested%20with-Vitest-green.svg)](#)
 
-## V1 status
+[Get Started](#get-started) • [Features](#features) • [Architecture](#architecture) • [CLI](#cli) • [Development](#development)
 
-V1 is a **working scaffold**, not a production-ready product:
+</div>
 
-- **Implemented:** manifest apply, orchestration (parser/planner/scheduler), Zig agents, Sequelize-backed control plane, CLI, Vue dashboard, GitOps, backups, log rotation, NetBird integration, and a full Docker Compose dogfood stack.
-- **Intended use:** local development, integration testing, and internal dogfood.
-- **Not yet production-hardened:** operational runbooks, multi-tenant hardening, and production SLOs are follow-up work beyond this scaffold.
+---
 
-See [PROGRESS.md](PROGRESS.md) for the phase log and [CONTEXT.md](CONTEXT.md) for architecture.
+## What Is naulite?
+
+naulite lets you run a small self-hosted platform from a control plane plus one or more agents. You describe services with Compose-compatible manifests, the control plane plans the desired state, and agents execute workloads on the nodes where they run.
+
+It is designed for teams that want a lightweight deployment layer with GitOps, private networking, backups, logs, metrics, and container registry flows without adopting a full Kubernetes cluster.
+
+```text
+  [ Developer / GitOps / CLI / UI ]
+                 |
+                 v
+        [ naulite Control Plane ]
+                 |
+       plan, schedule, audit, route
+                 |
+        +--------+--------+
+        |                 |
+        v                 v
+ [ naulite Agent ]  [ naulite Agent ]
+      Docker             Podman
+```
+
+---
 
 ## Features
 
-- Compose-based manifests with platform extensions (cluster labels, ingress, backups, log rotation, networks)
-- Pluggable providers for runtime, builds, gateway, secrets, volumes, and backup destinations
-- kubectl-style CLI and Vue dashboard
-- HA control plane with SQLite or PostgreSQL (Sequelize ORM)
-- NetBird integration for private networking and ingress (self-hosted only; see `docs/netbird.md`)
-- GitOps apply and rollback
+* **Compose-compatible manifests:** Define services, volumes, ingress, networks, backups, build steps, and log rotation with a familiar YAML shape.
+* **Control plane API:** Fastify API with OpenAPI, ACL, CSRF-protected admin UI flow, audit logs, GitOps revisions, and leader-only mutating routes.
+* **Private agents:** Zig agent binary that registers with the control plane, reports status, and executes runtime, build, backup, and restore tasks.
+* **Pluggable runtime layer:** Docker, Podman, and containerd provider packages.
+* **Built-in operational stack:** PostgreSQL HA dogfood, Prometheus file discovery, Traefik gateway, NetBird integration, S3-compatible backups, and local container registry storage.
+* **GitOps and rollback:** Apply manifests from git, track revisions, and roll back to a previous desired state.
+* **Admin dashboard and SDK:** Vue dashboard backed by a BFF, plus `@naulite/sdk` for typed API access.
+* **CI security checks:** Trivy image scanning and CycloneDX SBOM artifacts for built images.
 
-## Quick start
+---
+
+## Get Started
+
+The bootstrap scripts live in the `callmeteus/naulite` repository and can be executed directly from GitHub raw URLs.
+
+### 1. Install A Control Plane
+
+Use this on the host that will run the control plane dogfood stack. It writes `dogfood/.env`, configures public URLs, and starts the local Docker Compose stack unless `--dry-run` is passed.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/control-plane-install.sh \
+  | bash -s -- \
+    --host https://cp.example.com \
+    --netbird-domain vpn.example.com \
+    --netbird-http-protocol https \
+    --netbird-public-management-url https://vpn.example.com
+```
+
+Dry-run mode validates inputs and writes configuration without starting Docker:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/control-plane-install.sh \
+  | bash -s -- \
+    --host https://cp.example.com \
+    --netbird-domain vpn.example.com \
+    --netbird-http-protocol https \
+    --dry-run
+```
+
+### 2. Install An Agent
+
+Use this on each worker node. The agent points at the control plane and uses the setup key created by the control plane bootstrap flow.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/agent-install.sh \
+  | sudo bash -s -- \
+    --host https://cp.example.com \
+    --setup-key nb_setup_key_here \
+    --install-netbird
+```
+
+If the control plane can serve bootstrap metadata, the agent installer fetches the NetBird management URL automatically. You can also pass it explicitly:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/agent-install.sh \
+  | sudo bash -s -- \
+    --host https://cp.example.com \
+    --setup-key nb_setup_key_here \
+    --netbird-management-url https://vpn.example.com
+```
+
+### 3. Verify The Cluster
+
+Build or install the CLI, then point it at the control plane:
+
+```bash
+export NAULITE_CP_URL=https://cp.example.com
+export NAULITE_API_KEY=naulite_api_key_here
+
+naulite cluster status get
+naulite cluster nodes get
+```
+
+Apply a manifest:
+
+```bash
+naulite cluster manifests apply -f manifest.yml
+```
+
+---
+
+## Architecture
+
+naulite is organized as a TypeScript/Zig monorepo:
+
+* `packages/control-plane`: Fastify control plane, Sequelize models, migrations, orchestration, admin modules, and REST routes.
+* `packages/agent`: Zig agent that runs on worker nodes.
+* `packages/cli`: Zig CLI with a Node package wrapper.
+* `packages/shared`: Schemas, provider contracts, manifest utilities, and permission catalog.
+* `packages/sdk`: Typed HTTP client for the control plane and admin BFF.
+* `packages/ui`: Vue admin dashboard plus backend-for-frontend.
+* `packages/gateway`: Traefik/NetBird gateway integration.
+* `packages/runtimes`: Docker, Podman, and containerd runtime providers.
+* `packages/builders`: Docker and Kaniko build providers.
+* `packages/plugins`: Optional providers such as S3 storage, Slack, webhook notifications, Infisical, and AWS node provisioning.
+
+---
+
+## CLI
+
+The CLI follows a kubectl-style shape:
+
+```bash
+naulite login --cp 100.64.0.10 --key <api-key>
+naulite cluster status get
+naulite cluster nodes get
+naulite cluster services get
+naulite cluster manifests apply -f manifest.yml
+naulite runs list
+naulite runs logs <runId>
+```
+
+Environment variables:
+
+```bash
+NAULITE_CP_URL=https://cp.example.com
+NAULITE_API_KEY=naulite_api_key_here
+NAULITE_TOKEN=naulite_api_key_here
+```
+
+---
+
+## Development
+
+Clone the repository and run from the repo root:
 
 ```bash
 yarn install
@@ -36,79 +175,32 @@ yarn test:unit
 With Docker available:
 
 ```bash
-# Linux/macOS/Git Bash
-./bin/dev.sh
-
-# Windows PowerShell
-./bin/dev.ps1
-
-# Or via yarn (picks script by OS)
 yarn dev:docker
-```
-
-This creates `.env` when missing, bootstraps NetBird config under `infra/netbird/`, runs `docker compose up -d --build`, and creates `ADMIN_API_KEY` when empty.
-
-```bash
 yarn test:unit:docker
 yarn test:e2e
 ```
 
-Point the CLI or UI at a control plane:
+Common scripts:
 
-```bash
-export NAULITE_CP_URL=http://localhost:8080
-yarn workspace @naulite/cli build:all
-platform cluster status get
-```
+* `yarn build` - Build all packages with Turborepo.
+* `yarn lint` - Run ESLint across packages.
+* `yarn test:unit` - Run unit tests.
+* `yarn test:unit:docker` - Run Docker-backed unit tests.
+* `yarn test:e2e` - Run end-to-end flows against the local test cluster.
+* `yarn dev:docker` - Bootstrap NetBird and start the full Docker dogfood stack.
 
-## Repository layout
-
-```
-platform/                  # git + dev root (you are here)
-    packages/
-        shared/            Domain schemas and provider interfaces
-        cli/               Zig CLI; strings in src/i18n.zig
-        sdk/               Control plane HTTP client
-        ui/                Vue dashboard (ui-frontend + ui-backend BFF)
-        control-plane/     Fastify API, Sequelize, orchestration
-        agent/             Zig executor on each node
-        runtimes/          Docker, Podman, containerd providers
-        builders/          Docker and Kaniko build providers
-        plugins/           Swappable extensions (e.g. s3-storage-provider)
-        gateway/           Ingress gateway provider
-    tests/
-        unit/              Pure and docker-backed unit tests (~72)
-        e2e/               Black-box platform flows
-        harness/           LocalTestCluster lifecycle helpers
-        fixtures/          Docker compose stack and manifests
-    docs/                  Architecture and operations guides
-```
+---
 
 ## Documentation
 
-- [CONTEXT.md](CONTEXT.md) - canonical architecture and philosophy
-- [PROGRESS.md](PROGRESS.md) - development log and phase status
-- [docs/ci.md](docs/ci.md) - CI requirements and local parity
-- [docs/architecture.md](docs/architecture.md)
-- [docs/manifest.md](docs/manifest.md)
-- [docs/networks.md](docs/networks.md)
-- [docs/backups.md](docs/backups.md)
-- [docs/log-rotation.md](docs/log-rotation.md)
-- [docs/bootstrap.md](docs/bootstrap.md)
-- [docs/admin-auth.md](docs/admin-auth.md)
+* [CONTEXT.md](CONTEXT.md) - Architecture and product philosophy.
+* [PROGRESS.md](PROGRESS.md) - Development phase log.
+* [packages/docs/src/content/docs/bootstrap.md](packages/docs/src/content/docs/bootstrap.md) - Bootstrap details.
+* [packages/docs/src/content/docs/get-started/install.md](packages/docs/src/content/docs/get-started/install.md) - Installation guide.
+* [packages/docs/src/content/docs/operations/runbook.md](packages/docs/src/content/docs/operations/runbook.md) - Operations runbook.
 
-## Development
-
-| Script | Description |
-|--------|-------------|
-| `yarn build` | Build all packages via Turborepo |
-| `yarn lint` | ESLint across packages |
-| `yarn test:unit` | Fast pure unit tests (~72) |
-| `yarn test:unit:docker` | Docker-backed unit tests |
-| `yarn test:e2e` | End-to-end smoke and flows |
-| `yarn dev` | Start package dev servers in parallel |
-| `yarn dev:docker` | Bootstrap NetBird + start full Docker stack (`bin/dev.sh` / `bin/dev.ps1`) |
+---
 
 ## License
 
-Private monorepo - internal use.
+License not specified yet.
