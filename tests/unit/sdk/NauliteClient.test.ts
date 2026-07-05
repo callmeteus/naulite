@@ -214,4 +214,38 @@ describe("NauliteClient", () => {
             })
         );
     });
+
+    it("uses a wrapped default fetch when fetchImpl is omitted", async () => {
+        const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+            user: {
+                id: "user-1",
+                email: "admin@example.com",
+                role: "admin",
+                tenantId: null,
+                disabledAt: null,
+                createdAt: "2026-07-02T00:00:00.000Z",
+                updatedAt: "2026-07-02T00:00:00.000Z"
+            },
+            csrfToken: "csrf-token-default"
+        }), { status: 200 }));
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        try {
+            const client = new NauliteClient({
+                baseUrl: "http://localhost:3001/api",
+                credentials: "include"
+            });
+
+            const response = await client.login({ email: "admin@example.com", password: "secret" });
+
+            expect(response.csrfToken).toBe("csrf-token-default");
+            expect(fetchMock).toHaveBeenCalledWith(
+                "http://localhost:3001/api/auth/login",
+                expect.objectContaining({ method: "POST" })
+            );
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
 });

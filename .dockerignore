@@ -1,0 +1,11 @@
+.git
+.turbo
+**/node_modules
+**/dist
+**/zig-out
+**/.zig-cache
+**/native
+**/*.md
+!packages/**/README.md
+tests
+.cursor

@@ -128,7 +128,11 @@ Write-Host "[dev] Control plane is healthy."
 if (-not $env:ADMIN_API_KEY) {
     Write-Host "[dev] ADMIN_API_KEY is empty - creating a dev API key via loopback ..."
     $body = '{"name":"dev-admin"}'
-    $keyResponse = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api-keys" -ContentType "application/json" -Body $body
+    try {
+        $keyResponse = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api-keys" -ContentType "application/json" -Body $body
+    } catch {
+        Write-Error "[dev] Failed to create ADMIN_API_KEY. Ensure NAULITE_E2E_ALLOW_BRIDGE=1 on control-plane services, then run: docker compose up -d control-plane-1 control-plane-2"
+    }
     $newKey = $keyResponse.secret
 
     if ($newKey) {

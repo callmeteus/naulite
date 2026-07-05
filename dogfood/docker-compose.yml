@@ -8,12 +8,6 @@ include:
     - path: ../packages/metrics/compose/metrics-stack.yml
       project_directory: ../packages/metrics/compose
 
-naulite:
-    version: 0.1.0
-    plugins:
-        enabled:
-            - s3
-
 services:
     minio:
         image: minio/minio:RELEASE.2025-09-07T16-13-09Z
@@ -102,6 +96,7 @@ services:
             PROMETHEUS_URL: ${PROMETHEUS_URL:-http://naulite-prometheus:9090}
             NAULITE_PROMETHEUS_FILE_SD_DIR: ${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}
             NAULITE_METRICS_SYNC_ENABLED: ${NAULITE_METRICS_SYNC_ENABLED:-true}
+            NAULITE_E2E_ALLOW_BRIDGE: ${NAULITE_E2E_ALLOW_BRIDGE:-1}
         ports:
             - "8080:8080"
         volumes:
@@ -141,6 +136,7 @@ services:
             PROMETHEUS_URL: ${PROMETHEUS_URL:-http://naulite-prometheus:9090}
             NAULITE_PROMETHEUS_FILE_SD_DIR: ${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}
             NAULITE_METRICS_SYNC_ENABLED: ${NAULITE_METRICS_SYNC_ENABLED:-true}
+            NAULITE_E2E_ALLOW_BRIDGE: ${NAULITE_E2E_ALLOW_BRIDGE:-1}
         ports:
             - "8081:8080"
         volumes:

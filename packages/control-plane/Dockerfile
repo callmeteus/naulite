@@ -44,11 +44,11 @@ RUN yarn workspace @naulite/shared build \
     && yarn workspace @naulite/runtime-docker build \
     && yarn workspace @naulite/runtime-podman build \
     && yarn workspace @naulite/runtime-containerd build \
+    && yarn workspace @naulite/control-plane build \
     && yarn workspace @naulite/plugin-s3-storage-provider build \
     && yarn workspace @naulite/plugin-aws-node-provisioner build \
     && yarn workspace @naulite/plugin-notification-slack build \
-    && yarn workspace @naulite/plugin-notification-webhook build \
-    && yarn workspace @naulite/control-plane build
+    && yarn workspace @naulite/plugin-notification-webhook build
 
 FROM node:22-bookworm-slim AS runtime
 
@@ -58,7 +58,7 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=8080
 ENV DATABASE_PATH=/data/control-plane.db
-ENV PLATFORM_PACKAGES_DIR=/app/packages
+ENV NAULITE_PACKAGES_DIR=/app/packages
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \

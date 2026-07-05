@@ -59,6 +59,21 @@ import type {
 import type { Node } from "./types";
 
 /**
+ * Returns a fetch implementation that remains callable when stored on a class field.
+ * Browser fetch throws "Illegal invocation" when extracted from window without binding.
+ *
+ * @param fetchImpl Optional custom fetch implementation
+ * @returns Callable fetch function
+ */
+function resolveFetchImpl(fetchImpl?: typeof fetch): typeof fetch {
+    if (fetchImpl) {
+        return fetchImpl;
+    }
+
+    return (input, init) => fetch(input, init);
+}
+
+/**
  * Typed HTTP client for all control plane REST routes.
  */
 export class NauliteClient {
@@ -80,7 +95,7 @@ export class NauliteClient {
         this.sessionToken = options.sessionToken;
         this.csrfToken = options.csrfToken;
         this.credentials = options.credentials;
-        this.fetchImpl = options.fetchImpl ?? fetch;
+        this.fetchImpl = resolveFetchImpl(options.fetchImpl);
     }
 
     /**

@@ -12,6 +12,7 @@ RUN corepack enable && yarn install --frozen-lockfile || yarn install
 COPY packages/shared ./packages/shared
 COPY packages/sdk ./packages/sdk
 COPY packages/ui/packages/backend ./packages/ui/packages/backend
+COPY scripts ./scripts
 
 RUN yarn workspace @naulite/shared build \
     && yarn workspace @naulite/sdk build \

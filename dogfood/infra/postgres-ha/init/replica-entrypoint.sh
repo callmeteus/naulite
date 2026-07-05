@@ -9,7 +9,7 @@ REPL_PASSWORD="${POSTGRES_REPLICATION_PASSWORD:-replicator}"
 if [ ! -s "${PGDATA}/PG_VERSION" ]; then
     echo "Bootstrapping replica from ${PRIMARY_HOST}..."
     rm -rf "${PGDATA:?}"/*
-    until pg_isready -h "${PRIMARY_HOST}" -U "${POSTGRES_USER:-platform}"; do
+    until pg_isready -h "${PRIMARY_HOST}" -U "${POSTGRES_USER:-naulite}"; do
         sleep 2
     done
     export PGPASSWORD="${REPL_PASSWORD}"
