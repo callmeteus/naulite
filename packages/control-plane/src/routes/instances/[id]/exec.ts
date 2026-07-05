@@ -24,7 +24,13 @@ export const POST = defineRoute({
     },
     async handler(req, res) {
         const { id } = req.params;
-        const { command } = req.body;
+        const { command, stdin, tty } = req.body;
+
+        if (stdin === true || tty === true) {
+            return res.status(400).send({
+                error: "Use GET /instances/:id/exec/ws for interactive exec."
+            });
+        }
 
         try {
             return await AgentProxyService.execCommand(

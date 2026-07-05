@@ -616,6 +616,132 @@ pub const DockerApi = struct {
         };
     }
 
+    /// Creates a Docker exec instance and returns its identifier.
+    pub fn createExecInstance(
+        self: *const DockerApi,
+        // Container name or id.
+        container_ref: []const u8,
+        // Command argv to run inside the container.
+        command: []const []const u8,
+        // Whether stdin is attached.
+        attach_stdin: bool,
+        // Whether stdout is attached.
+        attach_stdout: bool,
+        // Whether stderr is attached.
+        attach_stderr: bool,
+        // Whether a TTY is allocated.
+        allocate_tty: bool,
+    ) ![]u8 {
+        const create_path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/{s}/exec", .{container_ref});
+        defer self.allocator.free(create_path);
+
+        const cmd_json = try stringArrayToJson(self.allocator, command);
+        defer self.allocator.free(cmd_json);
+
+        const create_body = try std.fmt.allocPrint(
+            self.allocator,
+            "{{\"AttachStdin\":{s},\"AttachStdout\":{s},\"AttachStderr\":{s},\"Tty\":{s},\"Cmd\":{s}}}",
+            .{
+                if (attach_stdin) "true" else "false",
+                if (attach_stdout) "true" else "false",
+                if (attach_stderr) "true" else "false",
+                if (allocate_tty) "true" else "false",
+                cmd_json,
+            },
+        );
+        defer self.allocator.free(create_body);
+
+        var create_response = try self.request("POST", create_path, create_body);
+        defer create_response.deinit(self.allocator);
+
+        if (create_response.status < 200 or create_response.status >= 300) {
+            std.log.err("[docker] exec create failed status={d} ref={s} body={s}", .{
+                create_response.status,
+                container_ref,
+                create_response.body,
+            });
+            return error.DockerExecFailed;
+        }
+
+        return try parseJsonStringField(self.allocator, create_response.body, "Id");
+    }
+
+    /// Starts an exec instance and returns the hijacked Docker stream.
+    pub fn startExecHijack(
+        self: *const DockerApi,
+        // Docker exec identifier.
+        exec_id: []const u8,
+        // Whether the exec session uses a TTY.
+        allocate_tty: bool,
+    ) !std.Io.net.Stream {
+        const io = blocking_io.io();
+
+        const unix_address = try std.Io.net.UnixAddress.init(self.socket_path);
+        var stream = try unix_address.connect(io);
+
+        var write_buffer: [8192]u8 = undefined;
+        var net_writer = stream.writer(io, &write_buffer);
+
+        const start_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/start", .{exec_id});
+        defer self.allocator.free(start_path);
+
+        const start_body = if (allocate_tty)
+            "{\"Detach\":false,\"Tty\":true}"
+        else
+            "{\"Detach\":false,\"Tty\":false}";
+
+        try std.Io.Writer.print(
+            &net_writer.interface,
+            "POST {s} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nConnection: Upgrade\r\nUpgrade: tcp\r\nContent-Length: {d}\r\n\r\n{s}",
+            .{ start_path, start_body.len, start_body },
+        );
+        try std.Io.Writer.flush(&net_writer.interface);
+
+        var response_buffer: std.ArrayList(u8) = .empty;
+        defer response_buffer.deinit(self.allocator);
+
+        var read_buffer: [4096]u8 = undefined;
+        while (true) {
+            var net_reader = stream.reader(io, &read_buffer);
+            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch break;
+            if (read_count == 0) {
+                break;
+            }
+            try response_buffer.appendSlice(self.allocator, read_buffer[0..read_count]);
+            if (std.mem.indexOf(u8, response_buffer.items, "\r\n\r\n") != null) {
+                break;
+            }
+        }
+
+        if (!std.mem.startsWith(u8, response_buffer.items, "HTTP/1.1 101")) {
+            std.log.err("[docker] exec hijack failed body={s}", .{response_buffer.items});
+            stream.close(io);
+            return error.DockerExecFailed;
+        }
+
+        return stream;
+    }
+
+    /// Reads the exit code for a finished exec instance.
+    pub fn inspectExecExitCode(
+        self: *const DockerApi,
+        // Docker exec identifier.
+        exec_id: []const u8,
+    ) !u8 {
+        const inspect_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/json", .{exec_id});
+        defer self.allocator.free(inspect_path);
+
+        var inspect_response = try self.request("GET", inspect_path, null);
+        defer inspect_response.deinit(self.allocator);
+
+        if (inspect_response.status < 200 or inspect_response.status >= 300) {
+            return error.DockerExecFailed;
+        }
+
+        const exit_code = parseJsonIntField(inspect_response.body, "ExitCode") orelse 1;
+        return @intCast(exit_code);
+    }
+
     /// Fetches container logs as plain text.
     pub fn containerLogs(
         self: *const DockerApi,

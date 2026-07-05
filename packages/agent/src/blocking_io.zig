@@ -9,6 +9,18 @@ pub fn io() std.Io {
     return std.Io.Threaded.global_single_threaded.io();
 }
 
+/// Sleeps for the given number of milliseconds using the blocking I/O clock.
+///
+/// @param milliseconds Sleep duration in milliseconds
+pub fn sleepMs(milliseconds: u64) void {
+    std.Io.Timeout.sleep(.{
+        .duration = .{
+            .raw = std.Io.Duration.fromMilliseconds(@intCast(milliseconds)),
+            .clock = .real,
+        },
+    }, io()) catch {};
+}
+
 /// Sleeps for the given number of seconds using the blocking I/O clock.
 ///
 /// @param seconds Sleep duration in whole seconds

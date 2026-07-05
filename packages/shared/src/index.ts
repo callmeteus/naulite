@@ -2,6 +2,7 @@ export * from "./schemas/index";
 export * from "./types/index";
 export * from "./providers/index";
 export * from "./auth/index";
+export * from "./services/ExecInstanceTargetResolver";
 export { PluginRegistry } from "./plugins/PluginRegistry";
 export type { PluginRegistryEntry } from "./plugins/PluginRegistry";
 export { NetworkGroupId } from "./orchestration/NetworkGroupId";

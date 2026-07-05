@@ -7,6 +7,7 @@ import { registerErrorHandler } from "./errors/RegisterErrorHandler";
 import { registerOpenApi } from "./openapi/RegisterOpenApi";
 import { registerRawBodyParser } from "./openapi/RegisterRawBodyParser";
 import { registerRoutes } from "./routes/index";
+import { registerExecWebSocket } from "./routing/RegisterExecWebSocket";
 
 /**
  * Options for creating the control plane Fastify application.
@@ -39,5 +40,6 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     await registerRawBodyParser(app);
     await registerOpenApi(app);
     await registerRoutes(app);
+    await registerExecWebSocket(app);
     return app;
 }

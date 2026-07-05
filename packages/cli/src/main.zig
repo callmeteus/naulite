@@ -3,6 +3,7 @@ const std = @import("std");
 const commands = @import("commands.zig");
 const control_plane_client = @import("control_plane_client.zig");
 const credentials_mod = @import("credentials.zig");
+const exec_cmd = @import("exec_cmd.zig");
 const io_output = @import("io_output.zig");
 const resolve_mod = @import("resolve.zig");
 
@@ -71,6 +72,14 @@ pub fn main(init: std.process.Init) !void {
 
     if (std.mem.eql(u8, args[index], "runs")) {
         const exit_code = try dispatchRuns(allocator, &client, args[index..]);
+        if (exit_code != 0) {
+            std.process.exit(exit_code);
+        }
+        return;
+    }
+
+    if (std.mem.eql(u8, args[index], "exec")) {
+        const exit_code = try dispatchExec(allocator, &client, args[index..]);
         if (exit_code != 0) {
             std.process.exit(exit_code);
         }
@@ -189,6 +198,17 @@ fn dispatchRuns(
     return error.InvalidArgument;
 }
 
+/// Dispatches top-level exec commands.
+fn dispatchExec(
+    allocator: std.mem.Allocator,
+    client: *control_plane_client.Client,
+    argv: []const []const u8,
+) !u8 {
+    const options = try exec_cmd.parseExecOptions(allocator, argv[1..]);
+    defer allocator.free(options.command_argv);
+    return exec_cmd.runExec(allocator, client, options);
+}
+
 /// Dispatches parsed CLI arguments to command handlers.
 fn dispatch(
     allocator: std.mem.Allocator,
@@ -265,14 +285,6 @@ fn dispatch(
         }
         const tail = try readTailFlag(argv[3..]);
         return try runVoid(commands.fetchLogs(allocator, client, argv[3], tail));
-    }
-    if (std.mem.eql(u8, argv[1], "instances") and std.mem.eql(u8, argv[2], "exec")) {
-        if (argv.len < 4) {
-            return error.InvalidArgument;
-        }
-        const command_argv = try sliceExecCommand(allocator, argv[4..]);
-        defer allocator.free(command_argv);
-        return commands.execInstance(allocator, client, argv[3], command_argv);
     }
     if (matchesAction(argv, "builds", "run")) {
         const service_name = readFlagValue(argv, "--service", "--service") orelse return error.InvalidArgument;
@@ -358,25 +370,6 @@ fn readTailFlag(argv: []const []const u8) !u32 {
     return try std.fmt.parseInt(u32, tail_value, 10);
 }
 
-fn sliceExecCommand(
-    allocator: std.mem.Allocator,
-    // Arguments after the instance id.
-    argv: []const []const u8,
-) ![]const []const u8 {
-    var start: usize = 0;
-    if (argv.len > 0 and std.mem.eql(u8, argv[0], "--")) {
-        start = 1;
-    }
-
-    if (start >= argv.len) {
-        return error.InvalidArgument;
-    }
-
-    const slice = try allocator.alloc([]const u8, argv.len - start);
-    @memcpy(slice, argv[start..]);
-    return slice;
-}
-
 fn printUsage(writer: anytype) !void {
     try writer.writeAll(
         \\naulite - hierarchical CLI for the Naulite control plane
@@ -385,7 +378,8 @@ fn printUsage(writer: anytype) !void {
         \\  naulite login --cp <netbird-ip> --key <secret> [--port <port>] [--tenant <slug>]
         \\  naulite [--url <url>] [--cp <host>] [--port <port>] cluster nodes get
         \\  naulite cluster services get|delete <name>|rotate-logs <name>
-        \\  naulite cluster instances get|logs <id>|exec <id> -- <command...>
+        \\  naulite cluster instances get|logs <id>
+        \\  naulite exec [-i] [-t] <target> [--] <command...>
         \\  naulite cluster volumes get|delete <name>
         \\  naulite cluster secrets get|delete <name>
         \\  naulite cluster backups get|run <volume>|restore <backupId>

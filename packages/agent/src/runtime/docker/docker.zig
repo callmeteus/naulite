@@ -8,6 +8,15 @@ const docker_stats = @import("docker_stats.zig");
 
 pub const ResourceSnapshot = docker_stats.Snapshot;
 
+/// Converts a control plane instance id into a Docker-safe container name.
+pub fn sanitizeContainerName(allocator: std.mem.Allocator, instance_id: []const u8) ![]u8 {
+    var output = try allocator.alloc(u8, instance_id.len);
+    for (instance_id, 0..) |char, index| {
+        output[index] = if (char == ':') '-' else char;
+    }
+    return output;
+}
+
 pub const DockerClient = struct {
     // Path to the Docker Unix socket or named pipe.
     socket_path: []const u8,
@@ -366,14 +375,6 @@ pub const DockerClient = struct {
 
         try api.disconnectNetwork(network_name, container_name, force);
         std.log.info("[docker] disconnected container={s} network={s}", .{ container_name, network_name });
-    }
-
-    fn sanitizeContainerName(allocator: std.mem.Allocator, instance_id: []const u8) ![]u8 {
-        var output = try allocator.alloc(u8, instance_id.len);
-        for (instance_id, 0..) |char, index| {
-            output[index] = if (char == ':') '-' else char;
-        }
-        return output;
     }
 
     fn readStringField(allocator: std.mem.Allocator, raw_json: []const u8, field_name: []const u8) ![]u8 {

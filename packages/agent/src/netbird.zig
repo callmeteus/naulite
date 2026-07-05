@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const agent_config = @import("agent_config.zig");
+const blocking_io = @import("blocking_io.zig");
 const process_cmd = @import("process_cmd.zig");
 
 pub const LoadError = error{
@@ -345,7 +346,7 @@ fn runNetbirdUp(
             }
             const delay_ms = netbirdUpRetryDelayMs(attempt);
             std.log.debug("[netbird] netbird up retry delay_ms={d}", .{delay_ms});
-            std.Thread.sleep(delay_ms * std.time.ns_per_ms);
+            blocking_io.sleepMs(delay_ms);
             continue;
         };
         defer allocator.free(captured.stdout);
@@ -374,7 +375,7 @@ fn runNetbirdUp(
 
         const delay_ms = netbirdUpRetryDelayMs(attempt);
         std.log.debug("[netbird] netbird up retry delay_ms={d}", .{delay_ms});
-        std.Thread.sleep(delay_ms * std.time.ns_per_ms);
+        blocking_io.sleepMs(delay_ms);
     }
 }
 

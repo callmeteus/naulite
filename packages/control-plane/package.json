@@ -13,6 +13,7 @@
     "dependencies": {
         "@fastify/swagger": "^9.4.2",
         "@fastify/swagger-ui": "^5.2.1",
+        "@fastify/websocket": "^11.0.2",
         "@naulite/builder-docker": "0.1.0",
         "@naulite/builder-kaniko": "0.1.0",
         "@naulite/gateway": "0.1.0",
@@ -35,6 +36,7 @@
     "devDependencies": {
         "@types/pg": "^8.11.10",
         "@types/validator": "^13.12.2",
+        "@types/ws": "^8.5.14",
         "typescript": "^5.7.2"
     }
 }

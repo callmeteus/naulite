@@ -466,17 +466,24 @@ export class NauliteClient {
     }
 
     /**
-     * Executes a command inside an instance.
-     * 
+     * Executes a command inside an instance (non-interactive).
+     * For interactive sessions with stdin or TTY, use the WebSocket route
+     * `GET /instances/:id/exec/ws` instead.
+     *
      * @param instanceId Instance identifier
      * @param command Command argv array
+     * @param options Optional exec flags (stdin/tty are rejected by POST; use WebSocket for those)
      * @returns Exec result
      */
-    async exec(instanceId: string, command: string[]): Promise<ExecResponse> {
+    async exec(
+        instanceId: string,
+        command: string[],
+        options: { stdin?: boolean; tty?: boolean } = {}
+    ): Promise<ExecResponse> {
         return this.request<ExecResponse>(
             "POST",
             `/instances/${encodeURIComponent(instanceId)}/exec`,
-            { command }
+            { command, ...options }
         );
     }
 

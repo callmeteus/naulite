@@ -5,6 +5,7 @@ const blocking_io = @import("blocking_io.zig");
 const bootstrap = @import("bootstrap.zig");
 const build_context = @import("build_context.zig");
 const build_executor = @import("build_executor.zig");
+const exec_stream = @import("exec_stream.zig");
 const execution_plan = @import("execution_plan.zig");
 const log_rotation_executor = @import("log_rotation_executor.zig");
 const metrics_exporter = @import("runtime/docker/metrics_exporter.zig");
@@ -293,6 +294,25 @@ fn handleConnection(
     const path = try normalizePath(request_allocator, target);
     const service_name_hint = parseQueryParam(target, "serviceName") orelse parseHeaderValue(header_section, "X-Service-Name");
 
+    if (std.mem.eql(u8, method, "GET") and std.mem.endsWith(u8, path, "/exec/ws") and isWebSocketUpgrade(header_section)) {
+        const instance_id = try extractContainerId(request_allocator, path);
+        defer request_allocator.free(instance_id);
+
+        exec_stream.handleExecWebSocket(
+            request_allocator,
+            io,
+            stream,
+            header_section,
+            docker_socket,
+            docker_client,
+            instance_id,
+        ) catch |err| {
+            std.log.err("[http] exec websocket failed: {}", .{err});
+            try writeRawResponse(io, stream, 500, "Internal Server Error", "application/json", "{\"error\":\"exec websocket failed\"}");
+        };
+        return;
+    }
+
     const response = handleRequestWithSocket(
         request_allocator,
         docker_client,
@@ -370,6 +390,34 @@ fn handleContainerLogs(ctx: *const RouteContext, path: []const u8) !HttpResponse
 fn handleContainerExec(ctx: *const RouteContext, path: []const u8, body: []const u8) !HttpResponse {
     const instance_id = try extractContainerId(ctx.allocator, path);
     defer ctx.allocator.free(instance_id);
+
+    if (try parseOptionalBoolField(body, "stdin")) |stdin_flag| {
+        if (stdin_flag) {
+            const response_body = try ctx.allocator.dupe(
+                u8,
+                "{\"error\":\"Use GET /containers/:id/exec/ws for interactive exec.\"}",
+            );
+            return .{
+                .status = 400,
+                .content_type = "application/json",
+                .body = response_body,
+            };
+        }
+    }
+
+    if (try parseOptionalBoolField(body, "tty")) |tty_flag| {
+        if (tty_flag) {
+            const response_body = try ctx.allocator.dupe(
+                u8,
+                "{\"error\":\"Use GET /containers/:id/exec/ws for interactive exec.\"}",
+            );
+            return .{
+                .status = 400,
+                .content_type = "application/json",
+                .body = response_body,
+            };
+        }
+    }
 
     const command = try parseStringArrayField(ctx.allocator, body, "command");
     defer ctx.allocator.free(command);
@@ -710,6 +758,27 @@ fn extractContainerId(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
     const remainder = path[prefix.len..];
     const slash_index = std.mem.indexOfScalar(u8, remainder, '/') orelse return error.InvalidContainerPath;
     return try allocator.dupe(u8, remainder[0..slash_index]);
+}
+
+fn isWebSocketUpgrade(header_section: []const u8) bool {
+    const upgrade = parseHeaderValue(header_section, "Upgrade") orelse return false;
+    return std.ascii.eqlIgnoreCase(upgrade, "websocket");
+}
+
+fn parseOptionalBoolField(body: []const u8, field_name: []const u8) !?bool {
+    const parsed = try std.json.parseFromSlice(std.json.Value, std.heap.page_allocator, body, .{});
+    defer parsed.deinit();
+
+    const root = parsed.value;
+    if (root != .object) {
+        return null;
+    }
+
+    const field = root.object.get(field_name) orelse return null;
+    return switch (field) {
+        .bool => |value| value,
+        else => null,
+    };
 }
 
 fn parseStringArrayField(allocator: std.mem.Allocator, body: []const u8, field_name: []const u8) ![]const []const u8 {

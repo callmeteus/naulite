@@ -84,8 +84,8 @@ naulite cluster services delete <name>
 naulite cluster volumes delete <name>
 naulite cluster secrets delete <name>
 naulite cluster instances logs <instance> [--tail 200]
+naulite exec [-i] [-t] <target> [--] <command...>
 naulite cluster services rotate-logs <service>
-naulite cluster instances exec <instance> -- echo hello
 naulite cluster builds run --service <name>
 naulite cluster registries get
 naulite cluster ingress get
