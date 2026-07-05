@@ -260,6 +260,8 @@ install_netbird() {
         return 0
     fi
 
+    ensure_netbird_host_dependencies
+
     if [[ "${DRY_RUN}" -eq 1 ]]; then
         log "dry-run would install netbird ${NETBIRD_VERSION}"
         return 0
@@ -317,6 +319,37 @@ install_netbird() {
     fi
 }
 
+ensure_netbird_host_dependencies() {
+    if [[ "${INSTALL_NETBIRD}" -ne 1 ]]; then
+        return 0
+    fi
+
+    local os
+    os="$(detect_os)"
+    if [[ "${os}" != "linux" ]]; then
+        return 0
+    fi
+
+    if command -v uname >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "dry-run would install coreutils (NetBird requires uname on minimal Linux hosts)"
+        return 0
+    fi
+
+    if command -v apt-get >/dev/null 2>&1; then
+        log "installing coreutils (NetBird requires uname on minimal Linux hosts)"
+        apt-get update
+        apt-get install -y coreutils
+        return 0
+    fi
+
+    log "uname is missing and apt-get is unavailable; install coreutils before enrolling NetBird"
+    exit 1
+}
+
 install_binary() {
     local os
     os="$(detect_os)"
@@ -354,6 +387,7 @@ Wants=network-online.target
 Type=simple
 ExecStart=${BIN_PATH}
 Environment=NAULITE_AGENT_CONFIG=${CONFIG_PATH}
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=on-failure
 RestartSec=5
 

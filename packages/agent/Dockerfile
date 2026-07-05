@@ -37,6 +37,7 @@ ARG DOCKER_GID=999
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
+        coreutils \
         curl \
         gnupg \
         iptables \
@@ -60,10 +61,17 @@ RUN apt-get update \
     && mkdir -p /var/lib/naulite \
     && chown -R naulite:naulite /var/lib/naulite
 
+COPY packages/agent/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
+
 COPY --from=builder /build/packages/agent/zig-out/bin/naulite-agent /usr/local/bin/naulite-agent
+
+# Full PATH so the NetBird CLI finds host utilities (uname, etc.) when the agent spawns it.
+ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 EXPOSE 9470
 
 USER naulite
 
-CMD ["naulite-agent"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

@@ -70,6 +70,15 @@ if [[ -z "${NAULITE_UI_HOST_PORT:-}" ]]; then
     set_env_var "NAULITE_UI_HOST_PORT" "${NAULITE_UI_HOST_PORT}"
 fi
 
+if [[ -z "${NAULITE_AGENT_USER:-}" ]] && [[ -S /var/run/docker.sock ]]; then
+    sock_gid="$(stat -c '%g' /var/run/docker.sock 2>/dev/null || true)"
+    if [[ "${sock_gid}" == "0" ]]; then
+        export NAULITE_AGENT_USER="0:0"
+        set_env_var "NAULITE_AGENT_USER" "${NAULITE_AGENT_USER}"
+        echo "[dev] Set NAULITE_AGENT_USER=0:0 (docker.sock group is root)"
+    fi
+fi
+
 NETBIRD_CONFIG="$DOGFOOD/infra/netbird/config.yaml"
 if [[ ! -f "$NETBIRD_CONFIG" ]]; then
     export NETBIRD_DOMAIN="${NETBIRD_DOMAIN:-netbird.local}"

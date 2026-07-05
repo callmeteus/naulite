@@ -38,6 +38,47 @@ Thin wrappers at `bin/dev.sh` and `bin/dev.ps1` delegate here.
 | `infra/traefik/` | Traefik v3 gateway (`--profile traefik`) |
 | `scripts/init-netbird-config.sh` | Generates NetBird `config.yaml` and `dashboard.env` |
 
+## Agent (Docker Desktop / Windows)
+
+On Windows, Docker Desktop mounts `docker.sock` as `root:root`. The dogfood stack handles this in three ways:
+
+| Mechanism | Purpose |
+|-----------|---------|
+| `NAULITE_AGENT_USER=0:0` | Agent runs as root so it can use the socket (set automatically by `bin/dev.ps1`) |
+| `tmpfs` at `/var/lib/naulite` | Writable agent config without named-volume ownership conflicts |
+| `extra_hosts: netbird.local:host-gateway` | NetBird signal/STUN uses `netbird.local`; resolves to the host port published by `netbird-server` |
+
+After changing agent user or volumes, recreate the container (and remove the old `naulite_agent-data-1` volume if it still exists):
+
+```bash
+cd dogfood
+docker compose stop agent-1
+docker compose rm -f agent-1
+docker volume rm naulite_agent-data-1 2>/dev/null || true
+docker compose up -d --build agent-1
+```
+
+On Linux with a `root:docker` socket, keep `NAULITE_AGENT_USER=1000:1000` and set `DOCKER_SOCKET_GID` to the host docker group id.
+
+## NetBird (dogfood `agent-1`)
+
+The **agent** starts the NetBird daemon, enrolls with `NETBIRD_SETUP_KEY`, and reports `netbirdDeviceId` to the control plane. Dogfood only supplies test infra:
+
+- `NETBIRD_MANAGEMENT_URL` / `NETBIRD_SETUP_KEY` in `.env`
+- `extra_hosts: netbird.local:host-gateway` so signal/STUN reach the host-published `${NETBIRD_SERVER_PORT}` port
+
+NetBird host dependencies (`coreutils` for `uname`) and the full `PATH` are baked into the agent image (`packages/agent/Dockerfile`), so every deployment - dogfood, test cluster, and bare metal - gets them by default.
+
+Verify:
+
+```bash
+docker compose logs agent-1 | grep netbird
+docker compose exec agent-1 netbird status
+curl -s http://localhost:9470/status
+```
+
+Expect `[netbird] enrollment complete` in agent logs and `Management: Connected` from `netbird status`.
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -54,6 +95,10 @@ Thin wrappers at `bin/dev.sh` and `bin/dev.ps1` delegate here.
 | `NAULITE_BOOTSTRAP_ADMIN_USERNAME` | `admin@naulite.local` | First UI login email (seeded when no users exist) |
 | `NAULITE_BOOTSTRAP_ADMIN_PASSWORD` | `naulite-dev` | First UI login password |
 | `NAULITE_UI_HOST_PORT` | `13000` | Host port for the admin UI (avoids clashes with local apps on 3000) |
+| `NAULITE_AGENT_USER` | `1000:1000` (Linux) / `0:0` (Windows) | Container user; root on Windows when Docker Desktop mounts `docker.sock` as `root:root` |
+| `DOCKER_SOCKET_GID` | `999` | Supplementary group for the agent when the socket uses the `docker` group |
+| Agent data | `tmpfs` at `/var/lib/naulite` | Avoids Docker Desktop volume permission issues; config is rebuilt from env on restart |
+| Agent `extra_hosts` | `netbird.local:host-gateway` | Required for in-compose NetBird signal/STUN (see below) |
 | `POSTGRES_PASSWORD` | `naulite` | Postgres password |
 | `NAULITE_PROMETHEUS_HOST_PORT` | `19090` | Host port for included metrics stack |
 

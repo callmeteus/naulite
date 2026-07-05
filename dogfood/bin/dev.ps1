@@ -97,6 +97,12 @@ if (-not $env:NAULITE_UI_HOST_PORT) {
     Set-DotEnvVar -Key "NAULITE_UI_HOST_PORT" -Value $env:NAULITE_UI_HOST_PORT -Path $envFile
 }
 
+if (-not $env:NAULITE_AGENT_USER) {
+    $env:NAULITE_AGENT_USER = "0:0"
+    Set-DotEnvVar -Key "NAULITE_AGENT_USER" -Value $env:NAULITE_AGENT_USER -Path $envFile
+    Write-Host "[dev] Set NAULITE_AGENT_USER=0:0 (Docker Desktop mounts docker.sock as root:root on Windows)"
+}
+
 $netbirdConfig = Join-Path $dogfood "infra\netbird\config.yaml"
 if (-not (Test-Path $netbirdConfig)) {
     if (-not $env:NETBIRD_DOMAIN) {

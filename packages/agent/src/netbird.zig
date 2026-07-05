@@ -10,6 +10,7 @@ pub const LoadError = error{
     CloudEndpointNotAllowed,
     InvalidManagementUrl,
     EnrollmentFailed,
+    DaemonNotReady,
 };
 
 /// Parsed NetBird status payload.
@@ -141,8 +142,14 @@ pub const NetbirdClient = struct {
 
     /// Ensures the node is enrolled in the self-hosted NetBird mesh.
     pub fn ensureConnected(self: *NetbirdClient) !void {
+        try ensureDaemon();
+
         if (self.isConnected()) {
-            std.log.debug("[netbird] already connected management_url={s}", .{self.management_url});
+            std.log.info("[netbird] already connected management_url={s} device_id={s}", .{
+                self.management_url,
+                self.device_id orelse "-",
+            });
+
             return;
         }
 
@@ -214,7 +221,13 @@ pub fn isCloudEndpoint(
     return false;
 }
 
-fn normalizeManagementUrl(allocator: std.mem.Allocator, raw: []const u8) ![]const u8 {
+/// Normalizes the management URL by stripping /api suffix and trailing slashes.
+fn normalizeManagementUrl(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+    /// The raw management URL to normalize.
+    raw: []const u8,
+) ![]const u8 {
     var trimmed = std.mem.trim(u8, raw, " \t\r\n");
     while (trimmed.len > 0 and trimmed[trimmed.len - 1] == '/') {
         trimmed = trimmed[0 .. trimmed.len - 1];
@@ -234,7 +247,13 @@ fn normalizeManagementUrl(allocator: std.mem.Allocator, raw: []const u8) ![]cons
     return try allocator.dupe(u8, trimmed);
 }
 
-fn readOptionalEnv(allocator: std.mem.Allocator, key: []const u8) !?[]const u8 {
+/// Reads an optional environment variable.
+fn readOptionalEnv(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+    /// The key to read.
+    key: []const u8,
+) !?[]const u8 {
     const key_z = try allocator.allocSentinel(u8, key.len, 0);
     defer allocator.free(key_z);
     @memcpy(key_z, key);
@@ -243,40 +262,74 @@ fn readOptionalEnv(allocator: std.mem.Allocator, key: []const u8) !?[]const u8 {
     return try allocator.dupe(u8, std.mem.span(value));
 }
 
-fn readStatus(allocator: std.mem.Allocator) !StatusInfo {
+/// Reads the NetBird status from the environment or runs `netbird status` with a wall-clock timeout.
+fn readStatus(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+) !StatusInfo {
     if (try readOptionalEnv(allocator, "NETBIRD_STATUS_JSON")) |raw_json| {
         defer allocator.free(raw_json);
         return parseStatusJson(allocator, raw_json);
     }
 
-    const output = process_cmd.runCommand(allocator, &.{ "netbird", "status", "--json" }) catch {
-        const text_output = process_cmd.runCommand(allocator, &.{ "netbird", "status" }) catch {
-            return StatusInfo{ .connected = false, .device_id = null };
-        };
-        defer allocator.free(text_output);
-        return parseStatusText(allocator, text_output);
-    };
-    defer allocator.free(output);
+    if (process_cmd.runCaptureLimited(allocator, &.{ "netbird", "status", "--json" }, netbird_cli_max_output_bytes)) |output| {
+        defer allocator.free(output.stdout);
+        defer allocator.free(output.stderr);
+        if (output.exited_normally and output.exit_code == 0) {
+            const payload = if (output.stdout.len > 0) output.stdout else output.stderr;
+            return parseStatusJson(allocator, payload);
+        }
+    } else |_| {}
 
-    return parseStatusJson(allocator, output);
+    if (process_cmd.runCaptureLimited(allocator, &.{ "netbird", "status" }, netbird_cli_max_output_bytes)) |text_output| {
+        defer allocator.free(text_output.stdout);
+        defer allocator.free(text_output.stderr);
+        if (text_output.exited_normally and text_output.exit_code == 0) {
+            const payload = if (text_output.stdout.len > 0) text_output.stdout else text_output.stderr;
+            return parseStatusText(allocator, payload);
+        }
+    } else |_| {}
+
+    return StatusInfo{ .connected = false, .device_id = null };
 }
 
-fn parseStatusJson(allocator: std.mem.Allocator, raw_json: []const u8) !StatusInfo {
+/// Parses the NetBird status from a JSON payload.
+fn parseStatusJson(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+    /// The raw JSON payload to parse.
+    raw_json: []const u8,
+) !StatusInfo {
     const parsed = try std.json.parseFromSlice(
         struct {
+            management: ?struct {
+                connected: ?bool = null,
+            } = null,
             management_connected: ?bool = null,
+            managementConnected: ?bool = null,
             connected: ?bool = null,
             id: ?[]const u8 = null,
             device_id: ?[]const u8 = null,
+            deviceId: ?[]const u8 = null,
+            publicKey: ?[]const u8 = null,
+            fqdn: ?[]const u8 = null,
         },
         allocator,
         raw_json,
-        .{},
+        .{ .ignore_unknown_fields = true },
     );
     defer parsed.deinit();
 
-    const connected = parsed.value.management_connected orelse parsed.value.connected orelse false;
-    const device_id = parsed.value.id orelse parsed.value.device_id;
+    const management_connected = if (parsed.value.management) |mgmt| mgmt.connected else null;
+    const connected = parsed.value.management_connected orelse
+        parsed.value.managementConnected orelse
+        management_connected orelse
+        parsed.value.connected orelse false;
+    const device_id = parsed.value.id orelse
+        parsed.value.device_id orelse
+        parsed.value.deviceId orelse
+        parsed.value.publicKey orelse
+        parsed.value.fqdn;
 
     return .{
         .connected = connected,
@@ -284,9 +337,14 @@ fn parseStatusJson(allocator: std.mem.Allocator, raw_json: []const u8) !StatusIn
     };
 }
 
-fn parseStatusText(allocator: std.mem.Allocator, raw_text: []const u8) !StatusInfo {
-    const connected = std.ascii.findIgnoreCase(raw_text, "management: connected") != null
-        or std.ascii.findIgnoreCase(raw_text, "status: connected") != null;
+/// Parses the NetBird status from a text payload.
+fn parseStatusText(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+    /// The raw text payload to parse.
+    raw_text: []const u8,
+) !StatusInfo {
+    const connected = std.ascii.findIgnoreCase(raw_text, "management: connected") != null or std.ascii.findIgnoreCase(raw_text, "status: connected") != null;
 
     var device_id: ?[]const u8 = null;
     var lines = std.mem.splitScalar(u8, raw_text, '\n');
@@ -311,6 +369,102 @@ fn parseStatusText(allocator: std.mem.Allocator, raw_text: []const u8) !StatusIn
 
 const netbird_up_max_attempts: u32 = 3;
 const netbird_up_base_delay_ms: u64 = 500;
+const netbird_cli_max_output_bytes: usize = 256 * 1024;
+const netbird_daemon_socket = "/var/run/netbird.sock";
+const netbird_daemon_pid_file = "/var/run/netbird-service.pid";
+const netbird_daemon_wait_attempts: u32 = 30;
+const netbird_daemon_wait_ms: u64 = 500;
+
+const netbird_daemon_start_shell =
+    "/usr/bin/netbird service run" ++
+    " --config /etc/netbird/config.json" ++
+    " --daemon-addr unix:///var/run/netbird.sock" ++
+    " --log-file /var/log/netbird/client.log" ++
+    " </dev/null >>/var/log/netbird/client.log 2>&1" ++
+    " & echo $! > " ++ netbird_daemon_pid_file;
+
+/// Returns whether the daemon socket exists and the recorded PID is alive.
+pub fn daemonReadyFromState(
+    /// Whether the daemon socket exists.
+    socket_exists: bool,
+    /// Whether the daemon process is running.
+    process_running: bool,
+) bool {
+    return socket_exists and process_running;
+}
+
+/// Starts the NetBird daemon process and waits until the socket and PID are ready.
+fn ensureDaemon() !void {
+    if (daemonReadyFromState(daemonSocketExists(), daemonProcessRunning())) {
+        return;
+    }
+
+    if (daemonProcessRunning() or daemonSocketExists()) {
+        std.log.warn("[netbird] daemon not responding, restarting", .{});
+        stopDaemon();
+    }
+
+    std.log.info("[netbird] starting daemon", .{});
+
+    const io = blocking_io.io();
+    const start_argv = [_][]const u8{ "/bin/sh", "-c", netbird_daemon_start_shell };
+    var shell_child = try std.process.spawn(io, .{
+        .argv = &start_argv,
+        .stdin = .ignore,
+        .stdout = .ignore,
+        .stderr = .ignore,
+    });
+    _ = shell_child.wait(io) catch {};
+
+    var attempt: u32 = 0;
+    while (attempt < netbird_daemon_wait_attempts) : (attempt += 1) {
+        if (daemonReadyFromState(daemonSocketExists(), daemonProcessRunning())) {
+            std.log.info("[netbird] daemon ready socket={s}", .{netbird_daemon_socket});
+            return;
+        }
+        blocking_io.sleepMs(netbird_daemon_wait_ms);
+    }
+
+    std.log.err("[netbird] daemon not responding after {d} attempts", .{netbird_daemon_wait_attempts});
+    return error.DaemonNotReady;
+}
+
+/// Stops the tracked daemon process and removes stale runtime files.
+fn stopDaemon() void {
+    const allocator = std.heap.smp_allocator;
+    const stop_shell =
+        "if [ -f " ++ netbird_daemon_pid_file ++ " ]; then kill \"$(cat " ++ netbird_daemon_pid_file ++ ")\" 2>/dev/null || true; fi";
+    const stop_argv = [_][]const u8{ "/bin/sh", "-c", stop_shell };
+    _ = process_cmd.runCaptureLimited(allocator, &stop_argv, 256) catch {};
+    removeStaleDaemonSocket();
+    _ = std.c.unlink(netbird_daemon_pid_file);
+}
+
+/// Returns whether a NetBird daemon PID file points to a live process.
+fn daemonProcessRunning() bool {
+    const allocator = std.heap.smp_allocator;
+    const check_shell =
+        "if [ -f " ++ netbird_daemon_pid_file ++ " ]; then kill -0 \"$(cat " ++ netbird_daemon_pid_file ++ ")\" 2>/dev/null; fi";
+    const check_argv = [_][]const u8{ "/bin/sh", "-c", check_shell };
+    const captured = process_cmd.runCaptureLimited(allocator, &check_argv, 256) catch return false;
+    defer allocator.free(captured.stdout);
+    defer allocator.free(captured.stderr);
+    return captured.exited_normally and captured.exit_code == 0;
+}
+
+/// Returns whether the NetBird daemon socket file exists.
+fn daemonSocketExists() bool {
+    const allocator = std.heap.smp_allocator;
+    const captured = process_cmd.runCaptureLimited(allocator, &.{ "test", "-S", netbird_daemon_socket }, 256) catch return false;
+    defer allocator.free(captured.stdout);
+    defer allocator.free(captured.stderr);
+    return captured.exited_normally and captured.exit_code == 0;
+}
+
+/// Removes a stale daemon socket left behind after an unclean shutdown.
+fn removeStaleDaemonSocket() void {
+    _ = std.c.unlink(netbird_daemon_socket);
+}
 
 /// Returns exponential backoff delay for a zero-based attempt index.
 fn netbirdUpRetryDelayMs(attempt_index: u32) u64 {
@@ -339,7 +493,7 @@ fn runNetbirdUp(
             .{ attempt + 1, netbird_up_max_attempts, management_url },
         );
 
-        const captured = process_cmd.runCapture(allocator, &argv) catch |err| {
+        const captured = process_cmd.runCaptureLimited(allocator, &argv, netbird_cli_max_output_bytes) catch |err| {
             std.log.debug("[netbird] netbird up attempt={d} spawn failed err={}", .{ attempt + 1, err });
             if (attempt + 1 >= netbird_up_max_attempts) {
                 return err;
@@ -360,15 +514,16 @@ fn runNetbirdUp(
             return;
         }
 
+        const stderr_text = if (captured.stderr.len > 0) captured.stderr else captured.stdout;
         std.log.debug(
             "[netbird] netbird up attempt={d} failed code={d} stderr={s}",
-            .{ attempt + 1, captured.exit_code, captured.stderr },
+            .{ attempt + 1, captured.exit_code, stderr_text },
         );
 
         if (attempt + 1 >= netbird_up_max_attempts) {
             std.log.err(
                 "[netbird] netbird up failed after {d} attempts code={d} stderr={s}",
-                .{ netbird_up_max_attempts, captured.exit_code, captured.stderr },
+                .{ netbird_up_max_attempts, captured.exit_code, stderr_text },
             );
             return error.EnrollmentFailed;
         }
@@ -379,7 +534,13 @@ fn runNetbirdUp(
     }
 }
 
-fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) ![]u8 {
+/// Runs a command and returns the output.
+fn runCommand(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+    /// The command to run.
+    argv: []const []const u8,
+) ![]u8 {
     return process_cmd.runCommand(allocator, argv) catch |err| switch (err) {
         error.CommandFailed => error.EnrollmentFailed,
         else => |other| other,
@@ -415,6 +576,22 @@ test "parses connected status from JSON payload" {
     try std.testing.expectEqualStrings("device-123", status.device_id.?);
 }
 
+test "parses connected status from nested management JSON payload" {
+    const allocator = std.testing.allocator;
+    const status = try parseStatusJson(
+        allocator,
+        "{\"management\":{\"connected\":true},\"publicKey\":\"device-abc\"}",
+    );
+    defer {
+        if (status.device_id) |device_id| {
+            allocator.free(device_id);
+        }
+    }
+
+    try std.testing.expect(status.connected);
+    try std.testing.expectEqualStrings("device-abc", status.device_id.?);
+}
+
 test "computes exponential backoff for netbird up retries" {
     try std.testing.expectEqual(@as(u64, 500), netbirdUpRetryDelayMs(0));
     try std.testing.expectEqual(@as(u64, 1000), netbirdUpRetryDelayMs(1));
@@ -435,4 +612,55 @@ test "parses connected status from text output" {
 
     try std.testing.expect(status.connected);
     try std.testing.expectEqualStrings("device-abc", status.device_id.?);
+}
+
+test "parses needs-login status from text output" {
+    const allocator = std.testing.allocator;
+    const status = try parseStatusText(
+        allocator,
+        "Daemon status: NeedsLogin\nRun UP command to log in with SSO (interactive login)\n",
+    );
+    defer {
+        if (status.device_id) |device_id| {
+            allocator.free(device_id);
+        }
+    }
+
+    try std.testing.expect(!status.connected);
+    try std.testing.expect(status.device_id == null);
+}
+
+test "daemon ready requires both socket and live process" {
+    try std.testing.expect(daemonReadyFromState(true, true));
+    try std.testing.expect(!daemonReadyFromState(true, false));
+    try std.testing.expect(!daemonReadyFromState(false, true));
+    try std.testing.expect(!daemonReadyFromState(false, false));
+}
+
+test "daemon start shell backgrounds netbird and records pid file" {
+    try std.testing.expect(std.mem.indexOf(u8, netbird_daemon_start_shell, "netbird service run") != null);
+    try std.testing.expect(std.mem.indexOf(u8, netbird_daemon_start_shell, "& echo $! > " ++ netbird_daemon_pid_file) != null);
+    try std.testing.expect(std.mem.indexOf(u8, netbird_daemon_start_shell, "PATH=") == null);
+}
+
+test "main initializes blocking IO before NetBird subprocess calls" {
+    const main_source = @embedFile("main.zig");
+    try std.testing.expect(std.mem.indexOf(u8, main_source, "blocking_io.init(allocator, init.environ)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, main_source, "ensureNetbirdConnected") != null);
+}
+
+test "parses disconnected status from nested management JSON payload" {
+    const allocator = std.testing.allocator;
+    const status = try parseStatusJson(
+        allocator,
+        "{\"management\":{\"connected\":false},\"publicKey\":\"device-offline\"}",
+    );
+    defer {
+        if (status.device_id) |device_id| {
+            allocator.free(device_id);
+        }
+    }
+
+    try std.testing.expect(!status.connected);
+    try std.testing.expectEqualStrings("device-offline", status.device_id.?);
 }

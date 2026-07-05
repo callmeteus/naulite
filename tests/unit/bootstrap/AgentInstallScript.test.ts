@@ -160,6 +160,17 @@ describeBootstrap("agent-install.sh", () => {
         const shim = await readTextFile(paths.installShim);
         expect(shim).toContain("agent-install.sh");
     });
+
+    it("installs coreutils when NetBird host utilities are missing on Linux", async () => {
+        const script = await readTextFile(paths.agentInstallScript);
+        expect(script).toContain("ensure_netbird_host_dependencies");
+        expect(script).toContain("coreutils (NetBird requires uname on minimal Linux hosts)");
+    });
+
+    it("sets PATH in the systemd unit for NetBird CLI dependencies", async () => {
+        const script = await readTextFile(paths.agentInstallScript);
+        expect(script).toContain("Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+    });
 });
 
 /**

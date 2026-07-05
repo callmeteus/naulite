@@ -96,8 +96,13 @@ pub const DockerApi = struct {
         var read_buffer: [4096]u8 = undefined;
         while (true) {
             var net_reader = stream.reader(io, &read_buffer);
+            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch |err| {
+                if (response_buffer.items.len > 0) {
+                    break;
+                }
 
-            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch break;
+                return err;
+            };
 
             if (read_count == 0) {
                 break;
@@ -793,7 +798,21 @@ pub const DockerApi = struct {
         const body = body_blk: {
             if (transfer_encoding) |encoding| {
                 if (std.ascii.eqlIgnoreCase(encoding, "chunked")) {
-                    break :body_blk try decodeChunkedBody(allocator, raw_body);
+                    const decoded = decodeChunkedBody(allocator, raw_body) catch |err| {
+                        if (extractJsonPayload(raw_body)) |payload| {
+                            break :body_blk try allocator.dupe(u8, payload);
+                        }
+
+                        return err;
+                    };
+
+                    if (decoded.len == 0) {
+                        if (extractJsonPayload(raw_body)) |payload| {
+                            break :body_blk try allocator.dupe(u8, payload);
+                        }
+                    }
+
+                    break :body_blk decoded;
                 }
 
                 break :body_blk try allocator.dupe(u8, raw_body);
@@ -803,6 +822,10 @@ pub const DockerApi = struct {
                 const content_length = try std.fmt.parseInt(usize, length_text, 10);
                 const bounded = raw_body[0..@min(content_length, raw_body.len)];
                 break :body_blk try allocator.dupe(u8, bounded);
+            }
+
+            if (extractJsonPayload(raw_body)) |payload| {
+                break :body_blk try allocator.dupe(u8, payload);
             }
 
             break :body_blk try allocator.dupe(u8, raw_body);
@@ -847,22 +870,30 @@ pub const DockerApi = struct {
         // The chunked body bytes.
         raw_body: []const u8,
     ) ![]u8 {
+        if (raw_body.len > 0 and (raw_body[0] == '{' or raw_body[0] == '[')) {
+            return try allocator.dupe(u8, raw_body);
+        }
+
         var decoded: std.ArrayList(u8) = .empty;
         errdefer decoded.deinit(allocator);
 
         var offset: usize = 0;
 
         while (offset < raw_body.len) {
-            const line_end = std.mem.indexOfPos(u8, raw_body, offset, "\r\n") orelse break;
+            const line_end = findLineEnd(raw_body, offset) orelse break;
             const size_line = std.mem.trim(u8, raw_body[offset..line_end], " ");
             const size_text = if (std.mem.indexOfScalar(u8, size_line, ';')) |semicolon|
                 size_line[0..semicolon]
             else
                 size_line;
 
+            if (size_text.len == 0) {
+                break;
+            }
+
             const chunk_size = try std.fmt.parseInt(usize, size_text, 16);
 
-            offset = line_end + 2;
+            offset = advancePastLine(raw_body, line_end);
 
             if (chunk_size == 0) {
                 break;
@@ -873,10 +904,49 @@ pub const DockerApi = struct {
             }
 
             try decoded.appendSlice(allocator, raw_body[offset .. offset + chunk_size]);
-            offset += chunk_size + 2;
+            offset = advancePastLine(raw_body, offset + chunk_size);
         }
 
         return try decoded.toOwnedSlice(allocator);
+    }
+
+    /// Returns the index of the next HTTP line ending starting at offset.
+    fn findLineEnd(raw_body: []const u8, offset: usize) ?usize {
+        if (std.mem.indexOfPos(u8, raw_body, offset, "\r\n")) |line_end| {
+            return line_end;
+        }
+
+        return std.mem.indexOfPos(u8, raw_body, offset, "\n");
+    }
+
+    /// Returns the byte offset immediately after a line ending.
+    fn advancePastLine(raw_body: []const u8, line_end: usize) usize {
+        if (line_end + 1 < raw_body.len and raw_body[line_end] == '\r' and raw_body[line_end + 1] == '\n') {
+            return line_end + 2;
+        }
+
+        if (line_end < raw_body.len and raw_body[line_end] == '\n') {
+            return line_end + 1;
+        }
+
+        return line_end;
+    }
+
+    /// Returns a JSON-looking slice embedded in a chunked or partial HTTP body.
+    fn extractJsonPayload(raw_body: []const u8) ?[]const u8 {
+        const object_start = std.mem.indexOfScalar(u8, raw_body, '{') orelse
+            std.mem.indexOfScalar(u8, raw_body, '[') orelse return null;
+        const object_end = if (raw_body[object_start] == '[')
+            std.mem.lastIndexOfScalar(u8, raw_body, ']')
+        else
+            std.mem.lastIndexOfScalar(u8, raw_body, '}');
+        const end = object_end orelse return null;
+
+        if (end < object_start) {
+            return null;
+        }
+
+        return raw_body[object_start .. end + 1];
     }
 
     /// Converts a string array to a JSON array.

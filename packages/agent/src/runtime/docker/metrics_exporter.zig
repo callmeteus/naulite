@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const blocking_io = @import("../../blocking_io.zig");
-const docker_stats = @import("docker_stats.zig");
-const docker_api = @import("docker_api.zig");
 const env_util = @import("../../env_util.zig");
+const docker_api = @import("docker_api.zig");
+const docker_stats = @import("docker_stats.zig");
 
 /// Per-instance telemetry collected from Docker container stats.
 pub const InstanceMetric = struct {
@@ -108,7 +108,26 @@ fn collectOnce(
     const node_resources = docker_stats.collect(allocator, docker_socket) catch docker_stats.fallbackSnapshot();
 
     const api = docker_api.DockerApi.init(allocator, docker_socket);
-    const containers = try api.listManagedContainers();
+    const containers = api.listManagedContainers() catch |err| {
+        std.log.debug("[metrics] managed container list unavailable err={}", .{err});
+        const empty_instances = try allocator.alloc(InstanceMetric, 0);
+        const snapshot = Snapshot{
+            .node_id = try allocator.dupe(u8, node_id),
+            .node_resources = node_resources,
+            .instances = empty_instances,
+        };
+
+        shared_state.mutex.lock(blocking_io.io()) catch {};
+        defer shared_state.mutex.unlock(blocking_io.io());
+
+        if (shared_state.snapshot) |*previous| {
+            freeSnapshot(allocator, previous);
+        }
+
+        shared_state.snapshot = snapshot;
+        return;
+    };
+
     defer {
         for (containers) |container| {
             allocator.free(container.instance_id);
@@ -360,15 +379,15 @@ test "renderPrometheus includes node and instance metrics" {
     const allocator = std.testing.allocator;
 
     var instances = [_]InstanceMetric{
-            .{
-                .instance_id = "demo-api-1",
-                .service_name = "api",
-                .cpu_percent = 12.5,
-                .memory_bytes = 1048576,
-                .network_rx_bytes = 100,
-                .network_tx_bytes = 200,
-            },
-        };
+        .{
+            .instance_id = "demo-api-1",
+            .service_name = "api",
+            .cpu_percent = 12.5,
+            .memory_bytes = 1048576,
+            .network_rx_bytes = 100,
+            .network_tx_bytes = 200,
+        },
+    };
 
     const snapshot = Snapshot{
         .node_id = "node-1",

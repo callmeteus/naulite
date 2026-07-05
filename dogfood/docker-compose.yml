@@ -179,6 +179,7 @@ services:
             context: ..
             dockerfile: packages/agent/Dockerfile
         restart: unless-stopped
+        user: "${NAULITE_AGENT_USER:-1000:1000}"
         security_opt:
             - no-new-privileges:true
         cap_drop:
@@ -200,8 +201,13 @@ services:
             NAULITE_AGENT_CONFIG: /var/lib/naulite/agent.json
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
             NETBIRD_SETUP_KEY: ${NETBIRD_SETUP_KEY:-}
+        extra_hosts:
+            # NetBird server exposes signal/STUN as netbird.local; map to the host-published port.
+            - "netbird.local:host-gateway"
         volumes:
-            - agent-data-1:/var/lib/naulite
+            # tmpfs avoids Docker Desktop volume ownership issues when NAULITE_AGENT_USER=0:0
+            - type: tmpfs
+              target: /var/lib/naulite
             - /var/run/docker.sock:/var/run/docker.sock
         depends_on:
             control-plane-1:
@@ -217,5 +223,4 @@ volumes:
     cp-data-1:
     cp-data-2:
     traefik-acme:
-    agent-data-1:
     naulite-prometheus-file-sd:

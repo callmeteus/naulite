@@ -105,7 +105,9 @@ fn registerNode(
     defer allocator.free(response_body);
 
     try agent_config.applyRegistrationResponse(allocator, config, response_body);
-    try agent_config.save(allocator, config);
+    agent_config.save(allocator, config) catch |err| {
+        std.log.warn("[agent-config] save after register failed: {}", .{err});
+    };
 
     std.log.info("[cp] registered node id={s} url={s}", .{ config.node_id, config.agent_url });
 }

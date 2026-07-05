@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const blocking_io = @import("blocking_io.zig");
+
 /// Runs a subprocess and fails when the exit code is non-zero.
 ///
 /// @param allocator Allocator for output buffers
@@ -48,17 +50,35 @@ pub fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) ![]u8 
 }
 
 /// Runs a subprocess and returns stdout, stderr, and termination status.
-///
-/// @param allocator Allocator for output buffers
-/// @param argv Command argv slice
-/// @returns Captured process output
-pub fn runCapture(allocator: std.mem.Allocator, argv: []const []const u8) !CaptureResult {
-    const blocking_io = @import("blocking_io.zig");
+pub fn runCapture(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+    /// The command to run.
+    argv: []const []const u8,
+) !CaptureResult {
+    return runCaptureLimited(allocator, argv, std.math.maxInt(usize));
+}
+
+/// Like `runCapture`, but fails with `error.OutputTooLarge` when stdout or stderr exceeds `max_bytes`.
+pub fn runCaptureLimited(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+    /// The command to run.
+    argv: []const []const u8,
+    /// The maximum number of bytes to capture.
+    max_bytes: usize,
+) !CaptureResult {
     const io = blocking_io.io();
 
     const result = try std.process.run(allocator, io, .{
         .argv = argv,
     });
+
+    if (result.stdout.len > max_bytes or result.stderr.len > max_bytes) {
+        allocator.free(result.stdout);
+        allocator.free(result.stderr);
+        return error.OutputTooLarge;
+    }
 
     var exit_code: u8 = 255;
     var exited_normally = false;
