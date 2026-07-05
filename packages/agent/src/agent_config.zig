@@ -113,11 +113,12 @@ pub fn load(
 
     var base = try loadDefaults(allocator, os, config_path);
     errdefer base.deinit(allocator);
+    allocator.free(config_path);
 
-    if (loadFromDisk(allocator, config_path, &base)) {
-        std.log.debug("[agent-config] loaded path={s} nodeId={s}", .{ config_path, base.node_id });
+    if (loadFromDisk(allocator, base.config_path, &base)) {
+        std.log.debug("[agent-config] loaded path={s} nodeId={s}", .{ base.config_path, base.node_id });
     } else |_| {
-        std.log.debug("[agent-config] no file at path={s} using defaults", .{config_path});
+        std.log.debug("[agent-config] no file at path={s} using defaults", .{base.config_path});
     }
 
     try applyEnvOverrides(allocator, os, &base);

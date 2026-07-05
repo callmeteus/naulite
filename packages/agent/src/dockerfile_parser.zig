@@ -71,6 +71,7 @@ pub const DockerfileParser = struct {
                 .start_line = 1,
                 .end_line = if (line_number == 0) 1 else line_number,
             });
+            names.deinit(allocator);
             return try markers.toOwnedSlice(allocator);
         }
 
@@ -89,6 +90,8 @@ pub const DockerfileParser = struct {
             });
         }
 
+        names.items.len = 0;
+        names.deinit(allocator);
         return try markers.toOwnedSlice(allocator);
     }
 };

@@ -1,9 +1,9 @@
 const std = @import("std");
 
+const blocking_io = @import("blocking_io.zig");
 const cp_client = @import("cp_client.zig");
 const dockerfile_parser = @import("dockerfile_parser.zig");
 const process_cmd = @import("process_cmd.zig");
-const blocking_io = @import("blocking_io.zig");
 
 /// Result of a build task executed on the agent.
 pub const BuildTaskResult = struct {
@@ -130,6 +130,15 @@ pub fn executeBuildTask(
                 );
             }
         }
+
+        allocator.free(service_name);
+        allocator.free(context_path);
+        allocator.free(image_ref);
+
+        if (dockerfile) |value| {
+            allocator.free(value);
+        }
+
         return .{
             .task_id = task_id,
             .status = try allocator.dupe(u8, "failed"),
@@ -181,6 +190,10 @@ pub fn executeBuildTask(
                     api_key,
                 ) catch |err| {
                     const message = try std.fmt.allocPrint(allocator, "container registry push failed: {}", .{err});
+                    allocator.free(service_name);
+                    allocator.free(context_path);
+                    allocator.free(image_ref);
+                    if (dockerfile) |value| allocator.free(value);
                     return .{
                         .task_id = task_id,
                         .status = try allocator.dupe(u8, "failed"),
@@ -195,6 +208,10 @@ pub fn executeBuildTask(
     }
 
     const final_image_ref = cr_image_ref orelse try allocator.dupe(u8, image_ref);
+    allocator.free(image_ref);
+    allocator.free(service_name);
+    allocator.free(context_path);
+    if (dockerfile) |value| allocator.free(value);
 
     return .{
         .task_id = task_id,

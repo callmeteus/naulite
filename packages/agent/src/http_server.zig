@@ -168,6 +168,7 @@ pub fn serve(
     const io = blocking_io.io();
 
     var docker_client = docker.DockerClient.init(allocator, config.docker_socket);
+    defer docker_client.deinit();
 
     var address = try std.Io.net.IpAddress.parseIp4(config.listen_address, config.listen_port);
     var server = try address.listen(io, .{ .reuse_address = true });
@@ -829,6 +830,7 @@ fn jsonStringLiteral(allocator: std.mem.Allocator, value: []const u8) ![]const u
 test "health handler returns ok payload" {
     const allocator = std.testing.allocator;
     var docker_client = docker.DockerClient.init(allocator, "/var/run/docker.sock");
+    defer docker_client.deinit();
 
     const response = try handleRequest(allocator, &docker_client, "GET", "/health", "");
     defer allocator.free(response.body);
@@ -841,6 +843,7 @@ test "health handler returns ok payload" {
 test "build route returns accepted payload" {
     const allocator = std.testing.allocator;
     var docker_client = docker.DockerClient.init(allocator, "/var/run/docker.sock");
+    defer docker_client.deinit();
 
     const response = try handleRequest(
         allocator,
@@ -857,6 +860,7 @@ test "build route returns accepted payload" {
 test "build context route rejects missing archive payload" {
     const allocator = std.testing.allocator;
     var docker_client = docker.DockerClient.init(allocator, "/var/run/docker.sock");
+    defer docker_client.deinit();
 
     const response = handleRequest(
         allocator,
@@ -872,6 +876,7 @@ test "build context route rejects missing archive payload" {
 test "unknown route returns 404" {
     const allocator = std.testing.allocator;
     var docker_client = docker.DockerClient.init(allocator, "/var/run/docker.sock");
+    defer docker_client.deinit();
 
     const response = try handleRequest(allocator, &docker_client, "GET", "/missing", "");
     defer allocator.free(response.body);

@@ -148,6 +148,7 @@ fn collectResources(
     docker_socket: []const u8,
 ) docker.ResourceSnapshot {
     var docker_client = docker.DockerClient.init(allocator, docker_socket);
+    defer docker_client.deinit();
     return docker_client.collectNodeResources() catch {
         std.log.debug("[cp] docker stats unavailable socket={s} using fallback", .{docker_socket});
         return fallbackResources();

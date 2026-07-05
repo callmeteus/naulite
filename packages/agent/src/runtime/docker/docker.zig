@@ -40,6 +40,14 @@ pub const DockerClient = struct {
         };
     }
 
+    /// Releases owned control plane configuration loaded during init.
+    pub fn deinit(self: *DockerClient) void {
+        if (self.cp_config) |*config| {
+            config.deinit(self.allocator);
+            self.cp_config = null;
+        }
+    }
+
     /// Applies an execution plan by dispatching each operation to the Docker API.
     pub fn applyPlan(
         self: *DockerClient,
