@@ -57,6 +57,10 @@ router.beforeEach(async (to) => {
     const auth = useAuthStore();
 
     if (to.meta.public) {
+        if (to.path === "/login") {
+            auth.error = "";
+        }
+
         return true;
     }
 

@@ -53,18 +53,25 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     });
 
     app.get("/auth/me", async (request) => {
-        const user = request.adminUser;
+        const sessionToken = RolePreHandlers.readSessionToken(request);
 
-        if (!user) {
-            return { user: null };
+        if (sessionToken) {
+            try {
+                const session = await request.server.controlPlane
+                    .withSession(sessionToken)
+                    .getAdminMe();
+                const cookies = parseCookies(request.headers.cookie);
+                const csrfToken = cookies[NAULITE_CSRF_COOKIE];
+
+                return {
+                    user: session.user,
+                    csrfToken: csrfToken || undefined
+                };
+            } catch {
+                return { user: null };
+            }
         }
 
-        const cookies = parseCookies(request.headers.cookie);
-        const csrfToken = cookies[NAULITE_CSRF_COOKIE];
-
-        return {
-            user,
-            csrfToken: csrfToken || undefined
-        };
+        return { user: null };
     });
 }

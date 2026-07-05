@@ -29,6 +29,23 @@ describe("ui-backend auth", () => {
         await app.close();
     });
 
+    it("allows unauthenticated session checks on GET /auth/me", async () => {
+        const app = await createApp({
+            adminApiKey: "secret-key",
+            logger: false
+        });
+
+        const response = await app.inject({
+            method: "GET",
+            url: "/auth/me"
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(response.json()).toEqual({ user: null });
+
+        await app.close();
+    });
+
     it("rejects cluster routes without authorization", async () => {
         const app = await createApp({
             adminApiKey: "secret-key",

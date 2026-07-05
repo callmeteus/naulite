@@ -1,4 +1,4 @@
-import { NauliteClient } from "@naulite/sdk";
+import { NauliteClient, NauliteApiError } from "@naulite/sdk";
 import type { AdminRole, AdminUser, NaulitePermission } from "@naulite/sdk";
 import { RolePermissions } from "@naulite/shared";
 import { reactive } from "vue";
@@ -66,6 +66,15 @@ export const authStore = reactive({
 
         try {
             const session = await nauliteClient.getSession();
+
+            if (!session.user) {
+                this.user = null;
+                this.csrfToken = undefined;
+                nauliteClient = createNauliteClient();
+                this.checked = true;
+                return null;
+            }
+
             this.user = session.user;
             this.csrfToken = session.csrfToken;
             nauliteClient = createNauliteClient(session.csrfToken);
@@ -76,7 +85,11 @@ export const authStore = reactive({
             this.csrfToken = undefined;
             nauliteClient = createNauliteClient();
             this.checked = true;
-            this.error = formatAuthError(err);
+
+            if (!(err instanceof NauliteApiError && err.status === 401)) {
+                this.error = formatAuthError(err);
+            }
+
             return null;
         } finally {
             this.loading = false;

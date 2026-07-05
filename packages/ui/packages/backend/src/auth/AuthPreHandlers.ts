@@ -67,6 +67,10 @@ export namespace AuthPreHandlers {
             return true;
         }
 
+        if (path === "/auth/me" && method === "GET") {
+            return true;
+        }
+
         return false;
     }
 }
