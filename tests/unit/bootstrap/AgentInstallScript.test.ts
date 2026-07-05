@@ -39,14 +39,14 @@ describeBootstrap("agent-install.sh", () => {
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("--setup-key");
         expect(result.stdout).toContain("--dry-run");
-        expect(result.stdout).toContain("--install-netbird");
+        expect(result.stdout).toContain("--no-install-netbird");
     });
 
     it("fails when required flags are missing", async () => {
         const result = await runBootstrapScript("agent-install.sh", ["--host", "https://cp.example.com"]);
 
         expect(result.exitCode).toBe(1);
-        expect(result.stderr + result.stdout).toContain("--host and --setup-key are required");
+        expect(result.stderr + result.stdout).toContain("--host and --setup-key are required when not running on an interactive terminal");
     });
 
     it("writes agent.json during dry-run when NetBird URL is provided", async () => {
@@ -120,7 +120,6 @@ describeBootstrap("agent-install.sh", () => {
 
         const result = await runBootstrapScript("agent-install.sh", [
             "--dry-run",
-            "--install-netbird",
             "--host",
             "https://cp.example.com",
             "--setup-key",
@@ -133,6 +132,28 @@ describeBootstrap("agent-install.sh", () => {
 
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("dry-run would install netbird");
+    });
+
+    it("skips netbird install during dry-run with --no-install-netbird", async () => {
+        const tempDir = await mkdtemp(path.join(tmpdir(), "naulite-agent-config-"));
+        tempDirs.push(tempDir);
+        const configPath = path.join(tempDir, "agent.json");
+
+        const result = await runBootstrapScript("agent-install.sh", [
+            "--dry-run",
+            "--no-install-netbird",
+            "--host",
+            "https://cp.example.com",
+            "--setup-key",
+            "setup-key-valid",
+            "--netbird-management-url",
+            "https://vpn.example.com",
+            "--config-path",
+            configPath
+        ]);
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).not.toContain("dry-run would install netbird");
     });
 
     it("keeps install.sh as an alias for agent-install.sh", async () => {

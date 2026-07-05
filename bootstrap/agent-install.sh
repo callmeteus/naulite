@@ -20,7 +20,7 @@ NODE_ID=""
 LABELS_JSON=""
 CAPABILITIES_JSON=""
 DRY_RUN=0
-INSTALL_NETBIRD=0
+INSTALL_NETBIRD=1
 
 log() {
     printf '[naulite-agent] %s\n' "$*"
@@ -29,21 +29,60 @@ log() {
 usage() {
     cat <<'EOF'
 Usage:
-  agent-install.sh --host <control-plane-url> --setup-key <netbird-setup-key> [options]
+  agent-install.sh [options]
 
 Options:
-  --host <url>                     Public control plane base URL (required)
-  --setup-key <key>                NetBird setup key from control plane bootstrap (required)
+  --host <url>                     Public control plane base URL
+  --setup-key <key>                NetBird setup key from control plane bootstrap
   --netbird-management-url <url>   Self-hosted NetBird management URL (optional; fetched from CP when omitted)
   --management-url <url>           Alias for --netbird-management-url
   --url <url>                      Alias for --netbird-management-url
   --agent-port <port>              Agent HTTP listen port (default: 9470)
   --install-dir <path>             Install directory (default: /opt/naulite-agent)
   --config-path <path>             Agent JSON config path (default: /var/lib/naulite/agent.json)
-  --install-netbird                Install pinned NetBird CLI on Linux (default version: 0.35.2)
+  --no-install-netbird             Skip NetBird CLI install (enabled by default on Linux)
   --dry-run                        Validate input, fetch bootstrap data, write config only
   -h, --help                       Show this help
+
+When required values are omitted, the installer prompts on an interactive terminal.
 EOF
+}
+
+can_prompt() {
+    [[ -e /dev/tty ]]
+}
+
+read_prompt() {
+    local prompt="$1"
+    local default_value="${2:-}"
+    local reply=""
+
+    if [[ -n "${default_value}" ]]; then
+        read -rp "${prompt} [${default_value}]: " reply </dev/tty
+        printf '%s' "${reply:-${default_value}}"
+        return 0
+    fi
+
+    read -rp "${prompt}: " reply </dev/tty
+    printf '%s' "${reply}"
+}
+
+prompt_missing_values() {
+    if ! can_prompt; then
+        return 0
+    fi
+
+    if [[ -z "${CP_HOST}" ]]; then
+        CP_HOST="$(read_prompt "Control plane public URL")"
+    fi
+
+    if [[ -z "${SETUP_KEY}" ]]; then
+        SETUP_KEY="$(read_prompt "NetBird setup key")"
+    fi
+
+    if [[ -z "${NETBIRD_MANAGEMENT_URL}" ]]; then
+        NETBIRD_MANAGEMENT_URL="$(read_prompt "NetBird management URL (leave empty to fetch from control plane)" "")"
+    fi
 }
 
 require_root() {
@@ -85,6 +124,10 @@ parse_args() {
                 INSTALL_NETBIRD=1
                 shift
                 ;;
+            --no-install-netbird)
+                INSTALL_NETBIRD=0
+                shift
+                ;;
             --dry-run)
                 DRY_RUN=1
                 shift
@@ -111,8 +154,10 @@ parse_args() {
     LABELS_JSON="${LABELS_JSON:-${NAULITE_LABELS:-}}"
     CAPABILITIES_JSON="${CAPABILITIES_JSON:-${NAULITE_CAPABILITIES:-}}"
 
+    prompt_missing_values
+
     if [[ -z "${CP_HOST}" || -z "${SETUP_KEY}" ]]; then
-        log "--host and --setup-key are required"
+        log "--host and --setup-key are required when not running on an interactive terminal"
         usage
         exit 1
     fi

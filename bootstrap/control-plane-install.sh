@@ -19,17 +19,53 @@ log() {
 usage() {
     cat <<'EOF'
 Usage:
-  control-plane-install.sh --host <public-control-plane-url> [options]
+  control-plane-install.sh [options]
 
 Options:
-  --host <url>                         Public control plane URL shown to agents (required)
+  --host <url>                         Public control plane URL shown to agents
   --netbird-domain <domain>            NetBird domain for local dogfood (default: netbird.local)
   --netbird-http-protocol <protocol>   http or https for NetBird dashboard (default: http)
   --netbird-public-management-url <url> Public NetBird management URL for enrolling agents
   --netbird-server-port <port>         Host port for NetBird management API (default: 9081)
   --dry-run                            Validate input and write dogfood/.env only
   -h, --help                           Show this help
+
+When required values are omitted, the installer prompts on an interactive terminal.
 EOF
+}
+
+can_prompt() {
+    [[ -e /dev/tty ]]
+}
+
+read_prompt() {
+    local prompt="$1"
+    local default_value="${2:-}"
+    local reply=""
+
+    if [[ -n "${default_value}" ]]; then
+        read -rp "${prompt} [${default_value}]: " reply </dev/tty
+        printf '%s' "${reply:-${default_value}}"
+        return 0
+    fi
+
+    read -rp "${prompt}: " reply </dev/tty
+    printf '%s' "${reply}"
+}
+
+prompt_missing_values() {
+    if ! can_prompt; then
+        return 0
+    fi
+
+    if [[ -z "${CP_HOST}" ]]; then
+        CP_HOST="$(read_prompt "Public control plane URL")"
+    fi
+
+    NETBIRD_DOMAIN="$(read_prompt "NetBird domain" "${NETBIRD_DOMAIN}")"
+    NETBIRD_HTTP_PROTOCOL="$(read_prompt "NetBird HTTP protocol (http or https)" "${NETBIRD_HTTP_PROTOCOL}")"
+    NETBIRD_PUBLIC_MANAGEMENT_URL="$(read_prompt "Public NetBird management URL (leave empty to derive)" "${NETBIRD_PUBLIC_MANAGEMENT_URL}")"
+    NETBIRD_SERVER_PORT="$(read_prompt "NetBird server port" "${NETBIRD_SERVER_PORT}")"
 }
 
 derive_netbird_public_management_url() {
@@ -83,8 +119,11 @@ parse_args() {
         esac
     done
 
+    CP_HOST="${CP_HOST:-${NAULITE_PUBLIC_URL:-}}"
+    prompt_missing_values
+
     if [[ -z "${CP_HOST}" ]]; then
-        log "--host is required"
+        log "--host is required when not running on an interactive terminal"
         usage
         exit 1
     fi
@@ -250,9 +289,7 @@ Control plane is ready.
 
 Install an agent on another machine:
 
-  curl -fsSL <repo>/bootstrap/agent-install.sh | sudo bash -s -- \\
-    --host ${CP_HOST} \\
-    --setup-key ${setup_key}
+  curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/agent-install.sh | sudo bash
 
 Only POST /nodes/register and GET /bootstrap/agent need public internet exposure
 when the control plane API is otherwise private.

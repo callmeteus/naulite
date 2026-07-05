@@ -42,7 +42,7 @@ describeBootstrap("control-plane-install.sh", () => {
         const result = await runBootstrapScript("control-plane-install.sh", []);
 
         expect(result.exitCode).toBe(1);
-        expect(result.stderr + result.stdout).toContain("--host is required");
+        expect(result.stderr + result.stdout).toContain("--host is required when not running on an interactive terminal");
     });
 
     it("writes bootstrap env values during dry-run", async () => {

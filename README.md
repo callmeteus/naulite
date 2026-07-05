@@ -60,46 +60,36 @@ The bootstrap scripts live in the `callmeteus/naulite` repository and can be exe
 Use this on the host that will run the control plane dogfood stack. It writes `dogfood/.env`, configures public URLs, and starts the local Docker Compose stack unless `--dry-run` is passed.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/control-plane-install.sh \
-  | bash -s -- \
-    --host https://cp.example.com \
-    --netbird-domain vpn.example.com \
-    --netbird-http-protocol https \
-    --netbird-public-management-url https://vpn.example.com
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/control-plane-install.sh | bash
+```
+
+Missing values are prompted on an interactive terminal (public URL, NetBird domain, protocol, management URL, and port). Pass flags to skip prompts:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/control-plane-install.sh | bash -s -- --host https://cp.example.com --netbird-domain vpn.example.com --netbird-http-protocol https --netbird-public-management-url https://vpn.example.com
 ```
 
 Dry-run mode validates inputs and writes configuration without starting Docker:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/control-plane-install.sh \
-  | bash -s -- \
-    --host https://cp.example.com \
-    --netbird-domain vpn.example.com \
-    --netbird-http-protocol https \
-    --dry-run
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/control-plane-install.sh | bash -s -- --host https://cp.example.com --dry-run
 ```
 
 ### 2. Install An Agent
 
-Use this on each worker node. The agent points at the control plane and uses the setup key created by the control plane bootstrap flow.
+Use this on each worker node. NetBird CLI install is enabled by default on Linux. Missing values are prompted on an interactive terminal.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/agent-install.sh \
-  | sudo bash -s -- \
-    --host https://cp.example.com \
-    --setup-key nb_setup_key_here \
-    --install-netbird
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/agent-install.sh | sudo bash
 ```
 
-If the control plane can serve bootstrap metadata, the agent installer fetches the NetBird management URL automatically. You can also pass it explicitly:
+Pass flags to skip prompts:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/agent-install.sh \
-  | sudo bash -s -- \
-    --host https://cp.example.com \
-    --setup-key nb_setup_key_here \
-    --netbird-management-url https://vpn.example.com
+curl -fsSL https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/agent-install.sh | sudo bash -s -- --host https://cp.example.com --setup-key nb_setup_key_here
 ```
+
+If the control plane can serve bootstrap metadata, the agent installer fetches the NetBird management URL automatically. Skip NetBird install with `--no-install-netbird`.
 
 ### 3. Verify The Cluster
 
