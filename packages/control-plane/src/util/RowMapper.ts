@@ -1,4 +1,4 @@
-import type { Instance, Node, NodeProvision, Secret, Service, Volume, ApiKey } from "@naulite/shared";
+import type { ApiKey, Instance, Node, NodeProvision, Secret, Service, Volume } from "@naulite/shared";
 
 /**
  * JSON field helpers for sqlite text columns.
@@ -133,6 +133,9 @@ export namespace RowMapper {
         resources: unknown;
         health: unknown;
         lifecycleStatus: string | null;
+        dispatchAttempts: number;
+        lastDispatchedAt: string | null;
+        lastError: string | null;
         createdAt: string;
         updatedAt: string;
     }): Instance {
@@ -147,6 +150,9 @@ export namespace RowMapper {
             resources: JsonField.parse(row.resources),
             health: JsonField.parse(row.health),
             lifecycleStatus: row.lifecycleStatus as Instance["lifecycleStatus"],
+            dispatchAttempts: row.dispatchAttempts ?? 0,
+            lastDispatchedAt: row.lastDispatchedAt ?? undefined,
+            lastError: row.lastError ?? undefined,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt
         };

@@ -7,6 +7,7 @@ import { Moon, Sun } from "@lucide/vue";
 import { navigationSections } from "../../config/navigation";
 import { useLocale, type AppLocale } from "../../composables/useLocale";
 import { useTheme } from "../../composables/useTheme";
+import NauliteBrand from "../brand/NauliteBrand.vue";
 import { useAuthStore } from "../../stores/Auth";
 
 const auth = useAuthStore();
@@ -49,8 +50,8 @@ function changeLocale(value: AppLocale): void {
 <template>
     <aside class="flex h-full min-h-screen w-64 flex-col border-r border-base-300 bg-base-200">
         <div class="border-b border-base-300 p-4">
-            <h1 class="text-lg font-bold">{{ t("menu.dashboard") }}</h1>
-            <p v-if="auth.user" class="mt-1 break-all text-xs text-base-content/70">
+            <NauliteBrand size="sm" />
+            <p v-if="auth.user" class="mt-2 break-all text-xs text-base-content/70">
                 {{ auth.user.email }} ({{ auth.user.role }})
             </p>
         </div>

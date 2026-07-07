@@ -5,6 +5,7 @@ ENV VITE_ADMIN_API_URL=$VITE_ADMIN_API_URL
 
 WORKDIR /app
 COPY package.json yarn.lock turbo.json tsconfig.base.json ./
+COPY assets ./assets
 COPY packages ./packages
 COPY scripts ./scripts
 RUN yarn install --frozen-lockfile || yarn install

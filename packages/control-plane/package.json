@@ -21,6 +21,8 @@
         "@naulite/runtime-docker": "0.1.0",
         "@naulite/runtime-podman": "0.1.0",
         "@naulite/logger": "0.1.0",
+        "@naulite/plugin-notification-slack": "0.1.0",
+        "@naulite/plugin-notification-webhook": "0.1.0",
         "@naulite/shared": "0.1.0",
         "bcryptjs": "^2.4.3",
         "fastify": "^5.2.0",

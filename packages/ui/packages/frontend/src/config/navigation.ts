@@ -44,7 +44,8 @@ export const navigationSections: NavSection[] = [
         items: [
             { path: "/nodes", labelKey: "menu.infrastructure.nodes", permission: "nodes:read", icon: Server },
             { path: "/cluster", labelKey: "menu.infrastructure.cluster", permission: "metrics:read", icon: LayoutDashboard },
-            { path: "/metrics", labelKey: "menu.infrastructure.metrics", permission: "metrics:read", icon: Activity }
+            { path: "/metrics", labelKey: "menu.infrastructure.metrics", permission: "metrics:read", icon: Activity },
+            { path: "/provision", labelKey: "menu.infrastructure.provision", permission: "nodes:provision", icon: Cloud }
         ]
     },
     {
@@ -76,13 +77,6 @@ export const navigationSections: NavSection[] = [
             { path: "/backups", labelKey: "menu.platform.backups", permission: "backups:read", icon: Archive },
             { path: "/netbird", labelKey: "menu.platform.netbird", permission: "netbird:read", icon: Network },
             { path: "/notifications", labelKey: "menu.platform.notifications", permission: "notifications:read", icon: Bell }
-        ]
-    },
-    {
-        id: "cloud",
-        labelKey: "menu.sections.cloud",
-        items: [
-            { path: "/provision", labelKey: "menu.cloud.provision", permission: "nodes:provision", icon: Cloud }
         ]
     },
     {

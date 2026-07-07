@@ -30,7 +30,7 @@ Operator/UI ──POST /nodes/provision──> NodeProvisionService
 
 | Field | Purpose |
 |-------|---------|
-| `provider` | Must be `aws` |
+| `provider` | Must be `AWS` |
 | `instanceType` | EC2 instance type (e.g. `t3.medium`) |
 | `amiId` | AMI in the target region |
 | `region` | AWS region override |

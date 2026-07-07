@@ -44,7 +44,7 @@ describe("ui-backend pagination routes", () => {
             listNodeProvisions: vi.fn(async () => ({
                 items: [{
                     id: "provision-1",
-                    provider: "aws",
+                    provider: "AWS",
                     status: "bootstrapping",
                     instanceType: "t3.small",
                     amiId: "ami-123",
@@ -60,7 +60,7 @@ describe("ui-backend pagination routes", () => {
             })),
             terminateNodeProvision: vi.fn(async () => ({
                 id: "provision-1",
-                provider: "aws",
+                provider: "AWS",
                 status: "terminated",
                 instanceType: "t3.small",
                 amiId: "ami-123",

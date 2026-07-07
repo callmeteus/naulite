@@ -117,6 +117,14 @@ export namespace ControlPlaneService {
 
             return deleted;
         }
+
+        /**
+         * @param name Secret name
+         * @returns Decrypted secret values when found
+         */
+        export function revealValues(name: string): ReturnType<ControlPlaneContext["secretsService"]["resolveValues"]> {
+            return ControlPlaneService.requireContext().secretsService.resolveValues(name);
+        }
     }
 
     /**
@@ -689,6 +697,31 @@ export namespace ControlPlaneService {
                 provisionId,
                 setupKey
             );
+        }
+    }
+
+    /**
+     * Workload instance reconciliation and retry operations.
+     */
+    export namespace InstanceReconciler {
+        /**
+         * @param nodeId Node identifier
+         * @returns Nothing.
+         */
+        export function reconcileNode(
+            nodeId: string
+        ): ReturnType<ControlPlaneContext["instanceReconcilerService"]["reconcileNode"]> {
+            return ControlPlaneService.requireContext().instanceReconcilerService.reconcileNode(nodeId);
+        }
+
+        /**
+         * @param instanceId Instance identifier
+         * @returns Nothing.
+         */
+        export function reconcileInstance(
+            instanceId: string
+        ): ReturnType<ControlPlaneContext["instanceReconcilerService"]["reconcileInstance"]> {
+            return ControlPlaneService.requireContext().instanceReconcilerService.reconcileInstance(instanceId);
         }
     }
 

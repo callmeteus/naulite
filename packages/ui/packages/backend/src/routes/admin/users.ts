@@ -18,6 +18,7 @@ const DisableAdminUserBodySchema = z.object({
 });
 
 const UpdateAdminUserBodySchema = z.object({
+    email: z.string().email().optional(),
     role: z.enum(["viewer", "operator", "admin"]).optional(),
     password: z.string().min(8).optional()
 });

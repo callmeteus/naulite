@@ -112,6 +112,7 @@ function createNetBirdApplyContext(): ControlPlaneContext {
                 servicesToUpdate: [],
                 servicesToRemove: [],
                 instancesToCreate: [],
+                instancesToRedeploy: [],
                 instancesToRemove: [],
                 volumesToEnsure: [],
                 volumesToRemove: [],

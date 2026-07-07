@@ -9,7 +9,7 @@ import { NetworkGroupId } from "../orchestration/NetworkGroupId";
 import type { PlannerDiff } from "../orchestration/Planner";
 import type { SecretProvider } from "../modules/secrets/SecretProvider";
 
-import { AgentDispatcher } from "./AgentDispatcher";
+import { AgentDispatcher, type AgentDispatchResult } from "./AgentDispatcher";
 import { BuildContextService } from "./BuildContextService";
 import { BuildService } from "./BuildService";
 import { PipelineRunService } from "./PipelineRunService";
@@ -268,6 +268,11 @@ export namespace ApplyService {
         });
 
         const dispatch = await AgentDispatcher.dispatchPlans(plans, nodes);
+        const watchedInstanceIds = [
+            ...diff.instancesToCreate.map((instance) => instance.id),
+            ...diff.instancesToRedeploy.map((instance) => instance.id)
+        ];
+        const dispatchOutcome = await applyDispatchResults(watchedInstanceIds, instanceNodes, dispatch);
 
         for (const volume of diff.volumesToRemove) {
             const nodeId = volume.nodeId ?? volumeNodes.get(volume.name);
@@ -288,8 +293,13 @@ export namespace ApplyService {
             await ControlPlaneService.Store.deleteVolumeByName(volume.name);
         }
 
-        const watchedInstanceIds = diff.instancesToCreate.map((instance) => instance.id);
-        RolloutWatcher.watch(applyRun.id, watchedInstanceIds);
+        if (dispatchOutcome.allFailed) {
+            await PipelineRunService.completeRun(applyRun.id, "failed", {
+                errorMessage: "Rollout failed because agent dispatch did not succeed for any instance."
+            });
+        } else {
+            RolloutWatcher.watch(applyRun.id, watchedInstanceIds);
+        }
 
         await PipelineRunService.emitEvent(applyRun.id, {
             kind: "infra.sync.finished",
@@ -830,5 +840,50 @@ export namespace ApplyService {
         }
 
         return nodes.find((node) => node.status === "online") ?? nodes[0];
+    }
+
+    /**
+     * Marks instances failed when their node dispatch did not succeed.
+     *
+     * @param instanceIds Instance identifiers created or redeployed in this apply
+     * @param instanceNodes Instance id to scheduled node id map
+     * @param dispatch Per-node dispatch results
+     * @returns Whether every watched instance failed to dispatch
+     */
+    async function applyDispatchResults(
+        instanceIds: string[],
+        instanceNodes: Map<string, string>,
+        dispatch: AgentDispatchResult[]
+    ): Promise<{ allFailed: boolean }> {
+        const now = new Date().toISOString();
+        let dispatchedCount = 0;
+
+        for (const instanceId of instanceIds) {
+            const nodeId = instanceNodes.get(instanceId);
+
+            if (!nodeId) {
+                continue;
+            }
+
+            const result = dispatch.find((entry) => entry.nodeId === nodeId);
+
+            if (result?.status === "dispatched") {
+                dispatchedCount += 1;
+                await ControlPlaneService.Store.updateInstance(instanceId, {
+                    lastDispatchedAt: now
+                });
+                continue;
+            }
+
+            await ControlPlaneService.Store.updateInstance(instanceId, {
+                status: "failed",
+                lastDispatchedAt: now,
+                lastError: result?.message ?? "Agent dispatch failed or was skipped."
+            });
+        }
+
+        return {
+            allFailed: instanceIds.length > 0 && dispatchedCount === 0
+        };
     }
 }

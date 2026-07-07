@@ -7,8 +7,8 @@ import {
 } from "@naulite/shared";
 
 import { ControlPlaneService } from "../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { LeaderPreHandlers } from "../../auth/LeaderPreHandlers";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { HTTP404Error } from "../../errors/TreatedError";
 import { defineRoute } from "../../routing/DefineRoute";
 

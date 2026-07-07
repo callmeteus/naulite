@@ -5,3 +5,4 @@ dist/
 packages/cli/native/
 **/.zig-cache/
 logs/
+*.log

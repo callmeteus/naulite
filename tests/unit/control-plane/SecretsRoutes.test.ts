@@ -48,7 +48,14 @@ function createSecretsTestContext(options: {
                 secrets.set(input.name, metadata);
                 return metadata;
             }),
-            deleteByName: vi.fn(async (name: string) => secrets.delete(name))
+            deleteByName: vi.fn(async (name: string) => secrets.delete(name)),
+            resolveValues: vi.fn(async (name: string) => {
+                if (!secrets.has(name)) {
+                    return null;
+                }
+
+                return { token: "abc" };
+            })
         },
         store: {
             validateApiKey: vi.fn(async (secret: string) => secret === "valid-secret")
@@ -140,6 +147,35 @@ describe("secrets routes", () => {
             name: "netbird/internal",
             keys: ["token"]
         }));
+
+        await app.close();
+    });
+
+    it("reveals secret values by query name", async () => {
+        const context = createSecretsTestContext({ isLeader: true });
+        const app = await createApp({ context, logger: false });
+
+        await app.inject({
+            method: "POST",
+            url: "/secrets",
+            remoteAddress: "127.0.0.1",
+            payload: {
+                name: "netbird/internal",
+                data: { token: "abc" }
+            }
+        });
+
+        const response = await app.inject({
+            method: "GET",
+            url: "/secrets/reveal?name=netbird%2Finternal",
+            remoteAddress: "127.0.0.1"
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(response.json()).toEqual({
+            name: "netbird/internal",
+            data: { token: "abc" }
+        });
 
         await app.close();
     });

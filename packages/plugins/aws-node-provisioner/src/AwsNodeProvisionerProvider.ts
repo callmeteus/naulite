@@ -26,7 +26,7 @@ export interface AwsNodeProvisionerProviderOptions {
  * AWS EC2 node provisioner backed by @aws-sdk/client-ec2.
  */
 export class AwsNodeProvisionerProvider implements NodeProvisionerProvider {
-    readonly id = "aws";
+    readonly id = "AWS";
     private readonly injectedClient?: EC2Client;
     private readonly defaultClientConfig?: EC2ClientConfig;
 
@@ -189,7 +189,7 @@ function mapEc2State(state: string | undefined): MachineStatus {
 export const awsNodeProvisionerProvider = new AwsNodeProvisionerProvider();
 
 export const awsNodeProvisionerPluginRegistration = {
-    id: "aws",
+    id: "AWS",
     type: "nodeProvisioner" as const,
     version: "0.1.0",
     nodeProvisionerProvider: awsNodeProvisionerProvider

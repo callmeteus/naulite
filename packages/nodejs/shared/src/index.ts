@@ -1,5 +1,6 @@
 export * from "./schemas/index";
 export * from "./types/index";
+export { NodeProvisionProvider } from "./types/NodeProvisionProvider";
 export * from "./providers/index";
 export * from "./auth/index";
 export * from "./services/ExecInstanceTargetResolver";

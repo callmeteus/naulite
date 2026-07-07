@@ -6,13 +6,13 @@
             "workloads": "Cargas de trabalho",
             "delivery": "Entrega",
             "platform": "Plataforma",
-            "cloud": "Nuvem",
             "administration": "Administração"
         },
         "infrastructure": {
             "nodes": "Nós",
             "cluster": "Cluster",
-            "metrics": "Métricas"
+            "metrics": "Métricas",
+            "provision": "Provisionar nó"
         },
         "workloads": {
             "services": "Serviços",
@@ -33,9 +33,6 @@
             "netbird": "NetBird",
             "notifications": "Notificações"
         },
-        "cloud": {
-            "provision": "Provisionar nó"
-        },
         "administration": {
             "apiKeys": "Chaves de API",
             "adminUsers": "Usuários admin"
@@ -45,6 +42,13 @@
         "localeEn": "English",
         "localePtBr": "Português",
         "logout": "Sair"
+    },
+    "relations": {
+        "nodeProvisionProvider": {
+            "AWS": {
+                "label": "Amazon Web Services"
+            }
+        }
     },
     "common": {
         "loading": "Carregando...",
@@ -325,29 +329,46 @@
         },
         "notifications": {
             "title": "Notificações",
-            "hint": "Provedores de notificação registrados no plano de controle e variáveis de ambiente associadas.",
+            "hint": "Configure destinos Slack e webhook diretamente no painel.",
             "refresh": "Atualizar",
+            "addDestination": "Adicionar destino",
+            "editDestination": "Editar destino",
             "test": "Enviar teste",
+            "testAll": "Testar todos",
             "testing": "Enviando teste...",
-            "provider": "Provedor",
-            "urlConfigured": "URL configurada",
+            "name": "Nome",
+            "type": "Tipo",
+            "typeSlack": "Slack",
+            "typeWebhook": "Webhook",
+            "enabled": "Ativo",
+            "webhookUrl": "URL do webhook",
+            "webhookUrlPlaceholder": "https://hooks.slack.com/services/...",
+            "webhookSecret": "Segredo de assinatura (opcional)",
+            "webhookSecretPlaceholder": "Deixe em branco para manter o segredo atual",
             "secretConfigured": "Segredo configurado",
-            "envVars": "Variáveis de ambiente",
-            "emptyTitle": "Nenhum provedor de notificação",
-            "emptyDescription": "Registre um provedor de notificação no plano de controle para receber alertas.",
+            "emptyTitle": "Nenhum destino de notificação",
+            "emptyDescription": "Adicione um destino Slack ou webhook para receber alertas de pipeline e infraestrutura.",
+            "created": "Destino criado com sucesso.",
+            "updated": "Destino atualizado com sucesso.",
+            "deleted": "Destino excluído com sucesso.",
+            "deleteTitle": "Excluir destino",
+            "deleteMessage": "Excluir o destino \"{name}\"? Esta ação não pode ser desfeita.",
             "testResults": "Resultado do teste",
             "testOk": "Entrega bem-sucedida",
             "testFailed": "Falha na entrega",
             "filters": "Eventos permitidos",
-            "saveFilters": "Salvar filtros",
-            "savingFilters": "Salvando filtros..."
+            "filtersHint": "Deixe todos desmarcados para entregar todos os eventos.",
+            "filtersAll": "Todos os eventos",
+            "filtersCount": "{count} eventos selecionados",
+            "selectAllEvents": "Selecionar todos",
+            "clearEvents": "Limpar"
         },
         "provision": {
             "title": "Provisionar nó",
             "hint": "Solicite uma nova instância na nuvem e registre o agente na plataforma.",
             "history": "Histórico de provisionamento",
             "terminate": "Encerrar instância",
-            "provider": "Provider",
+            "provider": "Provedor",
             "instanceType": "Tipo de instância",
             "amiId": "ID da AMI",
             "amiPlaceholder": "ami-0123456789abcdef0",
@@ -393,17 +414,35 @@
         },
         "secrets": {
             "title": "Segredos",
-            "hint": "Gerencie metadados de segredos do cluster. Os valores são criptografados e não são exibidos após salvar.",
+            "hint": "Gerencie segredos do cluster. Os valores são criptografados em repouso e só aparecem quando você revela.",
             "emptyTitle": "Nenhum segredo criado ainda",
             "emptyDescription": "Crie um segredo para armazenar credenciais e configuração para seus serviços.",
             "emptyAction": "Criar segredo",
+            "add": "Adicionar segredo",
+            "addTitle": "Adicionar segredo",
+            "addHint": "Adicione um ou mais pares chave-valor. Os valores podem ser qualquer texto.",
             "name": "Nome",
             "namePlaceholder": "db-credentials",
-            "data": "Dados (objeto JSON)",
+            "nameRequired": "O nome do segredo é obrigatório.",
+            "entries": "Entradas",
+            "addEntry": "Adicionar entrada",
+            "removeEntry": "Remover entrada",
+            "key": "Chave",
+            "keyPlaceholder": "password",
+            "value": "Valor",
+            "valuePlaceholder": "Qualquer valor em texto",
             "description": "Descrição",
             "descriptionPlaceholder": "Nota opcional para operadores",
             "save": "Salvar segredo",
-            "delete": "Excluir"
+            "delete": "Excluir",
+            "reveal": "Revelar",
+            "hide": "Ocultar",
+            "revealTitle": "Valores do segredo",
+            "rootFolder": "Segredos",
+            "openFolder": "Abrir",
+            "emptyFolder": "Esta pasta está vazia.",
+            "atLeastOneKey": "Pelo menos uma chave com nome é obrigatória.",
+            "duplicateKey": "Chave duplicada \"{key}\"."
         },
         "services": {
             "title": "Serviços",

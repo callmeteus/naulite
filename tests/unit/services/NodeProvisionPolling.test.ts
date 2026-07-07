@@ -10,7 +10,7 @@ describe("NodeProvisionService status polling", () => {
         const store = {
             listNodeProvisionsInFlight: vi.fn(async () => [{
                 id: "provision-1",
-                provider: "aws",
+                provider: "AWS",
                 cloudInstanceId: "i-123",
                 status: "launching",
                 instanceType: "t3.micro",
@@ -25,7 +25,7 @@ describe("NodeProvisionService status polling", () => {
 
         const registry = new NodeProvisionerRegistry();
         registry.register({
-            id: "aws",
+            id: "AWS",
             provision: vi.fn(),
             getStatus: vi.fn(async () => "running"),
             terminate: vi.fn()
@@ -50,7 +50,7 @@ describe("NodeProvisionService status polling", () => {
         const store = {
             listNodeProvisionsInFlight: vi.fn(async () => [{
                 id: "provision-2",
-                provider: "aws",
+                provider: "AWS",
                 cloudInstanceId: "i-456",
                 status: "bootstrapping",
                 instanceType: "t3.micro",
@@ -65,7 +65,7 @@ describe("NodeProvisionService status polling", () => {
 
         const registry = new NodeProvisionerRegistry();
         registry.register({
-            id: "aws",
+            id: "AWS",
             provision: vi.fn(),
             getStatus: vi.fn(async () => "failed"),
             terminate: vi.fn()

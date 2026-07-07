@@ -1,4 +1,4 @@
-import type { NotificationProvider, NodeProvisionerProvider, SecretProvider } from "@naulite/shared";
+import type { NodeProvisionerProvider, SecretProvider } from "@naulite/shared";
 
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 import { BackupDestinationProvider } from "../modules/backup/BackupDestinationProvider";
@@ -7,7 +7,6 @@ import {
     PluginSecretProviderAdapter,
     resolveSecretBackendId
 } from "../modules/secrets/PluginSecretProviderAdapter";
-import { RunNotificationDispatcher } from "../services/RunNotificationDispatcher";
 import type { LoadedPluginRegistration } from "./LoadedPluginRegistration";
 import { Logger } from "../Logger";
 const log_plugins = Logger.create("plugins");
@@ -49,12 +48,9 @@ export namespace PluginRegistryWiring {
                 log_plugins.debug("wired node provisioner id=%s", plugin.id);
             }
 
-            if (plugin.type === "notification" && plugin.notificationProvider) {
-                RunNotificationDispatcher.register(
-                    plugin.id,
-                    plugin.notificationProvider as NotificationProvider
-                );
-                log_plugins.debug("wired notification provider id=%s", plugin.id);
+            if (plugin.type === "notification") {
+                log_plugins.debug("skipped env notification provider id=%s (panel destinations)", plugin.id);
+                continue;
             }
 
             if (plugin.type === "secret" && plugin.secretProvider) {

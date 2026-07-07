@@ -1,6 +1,6 @@
 <div align="center">
 
-# naulite
+<img src="assets/naulite-logo.svg" alt="naulite" width="280" />
 
 **A self-hosted orchestration control plane for Compose-compatible workloads, private agents, GitOps rollouts, and operational automation.**
 

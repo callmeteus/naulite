@@ -23,6 +23,7 @@ const createEmail = ref("");
 const createPassword = ref("");
 const createRole = ref<AdminRole>("viewer");
 const editUser = ref<AdminUser | null>(null);
+const editEmail = ref("");
 const editRole = ref<AdminRole>("viewer");
 const editPassword = ref("");
 const disableTarget = ref<AdminUser | null>(null);
@@ -110,6 +111,7 @@ async function createUser(): Promise<void> {
  */
 function openEditModal(user: AdminUser): void {
     editUser.value = user;
+    editEmail.value = user.email;
     editRole.value = user.role;
     editPassword.value = "";
     editModalRef.value?.showModal();
@@ -135,12 +137,19 @@ async function saveEditUser(): Promise<void> {
         return;
     }
 
+    const trimmedEmail = editEmail.value.trim();
+
+    if (!trimmedEmail) {
+        return;
+    }
+
     loading.value = true;
     error.value = "";
     message.value = "";
 
     try {
         await nauliteClient.updateAdminUser(editUser.value.id, {
+            email: trimmedEmail,
             role: editRole.value,
             password: editPassword.value.length >= 8 ? editPassword.value : undefined
         });
@@ -339,7 +348,7 @@ async function confirmDisableUser(): Promise<void> {
                 <form v-if="editUser" class="mt-4 grid gap-4" @submit.prevent="saveEditUser">
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.login.email") }}</span>
-                        <input :value="editUser.email" type="email" class="input input-bordered w-full" disabled />
+                        <input v-model="editEmail" type="email" class="input input-bordered w-full" required />
                     </label>
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.adminUsers.role") }}</span>
@@ -355,7 +364,7 @@ async function confirmDisableUser(): Promise<void> {
                     </label>
                     <div class="modal-action mt-2 px-0">
                         <button type="button" class="btn" @click="closeEditModal">{{ t("common.cancel") }}</button>
-                        <button type="submit" class="btn btn-primary" :disabled="loading">
+                        <button type="submit" class="btn btn-primary" :disabled="loading || !editEmail.trim()">
                             {{ t("common.save") }}
                         </button>
                     </div>

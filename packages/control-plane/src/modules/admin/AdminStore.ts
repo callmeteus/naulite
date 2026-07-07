@@ -104,7 +104,7 @@ export class AdminStore {
     }
 
     /**
-     * Updates an admin user role and optionally resets the password.
+     * Updates an admin user role, email, and optionally resets the password.
      *
      * @param userId Admin user identifier
      * @param input Update payload
@@ -115,6 +115,7 @@ export class AdminStore {
         input: {
             role?: AdminRole;
             password?: string;
+            username?: string;
         }
     ): Promise<AdminUserPublic | null> {
         const user = await this.findUserById(userId);
@@ -127,6 +128,7 @@ export class AdminStore {
         const updates: {
             role?: AdminRole;
             passwordHash?: string;
+            username?: string;
             updatedAt: string;
         } = {
             updatedAt: now
@@ -138,6 +140,20 @@ export class AdminStore {
 
         if (input.password) {
             updates.passwordHash = await AdminPasswordCrypto.hashPassword(input.password);
+        }
+
+        if (input.username) {
+            const normalizedUsername = input.username.trim().toLowerCase();
+
+            if (normalizedUsername !== user.username) {
+                const existing = await this.findUserByUsername(normalizedUsername);
+
+                if (existing && existing.id !== userId) {
+                    throw new Error(`Admin user already exists: ${normalizedUsername}`);
+                }
+
+                updates.username = normalizedUsername;
+            }
         }
 
         await user.update(updates);

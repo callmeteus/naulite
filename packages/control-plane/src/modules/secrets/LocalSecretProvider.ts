@@ -1,8 +1,8 @@
 import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@naulite/shared";
 
+import { Logger } from "../../Logger";
 import { AesEncryption } from "./AesEncryption";
 import { SecretProvider } from "./SecretProvider";
-import { Logger } from "../../Logger";
 const log_secrets = Logger.create("secrets");
 
 

@@ -37,6 +37,7 @@ import { NetBirdEnrollmentService } from "./services/NetBirdEnrollmentService";
 import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
 import { NetBirdService } from "./services/NetBirdService";
 import { createNodeProvisionService, type NodeProvisionService } from "./services/NodeProvisionService";
+import { createInstanceReconcilerService, type InstanceReconcilerService } from "./services/InstanceReconcilerService";
 import { createMetricsSyncService, type MetricsSyncService } from "./services/MetricsSyncService";
 import { SecretsService, resolveSecretMasterKey } from "./services/SecretsService";
 import { Logger } from "./Logger";
@@ -72,6 +73,7 @@ export interface ControlPlaneContext {
     gatewayRouteService: GatewayRouteService;
     nodeProvisionerRegistry: NodeProvisionerRegistry;
     nodeProvisionService: NodeProvisionService;
+    instanceReconcilerService: InstanceReconcilerService;
     metricsSyncService: MetricsSyncService;
     builderProviders: Map<string, BuilderProvider>;
     applyRevision: number;
@@ -125,7 +127,7 @@ export function createControlPlaneContext(
     const metricsSyncService = createMetricsSyncService(store, leaderElection);
     const secretsService = new SecretsService(store, masterKey);
 
-    return {
+    const context: ControlPlaneContext = {
         instanceId,
         databaseProvider,
         store,
@@ -156,10 +158,20 @@ export function createControlPlaneContext(
         gatewayRouteService,
         nodeProvisionerRegistry,
         nodeProvisionService,
+        instanceReconcilerService: null!,
         metricsSyncService,
         builderProviders,
         applyRevision: options.applyRevision ?? 0
     };
+
+    context.instanceReconcilerService = createInstanceReconcilerService(
+        store,
+        context.planner,
+        context.composeParser,
+        () => context.applyRevision
+    );
+
+    return context;
 }
 
 /**

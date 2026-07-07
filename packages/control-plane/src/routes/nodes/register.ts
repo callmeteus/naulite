@@ -53,6 +53,10 @@ export const POST = defineRoute({
 
         await ControlPlaneService.Store.saveNode(node);
 
+        if (body.agentUrl) {
+            void ControlPlaneService.InstanceReconciler.reconcileNode(node.id);
+        }
+
         if (body.provisionId) {
             await ControlPlaneService.NodeProvision.completeRegistration(body.provisionId, node.id);
         }

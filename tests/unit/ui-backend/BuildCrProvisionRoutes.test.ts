@@ -62,7 +62,7 @@ function createMockControlPlane(): NauliteClient {
 
             id: "provision-1",
 
-            provider: "aws",
+            provider: "AWS",
 
             status: "bootstrapping",
 
@@ -248,7 +248,7 @@ describe("ui-backend build, container registry, and provision routes", () => {
 
             payload: {
 
-                provider: "aws",
+                provider: "AWS",
 
                 instanceType: "t3.small",
 
@@ -262,7 +262,7 @@ describe("ui-backend build, container registry, and provision routes", () => {
 
         expect(controlPlane.provisionNode).toHaveBeenCalledWith({
 
-            provider: "aws",
+            provider: "AWS",
 
             instanceType: "t3.small",
 

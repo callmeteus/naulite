@@ -165,7 +165,7 @@ describe("NauliteClient", () => {
     it("provisions nodes through the control plane API", async () => {
         const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
             id: "provision-1",
-            provider: "aws",
+            provider: "AWS",
             status: "bootstrapping",
             instanceType: "t3.small",
             amiId: "ami-123",

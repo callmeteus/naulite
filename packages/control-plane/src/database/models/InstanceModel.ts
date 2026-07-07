@@ -36,6 +36,15 @@ export class InstanceModel extends Model {
     @Column({ type: DataType.STRING, field: "lifecycle_status" })
     declare lifecycleStatus: string | null;
 
+    @Column({ type: DataType.INTEGER, field: "dispatch_attempts", defaultValue: 0 })
+    declare dispatchAttempts: number;
+
+    @Column({ type: DataType.STRING, field: "last_dispatched_at" })
+    declare lastDispatchedAt: string | null;
+
+    @Column({ type: DataType.STRING, field: "last_error" })
+    declare lastError: string | null;
+
     @Column({ type: DataType.STRING, field: "created_at" })
     declare createdAt: string;
 

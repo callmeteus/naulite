@@ -44,7 +44,8 @@ function createApplyTestContext(): ControlPlaneContext {
             insertVolume: vi.fn(async () => undefined),
             deleteInstance: vi.fn(async () => undefined),
             deleteService: vi.fn(async () => undefined),
-            deleteVolumeByName: vi.fn(async () => true)
+            deleteVolumeByName: vi.fn(async () => true),
+            updateInstance: vi.fn(async () => null)
         },
         composeParser: {
             parse: vi.fn(() => ({
@@ -91,6 +92,7 @@ function createApplyTestContext(): ControlPlaneContext {
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 }],
+                instancesToRedeploy: [],
                 instancesToRemove: [],
                 volumesToEnsure: [],
                 volumesToRemove: [],
@@ -236,6 +238,7 @@ describe("ApplyService phase 1.2", () => {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             }],
+            instancesToRedeploy: [],
             instancesToRemove: [],
             volumesToEnsure: [],
             volumesToRemove: [],
@@ -342,6 +345,47 @@ describe("ApplyService phase 1.2", () => {
         }
     });
 
+    it("marks instances failed and completes the run when dispatch does not succeed", async () => {
+        const context = createApplyTestContext();
+        installApplyTestContext(context);
+
+        vi.spyOn(ControlPlaneService.GitOps, "recordRevision").mockResolvedValue({
+            id: "rev-1",
+            repositoryUrl: "inline://apply",
+            branch: "main",
+            commitSha: "rev-1",
+            manifestName: "minimal",
+            createdAt: new Date().toISOString()
+        } as never);
+
+        const agentDispatcher = await import("../../../packages/control-plane/src/services/AgentDispatcher");
+        vi.spyOn(agentDispatcher.AgentDispatcher, "dispatchPlans").mockResolvedValue([{
+            nodeId: "agent-1",
+            planId: "minimal-agent-1-1",
+            agentUrl: "http://agent-1",
+            status: "skipped",
+            message: "Node has no agentUrl"
+        }]);
+
+        const rolloutWatcher = await import("../../../packages/control-plane/src/services/RolloutWatcher");
+        const watchSpy = vi.spyOn(rolloutWatcher.RolloutWatcher, "watch").mockImplementation(() => undefined);
+
+        await ApplyService.execute("name: minimal");
+
+        expect(context.store.updateInstance).toHaveBeenCalledWith("minimal:web-1", expect.objectContaining({
+            status: "failed",
+            lastError: "Node has no agentUrl"
+        }));
+        expect(PipelineRunService.completeRun).toHaveBeenCalledWith(
+            "apply-run-test-1",
+            "failed",
+            expect.objectContaining({
+                errorMessage: expect.stringContaining("agent dispatch")
+            })
+        );
+        expect(watchSpy).not.toHaveBeenCalled();
+    });
+
     it("removes retired instances and volumes from the store during apply", async () => {
         const context = createApplyTestContext();
         context.planner.diff = vi.fn(() => ({
@@ -360,6 +404,7 @@ describe("ApplyService phase 1.2", () => {
                 updatedAt: new Date().toISOString()
             }],
             instancesToCreate: [],
+            instancesToRedeploy: [],
             instancesToRemove: [{
                 id: "minimal:api-1",
                 serviceId: "minimal:api",

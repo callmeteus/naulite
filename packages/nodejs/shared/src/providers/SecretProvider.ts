@@ -1,5 +1,5 @@
-import type { Secret } from "../types/Secret";
 import type { ResolvedSecret } from "../types/Common";
+import type { Secret } from "../types/Secret";
 
 /**
  * Input for creating or updating a cluster secret.

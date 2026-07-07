@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 
+import NauliteBrand from "../components/brand/NauliteBrand.vue";
 import { useAuthStore } from "../stores/Auth";
 
 const { t } = useI18n();
@@ -34,9 +35,9 @@ async function submitLogin(): Promise<void> {
 <template>
     <section class="flex min-h-screen items-center justify-center bg-base-200 p-4">
         <div class="w-full max-w-md space-y-6">
-            <header class="text-center">
-                <p class="text-3xl font-bold">Naulite</p>
-                <p class="mt-1 text-sm text-base-content/70">{{ t("pages.login.tagline") }}</p>
+            <header class="flex flex-col items-center text-center">
+                <NauliteBrand size="lg" />
+                <p class="mt-2 text-sm text-base-content/70">{{ t("pages.login.tagline") }}</p>
             </header>
 
             <div class="card bg-base-100 shadow-xl">

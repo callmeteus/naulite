@@ -4,18 +4,24 @@ import { useI18n } from "vue-i18n";
 
 import type { NodeProvision } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
+import {
+    NodeProvisionProvider,
+    NodeProvisionProviderRelation
+} from "../domain/NodeProvisionProvider";
 import PageLayout from "../components/layout/PageLayout.vue";
 import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import RelationSelect from "../components/ui/RelationSelect.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
 import { useServerPagination } from "../composables/useServerPagination";
+import { getRelationLabel } from "../utils/Relation";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
 const store = useClusterStore();
-const provider = ref("aws");
+const provider = ref<NodeProvisionProvider>(NodeProvisionProvider.AWS);
 const instanceType = ref("t3.small");
 const amiId = ref("");
 const region = ref("");
@@ -117,7 +123,7 @@ async function submitProvision(): Promise<void> {
     activeProvision.value = null;
 
     const provision = await store.provisionNode({
-        provider: provider.value.trim() || "aws",
+        provider: provider.value,
         instanceType: trimmedType,
         amiId: trimmedAmi,
         count: count.value,
@@ -172,10 +178,13 @@ async function selectProvision(provisionId: string): Promise<void> {
         <div class="card bg-base-100 shadow">
             <div class="card-body gap-4">
                 <form class="grid gap-4 md:grid-cols-2" @submit.prevent="submitProvision">
-                    <label class="form-control w-full">
-                        <span class="label-text">{{ t("pages.provision.provider") }}</span>
-                        <input v-model="provider" type="text" class="input input-bordered w-full" />
-                    </label>
+                    <RelationSelect
+                        v-model="provider"
+                        :relation="NodeProvisionProviderRelation"
+                        :disabled="store.loading"
+                    >
+                        <template #label>{{ t("pages.provision.provider") }}</template>
+                    </RelationSelect>
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.provision.instanceType") }}</span>
                         <input v-model="instanceType" type="text" class="input input-bordered w-full" />
@@ -287,7 +296,7 @@ async function selectProvision(provisionId: string): Promise<void> {
                         <tbody>
                             <tr v-for="provision in provisionHistory" :key="provision.id">
                                 <td>{{ provision.id }}</td>
-                                <td>{{ provision.provider }}</td>
+                                <td>{{ getRelationLabel(NodeProvisionProviderRelation, provision.provider, t) }}</td>
                                 <td><StatusPill :status="provision.status" /></td>
                                 <td>{{ provision.instanceType }}</td>
                                 <td>

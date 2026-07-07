@@ -1,26 +1,52 @@
-import type { NotificationProvider, PipelineNotificationEvent } from "@naulite/shared";
+import type { NotificationProvider, PipelineEventKind, PipelineNotificationEvent } from "@naulite/shared";
 
-import { NotificationProviderFilterStore } from "../database/NotificationProviderFilterStore";
 import { Logger } from "../Logger";
 const log_pipeline = Logger.create("pipeline");
 
+interface RegisteredNotificationProvider {
+    provider: NotificationProvider;
+    allowedKinds: PipelineEventKind[] | null;
+}
 
 /**
  * Dispatches pipeline notifications to registered notification providers.
  */
 export namespace RunNotificationDispatcher {
-    const providers = new Map<string, NotificationProvider>();
+    const providers = new Map<string, RegisteredNotificationProvider>();
 
     /**
      * Registers a notification provider sink.
      *
      * @param id Provider identifier
      * @param provider Notification provider implementation
+     * @param allowedKinds Allowed event kinds, or null when all events are allowed
      * @returns Nothing.
      */
-    export function register(id: string, provider: NotificationProvider): void {
-        providers.set(id, provider);
+    export function register(
+        id: string,
+        provider: NotificationProvider,
+        allowedKinds: PipelineEventKind[] | null = null
+    ): void {
+        providers.set(id, { provider, allowedKinds });
         log_pipeline.debug("notification provider registered id=%s count=%d", id, providers.size);
+    }
+
+    /**
+     * Replaces all registered notification providers.
+     *
+     * @param entries Destination providers to register
+     * @returns Nothing.
+     */
+    export function replaceAll(entries: Array<{
+        id: string;
+        provider: NotificationProvider;
+        allowedKinds: PipelineEventKind[] | null;
+    }>): void {
+        providers.clear();
+
+        for (const entry of entries) {
+            register(entry.id, entry.provider, entry.allowedKinds);
+        }
     }
 
     /**
@@ -62,22 +88,14 @@ export namespace RunNotificationDispatcher {
             return;
         }
 
-        await Promise.all([...providers.entries()].map(async ([id, provider]) => {
+        await Promise.all([...providers.entries()].map(async ([id, entry]) => {
             try {
-                let allowedKinds: Awaited<ReturnType<typeof NotificationProviderFilterStore.getAllowedKinds>> = null;
-
-                try {
-                    allowedKinds = await NotificationProviderFilterStore.getAllowedKinds(id);
-                } catch (filterErr) {
-                    log_pipeline.debug("notification filter lookup failed id=%s: %O", id, filterErr);
-                }
-
-                if (allowedKinds && !allowedKinds.includes(event.kind)) {
+                if (entry.allowedKinds && !entry.allowedKinds.includes(event.kind)) {
                     log_pipeline.debug("notification filtered id=%s kind=%s", id, event.kind);
                     return;
                 }
 
-                await provider.onPipelineEvent(event);
+                await entry.provider.onPipelineEvent(event);
             } catch (err) {
                 log_pipeline.error("notification provider failed: %O", err);
             }
@@ -92,9 +110,9 @@ export namespace RunNotificationDispatcher {
     export async function testPing(): Promise<Array<{ id: string; ok: boolean; error?: string }>> {
         const event = buildTestEvent();
 
-        return Promise.all([...providers.entries()].map(async ([id, provider]) => {
+        return Promise.all([...providers.entries()].map(async ([id, entry]) => {
             try {
-                await provider.onPipelineEvent(event);
+                await entry.provider.onPipelineEvent(event);
                 return { id, ok: true };
             } catch (err) {
                 return {
@@ -104,6 +122,37 @@ export namespace RunNotificationDispatcher {
                 };
             }
         }));
+    }
+
+    /**
+     * Sends a synthetic test notification to a single provider.
+     *
+     * @param id Provider identifier
+     * @returns Delivery result
+     */
+    export async function testPingForId(id: string): Promise<{ id: string; ok: boolean; error?: string }> {
+        const entry = providers.get(id);
+
+        if (!entry) {
+            return {
+                id,
+                ok: false,
+                error: "Notification destination is not registered."
+            };
+        }
+
+        const event = buildTestEvent();
+
+        try {
+            await entry.provider.onPipelineEvent(event);
+            return { id, ok: true };
+        } catch (err) {
+            return {
+                id,
+                ok: false,
+                error: err instanceof Error ? err.message : String(err)
+            };
+        }
     }
 
     /**

@@ -1,5 +1,4 @@
-import type { ApplyResponse, BackupRun, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, Instance, Node, NodeProvision, PipelineEvent, PipelineRun, Secret, Service, Volume } from "@naulite/sdk";
-import type { BuildRequest, BuildResponse, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, ProvisionNodeInput } from "@naulite/sdk";
+import type { ApplyResponse, BackupRun, BuildRequest, BuildResponse, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, Instance, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, Node, NodeProvision, PipelineEvent, PipelineRun, ProvisionNodeInput, Secret, Service, Volume } from "@naulite/sdk";
 import { reactive } from "vue";
 
 import { nauliteClient } from "../api/Client";

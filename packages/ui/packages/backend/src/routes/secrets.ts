@@ -14,6 +14,13 @@ const UpsertSecretBodySchema = z.object({
  * @returns Nothing.
  */
 export async function registerSecretRoutes(app: FastifyInstance): Promise<void> {
+    app.get("/secrets/reveal", async (request) => {
+        const query = z.object({
+            name: z.string().min(1)
+        }).parse(request.query);
+        return app.controlPlane.revealSecret(query.name);
+    });
+
     app.post("/secrets", async (request) => {
         const body = UpsertSecretBodySchema.parse(request.body);
         return app.controlPlane.upsertSecret(body);

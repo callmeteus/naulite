@@ -1,4 +1,4 @@
-import { onMounted, ref, watch } from "vue";
+import { ref, watch } from "vue";
 
 const STORAGE_KEY = "naulite-ui-theme";
 
@@ -23,6 +23,10 @@ function applyTheme(value: AppTheme): void {
  * @returns Resolved theme
  */
 function resolveInitialTheme(): AppTheme {
+    if (typeof window === "undefined") {
+        return "light";
+    }
+
     const stored = localStorage.getItem(STORAGE_KEY);
 
     if (stored === "light" || stored === "dark") {
@@ -33,16 +37,21 @@ function resolveInitialTheme(): AppTheme {
 }
 
 /**
+ * Applies the saved theme before Vue mounts to avoid default DaisyUI colors.
+ *
+ * @returns Nothing.
+ */
+export function initTheme(): void {
+    theme.value = resolveInitialTheme();
+    applyTheme(theme.value);
+}
+
+/**
  * Composable for light/dark theme switching with persistence.
  *
  * @returns Theme state and toggle helpers
  */
 export function useTheme() {
-    onMounted(() => {
-        theme.value = resolveInitialTheme();
-        applyTheme(theme.value);
-    });
-
     watch(theme, (value) => {
         applyTheme(value);
     });

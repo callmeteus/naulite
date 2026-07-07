@@ -40,6 +40,9 @@ export const InstanceSchema = z.object({
     resources: ResourceRequirementsSchema.optional(),
     health: InstanceHealthSchema.optional(),
     lifecycleStatus: LifecycleStatusSchema.optional(),
+    dispatchAttempts: z.number().int().nonnegative().optional(),
+    lastDispatchedAt: TimestampSchema.optional(),
+    lastError: z.string().optional(),
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema
 });

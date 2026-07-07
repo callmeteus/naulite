@@ -20,7 +20,7 @@ describe("NodeProvisionService", () => {
 
         const registry = new NodeProvisionerRegistry();
         registry.register({
-            id: "aws",
+            id: "AWS",
             provision: vi.fn(async () => [{
                 cloudInstanceId: "i-launched",
                 status: "pending",
@@ -38,7 +38,7 @@ describe("NodeProvisionService", () => {
         );
 
         const provision = await service.provision({
-            provider: "aws",
+            provider: "AWS",
             instanceType: "t3.micro",
             amiId: "ami-123",
             labels: { role: "worker" },
@@ -60,7 +60,7 @@ describe("NodeProvisionService", () => {
         const store = {
             getNodeProvision: vi.fn(async () => ({
                 id: "provision-1",
-                provider: "aws",
+                provider: "AWS",
                 cloudInstanceId: "i-1",
                 status: "bootstrapping",
                 instanceType: "t3.micro",

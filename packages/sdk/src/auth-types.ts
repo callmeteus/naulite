@@ -74,6 +74,7 @@ export interface DisableAdminUserInput {
  * Payload for updating an admin user.
  */
 export interface UpdateAdminUserInput {
+    email?: string;
     role?: AdminRole;
     password?: string;
 }

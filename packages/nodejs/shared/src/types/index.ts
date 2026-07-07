@@ -125,3 +125,13 @@ export type {
 } from "./PipelineRun";
 
 export type { ApiKey, CreatedApiKey } from "./ApiKey";
+
+export type {
+    NotificationDestination,
+    CreateNotificationDestinationInput,
+    UpdateNotificationDestinationInput,
+    NotificationDestinationTestResult
+} from "./NotificationDestination";
+
+export { NodeProvisionProvider } from "./NodeProvisionProvider";
+export { NotificationDestinationType } from "./NotificationDestinationType";

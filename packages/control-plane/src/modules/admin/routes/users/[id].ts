@@ -11,7 +11,9 @@ const AdminUserParamsSchema = z.object({
 
 const UpdateAdminUserBodySchema = z.object({
     role: z.enum(["viewer", "operator", "admin"]).optional(),
-    password: z.string().min(8).max(256).optional()
+    password: z.string().min(8).max(256).optional(),
+    email: z.string().email().optional(),
+    username: z.string().email().optional()
 });
 
 const AdminUserPublicSchema = z.object({
@@ -66,7 +68,7 @@ export const PATCH = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("admin:users:write"),
     schema: {
         summary: "Update admin user",
-        description: "Updates role and optionally resets password for an admin user.",
+        description: "Updates role, email, and optionally resets password for an admin user.",
         tags: ["admin"],
         operationId: "updateAdminUser",
         params: AdminUserParamsSchema,
@@ -77,19 +79,30 @@ export const PATCH = defineRoute({
         }
     },
     async handler(req) {
-        if (!req.body.role && !req.body.password) {
-            throw new HTTP400Error("At least one of role or password is required.");
+        const username = (req.body.email ?? req.body.username)?.trim().toLowerCase();
+
+        if (!req.body.role && !req.body.password && !username) {
+            throw new HTTP400Error("At least one of role, password, or email is required.");
         }
 
-        const updated = await AdminService.updateUser(req.params.id, {
-            role: req.body.role,
-            password: req.body.password
-        });
+        try {
+            const updated = await AdminService.updateUser(req.params.id, {
+                role: req.body.role,
+                password: req.body.password,
+                username
+            });
 
-        if (!updated) {
-            throw new HTTP404Error("Admin user not found.", { id: req.params.id });
+            if (!updated) {
+                throw new HTTP404Error("Admin user not found.", { id: req.params.id });
+            }
+
+            return updated;
+        } catch (err) {
+            if (err instanceof HTTP404Error) {
+                throw err;
+            }
+
+            throw new HTTP400Error(err instanceof Error ? err.message : String(err));
         }
-
-        return updated;
     }
 });

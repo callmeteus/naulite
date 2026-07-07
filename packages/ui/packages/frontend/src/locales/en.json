@@ -6,13 +6,13 @@
             "workloads": "Workloads",
             "delivery": "Delivery",
             "platform": "Platform",
-            "cloud": "Cloud",
             "administration": "Administration"
         },
         "infrastructure": {
             "nodes": "Nodes",
             "cluster": "Cluster",
-            "metrics": "Metrics"
+            "metrics": "Metrics",
+            "provision": "Provision node"
         },
         "workloads": {
             "services": "Services",
@@ -33,9 +33,6 @@
             "netbird": "NetBird",
             "notifications": "Notifications"
         },
-        "cloud": {
-            "provision": "Provision node"
-        },
         "administration": {
             "apiKeys": "API keys",
             "adminUsers": "Admin users"
@@ -45,6 +42,13 @@
         "localeEn": "English",
         "localePtBr": "Português",
         "logout": "Sign out"
+    },
+    "relations": {
+        "nodeProvisionProvider": {
+            "AWS": {
+                "label": "Amazon Web Services"
+            }
+        }
     },
     "common": {
         "loading": "Loading...",
@@ -325,22 +329,39 @@
         },
         "notifications": {
             "title": "Notifications",
-            "hint": "Notification providers registered in the control plane, and associated environment variables.",
+            "hint": "Configure Slack and webhook destinations directly in the panel.",
             "refresh": "Refresh",
+            "addDestination": "Add destination",
+            "editDestination": "Edit destination",
             "test": "Send test",
+            "testAll": "Test all",
             "testing": "Sending test...",
-            "provider": "Provider",
-            "urlConfigured": "Configured URL",
-            "secretConfigured": "Configured secret",
-            "envVars": "Environment variables",
-            "emptyTitle": "No notification providers",
-            "emptyDescription": "Register a notification provider in the control plane to receive alerts.",
+            "name": "Name",
+            "type": "Type",
+            "typeSlack": "Slack",
+            "typeWebhook": "Webhook",
+            "enabled": "Enabled",
+            "webhookUrl": "Webhook URL",
+            "webhookUrlPlaceholder": "https://hooks.slack.com/services/...",
+            "webhookSecret": "Signing secret (optional)",
+            "webhookSecretPlaceholder": "Leave blank to keep the current secret",
+            "secretConfigured": "Secret configured",
+            "emptyTitle": "No notification destinations",
+            "emptyDescription": "Add a Slack or webhook destination to receive pipeline and infrastructure alerts.",
+            "created": "Destination created successfully.",
+            "updated": "Destination updated successfully.",
+            "deleted": "Destination deleted successfully.",
+            "deleteTitle": "Delete destination",
+            "deleteMessage": "Delete destination \"{name}\"? This cannot be undone.",
             "testResults": "Test result",
             "testOk": "Delivery succeeded",
             "testFailed": "Delivery failed",
             "filters": "Allowed events",
-            "saveFilters": "Save filters",
-            "savingFilters": "Saving filters..."
+            "filtersHint": "Leave all unchecked to deliver every event.",
+            "filtersAll": "All events",
+            "filtersCount": "{count} selected events",
+            "selectAllEvents": "Select all",
+            "clearEvents": "Clear"
         },
         "provision": {
             "title": "Provision node",
@@ -393,17 +414,35 @@
         },
         "secrets": {
             "title": "Secrets",
-            "hint": "Manage cluster secret metadata. Values are encrypted and not shown after saving.",
+            "hint": "Manage cluster secrets. Values are encrypted at rest and only shown when you reveal them.",
             "emptyTitle": "No secrets created yet",
             "emptyDescription": "Create a secret to store credentials and configuration for your services.",
             "emptyAction": "Create secret",
+            "add": "Add secret",
+            "addTitle": "Add secret",
+            "addHint": "Add one or more key-value pairs. Values can be any text.",
             "name": "Name",
             "namePlaceholder": "db-credentials",
-            "data": "Data (JSON object)",
+            "nameRequired": "Secret name is required.",
+            "entries": "Entries",
+            "addEntry": "Add entry",
+            "removeEntry": "Remove entry",
+            "key": "Key",
+            "keyPlaceholder": "password",
+            "value": "Value",
+            "valuePlaceholder": "Any text value",
             "description": "Description",
             "descriptionPlaceholder": "Optional note for operators",
             "save": "Save secret",
-            "delete": "Delete"
+            "delete": "Delete",
+            "reveal": "Reveal",
+            "hide": "Hide",
+            "revealTitle": "Secret values",
+            "rootFolder": "Secrets",
+            "openFolder": "Open",
+            "emptyFolder": "This folder is empty.",
+            "atLeastOneKey": "At least one key with a name is required.",
+            "duplicateKey": "Duplicate key \"{key}\"."
         },
         "services": {
             "title": "Services",

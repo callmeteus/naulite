@@ -39,6 +39,9 @@ import type {
     LogsResponse,
     NotificationProviderStatus,
     NotificationProviderFilters,
+    NotificationDestination,
+    CreateNotificationDestinationInput,
+    UpdateNotificationDestinationInput,
     NotificationTestResult,
     PipelineEventKind,
     NetBirdAcl,
@@ -52,6 +55,7 @@ import type {
     PromQLRangeResponse,
     ProvisionNodeInput,
     RegistryResponse,
+    ResolvedSecret,
     Secret,
     Service,
     UpsertSecretInput,
@@ -276,10 +280,24 @@ export class NauliteClient {
      * @returns Updated admin user
      */
     async updateAdminUser(userId: string, input: UpdateAdminUserInput): Promise<AdminUser> {
+        const payload: UpdateAdminUserInput = {};
+
+        if (input.role) {
+            payload.role = input.role;
+        }
+
+        if (input.password) {
+            payload.password = input.password;
+        }
+
+        if (input.email) {
+            payload.email = AdminUserMapper.emailToUsername(input.email);
+        }
+
         const user = await this.request<ControlPlaneAdminUser>(
             "PATCH",
             `/admin/users/${encodeURIComponent(userId)}`,
-            input
+            payload
         );
         return AdminUserMapper.toSdkUser(user);
     }
@@ -383,6 +401,93 @@ export class NauliteClient {
     }
 
     /**
+     * Returns decrypted secret values for operator review.
+     *
+     * @param secretName Secret name
+     * @returns Resolved secret payload
+     */
+    async revealSecret(secretName: string): Promise<ResolvedSecret> {
+        const params = new URLSearchParams({ name: secretName });
+        return this.request<ResolvedSecret>("GET", `/secrets/reveal?${params.toString()}`);
+    }
+
+    /**
+     * Lists notification destinations configured through the admin panel.
+     *
+     * @returns Notification destination list
+     */
+    async listNotificationDestinations(): Promise<{ destinations: NotificationDestination[] }> {
+        return this.request<{ destinations: NotificationDestination[] }>("GET", "/notifications/destinations");
+    }
+
+    /**
+     * Creates a notification destination.
+     *
+     * @param input Destination payload
+     * @returns Created destination
+     */
+    async createNotificationDestination(input: CreateNotificationDestinationInput): Promise<NotificationDestination> {
+        return this.request<NotificationDestination>("POST", "/notifications/destinations", input);
+    }
+
+    /**
+     * Returns a notification destination by identifier.
+     *
+     * @param destinationId Destination identifier
+     * @returns Destination payload
+     */
+    async getNotificationDestination(destinationId: string): Promise<NotificationDestination> {
+        return this.request<NotificationDestination>(
+            "GET",
+            `/notifications/destinations/${encodeURIComponent(destinationId)}`
+        );
+    }
+
+    /**
+     * Updates a notification destination.
+     *
+     * @param destinationId Destination identifier
+     * @param input Partial destination payload
+     * @returns Updated destination
+     */
+    async updateNotificationDestination(
+        destinationId: string,
+        input: UpdateNotificationDestinationInput
+    ): Promise<NotificationDestination> {
+        return this.request<NotificationDestination>(
+            "PATCH",
+            `/notifications/destinations/${encodeURIComponent(destinationId)}`,
+            input
+        );
+    }
+
+    /**
+     * Deletes a notification destination.
+     *
+     * @param destinationId Destination identifier
+     * @returns Deletion result
+     */
+    async deleteNotificationDestination(destinationId: string): Promise<{ id: string; deleted: true }> {
+        return this.request<{ id: string; deleted: true }>(
+            "DELETE",
+            `/notifications/destinations/${encodeURIComponent(destinationId)}`
+        );
+    }
+
+    /**
+     * Sends a test notification to a single destination.
+     *
+     * @param destinationId Destination identifier
+     * @returns Delivery result
+     */
+    async testNotificationDestination(destinationId: string): Promise<NotificationTestResult> {
+        return this.request<NotificationTestResult>(
+            "POST",
+            `/notifications/destinations/${encodeURIComponent(destinationId)}/test`
+        );
+    }
+
+    /**
      * Lists registered notification providers and their environment status.
      *
      * @returns Notification provider status list
@@ -392,12 +497,12 @@ export class NauliteClient {
     }
 
     /**
-     * Sends a test notification to every registered provider.
+     * Sends a test notification to every enabled destination.
      *
-     * @returns Per-provider delivery results
+     * @returns Per-destination delivery results
      */
-    async testNotificationProviders(): Promise<{ providers: NotificationTestResult[] }> {
-        return this.request<{ providers: NotificationTestResult[] }>("POST", "/notifications/test");
+    async testNotificationProviders(): Promise<{ destinations: NotificationTestResult[] }> {
+        return this.request<{ destinations: NotificationTestResult[] }>("POST", "/notifications/test");
     }
 
     /**

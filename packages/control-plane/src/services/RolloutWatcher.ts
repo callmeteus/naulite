@@ -1,8 +1,7 @@
+import type { Instance } from "@naulite/shared";
+
 import { ControlPlaneService } from "../ControlPlaneService";
 import { PipelineRunService } from "./PipelineRunService";
-import { Logger } from "../Logger";
-const log_rollout = Logger.create("rollout");
-
 
 /**
  * Watches instance health after apply and emits rollout completion events.
@@ -47,11 +46,25 @@ export namespace RolloutWatcher {
 
         const handle = setInterval(() => {
             void poll(runId, instanceIds, startedAt, timeoutMs, handle).catch((err) => {
-                log_rollout.error("watch failed runId=%s err=%O", runId, err);
+                console.error("[rollout] watch failed runId=%s err=%O", runId, err);
             });
         }, intervalMs);
 
         activeWatches.set(runId, handle);
+    }
+
+    /**
+     * Returns whether an instance satisfies rollout success criteria.
+     *
+     * @param instance Instance being watched
+     * @returns True when the instance is ready
+     */
+    export function isInstanceRolloutReady(instance: Instance): boolean {
+        if (instance.status === "running") {
+            return true;
+        }
+
+        return instance.health?.healthy === true;
     }
 
     /**
@@ -73,9 +86,21 @@ export namespace RolloutWatcher {
     ): Promise<void> {
         const instances = await ControlPlaneService.Store.listInstances();
         const watched = instances.filter((instance) => instanceIds.includes(instance.id));
-        const allHealthy = watched.length > 0 && watched.every((instance) => instance.health?.healthy === true);
+        const anyFailed = watched.some((instance) => instance.status === "failed");
 
-        if (allHealthy) {
+        if (anyFailed) {
+            clearInterval(handle);
+            activeWatches.delete(runId);
+            await PipelineRunService.completeRun(runId, "failed", {
+                errorMessage: "Rollout failed because one or more instances entered failed status."
+            });
+            return;
+        }
+
+        const allReady = watched.length > 0
+            && watched.every((instance) => RolloutWatcher.isInstanceRolloutReady(instance));
+
+        if (allReady) {
             clearInterval(handle);
             activeWatches.delete(runId);
             await PipelineRunService.emitEvent(runId, {

@@ -368,6 +368,9 @@ export class ControlPlaneStore {
             resources: instance.resources ?? null,
             health: instance.health ?? null,
             lifecycleStatus: instance.lifecycleStatus ?? null,
+            dispatchAttempts: instance.dispatchAttempts ?? 0,
+            lastDispatchedAt: instance.lastDispatchedAt ?? null,
+            lastError: instance.lastError ?? null,
             createdAt: instance.createdAt,
             updatedAt: instance.updatedAt
         });
@@ -506,6 +509,9 @@ export class ControlPlaneStore {
             status?: Instance["status"];
             containerId?: string;
             health?: Instance["health"];
+            dispatchAttempts?: number;
+            lastDispatchedAt?: string;
+            lastError?: string | null;
         }
     ): Promise<Instance | null> {
         const row = await InstanceModel.findByPk(instanceId);
@@ -529,6 +535,18 @@ export class ControlPlaneStore {
 
         if (patch.health) {
             updates.health = patch.health;
+        }
+
+        if (patch.dispatchAttempts !== undefined) {
+            updates.dispatchAttempts = patch.dispatchAttempts;
+        }
+
+        if (patch.lastDispatchedAt !== undefined) {
+            updates.lastDispatchedAt = patch.lastDispatchedAt;
+        }
+
+        if (patch.lastError !== undefined) {
+            updates.lastError = patch.lastError;
         }
 
         await row.update(updates);

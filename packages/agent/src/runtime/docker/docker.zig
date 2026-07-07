@@ -1,16 +1,4 @@
-const logger = @import("logger");
-
 const log_docker = logger.Logger.create("docker");
-
-const std = @import("std");
-const execution_plan = @import("../../execution_plan.zig");
-const cp_client = @import("../../cp_client.zig");
-const process_cmd = @import("../../process_cmd.zig");
-const blocking_io = @import("../../blocking_io.zig");
-const docker_api = @import("docker_api.zig");
-const docker_stats = @import("docker_stats.zig");
-
-pub const ResourceSnapshot = docker_stats.Snapshot;
 
 /// Converts a control plane instance id into a Docker-safe container name.
 pub fn sanitizeContainerName(allocator: std.mem.Allocator, instance_id: []const u8) ![]u8 {
@@ -58,7 +46,8 @@ pub const DockerClient = struct {
         // Parsed execution plan from the control plane.
         plan: execution_plan.ExecutionPlan,
     ) !void {
-        log_docker.info("apply planId={s} revision={d} operations={d}",
+        log_docker.info(
+            "apply planId={s} revision={d} operations={d}",
             .{ plan.plan_id, plan.revision, plan.operations.len },
         );
 
@@ -95,9 +84,13 @@ pub const DockerClient = struct {
             }
 
             self.dispatchOperation(&api, op) catch |err| {
-                log_docker.err("dispatch op={s} failed err={} raw_json={s}",
+                log_docker.err(
+                    "dispatch op={s} failed err={} raw_json={s}",
                     .{ @tagName(op.op_type), err, op.raw_json },
                 );
+
+                reportInstanceFailedForOperation(self, op);
+
                 if (plan.run_id) |run_id| {
                     if (self.cp_config) |config| {
                         const message = std.fmt.allocPrint(
@@ -105,7 +98,9 @@ pub const DockerClient = struct {
                             "operation failed: {}",
                             .{err},
                         ) catch null;
+
                         defer if (message) |value| self.allocator.free(value);
+
                         cp_client.reportRunEvent(
                             self.allocator,
                             config,
@@ -697,6 +692,34 @@ pub const DockerClient = struct {
         const args = [_][]const u8{ "docker", "-H", docker_host, "tag", source_image, target_image };
         process_cmd.runCommandVoid(allocator, &args) catch return error.DockerTagFailed;
     }
+
+    fn reportInstanceFailedForOperation(self: *DockerClient, op: execution_plan.ExecutionPlan.Operation) void {
+        const instance_id = readOptionalStringField(self.allocator, op.raw_json, "instanceId") catch return;
+        defer if (instance_id) |owned| self.allocator.free(owned);
+
+        if (instance_id) |id| {
+            if (self.cp_config) |config| {
+                cp_client.reportInstanceFailed(self.allocator, config, id);
+            }
+        }
+    }
 };
 
+test "dispatch failure path reports instance failed" {
+    const source = @embedFile("docker.zig");
+    try std.testing.expect(std.mem.indexOf(u8, source, "reportInstanceFailedForOperation") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "cp_client.reportInstanceFailed") != null);
+}
+
+const std = @import("std");
+
+const logger = @import("logger");
+
+const blocking_io = @import("../../blocking_io.zig");
+const cp_client = @import("../../cp_client.zig");
+const execution_plan = @import("../../execution_plan.zig");
+const process_cmd = @import("../../process_cmd.zig");
+const docker_api = @import("docker_api.zig");
 pub const ExecResult = docker_api.ExecResult;
+const docker_stats = @import("docker_stats.zig");
+pub const ResourceSnapshot = docker_stats.Snapshot;

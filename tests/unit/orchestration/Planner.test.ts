@@ -44,6 +44,49 @@ describe("Planner", () => {
         expect(diff.operations.some((operation) => operation.type === "ensureVolume")).toBe(true);
     });
 
+    it("redeploys existing pending instances without recreating rows", () => {
+        const manifest = buildManifest();
+        const now = new Date().toISOString();
+        const diff = planner.diff(manifest, {
+            services: [{
+                id: "minimal:web",
+                name: "web",
+                manifestName: "minimal",
+                image: "nginx:1.27-alpine",
+                desiredReplicas: 1,
+                status: "pending",
+                capabilities: [],
+                networks: [],
+                deploySpec: {
+                    command: [],
+                    environment: {},
+                    ports: [],
+                    secrets: [],
+                    volumeMounts: []
+                },
+                createdAt: now,
+                updatedAt: now
+            }],
+            instances: [{
+                id: "minimal:web-1",
+                serviceId: "minimal:web",
+                serviceName: "web",
+                nodeId: "agent-1",
+                status: "pending",
+                image: "nginx:1.27-alpine",
+                createdAt: now,
+                updatedAt: now
+            }],
+            volumes: []
+        });
+
+        expect(diff.instancesToCreate).toHaveLength(0);
+        expect(diff.instancesToRedeploy).toHaveLength(1);
+        expect(diff.instancesToRedeploy[0]?.id).toBe("minimal:web-1");
+        expect(diff.operations.filter((operation) => operation.type === "create")).toHaveLength(1);
+        expect(diff.operations.filter((operation) => operation.type === "start")).toHaveLength(1);
+    });
+
     it("creates multiple instances when deploy.replicas is greater than one", () => {
         const manifest = buildManifest({
             services: {

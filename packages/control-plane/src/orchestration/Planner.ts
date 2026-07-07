@@ -17,6 +17,7 @@ export interface PlannerDiff {
     servicesToUpdate: Service[];
     servicesToRemove: Service[];
     instancesToCreate: Instance[];
+    instancesToRedeploy: Instance[];
     instancesToRemove: Instance[];
     volumesToEnsure: Volume[];
     volumesToRemove: Volume[];
@@ -108,9 +109,24 @@ export class Planner {
                 && !desiredVolumes.some((desired) => desired.name === volume.name);
         });
 
+        const instancesToRemoveIds = new Set(instancesToRemove.map((instance) => instance.id));
+        const instancesToCreateIds = new Set(instancesToCreate.map((instance) => instance.id));
+        const instancesToRedeploy = actual.instances.filter((instance) => {
+            if (instance.status !== "pending" && instance.status !== "failed") {
+                return false;
+            }
+
+            if (instancesToRemoveIds.has(instance.id) || instancesToCreateIds.has(instance.id)) {
+                return false;
+            }
+
+            return desiredServiceIds.has(instance.serviceId);
+        });
+
         const operations = Planner.buildOperations(
             manifest,
             instancesToCreate,
+            instancesToRedeploy,
             instancesToRemove,
             volumesToEnsure,
             volumesToRemove,
@@ -124,6 +140,7 @@ export class Planner {
             servicesToUpdate,
             servicesToRemove,
             instancesToCreate,
+            instancesToRedeploy,
             instancesToRemove,
             volumesToEnsure,
             volumesToRemove,
@@ -206,10 +223,51 @@ export class Planner {
     }
 
     /**
+     * Builds runtime operations to deploy a single instance.
+     *
+     * @param manifest Desired manifest
+     * @param instance Instance to deploy
+     * @returns Ordered create, network, and start operations
+     */
+    static buildInstanceDeployOperations(manifest: Manifest, instance: Instance): ExecutionOperation[] {
+        const manifestService = manifest.services[instance.serviceName];
+        const operations: ExecutionOperation[] = [];
+
+        operations.push({
+            type: "create",
+            instanceId: instance.id,
+            serviceName: instance.serviceName,
+            image: instance.image,
+            command: Planner.resolveCommand(manifestService),
+            environment: manifestService?.environment ?? {},
+            volumes: Planner.resolveVolumeMounts(manifestService),
+            networks: manifestService?.networks ?? [],
+            ports: Planner.resolvePorts(manifestService),
+            secrets: []
+        });
+
+        for (const networkName of manifestService?.networks ?? []) {
+            operations.push({
+                type: "connectNetwork",
+                instanceId: instance.id,
+                networkName
+            });
+        }
+
+        operations.push({
+            type: "start",
+            instanceId: instance.id
+        });
+
+        return operations;
+    }
+
+    /**
      * Builds runtime operations for the planner diff.
      *
      * @param manifest Desired manifest
      * @param instancesToCreate Instances that should be created
+     * @param instancesToRedeploy Existing instances that should be retried
      * @param instancesToRemove Instances that should be removed
      * @param volumesToEnsure Volumes that should exist
      * @param volumesToRemove Volumes that should be deleted
@@ -221,6 +279,7 @@ export class Planner {
     private static buildOperations(
         manifest: Manifest,
         instancesToCreate: Instance[],
+        instancesToRedeploy: Instance[],
         instancesToRemove: Instance[],
         volumesToEnsure: Volume[],
         volumesToRemove: Volume[],
@@ -295,33 +354,11 @@ export class Planner {
         }
 
         for (const instance of instancesToCreate) {
-            const manifestService = manifest.services[instance.serviceName];
+            operations.push(...Planner.buildInstanceDeployOperations(manifest, instance));
+        }
 
-            operations.push({
-                type: "create",
-                instanceId: instance.id,
-                serviceName: instance.serviceName,
-                image: instance.image,
-                command: Planner.resolveCommand(manifestService),
-                environment: manifestService?.environment ?? {},
-                volumes: Planner.resolveVolumeMounts(manifestService),
-                networks: manifestService?.networks ?? [],
-                ports: Planner.resolvePorts(manifestService),
-                secrets: []
-            });
-
-            for (const networkName of manifestService?.networks ?? []) {
-                operations.push({
-                    type: "connectNetwork",
-                    instanceId: instance.id,
-                    networkName
-                });
-            }
-
-            operations.push({
-                type: "start",
-                instanceId: instance.id
-            });
+        for (const instance of instancesToRedeploy) {
+            operations.push(...Planner.buildInstanceDeployOperations(manifest, instance));
         }
 
         return operations;

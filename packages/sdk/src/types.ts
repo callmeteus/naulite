@@ -11,6 +11,7 @@ import type {
     PipelineRun,
     PipelineRunKind,
     PipelineRunStatus,
+    ResolvedSecret,
     Secret,
     Service,
     Volume
@@ -324,6 +325,39 @@ export interface UpsertSecretInput {
 }
 
 /**
+ * Notification destination configured through the admin panel.
+ */
+export interface NotificationDestination {
+    id: string;
+    name: string;
+    type: "SLACK" | "WEBHOOK";
+    url: string;
+    secretConfigured: boolean;
+    enabled: boolean;
+    allowedKinds: PipelineEventKind[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateNotificationDestinationInput {
+    name: string;
+    type: "SLACK" | "WEBHOOK";
+    url: string;
+    secret?: string;
+    enabled?: boolean;
+    allowedKinds?: PipelineEventKind[];
+}
+
+export interface UpdateNotificationDestinationInput {
+    name?: string;
+    type?: "SLACK" | "WEBHOOK";
+    url?: string;
+    secret?: string;
+    enabled?: boolean;
+    allowedKinds?: PipelineEventKind[];
+}
+
+/**
  * Notification provider environment status.
  */
 export interface NotificationProviderStatus {
@@ -387,6 +421,7 @@ export type {
     LogRotationTask,
     Node,
     NodeProvision,
+    ResolvedSecret,
     Secret,
     Service,
     Volume

@@ -47,11 +47,11 @@ RUN yarn workspace @naulite/shared build \
     && yarn workspace @naulite/runtime-docker build \
     && yarn workspace @naulite/runtime-podman build \
     && yarn workspace @naulite/runtime-containerd build \
+    && yarn workspace @naulite/plugin-notification-slack build \
+    && yarn workspace @naulite/plugin-notification-webhook build \
     && yarn workspace @naulite/control-plane build \
     && yarn workspace @naulite/plugin-s3-storage-provider build \
-    && yarn workspace @naulite/plugin-aws-node-provisioner build \
-    && yarn workspace @naulite/plugin-notification-slack build \
-    && yarn workspace @naulite/plugin-notification-webhook build
+    && yarn workspace @naulite/plugin-aws-node-provisioner build
 
 FROM node:22-bookworm-slim AS runtime
 

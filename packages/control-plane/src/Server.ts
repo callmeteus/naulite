@@ -13,6 +13,7 @@ import { ControlPlaneSyncSubscribers } from "./services/ControlPlaneSyncSubscrib
 import { ControlPlaneInstanceId } from "./services/ControlPlaneInstanceId";
 import { LeaderElection } from "./services/LeaderElection";
 import { NetBirdBootstrap } from "./services/NetBirdBootstrap";
+import { NotificationDestinationRuntime } from "./services/NotificationDestinationRuntime";
 import { Logger } from "./Logger";
 const log_migrations = Logger.create("migrations");
 
@@ -129,6 +130,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     });
     await context.pluginLoader.load(context.pluginRegistry);
     PluginRegistryWiring.wire(context);
+    await NotificationDestinationRuntime.syncFromDatabase();
     ControlPlaneSyncSubscribers.register(context);
     context.leaderElection.setOnBecameLeader(async () => {
         await context.gatewayRouteService.hydrateFromDatabase();
@@ -139,6 +141,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     });
     context.leaderElection.start();
     context.nodeProvisionService.startStatusPolling(context.leaderElection);
+    context.instanceReconcilerService.startPolling(context.leaderElection);
     await context.gatewayRouteService.hydrateFromDatabase();
     context.metricsSyncService.start();
     context.backupScheduler.start();
@@ -159,6 +162,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
         databaseProvider,
         stop: async () => {
             context.nodeProvisionService.stopStatusPolling();
+            context.instanceReconcilerService.stop();
             context.leaderElection.stop();
             context.metricsSyncService.stop();
             context.backupScheduler.stop();

@@ -140,6 +140,16 @@ export {
 } from "./Plugin";
 
 export {
+    NotificationDestinationSchema,
+    NotificationDestinationTypeSchema,
+    CreateNotificationDestinationBodySchema,
+    UpdateNotificationDestinationBodySchema,
+    NotificationDestinationsResponseSchema,
+    NotificationDestinationTestResultSchema,
+    NotificationDestinationTestResponseSchema
+} from "./NotificationDestination";
+
+export {
     ApiKeySchema,
     CreatedApiKeySchema,
     CreateApiKeyBodySchema

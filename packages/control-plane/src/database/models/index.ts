@@ -1,4 +1,5 @@
 import { NotificationProviderFilterModel } from "./NotificationProviderFilterModel";
+import { NotificationDestinationModel } from "./NotificationDestinationModel";
 import { AdminAuditLogModel } from "./AdminAuditLogModel";
 import { AdminSessionModel } from "./AdminSessionModel";
 import { AdminUserModel } from "./AdminUserModel";
@@ -47,7 +48,8 @@ export {
     ServiceModel,
     TenantModel,
     VolumeModel,
-    NotificationProviderFilterModel
+    NotificationProviderFilterModel,
+    NotificationDestinationModel
 };
 
 /**
@@ -77,5 +79,6 @@ export const controlPlaneModels = [
     ControlPlaneLeaderModel,
     ClusterStateModel,
     GatewayRouteModel,
-    NotificationProviderFilterModel
+    NotificationProviderFilterModel,
+    NotificationDestinationModel
 ];

@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Naulite Dashboard</title>
+    <title>naulite</title>
+    <link rel="icon" type="image/svg+xml" href="/naulite-mark.svg" />
+    <script>
+      (function () {
+        var storageKey = "naulite-ui-theme";
+        var stored = localStorage.getItem(storageKey);
+        var theme = stored === "light" || stored === "dark"
+          ? stored
+          : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>
