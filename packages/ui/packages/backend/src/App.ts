@@ -17,6 +17,7 @@ import { registerRoutes } from "./routes/index";
  */
 export interface CreateAppOptions {
     controlPlaneUrl?: string;
+    leaderInstanceUrls?: Record<string, string>;
     adminApiKey?: string;
     logger?: boolean;
 }
@@ -31,7 +32,8 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     const envConfig = resolveConfigFromEnv();
     const controlPlane = new NauliteClient({
         baseUrl: options.controlPlaneUrl ?? envConfig.controlPlaneUrl,
-        token: options.adminApiKey ?? envConfig.adminApiKey
+        token: options.adminApiKey ?? envConfig.adminApiKey,
+        leaderInstanceUrls: options.leaderInstanceUrls ?? envConfig.leaderInstanceUrls
     });
 
     const httpLog = Logger.create("http");

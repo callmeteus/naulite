@@ -47,6 +47,7 @@ export interface NauliteClientOptions {
     csrfToken?: string;
     credentials?: "omit" | "same-origin" | "include";
     fetchImpl?: typeof fetch;
+    leaderInstanceUrls?: Record<string, string>;
 }
 /**
  * Cluster health summary returned by the control plane.

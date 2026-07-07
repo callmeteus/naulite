@@ -90,6 +90,7 @@ export class NauliteClient {
     private readonly csrfToken?: string;
     private readonly credentials?: "omit" | "same-origin" | "include";
     private readonly fetchImpl: typeof fetch;
+    private readonly leaderInstanceUrls?: Record<string, string>;
 
     /**
      * Creates a platform API client.
@@ -103,6 +104,7 @@ export class NauliteClient {
         this.csrfToken = options.csrfToken;
         this.credentials = options.credentials;
         this.fetchImpl = resolveFetchImpl(options.fetchImpl);
+        this.leaderInstanceUrls = options.leaderInstanceUrls;
     }
 
     /**
@@ -118,7 +120,8 @@ export class NauliteClient {
             sessionToken,
             csrfToken: this.csrfToken,
             credentials: this.credentials,
-            fetchImpl: this.fetchImpl
+            fetchImpl: this.fetchImpl,
+            leaderInstanceUrls: this.leaderInstanceUrls
         });
     }
 
@@ -135,7 +138,8 @@ export class NauliteClient {
             sessionToken: this.sessionToken,
             csrfToken,
             credentials: this.credentials,
-            fetchImpl: this.fetchImpl
+            fetchImpl: this.fetchImpl,
+            leaderInstanceUrls: this.leaderInstanceUrls
         });
     }
 
@@ -1316,9 +1320,29 @@ export class NauliteClient {
      * @returns Parsed JSON response
      */
     private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+        return this.requestOnBaseUrl<T>(this.baseUrl, method, path, body, true);
+    }
+
+    /**
+     * Performs an HTTP request against a specific control plane base URL.
+     *
+     * @param baseUrl Control plane base URL
+     * @param method HTTP method
+     * @param path API path
+     * @param body Optional JSON body
+     * @param allowLeaderRetry Whether a follower 503 may be retried on the leader
+     * @returns Parsed JSON response
+     */
+    private async requestOnBaseUrl<T>(
+        baseUrl: string,
+        method: string,
+        path: string,
+        body: unknown,
+        allowLeaderRetry: boolean
+    ): Promise<T> {
         const headers = this.buildAuthHeaders(method, body !== undefined);
 
-        const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+        const response = await this.fetchImpl(`${baseUrl}${path}`, {
             method,
             headers,
             credentials: this.credentials,
@@ -1337,7 +1361,19 @@ export class NauliteClient {
                     ? parsed.message
                     : `Request failed with status ${response.status}`;
 
-            throw new NauliteApiError(response.status, message, parsed);
+            const error = new NauliteApiError(response.status, message, parsed);
+
+            if (allowLeaderRetry && error.status === 503 && error.code === "not_leader") {
+                const leaderUrl = error.leaderId
+                    ? this.leaderInstanceUrls?.[error.leaderId]
+                    : undefined;
+
+                if (leaderUrl && leaderUrl !== baseUrl) {
+                    return this.requestOnBaseUrl<T>(leaderUrl, method, path, body, false);
+                }
+            }
+
+            throw error;
         }
 
         return parsed as T;

@@ -55,4 +55,20 @@ export class NauliteApiError extends Error {
 
         return record.details;
     }
+
+    /**
+     * Returns the elected leader instance id when the API reports a follower redirect.
+     *
+     * @returns Leader instance id or undefined
+     */
+    get leaderId(): string | undefined {
+        if (typeof this.body !== "object" || this.body === null) {
+            return undefined;
+        }
+
+        const record = this.body as Record<string, unknown>;
+        const leaderId = record.leaderId;
+
+        return typeof leaderId === "string" ? leaderId : undefined;
+    }
 }
