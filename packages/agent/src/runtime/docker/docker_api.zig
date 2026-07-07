@@ -366,12 +366,22 @@ pub const DockerApi = struct {
             return error.DockerListFailed;
         }
 
-        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, response.body, .{});
+        const json_body = extractJsonPayload(response.body) orelse response.body;
+        if (json_body.len == 0) {
+            return try self.allocator.alloc(ManagedContainer, 0);
+        }
+
+        const parsed = std.json.parseFromSlice(std.json.Value, self.allocator, json_body, .{}) catch {
+            log_docker.debug("managed container list parse failed bodyPrefix={s}", .{
+                truncateForLog(json_body, 160),
+            });
+            return error.InvalidDockerResponse;
+        };
         errdefer parsed.deinit();
 
         if (parsed.value != .array) {
             parsed.deinit();
-            return &[_]ManagedContainer{};
+            return try self.allocator.alloc(ManagedContainer, 0);
         }
 
         var containers: std.ArrayList(ManagedContainer) = .empty;
@@ -439,11 +449,19 @@ pub const DockerApi = struct {
             return error.DockerListFailed;
         }
 
-        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, response.body, .{});
+        const json_body = extractJsonPayload(response.body) orelse response.body;
+        if (json_body.len == 0) {
+            return try self.allocator.alloc([]const u8, 0);
+        }
+
+        const parsed = std.json.parseFromSlice(std.json.Value, self.allocator, json_body, .{}) catch {
+            return error.InvalidDockerResponse;
+        };
         errdefer parsed.deinit();
 
         if (parsed.value != .array) {
-            return &[_][]const u8{};
+            parsed.deinit();
+            return try self.allocator.alloc([]const u8, 0);
         }
 
         var ids: std.ArrayList([]const u8) = .empty;
@@ -936,19 +954,37 @@ pub const DockerApi = struct {
 
     /// Returns a JSON-looking slice embedded in a chunked or partial HTTP body.
     fn extractJsonPayload(raw_body: []const u8) ?[]const u8 {
-        const object_start = std.mem.indexOfScalar(u8, raw_body, '{') orelse
-            std.mem.indexOfScalar(u8, raw_body, '[') orelse return null;
-        const object_end = if (raw_body[object_start] == '[')
-            std.mem.lastIndexOfScalar(u8, raw_body, ']')
+        const trimmed = std.mem.trim(u8, raw_body, " \t\r\n");
+        if (trimmed.len == 0) {
+            return null;
+        }
+
+        if (trimmed[0] == '{' or trimmed[0] == '[') {
+            return trimmed;
+        }
+
+        const object_start = std.mem.indexOfScalar(u8, trimmed, '{') orelse
+            std.mem.indexOfScalar(u8, trimmed, '[') orelse return null;
+        const object_end = if (trimmed[object_start] == '[')
+            std.mem.lastIndexOfScalar(u8, trimmed, ']')
         else
-            std.mem.lastIndexOfScalar(u8, raw_body, '}');
+            std.mem.lastIndexOfScalar(u8, trimmed, '}');
         const end = object_end orelse return null;
 
         if (end < object_start) {
             return null;
         }
 
-        return raw_body[object_start .. end + 1];
+        return trimmed[object_start .. end + 1];
+    }
+
+    /// Truncates a payload for debug logging.
+    fn truncateForLog(payload: []const u8, max_len: usize) []const u8 {
+        if (payload.len <= max_len) {
+            return payload;
+        }
+
+        return payload[0..max_len];
     }
 
     /// Converts a string array to a JSON array.

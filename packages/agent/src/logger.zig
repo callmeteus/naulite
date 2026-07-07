@@ -117,14 +117,27 @@ fn formatTimestamp(buffer: []u8) ![]const u8 {
         0;
 
     return std.fmt.bufPrint(buffer, "{d:0>4}-{d:0>2}-{d:0>2} {d:0>2}:{d:0>2}:{d:0>2}.{d:0>3}", .{
-        @as(i32, @intCast(local.*.tm_year)) + 1900,
-        @as(i32, @intCast(local.*.tm_mon)) + 1,
-        @as(i32, @intCast(local.*.tm_mday)),
-        @as(i32, @intCast(local.*.tm_hour)),
-        @as(i32, @intCast(local.*.tm_min)),
-        @as(i32, @intCast(local.*.tm_sec)),
-        @as(i32, @intCast(millis)),
+        @as(u16, @intCast(local.*.tm_year + 1900)),
+        @as(u16, @intCast(local.*.tm_mon + 1)),
+        @as(u16, @intCast(local.*.tm_mday)),
+        @as(u16, @intCast(local.*.tm_hour)),
+        @as(u16, @intCast(local.*.tm_min)),
+        @as(u16, @intCast(local.*.tm_sec)),
+        @as(u16, @intCast(millis)),
     });
+}
+
+test "formatTimestamp matches platform contract" {
+    var buffer: [32]u8 = undefined;
+    const timestamp = try formatTimestamp(&buffer);
+    try std.testing.expect(timestamp.len >= 23);
+    try std.testing.expect(timestamp[4] == '-');
+    try std.testing.expect(timestamp[7] == '-');
+    try std.testing.expect(timestamp[10] == ' ');
+    try std.testing.expect(timestamp[13] == ':');
+    try std.testing.expect(timestamp[16] == ':');
+    try std.testing.expect(timestamp[19] == '.');
+    try std.testing.expect(timestamp[0] != '+');
 }
 
 /// Formats a log line using the platform-wide contract. Used by tests.
