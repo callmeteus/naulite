@@ -9,8 +9,10 @@ import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
+import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
+import { formatInstanceReconcileError } from "../utils/formatReconcileResults";
 
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -21,7 +23,7 @@ const logsContent = ref("");
 const logsLoading = ref(false);
 const logsError = ref("");
 const actionMessage = ref("");
-const actionError = ref("");
+const actionError = ref<ParsedApiError | null>(null);
 const redispatchingInstanceId = ref<string | null>(null);
 
 const canWrite = computed(() => auth.hasPermission("workloads:write"));
@@ -102,7 +104,7 @@ function closeLogsDialog(): void {
  */
 async function redispatchInstance(instanceId: string): Promise<void> {
     actionMessage.value = "";
-    actionError.value = "";
+    actionError.value = null;
     redispatchingInstanceId.value = instanceId;
 
     try {
@@ -111,12 +113,14 @@ async function redispatchInstance(instanceId: string): Promise<void> {
         if (result.status === "dispatched") {
             actionMessage.value = t("pages.instances.redispatchSuccess");
         } else {
-            actionError.value = result.message ?? t("pages.instances.redispatchFailed");
+            actionError.value = {
+                message: formatInstanceReconcileError(result, t("pages.instances.redispatchFailed"))
+            };
         }
 
         await store.refreshInstances();
     } catch (err) {
-        actionError.value = err instanceof Error ? err.message : String(err);
+        actionError.value = parseApiError(err);
     } finally {
         redispatchingInstanceId.value = null;
     }

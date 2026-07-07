@@ -1,4 +1,7 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+
+import { enrichApiErrorMessage, formatValidationDetails } from "@naulite/shared";
 
 import { ComposeParserError } from "./orchestration/compose/ComposeParserError";
 import { Logger } from "../Logger";
@@ -34,18 +37,41 @@ export function registerErrorHandler(app: FastifyInstance): void {
             && "code" in error
             && (error as { code: string }).code === "FST_ERR_VALIDATION"
         ) {
+            const validationError = error as {
+                validation?: unknown;
+                validationContext?: string;
+            };
+            const details = {
+                validation: validationError.validation,
+                validationContext: validationError.validationContext
+            };
+            const formatted = formatValidationDetails(details);
             reply.code(400);
             return {
-                message: "Validation failed.",
-                details: (error as { validation?: unknown }).validation
+                message: formatted ? `Validation failed: ${formatted}` : "Validation failed.",
+                code: "validation_failed",
+                details
+            };
+        }
+
+        if (error instanceof z.ZodError) {
+            const formatted = formatValidationDetails(error.issues);
+            reply.code(400);
+            return {
+                message: formatted ? `Validation failed: ${formatted}` : "Validation failed.",
+                code: "validation_failed",
+                details: error.issues
             };
         }
 
         if (error instanceof Error && "issues" in error) {
+            const issues = (error as Error & { issues?: unknown }).issues;
+            const formatted = formatValidationDetails(issues);
             reply.code(400);
             return {
-                message: "Validation failed.",
-                details: error
+                message: formatted ? `Validation failed: ${formatted}` : "Validation failed.",
+                code: "validation_failed",
+                details: issues ?? error
             };
         }
 

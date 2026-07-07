@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { InstanceReconcileResult, Service } from "@naulite/sdk";
+import type { Service } from "@naulite/sdk";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
@@ -8,14 +8,16 @@ import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
+import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
+import { formatServiceReconcileError } from "../utils/formatReconcileResults";
 
 const { t } = useI18n();
 const auth = useAuthStore();
 const store = useClusterStore();
 const actionMessage = ref("");
-const actionError = ref("");
+const actionError = ref<ParsedApiError | null>(null);
 const redispatchingService = ref<string | null>(null);
 
 const canWrite = computed(() => auth.hasPermission("workloads:write"));
@@ -45,26 +47,28 @@ function canRedispatchService(status: Service["status"]): boolean {
  */
 async function redispatchService(serviceName: string): Promise<void> {
     actionMessage.value = "";
-    actionError.value = "";
+    actionError.value = null;
     redispatchingService.value = serviceName;
 
     try {
         const result = await store.reconcileService(serviceName);
-        const dispatched = result.results.some((entry: InstanceReconcileResult) => entry.status === "dispatched");
-        const failed = result.results.some((entry: InstanceReconcileResult) => entry.status === "failed");
-        const skippedMessage = result.results.find((entry: InstanceReconcileResult) => entry.message)?.message;
+        const dispatched = result.results.some((entry) => entry.status === "dispatched");
 
         if (dispatched) {
             actionMessage.value = t("pages.services.redispatchSuccess");
-        } else if (failed || skippedMessage) {
-            actionError.value = skippedMessage ?? t("pages.services.redispatchFailed");
         } else {
-            actionError.value = t("pages.services.redispatchFailed");
+            actionError.value = {
+                message: formatServiceReconcileError(
+                    result,
+                    t("pages.services.redispatchFailed"),
+                    t("pages.services.redispatchNoTargets")
+                ) ?? t("pages.services.redispatchFailed")
+            };
         }
 
         await store.refreshOverview();
     } catch (err) {
-        actionError.value = err instanceof Error ? err.message : String(err);
+        actionError.value = parseApiError(err);
     } finally {
         redispatchingService.value = null;
     }

@@ -2,6 +2,7 @@ import type { ApplyResponse, BackupRun, BuildRequest, BuildResponse, ClusterStat
 import { reactive } from "vue";
 
 import { nauliteClient } from "../api/Client";
+import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
 
 interface GitOpsRevision {
     id: string;
@@ -32,7 +33,17 @@ export const clusterStore = reactive({
     runs: [] as PipelineRun[],
     lastApplyResult: null as ApplyResponse | null,
     loading: false,
-    error: "" as string,
+    error: null as ParsedApiError | null,
+
+    /**
+     * Stores a parsed API error for display in the UI.
+     *
+     * @param err Caught error value
+     * @returns Nothing.
+     */
+    setError(err: unknown): void {
+        this.error = parseApiError(err);
+    },
     /**
      * Loads nodes and services from the admin API.
      *
@@ -40,7 +51,7 @@ export const clusterStore = reactive({
      */
     async refreshOverview(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             const [nodes, services] = await Promise.all([
@@ -50,7 +61,7 @@ export const clusterStore = reactive({
             this.nodes = nodes;
             this.services = services;
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -63,12 +74,12 @@ export const clusterStore = reactive({
      */
     async refreshBackups(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             this.backups = await nauliteClient.listBackups();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -81,12 +92,12 @@ export const clusterStore = reactive({
      */
     async refreshInstances(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             this.instances = await nauliteClient.listInstances();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -119,12 +130,12 @@ export const clusterStore = reactive({
      */
     async refreshVolumes(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             this.volumes = await nauliteClient.listVolumes();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -137,12 +148,12 @@ export const clusterStore = reactive({
      */
     async refreshSecrets(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             this.secrets = await nauliteClient.listSecrets();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -155,12 +166,12 @@ export const clusterStore = reactive({
      */
     async refreshClusterStatus(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             this.clusterStatus = await nauliteClient.getClusterStatus();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -173,13 +184,13 @@ export const clusterStore = reactive({
      */
     async refreshGitOpsRevisions(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             const response = await nauliteClient.listGitOpsRevisions();
             this.gitopsRevisions = response.revisions as unknown as GitOpsRevision[];
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -193,13 +204,13 @@ export const clusterStore = reactive({
      */
     async rollbackGitOps(revisionId: string): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             await nauliteClient.rollbackGitOps(revisionId);
             await this.refreshGitOpsRevisions();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -212,7 +223,7 @@ export const clusterStore = reactive({
      */
     async refreshNetBird(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             const [topology, devices, groups, acls] = await Promise.all([
@@ -226,7 +237,7 @@ export const clusterStore = reactive({
             this.netBirdGroups = groups;
             this.netBirdAcls = acls;
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -242,13 +253,13 @@ export const clusterStore = reactive({
      */
     async upsertSecret(name: string, data: Record<string, string>, description?: string): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             await nauliteClient.upsertSecret({ name, data, description });
             await this.refreshSecrets();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
             throw err;
         } finally {
             this.loading = false;
@@ -263,13 +274,13 @@ export const clusterStore = reactive({
      */
     async deleteSecret(name: string): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             await nauliteClient.deleteSecret(name);
             await this.refreshSecrets();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
             throw err;
         } finally {
             this.loading = false;
@@ -284,13 +295,13 @@ export const clusterStore = reactive({
      */
     async runBackup(volumeName: string): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             await nauliteClient.runBackup(volumeName);
             await this.refreshBackups();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
             throw err;
         } finally {
             this.loading = false;
@@ -305,13 +316,13 @@ export const clusterStore = reactive({
      */
     async restoreBackup(backupId: string): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             await nauliteClient.restoreBackup(backupId);
             await this.refreshBackups();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
             throw err;
         } finally {
             this.loading = false;
@@ -325,12 +336,12 @@ export const clusterStore = reactive({
      */
     async refreshContainerRegistryImages(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             this.containerRegistryImages = await nauliteClient.listContainerRegistryImages();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -345,13 +356,13 @@ export const clusterStore = reactive({
      */
     async deleteContainerRegistryImage(name: string, tag: string): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             await nauliteClient.deleteContainerRegistryImage(name, tag);
             await this.refreshContainerRegistryImages();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
             throw err;
         } finally {
             this.loading = false;
@@ -366,12 +377,12 @@ export const clusterStore = reactive({
      */
     async refreshRuns(query: ListPipelineRunsQuery = {}): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             this.runs = await nauliteClient.listRuns(query);
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -405,12 +416,12 @@ export const clusterStore = reactive({
      */
     async triggerBuild(request: BuildRequest): Promise<BuildResponse> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             return await nauliteClient.triggerBuild(request);
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
             throw err;
         } finally {
             this.loading = false;
@@ -425,12 +436,12 @@ export const clusterStore = reactive({
      */
     async provisionNode(input: ProvisionNodeInput): Promise<NodeProvision> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             return await nauliteClient.provisionNode(input);
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
             throw err;
         } finally {
             this.loading = false;
@@ -454,12 +465,12 @@ export const clusterStore = reactive({
      */
     async refreshGatewayRoutes(): Promise<void> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             this.gatewayRoutes = await nauliteClient.listGatewayRoutes();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
         } finally {
             this.loading = false;
         }
@@ -473,7 +484,7 @@ export const clusterStore = reactive({
      */
     async applyManifest(manifestYaml: string): Promise<string> {
         this.loading = true;
-        this.error = "";
+        this.error = null;
 
         try {
             const result = await nauliteClient.applyManifest(manifestYaml);
@@ -481,7 +492,7 @@ export const clusterStore = reactive({
             await this.refreshOverview();
             return String(result.revision);
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.setError(err);
             throw err;
         } finally {
             this.loading = false;

@@ -457,7 +457,8 @@
             "redispatch": "Re-dispatch",
             "redispatching": "Re-dispatching...",
             "redispatchSuccess": "Service re-dispatched.",
-            "redispatchFailed": "Could not re-dispatch the service."
+            "redispatchFailed": "Could not re-dispatch the service.",
+            "redispatchNoTargets": "No pending or failed instances were found for this service."
         },
         "volumes": {
             "title": "Volumes",

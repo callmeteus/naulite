@@ -30,3 +30,7 @@ export {
     PipelineNotificationPayload,
     type PipelineNotificationPayload as PipelineNotificationPayloadData
 } from "./notifications/PipelineNotificationPayload";
+export {
+    enrichApiErrorMessage,
+    formatValidationDetails
+} from "./util/formatValidationDetails";

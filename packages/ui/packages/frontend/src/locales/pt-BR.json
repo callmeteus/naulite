@@ -457,7 +457,8 @@
             "redispatch": "Redisparar",
             "redispatching": "Redisparando...",
             "redispatchSuccess": "Serviço redisparado.",
-            "redispatchFailed": "Não foi possível redisparar o serviço."
+            "redispatchFailed": "Não foi possível redisparar o serviço.",
+            "redispatchNoTargets": "Nenhuma instância pendente ou com falha foi encontrada para este serviço."
         },
         "volumes": {
             "title": "Volumes",

@@ -1,5 +1,7 @@
 import { NauliteApiError, NauliteClient } from "@naulite/sdk";
+import { enrichApiErrorMessage, formatValidationDetails } from "@naulite/shared";
 import Fastify, { type FastifyInstance } from "fastify";
+import { z } from "zod";
 import { createFastifyLoggerOptions } from "@naulite/logger";
 
 import { AuthPreHandlers } from "./auth/AuthPreHandlers";
@@ -96,20 +98,33 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
 
     app.setErrorHandler((error, _request, reply) => {
         if (error instanceof NauliteApiError) {
+            const details = error.details;
             reply.code(error.status);
             return {
-                message: error.message,
+                message: enrichApiErrorMessage(error.message, details),
                 code: error.code,
-                details: error.details
+                details
+            };
+        }
+
+        if (error instanceof z.ZodError) {
+            const formatted = formatValidationDetails(error.issues);
+            reply.code(400);
+            return {
+                message: formatted ? `Validation failed: ${formatted}` : "Validation failed.",
+                code: "validation_failed",
+                details: error.issues
             };
         }
 
         if (error instanceof Error && "issues" in error) {
+            const issues = (error as Error & { issues?: unknown }).issues;
+            const formatted = formatValidationDetails(issues);
             reply.code(400);
             return {
-                message: "Validation failed.",
+                message: formatted ? `Validation failed: ${formatted}` : "Validation failed.",
                 code: "validation_failed",
-                details: error
+                details: issues ?? error
             };
         }
 

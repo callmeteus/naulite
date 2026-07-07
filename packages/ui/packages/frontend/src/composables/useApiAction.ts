@@ -1,4 +1,5 @@
 import { NauliteApiError } from "@naulite/sdk";
+import { enrichApiErrorMessage } from "@naulite/shared";
 import { ref } from "vue";
 
 import { useToast } from "../stores/Toast";
@@ -18,22 +19,13 @@ export interface ParsedApiError {
  */
 export function parseApiError(err: unknown): ParsedApiError {
     if (err instanceof NauliteApiError) {
-        const body = err.body;
-
-        if (typeof body === "object" && body !== null) {
-            const record = body as Record<string, unknown>;
-
-            return {
-                message: err.message,
-                status: err.status,
-                code: typeof record.code === "string" ? record.code : typeof record.error === "string" ? record.error : undefined,
-                details: record.details
-            };
-        }
+        const details = err.details;
 
         return {
-            message: err.message,
-            status: err.status
+            message: enrichApiErrorMessage(err.message, details),
+            status: err.status,
+            code: err.code,
+            details
         };
     }
 
