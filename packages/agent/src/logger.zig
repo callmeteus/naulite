@@ -68,7 +68,8 @@ fn ModuleLogger(comptime module: []const u8) type {
 
 fn resolveLogLevel() Level {
     const value = std.c.getenv("NAULITE_LOG_LEVEL") orelse {
-        return if (std.mem.eql(u8, std.c.getenv("NODE_ENV") orelse "", "production")) .info else .debug;
+        const node_env = std.c.getenv("NODE_ENV") orelse return .debug;
+        return if (std.mem.eql(u8, std.mem.span(node_env), "production")) .info else .debug;
     };
 
     const level_text = std.mem.span(value);
