@@ -15,7 +15,7 @@ export function formatInstanceReconcileError(
         return result.message;
     }
 
-    return `${result.instanceId}: ${result.status}`;
+    return `${result.instanceId}: ${result.status || fallback}`;
 }
 
 /**
