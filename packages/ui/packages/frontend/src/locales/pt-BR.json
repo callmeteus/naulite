@@ -277,6 +277,10 @@
             "emptyDescription": "As instâncias aparecem após os serviços serem implantados e agendados nos nós.",
             "emptyAction": "Ver serviços",
             "viewLogs": "Ver logs",
+            "redispatch": "Redisparar",
+            "redispatching": "Redisparando...",
+            "redispatchSuccess": "Instância redisparada.",
+            "redispatchFailed": "Não foi possível redisparar a instância.",
             "logsTitle": "Logs da instância",
             "logsEmpty": "Nenhuma linha de log retornada.",
             "logsLoading": "Carregando logs..."
@@ -449,7 +453,11 @@
             "hint": "Serviços desejados rastreados pelo plano de controle.",
             "emptyTitle": "Nenhum serviço implantado ainda",
             "emptyDescription": "Aplique um manifesto ou sincronize o GitOps para criar seu primeiro serviço.",
-            "emptyAction": "Ir para deploy"
+            "emptyAction": "Ir para deploy",
+            "redispatch": "Redisparar",
+            "redispatching": "Redisparando...",
+            "redispatchSuccess": "Serviço redisparado.",
+            "redispatchFailed": "Não foi possível redisparar o serviço."
         },
         "volumes": {
             "title": "Volumes",

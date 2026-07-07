@@ -92,4 +92,20 @@ describe("InstanceReconcilerService", () => {
         expect(InstanceReconcilerService.reconcileBackoffMs(1)).toBe(30_000);
         expect(InstanceReconcilerService.reconcileBackoffMs(2)).toBe(60_000);
     });
+
+    it("allows forced reconciliation before backoff elapses", () => {
+        const now = new Date().toISOString();
+        const instance = buildInstance({
+            status: "failed",
+            updatedAt: now,
+            lastDispatchedAt: now
+        });
+
+        expect(InstanceReconcilerService.isReconcileCandidate(
+            instance,
+            [buildNode()],
+            new Date(),
+            { force: true }
+        )).toBe(true);
+    });
 });

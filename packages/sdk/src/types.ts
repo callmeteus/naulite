@@ -412,6 +412,23 @@ export interface NotificationProviderFilters {
     allowedKinds: PipelineEventKind[];
 }
 
+/**
+ * Result of a manual or automatic instance reconciliation attempt.
+ */
+export interface InstanceReconcileResult {
+    instanceId: string;
+    status: "dispatched" | "skipped" | "failed";
+    message?: string;
+}
+
+/**
+ * Result of reconciling every stuck instance for a service.
+ */
+export interface ServiceReconcileResult {
+    serviceName: string;
+    results: InstanceReconcileResult[];
+}
+
 export type {
     ApiKey,
     BackupTask,

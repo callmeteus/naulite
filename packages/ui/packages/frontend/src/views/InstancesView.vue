@@ -1,27 +1,44 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import type { Instance, LogsResponse } from "@naulite/sdk";
+import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
-import type { LogsResponse } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
+import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
+const auth = useAuthStore();
 const store = useClusterStore();
 const logsDialogRef = ref<HTMLDialogElement | null>(null);
 const logsInstanceId = ref("");
 const logsContent = ref("");
 const logsLoading = ref(false);
 const logsError = ref("");
+const actionMessage = ref("");
+const actionError = ref("");
+const redispatchingInstanceId = ref<string | null>(null);
+
+const canWrite = computed(() => auth.hasPermission("workloads:write"));
 
 onMounted(() => {
     void store.refreshInstances();
 });
+
+/**
+ * Returns whether an instance can be manually re-dispatched.
+ *
+ * @param status Instance status
+ * @returns True for pending or failed instances
+ */
+function canRedispatchInstance(status: Instance["status"]): boolean {
+    return status === "pending" || status === "failed";
+}
 
 /**
  * Normalizes log payloads from the control plane API.
@@ -76,11 +93,41 @@ async function openLogs(instanceId: string): Promise<void> {
 function closeLogsDialog(): void {
     logsDialogRef.value?.close();
 }
+
+/**
+ * Manually re-dispatches a pending or failed instance.
+ *
+ * @param instanceId Instance identifier
+ * @returns Nothing.
+ */
+async function redispatchInstance(instanceId: string): Promise<void> {
+    actionMessage.value = "";
+    actionError.value = "";
+    redispatchingInstanceId.value = instanceId;
+
+    try {
+        const result = await store.reconcileInstance(instanceId);
+
+        if (result.status === "dispatched") {
+            actionMessage.value = t("pages.instances.redispatchSuccess");
+        } else {
+            actionError.value = result.message ?? t("pages.instances.redispatchFailed");
+        }
+
+        await store.refreshInstances();
+    } catch (err) {
+        actionError.value = err instanceof Error ? err.message : String(err);
+    } finally {
+        redispatchingInstanceId.value = null;
+    }
+}
 </script>
 
 <template>
     <PageLayout title-key="pages.instances.title" hint-key="pages.instances.hint">
-        <ErrorAlert :error="store.error" />
+        <ErrorAlert :error="store.error || actionError" />
+
+        <p v-if="actionMessage" class="alert alert-success">{{ actionMessage }}</p>
 
         <div v-if="store.loading" class="flex items-center gap-2">
             <LoadingSpinner />
@@ -115,13 +162,26 @@ function closeLogsDialog(): void {
                             <td>{{ instance.nodeId }}</td>
                             <td><StatusPill :status="instance.status" /></td>
                             <td><code class="text-xs">{{ instance.image }}</code></td>
-                            <td>
+                            <td class="flex flex-wrap gap-2">
                                 <button
                                     type="button"
                                     class="btn btn-outline btn-sm"
                                     @click="openLogs(instance.id)"
                                 >
                                     {{ t("pages.instances.viewLogs") }}
+                                </button>
+                                <button
+                                    v-if="canWrite && canRedispatchInstance(instance.status)"
+                                    type="button"
+                                    class="btn btn-primary btn-sm"
+                                    :disabled="redispatchingInstanceId === instance.id"
+                                    @click="redispatchInstance(instance.id)"
+                                >
+                                    {{
+                                        redispatchingInstanceId === instance.id
+                                            ? t("pages.instances.redispatching")
+                                            : t("pages.instances.redispatch")
+                                    }}
                                 </button>
                             </td>
                         </tr>

@@ -277,6 +277,10 @@
             "emptyDescription": "Instances appear after services are deployed and scheduled on nodes.",
             "emptyAction": "View services",
             "viewLogs": "View logs",
+            "redispatch": "Re-dispatch",
+            "redispatching": "Re-dispatching...",
+            "redispatchSuccess": "Instance re-dispatched.",
+            "redispatchFailed": "Could not re-dispatch the instance.",
             "logsTitle": "Instance logs",
             "logsEmpty": "No log lines returned.",
             "logsLoading": "Loading logs..."
@@ -449,7 +453,11 @@
             "hint": "Desired services tracked by the control plane.",
             "emptyTitle": "No services deployed yet",
             "emptyDescription": "Apply a manifest or sync GitOps to create your first service.",
-            "emptyAction": "Go to deploy"
+            "emptyAction": "Go to deploy",
+            "redispatch": "Re-dispatch",
+            "redispatching": "Re-dispatching...",
+            "redispatchSuccess": "Service re-dispatched.",
+            "redispatchFailed": "Could not re-dispatch the service."
         },
         "volumes": {
             "title": "Volumes",

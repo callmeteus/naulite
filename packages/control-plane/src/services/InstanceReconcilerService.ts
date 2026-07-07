@@ -12,6 +12,21 @@ const DEFAULT_RECONCILE_INTERVAL_MS = 30_000;
 const DEFAULT_RECONCILE_GRACE_MS = 15_000;
 const DEFAULT_MAX_RETRIES = 5;
 
+export type InstanceReconcileOutcome = {
+    instanceId: string;
+    status: "dispatched" | "skipped" | "failed";
+    message?: string;
+};
+
+export type ServiceReconcileOutcome = {
+    serviceName: string;
+    results: InstanceReconcileOutcome[];
+};
+
+type ReconcileOptions = {
+    force?: boolean;
+};
+
 /**
  * Re-dispatches workload instances stuck in pending or failed status.
  */
@@ -121,43 +136,102 @@ export class InstanceReconcilerService {
     }
 
     /**
+     * Re-dispatches pending or failed instances for a service.
+     *
+     * @param serviceName Service name
+     * @param options Reconcile options
+     * @returns Per-instance reconcile outcomes
+     */
+    async reconcileService(
+        serviceName: string,
+        options?: ReconcileOptions
+    ): Promise<ServiceReconcileOutcome> {
+        const services = await this.store.listServices();
+        const service = services.find((entry) => entry.name === serviceName);
+
+        if (!service) {
+            return {
+                serviceName,
+                results: []
+            };
+        }
+
+        const [instances, nodes] = await Promise.all([
+            this.store.listInstances(),
+            this.store.listNodes()
+        ]);
+        const targets = instances.filter((instance) => {
+            return instance.serviceId === service.id
+                && (instance.status === "pending" || instance.status === "failed");
+        });
+        const results: InstanceReconcileOutcome[] = [];
+
+        for (const instance of targets) {
+            results.push(await this.reconcileInstance(instance.id, instances, nodes, options));
+        }
+
+        return {
+            serviceName,
+            results
+        };
+    }
+
+    /**
      * Re-dispatches a single instance to its scheduled node agent.
      *
      * @param instanceId Instance identifier
      * @param instances Cached instance list
      * @param nodes Cached node list
-     * @returns Nothing.
+     * @param options Reconcile options
+     * @returns Reconcile outcome for the instance
      */
     async reconcileInstance(
         instanceId: string,
         instances?: Instance[],
-        nodes?: Node[]
-    ): Promise<void> {
+        nodes?: Node[],
+        options?: ReconcileOptions
+    ): Promise<InstanceReconcileOutcome> {
         const instanceList = instances ?? await this.store.listInstances();
         const nodeList = nodes ?? await this.store.listNodes();
         const instance = instanceList.find((entry) => entry.id === instanceId);
 
         if (!instance) {
-            return;
+            return {
+                instanceId,
+                status: "skipped",
+                message: "Instance not found."
+            };
         }
 
         const now = new Date();
 
-        if (!InstanceReconcilerService.isReconcileCandidate(instance, nodeList, now)) {
-            return;
+        if (!InstanceReconcilerService.isReconcileCandidate(instance, nodeList, now, options)) {
+            return {
+                instanceId,
+                status: "skipped",
+                message: InstanceReconcilerService.describeSkipReason(instance, nodeList, now, options)
+            };
         }
 
         const node = nodeList.find((entry) => entry.id === instance.nodeId);
 
         if (!node?.agentUrl) {
-            return;
+            return {
+                instanceId,
+                status: "skipped",
+                message: "Scheduled node has no agent URL."
+            };
         }
 
         const services = await this.store.listServices();
         const service = services.find((entry) => entry.id === instance.serviceId);
 
         if (!service) {
-            return;
+            return {
+                instanceId,
+                status: "skipped",
+                message: "Service not found."
+            };
         }
 
         const revisions = (await GitOpsService.listRevisions(service.manifestName))
@@ -170,7 +244,11 @@ export class InstanceReconcilerService {
                 instanceId,
                 service.manifestName
             );
-            return;
+            return {
+                instanceId,
+                status: "skipped",
+                message: "No GitOps revision found for the service manifest."
+            };
         }
 
         const manifest = this.composeParser.parse(latestRevision.manifestYaml);
@@ -201,7 +279,10 @@ export class InstanceReconcilerService {
                 node.id,
                 attempts
             );
-            return;
+            return {
+                instanceId,
+                status: "dispatched"
+            };
         }
 
         await this.store.updateInstance(instanceId, {
@@ -218,6 +299,11 @@ export class InstanceReconcilerService {
             maxRetries,
             result?.message ?? "unknown"
         );
+        return {
+            instanceId,
+            status: "failed",
+            message: result?.message ?? "Reconcile dispatch failed."
+        };
     }
 
     /**
@@ -226,14 +312,21 @@ export class InstanceReconcilerService {
      * @param instance Instance record
      * @param nodes Registered nodes
      * @param now Current timestamp
+     * @param options Reconcile options
      * @returns True when the instance is eligible for redeployment
      */
-    static isReconcileCandidate(instance: Instance, nodes: Node[], now: Date): boolean {
+    static isReconcileCandidate(
+        instance: Instance,
+        nodes: Node[],
+        now: Date,
+        options?: ReconcileOptions
+    ): boolean {
         if (instance.status !== "pending" && instance.status !== "failed") {
             return false;
         }
 
-        if ((instance.dispatchAttempts ?? 0) >= InstanceReconcilerService.resolveMaxRetries()) {
+        if (!options?.force
+            && (instance.dispatchAttempts ?? 0) >= InstanceReconcilerService.resolveMaxRetries()) {
             return false;
         }
 
@@ -243,10 +336,63 @@ export class InstanceReconcilerService {
             return false;
         }
 
+        if (options?.force) {
+            return true;
+        }
+
         const referenceTime = instance.lastDispatchedAt ?? instance.updatedAt;
         const elapsedMs = now.getTime() - new Date(referenceTime).getTime();
 
         return elapsedMs >= InstanceReconcilerService.reconcileBackoffMs(instance.dispatchAttempts ?? 0);
+    }
+
+    /**
+     * Describes why an instance was not eligible for reconciliation.
+     *
+     * @param instance Instance record
+     * @param nodes Registered nodes
+     * @param now Current timestamp
+     * @param options Reconcile options
+     * @returns Human-readable skip reason
+     */
+    static describeSkipReason(
+        instance: Instance,
+        nodes: Node[],
+        now: Date,
+        options?: ReconcileOptions
+    ): string {
+        if (instance.status !== "pending" && instance.status !== "failed") {
+            return `Instance status is ${instance.status}.`;
+        }
+
+        if (!options?.force
+            && (instance.dispatchAttempts ?? 0) >= InstanceReconcilerService.resolveMaxRetries()) {
+            return "Maximum dispatch attempts reached.";
+        }
+
+        const node = nodes.find((entry) => entry.id === instance.nodeId);
+
+        if (!node?.agentUrl) {
+            return "Scheduled node has no agent URL.";
+        }
+
+        if (node.status === "offline") {
+            return "Scheduled node is offline.";
+        }
+
+        if (options?.force) {
+            return "Instance is not eligible for reconciliation.";
+        }
+
+        const referenceTime = instance.lastDispatchedAt ?? instance.updatedAt;
+        const elapsedMs = now.getTime() - new Date(referenceTime).getTime();
+        const backoffMs = InstanceReconcilerService.reconcileBackoffMs(instance.dispatchAttempts ?? 0);
+
+        if (elapsedMs < backoffMs) {
+            return "Backoff period has not elapsed yet.";
+        }
+
+        return "Instance is not eligible for reconciliation.";
     }
 
     /**

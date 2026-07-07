@@ -719,9 +719,32 @@ export namespace ControlPlaneService {
          * @returns Nothing.
          */
         export function reconcileInstance(
-            instanceId: string
+            instanceId: string,
+            instances?: Parameters<ControlPlaneContext["instanceReconcilerService"]["reconcileInstance"]>[1],
+            nodes?: Parameters<ControlPlaneContext["instanceReconcilerService"]["reconcileInstance"]>[2],
+            options?: Parameters<ControlPlaneContext["instanceReconcilerService"]["reconcileInstance"]>[3]
         ): ReturnType<ControlPlaneContext["instanceReconcilerService"]["reconcileInstance"]> {
-            return ControlPlaneService.requireContext().instanceReconcilerService.reconcileInstance(instanceId);
+            return ControlPlaneService.requireContext().instanceReconcilerService.reconcileInstance(
+                instanceId,
+                instances,
+                nodes,
+                options
+            );
+        }
+
+        /**
+         * @param serviceName Service name
+         * @param options Reconcile options
+         * @returns Per-instance reconcile outcomes
+         */
+        export function reconcileService(
+            serviceName: string,
+            options?: Parameters<ControlPlaneContext["instanceReconcilerService"]["reconcileService"]>[1]
+        ): ReturnType<ControlPlaneContext["instanceReconcilerService"]["reconcileService"]> {
+            return ControlPlaneService.requireContext().instanceReconcilerService.reconcileService(
+                serviceName,
+                options
+            );
         }
     }
 

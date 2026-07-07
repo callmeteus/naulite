@@ -31,6 +31,14 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return client.getLogs(params.id);
     });
 
+    app.post("/instances/:id/reconcile", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+        const client = controlPlaneForRequest(app, request);
+        return client.reconcileInstance(params.id);
+    });
+
     app.get("/volumes", async () => {
         return app.controlPlane.listVolumes();
     });
@@ -49,6 +57,14 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
 
     app.get("/services", async () => {
         return app.controlPlane.listServices();
+    });
+
+    app.post("/services/:name/reconcile", async (request) => {
+        const params = z.object({
+            name: z.string().min(1)
+        }).parse(request.params);
+        const client = controlPlaneForRequest(app, request);
+        return client.reconcileService(params.name);
     });
 
     app.post("/gitops/rollback/:revisionId", async (request) => {

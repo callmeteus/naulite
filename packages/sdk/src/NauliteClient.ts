@@ -29,6 +29,7 @@ import type {
     GitOpsWebhookPayload,
     IngressSummary,
     Instance,
+    InstanceReconcileResult,
     LogRotationRun,
     LogRotationTask,
     PaginatedResponse,
@@ -58,6 +59,7 @@ import type {
     ResolvedSecret,
     Secret,
     Service,
+    ServiceReconcileResult,
     UpsertSecretInput,
     Volume
 } from "./types";
@@ -627,6 +629,32 @@ export class NauliteClient {
         return this.request<LogsResponse>(
             "GET",
             `/instances/${encodeURIComponent(instanceId)}/logs?tail=${tail}`
+        );
+    }
+
+    /**
+     * Manually re-dispatches a pending or failed instance to its agent.
+     *
+     * @param instanceId Instance identifier
+     * @returns Reconcile outcome
+     */
+    async reconcileInstance(instanceId: string): Promise<InstanceReconcileResult> {
+        return this.request<InstanceReconcileResult>(
+            "POST",
+            `/instances/${encodeURIComponent(instanceId)}/reconcile`
+        );
+    }
+
+    /**
+     * Manually re-dispatches pending or failed instances for a service.
+     *
+     * @param serviceName Service name
+     * @returns Per-instance reconcile outcomes
+     */
+    async reconcileService(serviceName: string): Promise<ServiceReconcileResult> {
+        return this.request<ServiceReconcileResult>(
+            "POST",
+            `/services/${encodeURIComponent(serviceName)}/reconcile`
         );
     }
 

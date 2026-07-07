@@ -93,6 +93,26 @@ export const clusterStore = reactive({
     },
 
     /**
+     * Manually re-dispatches a pending or failed instance.
+     *
+     * @param instanceId Instance identifier
+     * @returns Reconcile outcome
+     */
+    async reconcileInstance(instanceId: string) {
+        return nauliteClient.reconcileInstance(instanceId);
+    },
+
+    /**
+     * Manually re-dispatches pending or failed instances for a service.
+     *
+     * @param serviceName Service name
+     * @returns Per-instance reconcile outcomes
+     */
+    async reconcileService(serviceName: string) {
+        return nauliteClient.reconcileService(serviceName);
+    },
+
+    /**
      * Loads volumes from the admin API.
      *
      * @returns Nothing.
