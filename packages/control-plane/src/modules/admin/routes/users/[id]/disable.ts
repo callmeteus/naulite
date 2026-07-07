@@ -19,7 +19,8 @@ const AdminUserPublicSchema = z.object({
     role: z.enum(["viewer", "operator", "admin"]),
     tenantId: z.string().nullable(),
     createdAt: z.string().min(1),
-    updatedAt: z.string().min(1)
+    updatedAt: z.string().min(1),
+    disabledAt: z.string().nullable().optional()
 });
 
 /**

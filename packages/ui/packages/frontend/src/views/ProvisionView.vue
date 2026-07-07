@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 import type { NodeProvision } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
+import PageLayout from "../components/layout/PageLayout.vue";
+import ConfirmModal from "../components/ui/ConfirmModal.vue";
+import EmptyState from "../components/ui/EmptyState.vue";
+import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import { useServerPagination } from "../composables/useServerPagination";
-import { t } from "../ui/Translate";
 import { useClusterStore } from "../stores/Cluster";
 
+const { t } = useI18n();
 const store = useClusterStore();
 const provider = ref("aws");
 const instanceType = ref("t3.small");
@@ -15,6 +21,7 @@ const region = ref("");
 const count = ref(1);
 const activeProvision = ref<NodeProvision | null>(null);
 const provisionMessage = ref("");
+const terminateModalRef = ref<InstanceType<typeof ConfirmModal> | null>(null);
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 const {
@@ -33,10 +40,10 @@ const stepStates = computed(() => {
     const status = activeProvision.value?.status ?? "pending";
 
     return [
-        { key: "pending", label: t("provisionStepPending"), active: status === "pending", done: status !== "pending" && status !== "failed", failed: status === "failed" },
-        { key: "launching", label: t("provisionStepLaunching"), active: status === "launching", done: ["bootstrapping", "registered", "terminated"].includes(status), failed: status === "failed" },
-        { key: "bootstrapping", label: t("provisionStepBootstrapping"), active: status === "bootstrapping", done: ["registered", "terminated"].includes(status), failed: status === "failed" },
-        { key: "registered", label: t("provisionStepRegistered"), active: status === "registered", done: status === "registered" || status === "terminated", failed: status === "failed" }
+        { key: "pending", label: t("pages.provision.stepPending"), active: status === "pending", done: status !== "pending" && status !== "failed", failed: status === "failed" },
+        { key: "launching", label: t("pages.provision.stepLaunching"), active: status === "launching", done: ["bootstrapping", "registered", "terminated"].includes(status), failed: status === "failed" },
+        { key: "bootstrapping", label: t("pages.provision.stepBootstrapping"), active: status === "bootstrapping", done: ["registered", "terminated"].includes(status), failed: status === "failed" },
+        { key: "registered", label: t("pages.provision.stepRegistered"), active: status === "registered", done: status === "registered" || status === "terminated", failed: status === "failed" }
     ];
 });
 
@@ -44,6 +51,8 @@ const canTerminate = computed(() => {
     const status = activeProvision.value?.status;
     return Boolean(status && status !== "terminated" && status !== "failed" && status !== "pending");
 });
+
+const combinedError = computed(() => store.error || historyError.value || null);
 
 onMounted(() => {
     void refreshHistory();
@@ -115,7 +124,7 @@ async function submitProvision(): Promise<void> {
     });
 
     activeProvision.value = provision;
-    provisionMessage.value = t("provisionStarted");
+    provisionMessage.value = t("pages.provision.started");
     startPolling(provision.id);
     await refreshHistory();
 }
@@ -156,110 +165,159 @@ async function selectProvision(provisionId: string): Promise<void> {
 </script>
 
 <template>
-    <section>
-        <h2>{{ t("provision") }}</h2>
-        <p class="hint">{{ t("provisionHint") }}</p>
-        <p v-if="store.error || historyError" class="error">{{ store.error || historyError }}</p>
+    <PageLayout title-key="pages.provision.title" hint-key="pages.provision.hint">
+        <ErrorAlert :error="combinedError" />
 
-        <div class="panel">
-            <form class="create-form provision-form" @submit.prevent="submitProvision">
-                <label>
-                    {{ t("provisionProvider") }}
-                    <input v-model="provider" type="text" />
-                </label>
-                <label>
-                    {{ t("provisionInstanceType") }}
-                    <input v-model="instanceType" type="text" />
-                </label>
-                <label>
-                    {{ t("provisionAmiId") }}
-                    <input v-model="amiId" type="text" :placeholder="t('provisionAmiPlaceholder')" />
-                </label>
-                <label>
-                    {{ t("provisionRegion") }}
-                    <input v-model="region" type="text" :placeholder="t('provisionRegionPlaceholder')" />
-                </label>
-                <label>
-                    {{ t("provisionCount") }}
-                    <input v-model.number="count" type="number" min="1" max="10" />
-                </label>
-                <button type="submit" :disabled="store.loading || !amiId.trim() || !instanceType.trim()">
-                    {{ t("provisionSubmit") }}
-                </button>
-            </form>
+        <div class="card bg-base-100 shadow">
+            <div class="card-body gap-4">
+                <form class="grid gap-4 md:grid-cols-2" @submit.prevent="submitProvision">
+                    <label class="form-control w-full">
+                        <span class="label-text">{{ t("pages.provision.provider") }}</span>
+                        <input v-model="provider" type="text" class="input input-bordered w-full" />
+                    </label>
+                    <label class="form-control w-full">
+                        <span class="label-text">{{ t("pages.provision.instanceType") }}</span>
+                        <input v-model="instanceType" type="text" class="input input-bordered w-full" />
+                    </label>
+                    <label class="form-control w-full">
+                        <span class="label-text">{{ t("pages.provision.amiId") }}</span>
+                        <input
+                            v-model="amiId"
+                            type="text"
+                            class="input input-bordered w-full"
+                            :placeholder="t('pages.provision.amiPlaceholder')"
+                        />
+                    </label>
+                    <label class="form-control w-full">
+                        <span class="label-text">{{ t("pages.provision.region") }}</span>
+                        <input
+                            v-model="region"
+                            type="text"
+                            class="input input-bordered w-full"
+                            :placeholder="t('pages.provision.regionPlaceholder')"
+                        />
+                    </label>
+                    <label class="form-control w-full">
+                        <span class="label-text">{{ t("pages.provision.count") }}</span>
+                        <input v-model.number="count" type="number" min="1" max="10" class="input input-bordered w-full" />
+                    </label>
+                    <div class="flex items-end">
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            :disabled="store.loading || !amiId.trim() || !instanceType.trim()"
+                        >
+                            {{ t("pages.provision.submit") }}
+                        </button>
+                    </div>
+                </form>
 
-            <p v-if="provisionMessage" class="hint">{{ provisionMessage }}</p>
+                <p v-if="provisionMessage" class="text-sm text-base-content/70">{{ provisionMessage }}</p>
 
-            <div v-if="activeProvision" class="panel-grid">
-                <div>
-                    <div class="stepper">
-                        <div
+                <div v-if="activeProvision" class="space-y-4 rounded-box border border-base-300 p-4">
+                    <ul class="steps steps-vertical w-full lg:steps-horizontal">
+                        <li
                             v-for="step in stepStates"
                             :key="step.key"
-                            class="stepper-step"
-                            :class="{ active: step.active, done: step.done, failed: step.failed && activeProvision.status === 'failed' }"
+                            class="step"
+                            :class="{
+                                'step-primary': step.active || step.done,
+                                'step-error': step.failed && activeProvision.status === 'failed'
+                            }"
                         >
                             {{ step.label }}
-                        </div>
-                    </div>
+                        </li>
+                    </ul>
 
-                    <p>ID: {{ activeProvision.id }}</p>
-                    <p>{{ t("runsStatusFilter") }}: {{ activeProvision.status }}</p>
-                    <p v-if="activeProvision.cloudInstanceId">
-                        {{ t("provisionCloudInstance") }}: {{ activeProvision.cloudInstanceId }}
+                    <p><span class="font-medium">{{ t("common.id") }}:</span> {{ activeProvision.id }}</p>
+                    <p>
+                        <span class="font-medium">{{ t("pages.runs.statusFilter") }}:</span>
+                        <span class="badge badge-outline ml-2">{{ activeProvision.status }}</span>
                     </p>
-                    <p v-if="activeProvision.nodeId">{{ t("provisionNodeId") }}: {{ activeProvision.nodeId }}</p>
-                    <p v-if="activeProvision.error" class="error">{{ activeProvision.error }}</p>
+                    <p v-if="activeProvision.cloudInstanceId">
+                        <span class="font-medium">{{ t("pages.provision.cloudInstance") }}:</span>
+                        {{ activeProvision.cloudInstanceId }}
+                    </p>
+                    <p v-if="activeProvision.nodeId">
+                        <span class="font-medium">{{ t("pages.provision.nodeId") }}:</span>
+                        {{ activeProvision.nodeId }}
+                    </p>
+                    <ErrorAlert :error="activeProvision.error ?? null" />
 
                     <button
                         v-if="canTerminate"
                         type="button"
-                        class="danger"
+                        class="btn btn-error btn-outline btn-sm"
                         :disabled="store.loading"
-                        @click="terminateProvision"
+                        @click="terminateModalRef?.open()"
                     >
-                        {{ t("provisionTerminate") }}
+                        {{ t("pages.provision.terminate") }}
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="panel">
-            <h3>{{ t("provisionHistory") }}</h3>
-            <p v-if="historyLoading">{{ t("loading") }}</p>
-            <table v-else>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>{{ t("provisionProvider") }}</th>
-                        <th>{{ t("runsStatusFilter") }}</th>
-                        <th>{{ t("provisionInstanceType") }}</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="provision in provisionHistory" :key="provision.id">
-                        <td>{{ provision.id }}</td>
-                        <td>{{ provision.provider }}</td>
-                        <td>{{ provision.status }}</td>
-                        <td>{{ provision.instanceType }}</td>
-                        <td>
-                            <button type="button" @click="selectProvision(provision.id)">
-                                {{ t("runsViewDetails") }}
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <div v-if="provisionHistory.length > 0" class="pagination">
-                <button type="button" :disabled="!canGoPrevious" @click="previousPage">
-                    {{ t("paginationPrevious") }}
-                </button>
-                <span>{{ pageLabel }}</span>
-                <button type="button" :disabled="!canGoNext" @click="nextPage">
-                    {{ t("paginationNext") }}
-                </button>
+        <div class="card bg-base-100 shadow">
+            <div class="card-body gap-4">
+                <h3 class="text-lg font-semibold">{{ t("pages.provision.history") }}</h3>
+
+                <div v-if="historyLoading && provisionHistory.length === 0" class="flex items-center gap-2">
+                    <LoadingSpinner />
+                    <span>{{ t("common.loading") }}</span>
+                </div>
+
+                <EmptyState
+                    v-else-if="!historyError && provisionHistory.length === 0"
+                    title-key="pages.provision.emptyTitle"
+                    description-key="pages.provision.emptyDescription"
+                />
+
+                <div v-else class="overflow-x-auto">
+                    <table class="table table-zebra">
+                        <thead>
+                            <tr>
+                                <th>{{ t("common.id") }}</th>
+                                <th>{{ t("pages.provision.provider") }}</th>
+                                <th>{{ t("common.status") }}</th>
+                                <th>{{ t("pages.provision.instanceType") }}</th>
+                                <th>{{ t("common.actions") }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="provision in provisionHistory" :key="provision.id">
+                                <td>{{ provision.id }}</td>
+                                <td>{{ provision.provider }}</td>
+                                <td><span class="badge badge-outline">{{ provision.status }}</span></td>
+                                <td>{{ provision.instanceType }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-outline btn-sm" @click="selectProvision(provision.id)">
+                                        {{ t("pages.runs.viewDetails") }}
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div v-if="provisionHistory.length > 0" class="mt-4 flex items-center justify-end gap-2">
+                        <button type="button" class="btn btn-sm" :disabled="!canGoPrevious" @click="previousPage">
+                            {{ t("common.paginationPrevious") }}
+                        </button>
+                        <span class="text-sm">{{ pageLabel }}</span>
+                        <button type="button" class="btn btn-sm" :disabled="!canGoNext" @click="nextPage">
+                            {{ t("common.paginationNext") }}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </section>
+
+        <ConfirmModal
+            ref="terminateModalRef"
+            title-key="pages.provision.terminate"
+            message-key="pages.provision.terminate"
+            confirm-label-key="pages.provision.terminate"
+            danger
+            @confirm="terminateProvision"
+        />
+    </PageLayout>
 </template>

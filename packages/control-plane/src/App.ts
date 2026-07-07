@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
-import { toFastifyLogger } from "@naulite/logger";
+import { createFastifyLoggerOptions } from "@naulite/logger";
 
 import { ControlPlaneService } from "./ControlPlaneService";
 import { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
@@ -33,7 +33,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     const context = options.context ?? createControlPlaneContext(databaseProvider, packagesDir);
     const httpLog = Logger.create("http");
     const app = Fastify({
-        logger: options.logger === false ? false : toFastifyLogger(httpLog)
+        ...createFastifyLoggerOptions(httpLog, options.logger !== false)
     });
 
     ControlPlaneService.install(context);

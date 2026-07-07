@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import type { NotificationProviderStatus, NotificationTestResult, PipelineEventKind } from "@naulite/sdk";
 import { onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 import { nauliteClient } from "../api/Client";
+import PageLayout from "../components/layout/PageLayout.vue";
+import EmptyState from "../components/ui/EmptyState.vue";
+import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import { useAuthStore } from "../stores/Auth";
-import { t } from "../ui/Translate";
 
+const { t } = useI18n();
 const auth = useAuthStore();
 const providers = ref<NotificationProviderStatus[]>([]);
 const filtersByProvider = ref<Record<string, PipelineEventKind[]>>({});
@@ -134,86 +139,105 @@ onMounted(() => {
 </script>
 
 <template>
-    <section>
-        <h2>{{ t("notifications") }}</h2>
-        <p class="hint">{{ t("notificationsHint") }}</p>
-
-        <div class="actions">
-            <button type="button" :disabled="loading" @click="refreshProviders">
-                {{ t("notificationsRefresh") }}
+    <PageLayout title-key="pages.notifications.title" hint-key="pages.notifications.hint">
+        <template #actions>
+            <button type="button" class="btn btn-outline btn-sm" :disabled="loading" @click="refreshProviders">
+                {{ t("pages.notifications.refresh") }}
             </button>
             <button
                 v-if="auth.hasPermission('notifications:write')"
                 type="button"
+                class="btn btn-primary btn-sm"
                 :disabled="testing || providers.length === 0"
                 @click="sendTestPing"
             >
-                {{ testing ? t("notificationsTesting") : t("notificationsTest") }}
+                {{ testing ? t("pages.notifications.testing") : t("pages.notifications.test") }}
             </button>
+        </template>
+
+        <ErrorAlert :error="error" />
+
+        <div v-if="loading && providers.length === 0" class="flex items-center gap-2">
+            <LoadingSpinner />
+            <span>{{ t("common.loading") }}</span>
         </div>
 
-        <p v-if="error" class="error">{{ error }}</p>
+        <EmptyState
+            v-else-if="!error && providers.length === 0"
+            title-key="pages.notifications.emptyTitle"
+            description-key="pages.notifications.emptyDescription"
+        />
 
-        <table v-if="providers.length > 0">
-            <thead>
-                <tr>
-                    <th>{{ t("notificationsProvider") }}</th>
-                    <th>{{ t("notificationsUrlConfigured") }}</th>
-                    <th>{{ t("notificationsSecretConfigured") }}</th>
-                    <th>{{ t("notificationsEnvVars") }}</th>
-                    <th>{{ t("notificationsFilters") }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="provider in providers" :key="provider.id">
-                    <td>{{ provider.id }}</td>
-                    <td>{{ provider.urlConfigured ? t("yes") : t("no") }}</td>
-                    <td>{{ provider.secretConfigured ? t("yes") : t("no") }}</td>
-                    <td>
-                        <code>{{ [...provider.env.urlVars, ...provider.env.secretVars].join(", ") }}</code>
-                    </td>
-                    <td>
-                        <div class="filter-grid">
-                            <label
-                                v-for="kind in eventKindOptions"
-                                :key="`${provider.id}-${kind}`"
-                                class="filter-option"
-                            >
-                                <input
-                                    type="checkbox"
-                                    :checked="(filtersByProvider[provider.id] ?? []).includes(kind)"
-                                    :disabled="!auth.hasPermission('notifications:write')"
-                                    @change="toggleEventKind(provider.id, kind)"
-                                />
-                                <span>{{ kind }}</span>
-                            </label>
-                        </div>
-                        <button
-                            v-if="auth.hasPermission('notifications:write')"
-                            type="button"
-                            :disabled="savingProviderId === provider.id"
-                            @click="saveFilters(provider.id)"
-                        >
-                            {{ savingProviderId === provider.id ? t("notificationsSavingFilters") : t("notificationsSaveFilters") }}
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <p v-else-if="!loading" class="empty">{{ t("notificationsEmpty") }}</p>
-
-        <div v-if="testResults.length > 0" class="test-results">
-            <h3>{{ t("notificationsTestResults") }}</h3>
-            <ul>
-                <li v-for="result in testResults" :key="result.id">
-                    <strong>{{ result.id }}</strong>:
-                    {{ result.ok ? t("notificationsTestOk") : t("notificationsTestFailed") }}
-                    <span v-if="result.error"> - {{ result.error }}</span>
-                </li>
-            </ul>
+        <div v-else-if="providers.length > 0" class="card bg-base-100 shadow">
+            <div class="card-body overflow-x-auto p-0 sm:p-6">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>{{ t("pages.notifications.provider") }}</th>
+                            <th>{{ t("pages.notifications.urlConfigured") }}</th>
+                            <th>{{ t("pages.notifications.secretConfigured") }}</th>
+                            <th>{{ t("pages.notifications.envVars") }}</th>
+                            <th>{{ t("pages.notifications.filters") }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="provider in providers" :key="provider.id">
+                            <td>{{ provider.id }}</td>
+                            <td>{{ provider.urlConfigured ? t("common.yes") : t("common.no") }}</td>
+                            <td>{{ provider.secretConfigured ? t("common.yes") : t("common.no") }}</td>
+                            <td>
+                                <code class="text-xs">{{ [...provider.env.urlVars, ...provider.env.secretVars].join(", ") }}</code>
+                            </td>
+                            <td class="min-w-80">
+                                <div class="filter-grid">
+                                    <label
+                                        v-for="kind in eventKindOptions"
+                                        :key="`${provider.id}-${kind}`"
+                                        class="filter-option"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox checkbox-sm"
+                                            :checked="(filtersByProvider[provider.id] ?? []).includes(kind)"
+                                            :disabled="!auth.hasPermission('notifications:write')"
+                                            @change="toggleEventKind(provider.id, kind)"
+                                        />
+                                        <span>{{ kind }}</span>
+                                    </label>
+                                </div>
+                                <button
+                                    v-if="auth.hasPermission('notifications:write')"
+                                    type="button"
+                                    class="btn btn-primary btn-sm mt-2"
+                                    :disabled="savingProviderId === provider.id"
+                                    @click="saveFilters(provider.id)"
+                                >
+                                    {{
+                                        savingProviderId === provider.id
+                                            ? t("pages.notifications.savingFilters")
+                                            : t("pages.notifications.saveFilters")
+                                    }}
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </section>
+
+        <div v-if="testResults.length > 0" class="card bg-base-100 shadow">
+            <div class="card-body">
+                <h3 class="text-lg font-semibold">{{ t("pages.notifications.testResults") }}</h3>
+                <ul class="mt-2 space-y-2">
+                    <li v-for="result in testResults" :key="result.id" class="text-sm">
+                        <strong>{{ result.id }}</strong>:
+                        {{ result.ok ? t("pages.notifications.testOk") : t("pages.notifications.testFailed") }}
+                        <span v-if="result.error"> - {{ result.error }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </PageLayout>
 </template>
 
 <style scoped>

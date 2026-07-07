@@ -104,6 +104,70 @@ export class AdminStore {
     }
 
     /**
+     * Updates an admin user role and optionally resets the password.
+     *
+     * @param userId Admin user identifier
+     * @param input Update payload
+     * @returns Updated public user when found
+     */
+    async updateUser(
+        userId: string,
+        input: {
+            role?: AdminRole;
+            password?: string;
+        }
+    ): Promise<AdminUserPublic | null> {
+        const user = await this.findUserById(userId);
+
+        if (!user) {
+            return null;
+        }
+
+        const now = new Date().toISOString();
+        const updates: {
+            role?: AdminRole;
+            passwordHash?: string;
+            updatedAt: string;
+        } = {
+            updatedAt: now
+        };
+
+        if (input.role) {
+            updates.role = input.role;
+        }
+
+        if (input.password) {
+            updates.passwordHash = await AdminPasswordCrypto.hashPassword(input.password);
+        }
+
+        await user.update(updates);
+
+        return mapAdminUser(user);
+    }
+
+    /**
+     * Re-enables a disabled admin user.
+     *
+     * @param userId Admin user identifier
+     * @returns Updated public user when found
+     */
+    async enableUser(userId: string): Promise<AdminUserPublic | null> {
+        const user = await this.findUserById(userId);
+
+        if (!user) {
+            return null;
+        }
+
+        const now = new Date().toISOString();
+        await user.update({
+            disabledAt: null,
+            updatedAt: now
+        });
+
+        return mapAdminUser(user);
+    }
+
+    /**
      * Resolves a login identifier to a username (email aliases are stored as username).
      *
      * @param identifier Username or email-shaped login
@@ -331,7 +395,8 @@ function mapAdminUser(row: AdminUserModel): AdminUserPublic {
         role,
         tenantId: row.tenantId,
         createdAt: row.createdAt,
-        updatedAt: row.updatedAt
+        updatedAt: row.updatedAt,
+        disabledAt: row.disabledAt
     };
 }
 

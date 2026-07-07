@@ -1,6 +1,7 @@
 import { describe, expect, it, afterEach } from "vitest";
 
 import {
+    createFastifyLoggerOptions,
     formatLogLine,
     LOG_LINE_PATTERN,
     Logger,
@@ -45,6 +46,23 @@ describe("@naulite/logger", () => {
 
         expect(logger.transports.some((transport) => transport.constructor.name === "DailyRotateFile")).toBe(false);
         expect(logger.transports.some((transport) => transport.constructor.name === "Console")).toBe(true);
+    });
+
+    it("builds Fastify logger bootstrap options with loggerInstance", () => {
+        const options = createFastifyLoggerOptions(Logger.create("ui-backend", "http"));
+
+        expect(options).toEqual({
+            loggerInstance: expect.objectContaining({
+                info: expect.any(Function),
+                error: expect.any(Function)
+            })
+        });
+    });
+
+    it("disables Fastify logging when bootstrap is disabled", () => {
+        expect(createFastifyLoggerOptions(Logger.create("ui-backend", "http"), false)).toEqual({
+            logger: false
+        });
     });
 
     it("exposes Fastify-compatible logger methods", () => {

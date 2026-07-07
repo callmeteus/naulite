@@ -18,6 +18,7 @@ export interface AdminUserPublic {
     tenantId: string | null;
     createdAt: string;
     updatedAt: string;
+    disabledAt: string | null;
 }
 
 /**

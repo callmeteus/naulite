@@ -1,13 +1,14 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-    plugins: [vue()],
+    plugins: [tailwindcss(), vue()],
     resolve: {
         alias: {
             "@naulite/sdk": path.resolve(rootDir, "../../../sdk/src/index.ts"),

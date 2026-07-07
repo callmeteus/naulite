@@ -1,6 +1,6 @@
 import { NauliteApiError, NauliteClient } from "@naulite/sdk";
 import Fastify, { type FastifyInstance } from "fastify";
-import { toFastifyLogger } from "@naulite/logger";
+import { createFastifyLoggerOptions } from "@naulite/logger";
 
 import { AuthPreHandlers } from "./auth/AuthPreHandlers";
 import { CsrfProtection } from "./auth/CsrfProtection";
@@ -36,7 +36,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
 
     const httpLog = Logger.create("http");
     const app = Fastify({
-        logger: options.logger === false ? false : toFastifyLogger(httpLog)
+        ...createFastifyLoggerOptions(httpLog, options.logger !== false)
     });
 
     app.decorate("controlPlane", controlPlane);
@@ -96,7 +96,9 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
         if (error instanceof NauliteApiError) {
             reply.code(error.status);
             return {
-                message: error.message
+                message: error.message,
+                code: error.code,
+                details: error.details
             };
         }
 
@@ -104,6 +106,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
             reply.code(400);
             return {
                 message: "Validation failed.",
+                code: "validation_failed",
                 details: error
             };
         }

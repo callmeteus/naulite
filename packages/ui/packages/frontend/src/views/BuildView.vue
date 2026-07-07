@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
 import type { PipelineEvent, PipelineRun } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
-import { t } from "../ui/Translate";
+import PageLayout from "../components/layout/PageLayout.vue";
+import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import { useClusterStore } from "../stores/Cluster";
 
+const { t } = useI18n();
 const store = useClusterStore();
 const serviceName = ref("");
 const provider = ref("");
@@ -160,94 +163,127 @@ async function triggerBuild(): Promise<void> {
         activeRunId.value = result.runId;
         activeRun.value = await store.getRun(result.runId);
         selectedStepId.value = activeRun.value.steps?.[0]?.id ?? null;
-        buildMessage.value = t("buildStarted");
+        buildMessage.value = t("pages.build.started");
         return;
     }
 
-    buildMessage.value = t("buildQueued");
+    buildMessage.value = t("pages.build.queued");
 }
 </script>
 
 <template>
-    <section>
-        <h2>{{ t("build") }}</h2>
-        <p class="hint">{{ t("buildHint") }}</p>
-        <p v-if="store.error" class="error">{{ store.error }}</p>
+    <PageLayout title-key="pages.build.title" hint-key="pages.build.hint">
+        <ErrorAlert :error="store.error" />
 
-        <div class="panel">
-            <form class="create-form" @submit.prevent="triggerBuild">
-                <label>
-                    {{ t("buildServiceName") }}
-                    <input
-                        v-model="serviceName"
-                        type="text"
-                        list="service-names"
-                        :placeholder="t('buildServicePlaceholder')"
-                    />
-                    <datalist id="service-names">
-                        <option v-for="service in store.services" :key="service.name" :value="service.name" />
-                    </datalist>
-                </label>
-                <label>
-                    {{ t("buildProvider") }}
-                    <input v-model="provider" type="text" :placeholder="t('buildProviderPlaceholder')" />
-                </label>
-                <label>
-                    {{ t("buildRegistry") }}
-                    <input v-model="registry" type="text" :placeholder="t('buildRegistryPlaceholder')" />
-                </label>
-                <button type="submit" :disabled="store.loading || !serviceName.trim()">
-                    {{ t("buildTrigger") }}
-                </button>
-            </form>
+        <div class="card bg-base-100 shadow">
+            <div class="card-body gap-4">
+                <form class="grid gap-4 md:grid-cols-2" @submit.prevent="triggerBuild">
+                    <label class="form-control w-full">
+                        <span class="label-text">{{ t("pages.build.serviceName") }}</span>
+                        <input
+                            v-model="serviceName"
+                            type="text"
+                            class="input input-bordered w-full"
+                            list="service-names"
+                            :placeholder="t('pages.build.servicePlaceholder')"
+                        />
+                        <datalist id="service-names">
+                            <option v-for="service in store.services" :key="service.name" :value="service.name" />
+                        </datalist>
+                    </label>
+                    <label class="form-control w-full">
+                        <span class="label-text">{{ t("pages.build.provider") }}</span>
+                        <input
+                            v-model="provider"
+                            type="text"
+                            class="input input-bordered w-full"
+                            :placeholder="t('pages.build.providerPlaceholder')"
+                        />
+                    </label>
+                    <label class="form-control w-full md:col-span-2">
+                        <span class="label-text">{{ t("pages.build.registry") }}</span>
+                        <input
+                            v-model="registry"
+                            type="text"
+                            class="input input-bordered w-full"
+                            :placeholder="t('pages.build.registryPlaceholder')"
+                        />
+                    </label>
+                    <div class="md:col-span-2">
+                        <button type="submit" class="btn btn-primary" :disabled="store.loading || !serviceName.trim()">
+                            {{ t("pages.build.trigger") }}
+                        </button>
+                    </div>
+                </form>
 
-            <p v-if="buildMessage" class="hint">{{ buildMessage }}</p>
+                <p v-if="buildMessage" class="text-sm text-base-content/70">{{ buildMessage }}</p>
 
-            <div v-if="activeRun" class="panel-grid">
-                <div>
-                    <p>
-                        {{ t("runsStatusFilter") }}: {{ activeRun.status }}
-                        <span v-if="streamActive" class="hint"> ({{ t("runsStreaming") }})</span>
-                    </p>
-                    <p v-if="activeRun.imageRef">image: {{ activeRun.imageRef }}</p>
-                    <p v-if="activeRun.errorMessage" class="error">{{ activeRun.errorMessage }}</p>
-                    <div v-if="activeRun.failureLog" class="log-panel">
-                        <h4>{{ t("runsFailureLog") }}</h4>
-                        <pre>{{ activeRun.failureLog }}</pre>
+                <div v-if="activeRun" class="grid gap-6 lg:grid-cols-2">
+                    <div class="space-y-4">
+                        <p>
+                            {{ t("pages.runs.statusFilter") }}:
+                            <span class="badge badge-outline">{{ activeRun.status }}</span>
+                            <span v-if="streamActive" class="ml-2 text-sm text-base-content/70">
+                                ({{ t("pages.runs.streaming") }})
+                            </span>
+                        </p>
+                        <p v-if="activeRun.imageRef">
+                            <span class="font-medium">{{ t("common.tableColumns.image") }}:</span>
+                            <code class="text-xs">{{ activeRun.imageRef }}</code>
+                        </p>
+                        <ErrorAlert :error="activeRun.errorMessage ?? null" />
+
+                        <div v-if="activeRun.failureLog" class="rounded-box bg-base-300 p-4">
+                            <h4 class="font-semibold">{{ t("pages.runs.failureLog") }}</h4>
+                            <pre class="mt-2 max-h-64 overflow-auto text-xs">{{ activeRun.failureLog }}</pre>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold">{{ t("pages.runs.steps") }}</h4>
+                            <ul class="mt-2 flex flex-wrap gap-2">
+                                <li v-for="step in activeRun.steps ?? []" :key="step.id">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm"
+                                        :class="step.id === selectedStepId ? 'btn-primary' : 'btn-outline'"
+                                        @click="selectedStepId = step.id"
+                                    >
+                                        {{ step.name }} - {{ step.status }}
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div v-if="selectedStep?.logText" class="rounded-box bg-base-300 p-4">
+                            <h4 class="font-semibold">{{ t("pages.runs.stepLog") }}: {{ selectedStep.name }}</h4>
+                            <pre class="mt-2 max-h-64 overflow-auto text-xs">{{ selectedStep.logText }}</pre>
+                        </div>
                     </div>
 
-                    <h4>{{ t("runsSteps") }}</h4>
-                    <ul class="step-list">
-                        <li
-                            v-for="step in activeRun.steps ?? []"
-                            :key="step.id"
-                            :class="{ selected: step.id === selectedStepId }"
+                    <div v-if="activeRunId" class="space-y-4">
+                        <router-link
+                            class="link link-primary"
+                            :to="{ path: '/runs', query: { id: activeRunId } }"
                         >
-                            <button type="button" class="step-button" @click="selectedStepId = step.id">
-                                {{ step.name }} - {{ step.status }}
-                            </button>
-                        </li>
-                    </ul>
+                            {{ t("pages.deploy.runLink") }}: {{ activeRunId }}
+                        </router-link>
 
-                    <div v-if="selectedStep?.logText" class="log-panel">
-                        <h4>{{ t("runsStepLog") }}: {{ selectedStep.name }}</h4>
-                        <pre>{{ selectedStep.logText }}</pre>
+                        <div>
+                            <h4 class="font-semibold">{{ t("pages.runs.events") }}</h4>
+                            <ul class="mt-2 space-y-2">
+                                <li
+                                    v-for="event in runEvents"
+                                    :key="event.id"
+                                    class="rounded-box border border-base-300 p-3 text-sm"
+                                >
+                                    <strong>{{ event.kind }}</strong>
+                                    <span class="ml-2">{{ event.message }}</span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                </div>
-                <div v-if="activeRunId">
-                    <router-link :to="{ path: '/runs', query: { id: activeRunId } }">
-                        {{ t("deployRunLink") }}: {{ activeRunId }}
-                    </router-link>
-
-                    <h4>{{ t("runsEvents") }}</h4>
-                    <ul class="event-list">
-                        <li v-for="event in runEvents" :key="event.id">
-                            <strong>{{ event.kind }}</strong>
-                            <span>{{ event.message }}</span>
-                        </li>
-                    </ul>
                 </div>
             </div>
         </div>
-    </section>
+    </PageLayout>
 </template>

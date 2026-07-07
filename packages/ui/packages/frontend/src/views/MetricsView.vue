@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 import type { PromQLSeries } from "@naulite/sdk";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 
 import { nauliteClient } from "../api/Client";
-import { t } from "../ui/Translate";
+import PageLayout from "../components/layout/PageLayout.vue";
+import EmptyState from "../components/ui/EmptyState.vue";
+import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import { useClusterStore } from "../stores/Cluster";
 
+const { t } = useI18n();
 const store = useClusterStore();
 const selectedNodeId = ref("");
 const loading = ref(false);
@@ -191,14 +196,14 @@ async function refreshMetrics(): Promise<void> {
 
         clusterCpuPlot = renderPlot(
             clusterCpuChart.value,
-            t("metricsClusterCpu"),
+            t("pages.metrics.clusterCpu"),
             toPlotData(pickSeries(clusterCpu.data?.result)),
             "#7cc4ff",
             clusterCpuPlot
         );
         clusterMemPlot = renderPlot(
             clusterMemChart.value,
-            t("metricsClusterMemory"),
+            t("pages.metrics.clusterMemory"),
             toPlotData(pickSeries(clusterMem.data?.result)),
             "#3fb950",
             clusterMemPlot
@@ -207,14 +212,14 @@ async function refreshMetrics(): Promise<void> {
         if (selectedNodeId.value) {
             nodeCpuPlot = renderPlot(
                 nodeCpuChart.value,
-                t("metricsNodeCpu"),
+                t("pages.metrics.nodeCpu"),
                 toPlotData(pickSeries(nodeCpu.data?.result, selectedNodeId.value)),
                 "#d2a8ff",
                 nodeCpuPlot
             );
             nodeMemPlot = renderPlot(
                 nodeMemChart.value,
-                t("metricsNodeMemory"),
+                t("pages.metrics.nodeMemory"),
                 toPlotData(pickSeries(nodeMem.data?.result, selectedNodeId.value)),
                 "#ffa657",
                 nodeMemPlot
@@ -252,54 +257,78 @@ async function refreshMetrics(): Promise<void> {
 </script>
 
 <template>
-    <section>
-        <h2>{{ t("metrics") }}</h2>
-        <p class="hint">{{ t("metricsHint") }}</p>
-        <p v-if="error" class="error">{{ error }}</p>
-        <p v-if="loading" class="hint">{{ t("loading") }}</p>
+    <PageLayout title-key="pages.metrics.title" hint-key="pages.metrics.hint">
+        <ErrorAlert :error="error" />
 
-        <div class="panel metrics-grid">
-            <div ref="clusterCpuChart" class="chart-panel" />
-            <div ref="clusterMemChart" class="chart-panel" />
+        <div v-if="loading && instanceRows.length === 0" class="flex items-center gap-2">
+            <LoadingSpinner />
+            <span>{{ t("common.loading") }}</span>
         </div>
 
-        <div class="panel">
-            <label>
-                {{ t("metricsSelectNode") }}
-                <select v-model="selectedNodeId" @change="refreshMetrics">
-                    <option v-for="node in store.nodes" :key="node.id" :value="node.id">
-                        {{ node.hostname }} ({{ node.id }})
-                    </option>
-                </select>
-            </label>
-            <p v-if="selectedNode" class="hint">{{ t("metricsNodeDetail") }}: {{ selectedNode.hostname }}</p>
-            <div class="metrics-grid">
-                <div ref="nodeCpuChart" class="chart-panel" />
-                <div ref="nodeMemChart" class="chart-panel" />
+        <div class="grid gap-6 lg:grid-cols-2">
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div ref="clusterCpuChart" class="chart-panel min-h-[220px] w-full" />
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div ref="clusterMemChart" class="chart-panel min-h-[220px] w-full" />
+                </div>
             </div>
         </div>
 
-        <div class="panel">
-            <h3>{{ t("metricsInstances") }}</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>{{ t("metricsInstanceId") }}</th>
-                        <th>{{ t("metricsServiceName") }}</th>
-                        <th>{{ t("metricsInstanceCpu") }}</th>
-                        <th>{{ t("metricsInstanceMemory") }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="row in instanceRows" :key="row.instanceId">
-                        <td>{{ row.instanceId }}</td>
-                        <td>{{ row.serviceName }}</td>
-                        <td>{{ row.cpu }}</td>
-                        <td>{{ row.memory }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <p v-if="instanceRows.length === 0" class="empty">{{ t("metricsInstancesEmpty") }}</p>
+        <div class="card bg-base-100 shadow">
+            <div class="card-body gap-4">
+                <label class="form-control w-full max-w-md">
+                    <span class="label-text">{{ t("pages.metrics.selectNode") }}</span>
+                    <select v-model="selectedNodeId" class="select select-bordered" @change="refreshMetrics">
+                        <option v-for="node in store.nodes" :key="node.id" :value="node.id">
+                            {{ node.hostname }} ({{ node.id }})
+                        </option>
+                    </select>
+                </label>
+                <p v-if="selectedNode" class="text-sm text-base-content/70">
+                    {{ t("pages.metrics.nodeDetail") }}: {{ selectedNode.hostname }}
+                </p>
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div ref="nodeCpuChart" class="chart-panel min-h-[220px] w-full" />
+                    <div ref="nodeMemChart" class="chart-panel min-h-[220px] w-full" />
+                </div>
+            </div>
         </div>
-    </section>
+
+        <div class="card bg-base-100 shadow">
+            <div class="card-body gap-4">
+                <h3 class="text-lg font-semibold">{{ t("pages.metrics.instances") }}</h3>
+
+                <EmptyState
+                    v-if="instanceRows.length === 0"
+                    title-key="pages.metrics.instancesEmpty"
+                    description-key="pages.metrics.instancesEmpty"
+                />
+
+                <div v-else class="overflow-x-auto">
+                    <table class="table table-zebra">
+                        <thead>
+                            <tr>
+                                <th>{{ t("pages.metrics.instanceId") }}</th>
+                                <th>{{ t("pages.metrics.serviceName") }}</th>
+                                <th>{{ t("pages.metrics.instanceCpu") }}</th>
+                                <th>{{ t("pages.metrics.instanceMemory") }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in instanceRows" :key="row.instanceId">
+                                <td>{{ row.instanceId }}</td>
+                                <td>{{ row.serviceName }}</td>
+                                <td>{{ row.cpu }}</td>
+                                <td>{{ row.memory }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </PageLayout>
 </template>

@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 
-import { t } from "../ui/Translate";
+import PageLayout from "../components/layout/PageLayout.vue";
+import EmptyState from "../components/ui/EmptyState.vue";
+import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import { useClusterStore } from "../stores/Cluster";
 
+const { t } = useI18n();
 const store = useClusterStore();
 
 onMounted(() => {
@@ -12,29 +17,43 @@ onMounted(() => {
 </script>
 
 <template>
-    <section>
-        <h2>{{ t("services") }}</h2>
-        <p v-if="store.loading">Loading...</p>
-        <p v-else-if="store.error" class="error">{{ store.error }}</p>
-        <div v-else class="panel">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Status</th>
-                        <th>Desired Replicas</th>
-                        <th>Lifecycle</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="service in store.services" :key="service.name">
-                        <td>{{ service.name }}</td>
-                        <td>{{ service.status }}</td>
-                        <td>{{ service.desiredReplicas }}</td>
-                        <td>{{ service.lifecycleStatus ?? "-" }}</td>
-                    </tr>
-                </tbody>
-            </table>
+    <PageLayout title-key="pages.services.title" hint-key="pages.services.hint">
+        <ErrorAlert :error="store.error" />
+
+        <div v-if="store.loading" class="flex items-center gap-2">
+            <LoadingSpinner />
+            <span>{{ t("common.loading") }}</span>
         </div>
-    </section>
+
+        <EmptyState
+            v-else-if="!store.error && store.services.length === 0"
+            title-key="pages.services.emptyTitle"
+            description-key="pages.services.emptyDescription"
+            action-label-key="pages.services.emptyAction"
+            action-to="/deploy"
+        />
+
+        <div v-else-if="!store.error" class="card bg-base-100 shadow">
+            <div class="card-body overflow-x-auto p-0 sm:p-6">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>{{ t("common.tableColumns.name") }}</th>
+                            <th>{{ t("common.status") }}</th>
+                            <th>{{ t("common.tableColumns.replicas") }}</th>
+                            <th>{{ t("common.tableColumns.lifecycle") }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="service in store.services" :key="service.name">
+                            <td>{{ service.name }}</td>
+                            <td><span class="badge badge-outline">{{ service.status }}</span></td>
+                            <td>{{ service.desiredReplicas }}</td>
+                            <td>{{ service.lifecycleStatus ?? "-" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </PageLayout>
 </template>

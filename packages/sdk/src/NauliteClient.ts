@@ -23,6 +23,7 @@ import type {
     CreateAdminUserInput,
     CreatedApiKey,
     DisableAdminUserInput,
+    UpdateAdminUserInput,
     ExecResponse,
     GatewayRouteSummary,
     GitOpsWebhookPayload,
@@ -249,6 +250,50 @@ export class NauliteClient {
             "POST",
             `/admin/users/${encodeURIComponent(userId)}/disable`,
             input
+        );
+        return AdminUserMapper.toSdkUser(user);
+    }
+
+    /**
+     * Returns a single admin user by identifier (admin role required).
+     *
+     * @param userId Admin user identifier
+     * @returns Admin user record
+     */
+    async getAdminUser(userId: string): Promise<AdminUser> {
+        const user = await this.request<ControlPlaneAdminUser>(
+            "GET",
+            `/admin/users/${encodeURIComponent(userId)}`
+        );
+        return AdminUserMapper.toSdkUser(user);
+    }
+
+    /**
+     * Updates an admin user (admin role required).
+     *
+     * @param userId Admin user identifier
+     * @param input Update payload
+     * @returns Updated admin user
+     */
+    async updateAdminUser(userId: string, input: UpdateAdminUserInput): Promise<AdminUser> {
+        const user = await this.request<ControlPlaneAdminUser>(
+            "PATCH",
+            `/admin/users/${encodeURIComponent(userId)}`,
+            input
+        );
+        return AdminUserMapper.toSdkUser(user);
+    }
+
+    /**
+     * Re-enables a disabled admin user (admin role required).
+     *
+     * @param userId Admin user identifier
+     * @returns Updated admin user
+     */
+    async enableAdminUser(userId: string): Promise<AdminUser> {
+        const user = await this.request<ControlPlaneAdminUser>(
+            "POST",
+            `/admin/users/${encodeURIComponent(userId)}/enable`
         );
         return AdminUserMapper.toSdkUser(user);
     }

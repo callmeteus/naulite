@@ -23,6 +23,14 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return app.controlPlane.listInstances();
     });
 
+    app.get("/instances/:id/logs", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+        const client = controlPlaneForRequest(app, request);
+        return client.getLogs(params.id);
+    });
+
     app.get("/volumes", async () => {
         return app.controlPlane.listVolumes();
     });

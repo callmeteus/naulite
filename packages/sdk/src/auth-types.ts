@@ -69,3 +69,11 @@ export interface CreateAdminUserInput {
 export interface DisableAdminUserInput {
     reason?: string;
 }
+
+/**
+ * Payload for updating an admin user.
+ */
+export interface UpdateAdminUserInput {
+    role?: AdminRole;
+    password?: string;
+}

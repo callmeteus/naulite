@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 import type { ApiKey } from "@naulite/sdk";
-
 import { nauliteClient } from "../api/Client";
-import { t } from "../ui/Translate";
+import PageLayout from "../components/layout/PageLayout.vue";
+import EmptyState from "../components/ui/EmptyState.vue";
+import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 
+const { t } = useI18n();
 const keys = ref<ApiKey[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -15,7 +19,7 @@ const creating = ref(false);
 
 /**
  * Loads API keys from the control plane.
- * 
+ *
  * @returns Nothing.
  */
 async function refresh(): Promise<void> {
@@ -33,7 +37,7 @@ async function refresh(): Promise<void> {
 
 /**
  * Creates a new API key for remote CLI access.
- * 
+ *
  * @returns Nothing.
  */
 async function createKey(): Promise<void> {
@@ -59,7 +63,7 @@ async function createKey(): Promise<void> {
 
 /**
  * Revokes an API key by identifier.
- * 
+ *
  * @param apiKeyId API key identifier
  * @returns Nothing.
  */
@@ -76,7 +80,7 @@ async function revokeKey(apiKeyId: string): Promise<void> {
 
 /**
  * Clears the one-time secret banner after the operator copies it.
- * 
+ *
  * @returns Nothing.
  */
 function dismissSecret(): void {
@@ -89,58 +93,80 @@ onMounted(() => {
 </script>
 
 <template>
-    <section>
-        <h2>{{ t("apiKeys") }}</h2>
-        <p class="hint">{{ t("apiKeysHint") }}</p>
+    <PageLayout title-key="pages.apiKeys.title" hint-key="pages.apiKeys.hint">
+        <ErrorAlert :error="error" />
 
-        <div v-if="createdSecret" class="panel secret-panel">
-            <p><strong>{{ t("apiKeyCreated") }}</strong></p>
-            <code>{{ createdSecret }}</code>
-            <p class="hint">{{ t("apiKeyCopyOnce") }}</p>
-            <button type="button" @click="dismissSecret">{{ t("dismiss") }}</button>
+        <div v-if="createdSecret" class="alert alert-warning">
+            <div class="flex w-full flex-col gap-2">
+                <p><strong>{{ t("pages.apiKeys.created") }}</strong></p>
+                <code class="break-all rounded bg-base-300 p-2 text-sm">{{ createdSecret }}</code>
+                <p class="text-sm">{{ t("pages.apiKeys.copyOnce") }}</p>
+                <button type="button" class="btn btn-sm w-fit" @click="dismissSecret">
+                    {{ t("common.dismiss") }}
+                </button>
+            </div>
         </div>
 
-        <form class="panel create-form" @submit.prevent="createKey">
-            <label for="api-key-name">{{ t("apiKeyName") }}</label>
-            <input
-                id="api-key-name"
-                v-model="name"
-                type="text"
-                maxlength="120"
-                :placeholder="t('apiKeyNamePlaceholder')"
-            />
-            <button type="submit" :disabled="creating || !name.trim()">
-                {{ t("createApiKey") }}
-            </button>
-        </form>
-
-        <p v-if="loading">Loading...</p>
-        <p v-else-if="error" class="error">{{ error }}</p>
-        <div v-else class="panel">
-            <table>
-                <thead>
-                    <tr>
-                        <th>{{ t("apiKeyName") }}</th>
-                        <th>{{ t("apiKeyPrefix") }}</th>
-                        <th>{{ t("apiKeyCreatedAt") }}</th>
-                        <th>{{ t("apiKeyLastUsed") }}</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="apiKey in keys" :key="apiKey.id">
-                        <td>{{ apiKey.name }}</td>
-                        <td><code>{{ apiKey.prefix }}...</code></td>
-                        <td>{{ apiKey.createdAt }}</td>
-                        <td>{{ apiKey.lastUsedAt ?? "-" }}</td>
-                        <td>
-                            <button type="button" class="danger" @click="revokeKey(apiKey.id)">
-                                {{ t("revokeApiKey") }}
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="card bg-base-100 shadow">
+            <div class="card-body">
+                <form class="flex flex-wrap items-end gap-3" @submit.prevent="createKey">
+                    <label class="form-control w-full max-w-md">
+                        <span class="label-text">{{ t("pages.apiKeys.name") }}</span>
+                        <input
+                            id="api-key-name"
+                            v-model="name"
+                            type="text"
+                            maxlength="120"
+                            class="input input-bordered w-full"
+                            :placeholder="t('pages.apiKeys.namePlaceholder')"
+                        />
+                    </label>
+                    <button type="submit" class="btn btn-primary" :disabled="creating || !name.trim()">
+                        {{ t("pages.apiKeys.create") }}
+                    </button>
+                </form>
+            </div>
         </div>
-    </section>
+
+        <div v-if="loading" class="flex items-center gap-2">
+            <LoadingSpinner />
+            <span>{{ t("common.loading") }}</span>
+        </div>
+
+        <EmptyState
+            v-else-if="!error && keys.length === 0"
+            title-key="pages.apiKeys.emptyTitle"
+            description-key="pages.apiKeys.emptyDescription"
+            action-label-key="pages.apiKeys.emptyAction"
+        />
+
+        <div v-else-if="!error" class="card bg-base-100 shadow">
+            <div class="card-body overflow-x-auto p-0 sm:p-6">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>{{ t("pages.apiKeys.name") }}</th>
+                            <th>{{ t("pages.apiKeys.prefix") }}</th>
+                            <th>{{ t("pages.apiKeys.createdAt") }}</th>
+                            <th>{{ t("pages.apiKeys.lastUsed") }}</th>
+                            <th>{{ t("common.actions") }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="apiKey in keys" :key="apiKey.id">
+                            <td>{{ apiKey.name }}</td>
+                            <td><code>{{ apiKey.prefix }}...</code></td>
+                            <td>{{ apiKey.createdAt }}</td>
+                            <td>{{ apiKey.lastUsedAt ?? "-" }}</td>
+                            <td>
+                                <button type="button" class="btn btn-error btn-outline btn-sm" @click="revokeKey(apiKey.id)">
+                                    {{ t("pages.apiKeys.revoke") }}
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </PageLayout>
 </template>

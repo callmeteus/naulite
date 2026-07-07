@@ -17,6 +17,11 @@ const DisableAdminUserBodySchema = z.object({
     reason: z.string().optional()
 });
 
+const UpdateAdminUserBodySchema = z.object({
+    role: z.enum(["viewer", "operator", "admin"]).optional(),
+    password: z.string().min(8).optional()
+});
+
 /**
  * Registers admin user management routes proxied to the control plane.
  *
@@ -33,12 +38,29 @@ export async function registerAdminUserRoutes(app: FastifyInstance): Promise<voi
         return client.listAdminUsers();
     });
 
+    app.get("/admin/users/:id", adminOnly, async (request) => {
+        const params = AdminUserIdParamsSchema.parse(request.params);
+        const client = request.sessionToken
+            ? app.controlPlane.withSession(request.sessionToken)
+            : app.controlPlane;
+        return client.getAdminUser(params.id);
+    });
+
     app.post("/admin/users", adminOnly, async (request) => {
         const body = CreateAdminUserBodySchema.parse(request.body);
         const client = request.sessionToken
             ? app.controlPlane.withSession(request.sessionToken)
             : app.controlPlane;
         return client.createAdminUser(body);
+    });
+
+    app.patch("/admin/users/:id", adminOnly, async (request) => {
+        const params = AdminUserIdParamsSchema.parse(request.params);
+        const body = UpdateAdminUserBodySchema.parse(request.body);
+        const client = request.sessionToken
+            ? app.controlPlane.withSession(request.sessionToken)
+            : app.controlPlane;
+        return client.updateAdminUser(params.id, body);
     });
 
     app.post("/admin/users/:id/disable", adminOnly, async (request) => {
@@ -48,5 +70,13 @@ export async function registerAdminUserRoutes(app: FastifyInstance): Promise<voi
             ? app.controlPlane.withSession(request.sessionToken)
             : app.controlPlane;
         return client.disableAdminUser(params.id, body);
+    });
+
+    app.post("/admin/users/:id/enable", adminOnly, async (request) => {
+        const params = AdminUserIdParamsSchema.parse(request.params);
+        const client = request.sessionToken
+            ? app.controlPlane.withSession(request.sessionToken)
+            : app.controlPlane;
+        return client.enableAdminUser(params.id);
     });
 }

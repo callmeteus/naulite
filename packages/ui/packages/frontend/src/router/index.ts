@@ -11,6 +11,7 @@ import DeployView from "../views/DeployView.vue";
 import GatewayRoutesView from "../views/GatewayRoutesView.vue";
 import GitOpsView from "../views/GitOpsView.vue";
 import InstancesView from "../views/InstancesView.vue";
+import ForbiddenView from "../views/ForbiddenView.vue";
 import LoginView from "../views/LoginView.vue";
 import MetricsView from "../views/MetricsView.vue";
 import NetBirdView from "../views/NetBirdView.vue";
@@ -30,6 +31,7 @@ const router = createRouter({
     history: createWebHistory(),
     routes: [
         { path: "/login", component: LoginView, meta: { public: true } },
+        { path: "/403", component: ForbiddenView },
         { path: "/", redirect: "/nodes" },
         { path: "/nodes", component: NodesView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
         { path: "/services", component: ServicesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
@@ -76,7 +78,7 @@ router.beforeEach(async (to) => {
     const permissions = to.meta.permissions as NaulitePermission[] | undefined;
 
     if (permissions && !permissions.every((permission) => auth.hasPermission(permission))) {
-        return "/nodes";
+        return "/403";
     }
 
     return true;

@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 
-import { t } from "../ui/Translate";
+import PageLayout from "../components/layout/PageLayout.vue";
+import EmptyState from "../components/ui/EmptyState.vue";
+import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import { useClusterStore } from "../stores/Cluster";
 
+const { t } = useI18n();
 const store = useClusterStore();
 
 onMounted(() => {
@@ -12,31 +17,45 @@ onMounted(() => {
 </script>
 
 <template>
-    <section>
-        <h2>{{ t("nodes") }}</h2>
-        <p v-if="store.loading">Loading...</p>
-        <p v-else-if="store.error" class="error">{{ store.error }}</p>
-        <div v-else class="panel">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Hostname</th>
-                        <th>Status</th>
-                        <th>CPU Used</th>
-                        <th>Memory Used</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="node in store.nodes" :key="node.id">
-                        <td>{{ node.id }}</td>
-                        <td>{{ node.hostname }}</td>
-                        <td>{{ node.status }}</td>
-                        <td>{{ node.resources.cpuMillisUsed }}</td>
-                        <td>{{ node.resources.memoryMbUsed }} MB</td>
-                    </tr>
-                </tbody>
-            </table>
+    <PageLayout title-key="pages.nodes.title" hint-key="pages.nodes.hint">
+        <ErrorAlert :error="store.error" />
+
+        <div v-if="store.loading" class="flex items-center gap-2">
+            <LoadingSpinner />
+            <span>{{ t("common.loading") }}</span>
         </div>
-    </section>
+
+        <EmptyState
+            v-else-if="!store.error && store.nodes.length === 0"
+            title-key="pages.nodes.emptyTitle"
+            description-key="pages.nodes.emptyDescription"
+            action-label-key="pages.nodes.emptyAction"
+            action-to="/deploy"
+        />
+
+        <div v-else-if="!store.error" class="card bg-base-100 shadow">
+            <div class="card-body overflow-x-auto p-0 sm:p-6">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>{{ t("common.id") }}</th>
+                            <th>{{ t("common.tableColumns.hostname") }}</th>
+                            <th>{{ t("common.status") }}</th>
+                            <th>{{ t("pages.metrics.nodeCpu") }}</th>
+                            <th>{{ t("pages.metrics.nodeMemory") }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="node in store.nodes" :key="node.id">
+                            <td>{{ node.id }}</td>
+                            <td>{{ node.hostname }}</td>
+                            <td><span class="badge badge-outline">{{ node.status }}</span></td>
+                            <td>{{ node.resources.cpuMillisUsed }}</td>
+                            <td>{{ node.resources.memoryMbUsed }} MB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </PageLayout>
 </template>

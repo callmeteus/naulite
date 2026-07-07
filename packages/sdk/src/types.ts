@@ -27,7 +27,7 @@ export interface NauliteDiscovery {
     localBypass: boolean;
 }
 
-export type { AdminLoginInput, AdminLoginResponse, AdminRole, AdminSession, AdminUser, BffLoginResponse, BffSessionResponse, CreateAdminUserInput, DisableAdminUserInput } from "./auth-types";
+export type { AdminLoginInput, AdminLoginResponse, AdminRole, AdminSession, AdminUser, BffLoginResponse, BffSessionResponse, CreateAdminUserInput, DisableAdminUserInput, UpdateAdminUserInput } from "./auth-types";
 export type { PaginatedResponse, PaginationQuery } from "./pagination-types";
 export type { PromQLInstantResponse, PromQLRangeResponse, PromQLSample, PromQLSeries } from "./metrics-types";
 

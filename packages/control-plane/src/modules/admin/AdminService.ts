@@ -85,4 +85,32 @@ export namespace AdminService {
     export function disableUser(userId: string): ReturnType<AdminStore["disableUser"]> {
         return getAdminStore().disableUser(userId);
     }
+
+    /**
+     * @param userId Admin user id
+     * @returns Public user when found
+     */
+    export function getUser(userId: string): ReturnType<AdminStore["findUserById"]> {
+        return getAdminStore().findUserById(userId);
+    }
+
+    /**
+     * @param userId Admin user id
+     * @param input Update payload
+     * @returns Updated public user or null
+     */
+    export function updateUser(
+        userId: string,
+        input: Parameters<AdminStore["updateUser"]>[1]
+    ): ReturnType<AdminStore["updateUser"]> {
+        return getAdminStore().updateUser(userId, input);
+    }
+
+    /**
+     * @param userId Admin user id
+     * @returns Re-enabled user or null
+     */
+    export function enableUser(userId: string): ReturnType<AdminStore["enableUser"]> {
+        return getAdminStore().enableUser(userId);
+    }
 }

@@ -1,9 +1,11 @@
-import type { FastifyBaseLogger } from "fastify";
+import type { FastifyBaseLogger, FastifyServerOptions } from "fastify";
 import { format } from "node:util";
 
 import type winston from "winston";
 
 import type { LogLevel } from "./format";
+
+type FastifyLoggerBootstrapOptions = Pick<FastifyServerOptions, "logger" | "loggerInstance">;
 
 /**
  * Adapts a Winston logger to the Fastify logger interface.
@@ -66,4 +68,24 @@ export function toFastifyLogger(logger: winston.Logger): FastifyBaseLogger {
     };
 
     return fastifyLogger;
+}
+
+/**
+ * Builds Fastify logger bootstrap options for a Winston logger.
+ *
+ * Fastify 5 requires custom logger instances via `loggerInstance`, not `logger`.
+ *
+ * @param logger Winston logger instance
+ * @param enabled Whether HTTP logging should be enabled
+ * @returns Fastify server logger options
+ */
+export function createFastifyLoggerOptions(
+    logger: winston.Logger,
+    enabled = true
+): FastifyLoggerBootstrapOptions {
+    if (!enabled) {
+        return { logger: false };
+    }
+
+    return { loggerInstance: toFastifyLogger(logger) };
 }

@@ -1,5 +1,6 @@
 export * from "./LooseObjectSchema";
 export * from "./LooseObjectArraySchema";
+export * from "./ApiErrorResponseSchema";
 export * from "./RouteErrorResponseSchema";
 export * from "./RouteMessageResponseSchema";
 export * from "./DeletedByNameResponseSchema";
