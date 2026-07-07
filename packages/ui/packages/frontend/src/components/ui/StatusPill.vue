@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { resolveStatusTone, statusBadgeClass } from "../../utils/statusPill";
+import { resolveStatusTone, statusBadgeClass } from "../../utils/StatusPill";
 
 const props = withDefaults(
     defineProps<{

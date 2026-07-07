@@ -10,8 +10,11 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@codemirror/lang-yaml": "6.1.3",
+        "@codemirror/theme-one-dark": "^6.1.3",
         "@lucide/vue": "^1.23.0",
         "@naulite/sdk": "0.1.0",
+        "codemirror": "6",
         "uplot": "^1.6.32",
         "vue": "^3.5.13",
         "vue-i18n": "^11.4.6",

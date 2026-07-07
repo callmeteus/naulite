@@ -232,6 +232,8 @@
             "title": "Deploy",
             "hint": "Aplique um manifesto compose diretamente ao cluster. As revisões GitOps são rastreadas separadamente.",
             "applyManifest": "Aplicar manifesto",
+            "applyConfirmTitle": "Aplicar manifesto?",
+            "applyConfirmMessage": "Isso fará o deploy do manifesto no cluster. As revisões GitOps são rastreadas separadamente.",
             "revision": "Revisão",
             "created": "Serviços criados",
             "updated": "Serviços atualizados",

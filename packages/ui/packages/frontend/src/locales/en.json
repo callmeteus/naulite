@@ -232,6 +232,8 @@
             "title": "Deploy",
             "hint": "Apply a compose manifest directly to the cluster. GitOps revisions are tracked separately.",
             "applyManifest": "Apply manifest",
+            "applyConfirmTitle": "Apply manifest?",
+            "applyConfirmMessage": "This will deploy the manifest to the cluster. GitOps revisions are tracked separately.",
             "revision": "Revision",
             "created": "Services created",
             "updated": "Services updated",

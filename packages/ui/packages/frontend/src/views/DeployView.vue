@@ -3,20 +3,43 @@ import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import PageLayout from "../components/layout/PageLayout.vue";
+import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import YamlEditor from "../components/ui/YamlEditor.vue";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
 const store = useClusterStore();
-const manifestYaml = ref(`name: minimal\n\nservices:\n  web:\n    image: nginx:1.27-alpine\n    ports:\n      - "8080:80"\n`);
+const manifestYaml = ref(`name: minimal
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+`);
 const revision = ref("");
+const confirmModalRef = ref<InstanceType<typeof ConfirmModal> | null>(null);
+
+/**
+ * Opens the deploy confirmation modal.
+ *
+ * @returns Nothing.
+ */
+function requestApplyManifest(): void {
+    if (!manifestYaml.value.trim()) {
+        return;
+    }
+
+    confirmModalRef.value?.open();
+}
 
 /**
  * Submits the manifest editor contents to the control plane.
  *
  * @returns Nothing.
  */
-async function applyManifest(): Promise<void> {
+async function confirmApplyManifest(): Promise<void> {
     revision.value = await store.applyManifest(manifestYaml.value);
 }
 </script>
@@ -27,16 +50,13 @@ async function applyManifest(): Promise<void> {
 
         <div class="card bg-base-100 shadow">
             <div class="card-body gap-4">
-                <textarea
-                    v-model="manifestYaml"
-                    class="textarea textarea-bordered min-h-64 font-mono text-sm"
-                />
+                <YamlEditor v-model="manifestYaml" :disabled="store.loading" />
                 <div class="flex flex-wrap items-center gap-3">
                     <button
                         type="button"
                         class="btn btn-primary"
-                        :disabled="store.loading"
-                        @click="applyManifest"
+                        :disabled="store.loading || !manifestYaml.trim()"
+                        @click="requestApplyManifest"
                     >
                         {{ t("pages.deploy.applyManifest") }}
                     </button>
@@ -60,5 +80,13 @@ async function applyManifest(): Promise<void> {
                 </div>
             </div>
         </div>
+
+        <ConfirmModal
+            ref="confirmModalRef"
+            title-key="pages.deploy.applyConfirmTitle"
+            message-key="pages.deploy.applyConfirmMessage"
+            confirm-label-key="pages.deploy.applyManifest"
+            @confirm="confirmApplyManifest"
+        />
     </PageLayout>
 </template>
