@@ -7,6 +7,9 @@ import type { TraefikNetBirdGatewayProvider } from "@naulite/gateway";
 import { GatewayRouteModel } from "../database/models/index";
 import { ControlPlaneSync } from "./ControlPlaneSync";
 import type { LeaderElection } from "./LeaderElection";
+import { Logger } from "../Logger";
+const log_gateway = Logger.create("gateway");
+
 
 /**
  * Persisted gateway route row mapped to the shared contract.
@@ -97,8 +100,7 @@ export class GatewayRouteService {
             await GatewayRouteModel.create(record);
         }
 
-        console.debug(
-            "[gateway] persisted route service=%s host=%s target=%s:%d",
+        log_gateway.debug("persisted route service=%s host=%s target=%s:%d",
             route.serviceName,
             host,
             route.targetHost,
@@ -133,7 +135,7 @@ export class GatewayRouteService {
             return false;
         }
 
-        console.debug("[gateway] removed route service=%s host=%s", serviceName, host);
+        log_gateway.debug("removed route service=%s host=%s", serviceName, host);
         await this.publishRoutesIfLeader();
         await this.controlPlaneSync.publish(ControlPlaneSync.EVENTS.GATEWAY_ROUTE_CHANGED, {
             serviceName,
@@ -192,7 +194,7 @@ export class GatewayRouteService {
      */
     private async publishRoutesIfLeader(): Promise<void> {
         if (!this.leaderElection.isLeader()) {
-            console.debug("[gateway] skip traefik push reason=not_leader");
+            log_gateway.debug("skip traefik push reason=not_leader");
             return;
         }
 
@@ -211,7 +213,7 @@ export class GatewayRouteService {
             await this.traefikProvider.requestAutoTls(route.host);
         }
 
-        console.debug("[gateway] traefik sync routes=%d", gatewayRoutes.length);
+        log_gateway.debug("traefik sync routes=%d", gatewayRoutes.length);
     }
 
     /**

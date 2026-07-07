@@ -5,6 +5,9 @@ import type { BackupTask, Node, Volume } from "@naulite/shared";
 import type { BackupOrchestrator } from "../modules/backup/BackupOrchestrator";
 import { AgentProxyService } from "./AgentProxyService";
 import { BackupDispatchService } from "./BackupDispatchService";
+import { Logger } from "../Logger";
+const log_backups = Logger.create("backups");
+
 
 /**
  * Backup run details required to coordinate a restore.
@@ -44,8 +47,7 @@ export namespace BackupRestoreService {
         const location = typeof payload.location === "string" ? payload.location : undefined;
         const archivePath = typeof payload.archivePath === "string" ? payload.archivePath : undefined;
 
-        console.debug(
-            "[backups] restore backupId=%s provider=%s location=%s archivePath=%s",
+        log_backups.debug("restore backupId=%s provider=%s location=%s archivePath=%s",
             backupId,
             provider,
             location ?? "-",

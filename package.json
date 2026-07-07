@@ -4,6 +4,7 @@
     "type": "module",
     "workspaces": [
         "packages/*",
+        "packages/nodejs/*",
         "packages/runtimes/*",
         "packages/plugins/*",
         "packages/builders/*",

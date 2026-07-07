@@ -1,7 +1,10 @@
 import type { FastifyInstance } from "fastify";
 
 import { ComposeParserError } from "./orchestration/compose/ComposeParserError";
+import { Logger } from "../Logger";
 import { TreatedError } from "./TreatedError";
+
+const log = Logger.create("http");
 
 /**
  * Registers the control plane global Fastify error handler.
@@ -46,7 +49,7 @@ export function registerErrorHandler(app: FastifyInstance): void {
             };
         }
 
-        app.log.error({ err: error }, "request failed");
+        log.error("request failed: %O", error);
         reply.code(500);
         return {
             message: error instanceof Error ? error.message : "Internal server error."

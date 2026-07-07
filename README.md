@@ -118,7 +118,8 @@ naulite is organized as a TypeScript/Zig monorepo:
 * `packages/control-plane`: Fastify control plane, Sequelize models, migrations, orchestration, admin modules, and REST routes.
 * `packages/agent`: Zig agent that runs on worker nodes.
 * `packages/cli`: Zig CLI with a Node package wrapper.
-* `packages/shared`: Schemas, provider contracts, manifest utilities, and permission catalog.
+* `packages/nodejs/shared`: Schemas, provider contracts, manifest utilities, and permission catalog.
+* `packages/nodejs/logger`: Winston logger with log rotation and cross-language format contract.
 * `packages/sdk`: Typed HTTP client for the control plane and admin BFF.
 * `packages/ui`: Vue admin dashboard plus backend-for-frontend.
 * `packages/gateway`: Traefik/NetBird gateway integration.

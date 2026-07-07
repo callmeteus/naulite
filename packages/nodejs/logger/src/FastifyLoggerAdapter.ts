@@ -1,0 +1,69 @@
+import type { FastifyBaseLogger } from "fastify";
+import { format } from "node:util";
+
+import type winston from "winston";
+
+import type { LogLevel } from "./format";
+
+/**
+ * Adapts a Winston logger to the Fastify logger interface.
+ *
+ * @param logger Winston logger instance
+ * @returns Fastify-compatible logger
+ */
+export function toFastifyLogger(logger: winston.Logger): FastifyBaseLogger {
+    const write = (level: LogLevel, args: unknown[]): void => {
+        if (args.length === 0) {
+            logger.log(level, "");
+            return;
+        }
+
+        if (args.length === 1) {
+            if (typeof args[0] === "string") {
+                logger.log(level, args[0]);
+                return;
+            }
+
+            if (typeof args[0] === "object" && args[0] !== null) {
+                const record = args[0] as Record<string, unknown>;
+                const err = record.err ?? record.error;
+
+                if (err !== undefined) {
+                    logger.log(level, format("%O", err));
+                    return;
+                }
+
+                logger.log(level, format("%o", record));
+                return;
+            }
+
+            logger.log(level, String(args[0]));
+            return;
+        }
+
+        if (typeof args[0] === "object" && args[0] !== null && typeof args[1] === "string") {
+            const record = args[0] as Record<string, unknown>;
+            const err = record.err ?? record.error;
+            const suffix = err !== undefined ? format(" %O", err) : format(" %o", record);
+
+            logger.log(level, `${args[1]}${suffix}`);
+            return;
+        }
+
+        logger.log(level, format(...args as [unknown, ...unknown[]]));
+    };
+
+    const fastifyLogger: FastifyBaseLogger = {
+        level: logger.level,
+        silent: () => undefined,
+        trace: (...args: unknown[]) => write("debug", args),
+        debug: (...args: unknown[]) => write("debug", args),
+        info: (...args: unknown[]) => write("info", args),
+        warn: (...args: unknown[]) => write("warn", args),
+        error: (...args: unknown[]) => write("error", args),
+        fatal: (...args: unknown[]) => write("error", args),
+        child: () => fastifyLogger
+    };
+
+    return fastifyLogger;
+}

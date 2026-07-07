@@ -3,6 +3,9 @@ import { dirname, join } from "node:path";
 
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import type { LeaderElection } from "./LeaderElection";
+import { Logger } from "../Logger";
+const log_metrics_sync = Logger.create("metrics-sync");
+
 
 const DEFAULT_SYNC_INTERVAL_MS = 30_000;
 const DEFAULT_FILE_SD_DIR = "/var/lib/naulite/prometheus/file_sd";
@@ -66,12 +69,12 @@ export class MetricsSyncService {
 
         this.intervalHandle = setInterval(() => {
             void this.syncIfLeader().catch((err) => {
-                console.error("[metrics-sync] sync failed: %O", err);
+                log_metrics_sync.error("sync failed: %O", err);
             });
         }, this.syncIntervalMs);
 
         void this.syncIfLeader().catch((err) => {
-            console.error("[metrics-sync] initial sync failed: %O", err);
+            log_metrics_sync.error("initial sync failed: %O", err);
         });
     }
 
@@ -100,8 +103,7 @@ export class MetricsSyncService {
         const targets = await this.buildTargetGroups();
         await this.writeTargetsFile(targets);
 
-        console.debug(
-            "[metrics-sync] wrote targets groups=%d dir=%s",
+        log_metrics_sync.debug("wrote targets groups=%d dir=%s",
             targets.length,
             this.fileSdDir
         );

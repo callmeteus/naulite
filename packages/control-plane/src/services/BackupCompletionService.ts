@@ -3,6 +3,9 @@ import type { BackupTask } from "@naulite/shared";
 import { BackupRunModel } from "../database/models/index";
 import type { BackupOrchestrator } from "../modules/backup/BackupOrchestrator";
 import { BackupArchiveStagingService } from "./BackupArchiveStagingService";
+import { Logger } from "../Logger";
+const log_backups = Logger.create("backups");
+
 
 /**
  * Parsed agent backup task response.
@@ -59,8 +62,7 @@ export namespace BackupCompletionService {
     ): Promise<{ location: string; provider: string }> {
         const parsed = parseAgentResponse(agentResponse);
 
-        console.debug(
-            "[backups] complete taskId=%s status=%s archivePath=%s",
+        log_backups.debug("complete taskId=%s status=%s archivePath=%s",
             parsed.taskId,
             parsed.status,
             parsed.archivePath
@@ -96,8 +98,7 @@ export namespace BackupCompletionService {
             { where: { id: task.taskId } }
         );
 
-        console.debug(
-            "[backups] completed taskId=%s provider=%s location=%s",
+        log_backups.debug("completed taskId=%s provider=%s location=%s",
             task.taskId,
             writeResult.provider,
             writeResult.location

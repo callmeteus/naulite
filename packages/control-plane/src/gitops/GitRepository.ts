@@ -1,5 +1,8 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { Logger } from "../Logger";
+const log_gitops = Logger.create("gitops");
+
 
 const execFileAsync = promisify(execFile);
 
@@ -70,8 +73,7 @@ export namespace GitRepository {
     export async function cloneCheckout(options: GitCloneCheckoutOptions): Promise<GitCloneCheckoutResult> {
         const { repositoryUrl, branch, commitSha, workDir } = options;
 
-        console.debug(
-            "[gitops] clone repositoryUrl=%s branch=%s commitSha=%s workDir=%s",
+        log_gitops.debug("clone repositoryUrl=%s branch=%s commitSha=%s workDir=%s",
             repositoryUrl,
             branch,
             commitSha ?? "-",
@@ -97,7 +99,7 @@ export namespace GitRepository {
         const { stdout } = await runner.exec(["rev-parse", "HEAD"], { cwd: workDir });
         const resolvedSha = stdout.trim();
 
-        console.debug("[gitops] checkout resolved commitSha=%s", resolvedSha);
+        log_gitops.debug("checkout resolved commitSha=%s", resolvedSha);
 
         return { commitSha: resolvedSha };
     }

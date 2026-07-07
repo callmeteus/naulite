@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_build = logger.Logger.create("build");
+
 const std = @import("std");
 
 const blocking_io = @import("blocking_io.zig");
@@ -78,8 +82,7 @@ pub fn executeBuildTask(
     const api_key = try readOptionalStringField(allocator, root.object, "apiKey");
     defer if (api_key) |value| allocator.free(value);
 
-    std.log.debug(
-        "[build] execute taskId={s} service={s} context={s} image={s} runId={?s} cr={?s}:{?s}",
+    log_build.debug("execute taskId={s} service={s} context={s} image={s} runId={?s} cr={?s}:{?s}",
         .{ task_id, service_name, context_path, image_ref, run_id, cr_name, cr_tag },
     );
 
@@ -266,7 +269,7 @@ fn runDockerBuild(
 
     switch (captured.exited_normally and captured.exit_code == 0) {
         false => {
-            std.log.err("[build] docker build exit={d} image={s}", .{ captured.exit_code, image_ref });
+            log_build.err("docker build exit={d} image={s}", .{ captured.exit_code, image_ref });
             return error.DockerBuildFailed;
         },
         true => {},
@@ -310,7 +313,7 @@ fn pushImageToRegistry(
     defer std.Io.Dir.cwd().deleteFile(io, archive_path) catch {};
 
     try cp_client.putRegistryImage(allocator, cp_url, cr_name, cr_tag, archive_bytes, api_key);
-    std.log.debug("[build] pushed image name={s} tag={s} bytes={d}", .{ cr_name, cr_tag, archive_bytes.len });
+    log_build.debug("pushed image name={s} tag={s} bytes={d}", .{ cr_name, cr_tag, archive_bytes.len });
 }
 
 /// Resolves the context path for a build.

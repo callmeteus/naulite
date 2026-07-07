@@ -20,6 +20,9 @@ import {
 } from "../database/models/index";
 
 import { RunNotificationDispatcher } from "./RunNotificationDispatcher";
+import { Logger } from "../Logger";
+const log_pipeline = Logger.create("pipeline");
+
 
 const FAILURE_LOG_MAX_BYTES = 512 * 1024;
 
@@ -100,8 +103,7 @@ export namespace PipelineRunService {
             createdAt: now
         });
 
-        console.debug(
-            "[pipeline] run created id=%s kind=%s service=%s",
+        log_pipeline.debug("run created id=%s kind=%s service=%s",
             id,
             input.kind,
             input.serviceName ?? "-"
@@ -315,7 +317,7 @@ export namespace PipelineRunService {
             await RunNotificationDispatcher.dispatch(notification);
         }
 
-        console.debug("[pipeline] event runId=%s kind=%s message=%s", runId, input.kind, input.message);
+        log_pipeline.debug("event runId=%s kind=%s message=%s", runId, input.kind, input.message);
 
         return event;
     }
@@ -335,7 +337,7 @@ export namespace PipelineRunService {
         }
 
         await row.update({ revisionId });
-        console.debug("[pipeline] run linked runId=%s revisionId=%s", runId, revisionId);
+        log_pipeline.debug("run linked runId=%s revisionId=%s", runId, revisionId);
 
         return getRun(runId);
     }

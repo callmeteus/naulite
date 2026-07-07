@@ -1,5 +1,6 @@
 import { NauliteApiError, NauliteClient } from "@naulite/sdk";
 import Fastify, { type FastifyInstance } from "fastify";
+import { toFastifyLogger } from "@naulite/logger";
 
 import { AuthPreHandlers } from "./auth/AuthPreHandlers";
 import { CsrfProtection } from "./auth/CsrfProtection";
@@ -8,6 +9,7 @@ import {
     resolveBffRoutePermissions
 } from "./auth/PermissionPreHandlers";
 import { resolveConfigFromEnv } from "./Config";
+import { Logger } from "./Logger";
 import { registerRoutes } from "./routes/index";
 
 /**
@@ -32,8 +34,9 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
         token: options.adminApiKey ?? envConfig.adminApiKey
     });
 
+    const httpLog = Logger.create("http");
     const app = Fastify({
-        logger: options.logger ?? true
+        logger: options.logger === false ? false : toFastifyLogger(httpLog)
     });
 
     app.decorate("controlPlane", controlPlane);
@@ -113,7 +116,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
             };
         }
 
-        app.log.error({ err: error }, "request failed");
+        httpLog.error("request failed: %O", error);
         reply.code(500);
         return {
             message: error instanceof Error ? error.message : "Internal server error."

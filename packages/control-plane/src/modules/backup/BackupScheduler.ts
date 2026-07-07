@@ -10,6 +10,9 @@ import { BackupCompletionService } from "../../services/BackupCompletionService"
 import { RowMapper } from "../../util/RowMapper";
 import { CronEvaluator } from "../log-rotation/CronEvaluator";
 import type { BackupOrchestrator } from "./BackupOrchestrator";
+import { Logger } from "../../Logger";
+const log_backups = Logger.create("backups");
+
 
 /**
  * Dispatches a JSON task payload to a node agent.
@@ -67,7 +70,7 @@ export class BackupScheduler {
 
         this.intervalHandle = setInterval(() => {
             void this.tick().catch((err) => {
-                console.debug("[backups] scheduler tick failed err=%o", err);
+                log_backups.debug("scheduler tick failed err=%o", err);
             });
         }, this.pollIntervalMs);
     }
@@ -91,7 +94,7 @@ export class BackupScheduler {
      */
     async tick(): Promise<void> {
         if (!this.isLeader()) {
-            console.debug("[backups] scheduler tick skipped reason=not-leader");
+            log_backups.debug("scheduler tick skipped reason=not-leader");
             return;
         }
 
@@ -110,7 +113,7 @@ export class BackupScheduler {
             }
 
             if (await this.hasRecentRun(volume.id, now)) {
-                console.debug("[backups] skip recent run volume=%s", volume.name);
+                log_backups.debug("skip recent run volume=%s", volume.name);
                 continue;
             }
 
@@ -128,7 +131,7 @@ export class BackupScheduler {
     private async enqueueBackupRun(volume: Volume, now: Date): Promise<void> {
         const node = await this.resolveNode(volume.nodeId);
         if (!node?.agentUrl) {
-            console.debug("[backups] skip dispatch volume=%s reason=no-agent", volume.name);
+            log_backups.debug("skip dispatch volume=%s reason=no-agent", volume.name);
             return;
         }
 
@@ -174,7 +177,7 @@ export class BackupScheduler {
                 { where: { id: taskId } }
             );
 
-            console.debug("[backups] dispatched taskId=%s volume=%s node=%s", taskId, volume.name, node.id);
+            log_backups.debug("dispatched taskId=%s volume=%s node=%s", taskId, volume.name, node.id);
 
             if (this.backupOrchestrator) {
                 const task: BackupTask = {
@@ -212,7 +215,7 @@ export class BackupScheduler {
                 },
                 { where: { id: taskId } }
             );
-            console.debug("[backups] dispatch failed taskId=%s volume=%s err=%o", taskId, volume.name, err);
+            log_backups.debug("dispatch failed taskId=%s volume=%s err=%o", taskId, volume.name, err);
         }
     }
 

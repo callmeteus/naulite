@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_netbird = logger.Logger.create("netbird");
+
 const std = @import("std");
 
 const agent_config = @import("agent_config.zig");
@@ -105,7 +109,7 @@ pub const NetbirdClient = struct {
         allocator: std.mem.Allocator,
     ) !NetbirdClient {
         const raw_ptr = std.c.getenv("NETBIRD_MANAGEMENT_URL") orelse std.c.getenv("NETBIRD_API_URL") orelse {
-            std.log.err("[netbird] NETBIRD_MANAGEMENT_URL is required (self-hosted only)", .{});
+            log_netbird.err("NETBIRD_MANAGEMENT_URL is required (self-hosted only)", .{});
             return error.MissingManagementUrl;
         };
         const raw = std.mem.span(raw_ptr);
@@ -119,7 +123,7 @@ pub const NetbirdClient = struct {
     /// Returns whether the NetBird mesh is connected.
     pub fn isConnected(self: *NetbirdClient) bool {
         var status = readStatus(self.allocator) catch {
-            std.log.debug("[netbird] connected check management_url={s} status=unavailable", .{self.management_url});
+            log_netbird.debug("connected check management_url={s} status=unavailable", .{self.management_url});
             return false;
         };
         defer status.deinit(self.allocator);
@@ -128,8 +132,7 @@ pub const NetbirdClient = struct {
             self.setDeviceId(device_id) catch {};
         }
 
-        std.log.debug(
-            "[netbird] connected check management_url={s} connected={} device_id={s}",
+        log_netbird.debug("connected check management_url={s} connected={} device_id={s}",
             .{ self.management_url, status.connected, status.device_id orelse "-" },
         );
         return status.connected;
@@ -145,7 +148,7 @@ pub const NetbirdClient = struct {
         try ensureDaemon();
 
         if (self.isConnected()) {
-            std.log.info("[netbird] already connected management_url={s} device_id={s}", .{
+            log_netbird.info("already connected management_url={s} device_id={s}", .{
                 self.management_url,
                 self.device_id orelse "-",
             });
@@ -162,23 +165,21 @@ pub const NetbirdClient = struct {
         };
 
         const key = setup_key orelse {
-            std.log.warn("[netbird] enrollment skipped: missing setup key", .{});
+            log_netbird.warn("enrollment skipped: missing setup key", .{});
             return error.MissingSetupKey;
         };
 
-        std.log.info(
-            "[netbird] enrolling management_url={s} setup_key_len={d}",
+        log_netbird.info("enrolling management_url={s} setup_key_len={d}",
             .{ self.management_url, key.len },
         );
         try runNetbirdUp(self.allocator, self.management_url, key);
 
         if (!self.isConnected()) {
-            std.log.err("[netbird] enrollment finished but client is still disconnected", .{});
+            log_netbird.err("enrollment finished but client is still disconnected", .{});
             return error.EnrollmentFailed;
         }
 
-        std.log.info(
-            "[netbird] enrollment complete device_id={s}",
+        log_netbird.info("enrollment complete device_id={s}",
             .{self.device_id orelse "-"},
         );
     }
@@ -400,11 +401,11 @@ fn ensureDaemon() !void {
     }
 
     if (daemonProcessRunning() or daemonSocketExists()) {
-        std.log.warn("[netbird] daemon not responding, restarting", .{});
+        log_netbird.warn("daemon not responding, restarting", .{});
         stopDaemon();
     }
 
-    std.log.info("[netbird] starting daemon", .{});
+    log_netbird.info("starting daemon", .{});
 
     const io = blocking_io.io();
     const start_argv = [_][]const u8{ "/bin/sh", "-c", netbird_daemon_start_shell };
@@ -419,13 +420,13 @@ fn ensureDaemon() !void {
     var attempt: u32 = 0;
     while (attempt < netbird_daemon_wait_attempts) : (attempt += 1) {
         if (daemonReadyFromState(daemonSocketExists(), daemonProcessRunning())) {
-            std.log.info("[netbird] daemon ready socket={s}", .{netbird_daemon_socket});
+            log_netbird.info("daemon ready socket={s}", .{netbird_daemon_socket});
             return;
         }
         blocking_io.sleepMs(netbird_daemon_wait_ms);
     }
 
-    std.log.err("[netbird] daemon not responding after {d} attempts", .{netbird_daemon_wait_attempts});
+    log_netbird.err("daemon not responding after {d} attempts", .{netbird_daemon_wait_attempts});
     return error.DaemonNotReady;
 }
 
@@ -488,18 +489,17 @@ fn runNetbirdUp(
 
     var attempt: u32 = 0;
     while (attempt < netbird_up_max_attempts) : (attempt += 1) {
-        std.log.debug(
-            "[netbird] netbird up attempt={d}/{d} management_url={s}",
+        log_netbird.debug("netbird up attempt={d}/{d} management_url={s}",
             .{ attempt + 1, netbird_up_max_attempts, management_url },
         );
 
         const captured = process_cmd.runCaptureLimited(allocator, &argv, netbird_cli_max_output_bytes) catch |err| {
-            std.log.debug("[netbird] netbird up attempt={d} spawn failed err={}", .{ attempt + 1, err });
+            log_netbird.debug("netbird up attempt={d} spawn failed err={}", .{ attempt + 1, err });
             if (attempt + 1 >= netbird_up_max_attempts) {
                 return err;
             }
             const delay_ms = netbirdUpRetryDelayMs(attempt);
-            std.log.debug("[netbird] netbird up retry delay_ms={d}", .{delay_ms});
+            log_netbird.debug("netbird up retry delay_ms={d}", .{delay_ms});
             blocking_io.sleepMs(delay_ms);
             continue;
         };
@@ -507,29 +507,26 @@ fn runNetbirdUp(
         defer allocator.free(captured.stderr);
 
         if (captured.exited_normally and captured.exit_code == 0) {
-            std.log.debug(
-                "[netbird] netbird up succeeded attempt={d} output_len={d} stderr_len={d}",
+            log_netbird.debug("netbird up succeeded attempt={d} output_len={d} stderr_len={d}",
                 .{ attempt + 1, captured.stdout.len, captured.stderr.len },
             );
             return;
         }
 
         const stderr_text = if (captured.stderr.len > 0) captured.stderr else captured.stdout;
-        std.log.debug(
-            "[netbird] netbird up attempt={d} failed code={d} stderr={s}",
+        log_netbird.debug("netbird up attempt={d} failed code={d} stderr={s}",
             .{ attempt + 1, captured.exit_code, stderr_text },
         );
 
         if (attempt + 1 >= netbird_up_max_attempts) {
-            std.log.err(
-                "[netbird] netbird up failed after {d} attempts code={d} stderr={s}",
+            log_netbird.err("netbird up failed after {d} attempts code={d} stderr={s}",
                 .{ netbird_up_max_attempts, captured.exit_code, stderr_text },
             );
             return error.EnrollmentFailed;
         }
 
         const delay_ms = netbirdUpRetryDelayMs(attempt);
-        std.log.debug("[netbird] netbird up retry delay_ms={d}", .{delay_ms});
+        log_netbird.debug("netbird up retry delay_ms={d}", .{delay_ms});
         blocking_io.sleepMs(delay_ms);
     }
 }

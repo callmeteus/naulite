@@ -1,4 +1,7 @@
 import { ControlPlaneService } from "../ControlPlaneService";
+import { Logger } from "../Logger";
+const log_metrics = Logger.create("metrics");
+
 
 /**
  * Prometheus exposition format helpers for control plane metrics.
@@ -26,8 +29,7 @@ export namespace PrometheusMetrics {
         const isLeader = ControlPlaneService.Leader.isLeader() ? 1 : 0;
         const leaderId = ControlPlaneService.Leader.getLeaderId();
 
-        console.debug(
-            "[metrics] collect nodes=%d online=%d services=%d instances=%d running=%d dbHealthy=%s revision=%d leader=%s",
+        log_metrics.debug("collect nodes=%d online=%d services=%d instances=%d running=%d dbHealthy=%s revision=%d leader=%s",
             nodes.length,
             onlineNodes,
             services.length,

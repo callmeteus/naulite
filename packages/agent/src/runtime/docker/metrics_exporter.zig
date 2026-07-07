@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_metrics = logger.Logger.create("metrics");
+
 const std = @import("std");
 
 const blocking_io = @import("../../blocking_io.zig");
@@ -89,7 +93,7 @@ fn backgroundLoop(
 
     while (true) {
         collectOnce(allocator, node_id, docker_socket) catch |err| {
-            std.log.warn("[metrics] collect failed: {}", .{err});
+            log_metrics.warn("collect failed: {}", .{err});
         };
         blocking_io.sleepSeconds(interval_secs);
     }
@@ -109,7 +113,7 @@ fn collectOnce(
 
     const api = docker_api.DockerApi.init(allocator, docker_socket);
     const containers = api.listManagedContainers() catch |err| {
-        std.log.debug("[metrics] managed container list unavailable err={}", .{err});
+        log_metrics.debug("managed container list unavailable err={}", .{err});
         const empty_instances = try allocator.alloc(InstanceMetric, 0);
         const snapshot = Snapshot{
             .node_id = try allocator.dupe(u8, node_id),
@@ -171,8 +175,7 @@ fn collectOnce(
 
     shared_state.snapshot = snapshot;
 
-    std.log.debug(
-        "[metrics] collect nodeId={s} instances={d} cpu={d}/{d} mem={d}/{d}",
+    log_metrics.debug("collect nodeId={s} instances={d} cpu={d}/{d} mem={d}/{d}",
         .{
             node_id,
             instance_count,

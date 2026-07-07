@@ -4,6 +4,9 @@ import path from "node:path";
 import type { ProvisionVolumeOptions, Volume } from "@naulite/shared";
 
 import { VolumeProvider } from "./VolumeProvider";
+import { Logger } from "../../Logger";
+const log_volumes = Logger.create("volumes");
+
 
 /**
  * Options for the local cluster-scoped volume provider.
@@ -39,7 +42,7 @@ export class LocalVolumeProvider extends VolumeProvider {
      * @returns Volume metadata entries
      */
     async list(): Promise<Volume[]> {
-        console.debug("[volumes] list count=%d", this.volumes.size);
+        log_volumes.debug("list count=%d", this.volumes.size);
         return [...this.volumes.values()].map((volume) => this.toPublicVolume(volume));
     }
 
@@ -53,8 +56,7 @@ export class LocalVolumeProvider extends VolumeProvider {
         const now = new Date().toISOString();
         const volumeId = `vol_${options.volumeName}`;
         const hostPath = path.join(this.rootDir, options.volumeName);
-        console.debug(
-            "[volumes] provision volumeName=%s nodeId=%s hostPath=%s",
+        log_volumes.debug("provision volumeName=%s nodeId=%s hostPath=%s",
             options.volumeName,
             options.nodeId ?? "-",
             hostPath
@@ -89,11 +91,11 @@ export class LocalVolumeProvider extends VolumeProvider {
     async release(volumeId: string, deleteData = false): Promise<void> {
         const volume = this.volumes.get(volumeId);
         if (!volume) {
-            console.debug("[volumes] release missing volumeId=%s", volumeId);
+            log_volumes.debug("release missing volumeId=%s", volumeId);
             return;
         }
 
-        console.debug("[volumes] release volumeId=%s deleteData=%s", volumeId, deleteData);
+        log_volumes.debug("release volumeId=%s deleteData=%s", volumeId, deleteData);
         volume.status = "deleting";
         volume.updatedAt = new Date().toISOString();
 
@@ -114,16 +116,16 @@ export class LocalVolumeProvider extends VolumeProvider {
     async resolveHostPath(volumeId: string, nodeId: string): Promise<string | undefined> {
         const volume = this.volumes.get(volumeId);
         if (!volume) {
-            console.debug("[volumes] resolveHostPath missing volumeId=%s", volumeId);
+            log_volumes.debug("resolveHostPath missing volumeId=%s", volumeId);
             return undefined;
         }
 
         if (volume.nodeId && volume.nodeId !== nodeId) {
-            console.debug("[volumes] resolveHostPath node mismatch volumeId=%s nodeId=%s", volumeId, nodeId);
+            log_volumes.debug("resolveHostPath node mismatch volumeId=%s nodeId=%s", volumeId, nodeId);
             return undefined;
         }
 
-        console.debug("[volumes] resolveHostPath volumeId=%s path=%s", volumeId, volume.hostPath);
+        log_volumes.debug("resolveHostPath volumeId=%s path=%s", volumeId, volume.hostPath);
         return volume.hostPath;
     }
 

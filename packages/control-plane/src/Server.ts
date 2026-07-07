@@ -13,6 +13,9 @@ import { ControlPlaneSyncSubscribers } from "./services/ControlPlaneSyncSubscrib
 import { ControlPlaneInstanceId } from "./services/ControlPlaneInstanceId";
 import { LeaderElection } from "./services/LeaderElection";
 import { NetBirdBootstrap } from "./services/NetBirdBootstrap";
+import { Logger } from "./Logger";
+const log_migrations = Logger.create("migrations");
+
 
 /**
  * Server startup options.
@@ -53,7 +56,7 @@ async function runMigrationsWithLeaderGate(
     }
 
     if (!await databaseProvider.hasLeaderElectionTable()) {
-        console.debug("[migrations] bootstrap leader table missing, running full migrate instanceId=%s", instanceId);
+        log_migrations.debug("bootstrap leader table missing, running full migrate instanceId=%s", instanceId);
         await databaseProvider.migrate();
         return;
     }
@@ -63,10 +66,10 @@ async function runMigrationsWithLeaderGate(
     await waitForLeaderElectionReady(bootstrapLeader, 20_000);
 
     if (bootstrapLeader.isLeader()) {
-        console.debug("[migrations] leader applying pending migrations instanceId=%s", instanceId);
+        log_migrations.debug("leader applying pending migrations instanceId=%s", instanceId);
         await databaseProvider.migrate();
     } else {
-        console.debug("[migrations] follower waiting for migrations instanceId=%s", instanceId);
+        log_migrations.debug("follower waiting for migrations instanceId=%s", instanceId);
         await databaseProvider.waitUntilMigrationsApplied();
     }
 

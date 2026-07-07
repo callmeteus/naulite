@@ -2,6 +2,9 @@ import { ControlPlaneService } from "../ControlPlaneService";
 import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
 import { RegistryListResponseSchema } from "@naulite/shared";
+import { Logger } from "../Logger";
+const log_registry = Logger.create("registry");
+
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
@@ -33,7 +36,7 @@ export const GET = defineRoute({
                     registryIds.add(registryName);
                 }
             } catch (err) {
-                console.debug("[registry] skip manifest=%s parse failed: %o", revision.manifestName, err);
+                log_registry.debug("skip manifest=%s parse failed: %o", revision.manifestName, err);
             }
         }
 

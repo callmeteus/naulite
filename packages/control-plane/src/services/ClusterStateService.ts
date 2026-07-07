@@ -1,4 +1,7 @@
 import { ClusterStateModel } from "../database/models/index";
+import { Logger } from "../Logger";
+const log_cluster_state = Logger.create("cluster-state");
+
 
 const APPLY_REVISION_KEY = "apply_revision";
 
@@ -36,6 +39,6 @@ export namespace ClusterStateService {
             value: String(revision),
             updatedAt: now
         });
-        console.debug("[cluster-state] saved applyRevision=%d", revision);
+        log_cluster_state.debug("saved applyRevision=%d", revision);
     }
 }

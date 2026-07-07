@@ -5,6 +5,9 @@ import path from "node:path";
 import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, LocalBackupDestination } from "@naulite/shared";
 
 import { BackupDestinationProvider } from "./BackupDestinationProvider";
+import { Logger } from "../../Logger";
+const log_backups = Logger.create("backups");
+
 
 /**
  * Local filesystem backup destination provider.
@@ -29,7 +32,7 @@ export class LocalBackupDestinationProvider extends BackupDestinationProvider {
         await mkdir(destinationDir, { recursive: true });
         const fileName = `${task.volumeName}-${task.taskId}.tar.gz`;
         const destinationPath = path.join(destinationDir, fileName);
-        console.debug("[backups] local write taskId=%s destination=%s", task.taskId, destinationPath);
+        log_backups.debug("local write taskId=%s destination=%s", task.taskId, destinationPath);
         await copyFile(archivePath, destinationPath);
         const fileStat = await stat(destinationPath);
 
@@ -51,7 +54,7 @@ export class LocalBackupDestinationProvider extends BackupDestinationProvider {
             throw new Error(`LocalBackupDestinationProvider cannot handle provider ${task.destination.provider}`);
         }
 
-        console.debug("[backups] local read location=%s", location);
+        log_backups.debug("local read location=%s", location);
         const fileStat = await stat(location);
 
         return {
@@ -67,7 +70,7 @@ export class LocalBackupDestinationProvider extends BackupDestinationProvider {
      * @returns Nothing.
      */
     async delete(location: string): Promise<void> {
-        console.debug("[backups] local delete location=%s", location);
+        log_backups.debug("local delete location=%s", location);
         await unlink(location);
     }
 
@@ -85,10 +88,10 @@ export class LocalBackupDestinationProvider extends BackupDestinationProvider {
 
         try {
             await mkdir(destination.path, { recursive: true });
-            console.debug("[backups] local validate path=%s healthy=true", destination.path);
+            log_backups.debug("local validate path=%s healthy=true", destination.path);
             return true;
         } catch (err) {
-            console.debug("[backups] local validate path=%s healthy=false err=%o", destination.path, err);
+            log_backups.debug("local validate path=%s healthy=false err=%o", destination.path, err);
             return false;
         }
     }

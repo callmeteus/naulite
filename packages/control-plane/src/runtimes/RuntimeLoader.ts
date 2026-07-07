@@ -3,6 +3,9 @@ import { createDockerRuntimeProvider } from "@naulite/runtime-docker";
 import { createPodmanRuntimeProvider } from "@naulite/runtime-podman";
 
 import { RuntimeRegistry } from "./RuntimeRegistry";
+import { Logger } from "../Logger";
+const log_runtimes = Logger.create("runtimes");
+
 
 /**
  * Loads built-in runtime providers into a registry.
@@ -18,7 +21,7 @@ export namespace RuntimeLoader {
         registry.register("docker", createDockerRuntimeProvider());
         registry.register("podman", createPodmanRuntimeProvider());
         registry.register("containerd", createContainerdRuntimeProvider());
-        console.debug("[runtimes] loaded ids=%o", registry.listIds());
+        log_runtimes.debug("loaded ids=%o", registry.listIds());
         return registry;
     }
 }

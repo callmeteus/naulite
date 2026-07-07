@@ -99,6 +99,8 @@ services:
             NAULITE_E2E_ALLOW_BRIDGE: ${NAULITE_E2E_ALLOW_BRIDGE:-1}
             NAULITE_BOOTSTRAP_ADMIN_USERNAME: ${NAULITE_BOOTSTRAP_ADMIN_USERNAME:-admin@naulite.local}
             NAULITE_BOOTSTRAP_ADMIN_PASSWORD: ${NAULITE_BOOTSTRAP_ADMIN_PASSWORD:-naulite-dev}
+            NAULITE_LOG_LEVEL: ${NAULITE_LOG_LEVEL:-debug}
+            NAULITE_LOG_DIR: ${NAULITE_LOG_DIR:-/var/lib/naulite/logs}
         ports:
             - "8080:8080"
         volumes:
@@ -141,6 +143,8 @@ services:
             NAULITE_E2E_ALLOW_BRIDGE: ${NAULITE_E2E_ALLOW_BRIDGE:-1}
             NAULITE_BOOTSTRAP_ADMIN_USERNAME: ${NAULITE_BOOTSTRAP_ADMIN_USERNAME:-admin@naulite.local}
             NAULITE_BOOTSTRAP_ADMIN_PASSWORD: ${NAULITE_BOOTSTRAP_ADMIN_PASSWORD:-naulite-dev}
+            NAULITE_LOG_LEVEL: ${NAULITE_LOG_LEVEL:-debug}
+            NAULITE_LOG_DIR: ${NAULITE_LOG_DIR:-/var/lib/naulite/logs}
         ports:
             - "8081:8080"
         volumes:
@@ -161,6 +165,8 @@ services:
             NODE_ENV: production
             CONTROL_PLANE_URL: http://control-plane-1:8080
             ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+            NAULITE_LOG_LEVEL: ${NAULITE_LOG_LEVEL:-debug}
+            NAULITE_LOG_DIR: ${NAULITE_LOG_DIR:-/tmp/naulite/logs}
 
     ui:
         build:
@@ -201,6 +207,7 @@ services:
             NAULITE_AGENT_CONFIG: /var/lib/naulite/agent.json
             NETBIRD_MANAGEMENT_URL: ${NETBIRD_MANAGEMENT_URL:-http://netbird-server}
             NETBIRD_SETUP_KEY: ${NETBIRD_SETUP_KEY:-}
+            NAULITE_LOG_LEVEL: ${NAULITE_LOG_LEVEL:-debug}
         extra_hosts:
             # NetBird server exposes signal/STUN as netbird.local; map to the host-published port.
             - "netbird.local:host-gateway"

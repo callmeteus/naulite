@@ -1,6 +1,9 @@
 import type { Instance, Node } from "@naulite/shared";
 
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
+import { Logger } from "../Logger";
+const log_agent_proxy = Logger.create("agent-proxy");
+
 
 /**
  * Proxies instance-scoped requests from the control plane to node agents.
@@ -166,7 +169,7 @@ export namespace AgentProxyService {
      */
     export async function fetchBackupArchive(agentUrl: string, archivePath: string): Promise<Buffer> {
         const url = `${agentUrl}/backups/archive?archivePath=${encodeURIComponent(archivePath)}`;
-        console.debug("[agent-proxy] fetch backup archive path=%s", archivePath);
+        log_agent_proxy.debug("fetch backup archive path=%s", archivePath);
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -195,7 +198,7 @@ export namespace AgentProxyService {
         body: Buffer,
         contentType = "application/octet-stream"
     ): Promise<unknown> {
-        console.debug("[agent-proxy] post binary path=%s bytes=%d", path, body.length);
+        log_agent_proxy.debug("post binary path=%s bytes=%d", path, body.length);
         const response = await fetch(`${agentUrl}${path}`, {
             method: "POST",
             headers: {

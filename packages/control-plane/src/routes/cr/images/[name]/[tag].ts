@@ -5,6 +5,9 @@ import { ControlPlaneService } from "../../../../ControlPlaneService";
 import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
 import { HTTP400Error } from "../../../../errors/TreatedError";
 import { defineRoute } from "../../../../routing/DefineRoute";
+import { Logger } from "../../../../Logger";
+const log_container_registry = Logger.create("container-registry");
+
 import {
     CrImageDeleteResponseSchema,
     CrImageNameTagParamsSchema,
@@ -34,7 +37,7 @@ export const GET = defineRoute({
             res.header("Digest", image.digest);
             return res.send(stream);
         } catch (err) {
-            console.debug("[container-registry] get failed name=%s tag=%s err=%o", name, tag, err);
+            log_container_registry.debug("get failed name=%s tag=%s err=%o", name, tag, err);
             return res.status(404).send({
                 error: "not_found",
                 message: `Container image ${name}:${tag} not found.`

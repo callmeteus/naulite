@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_log_rotation = logger.Logger.create("log-rotation");
+
 const std = @import("std");
 
 /// Result of a log rotation task executed on the agent.
@@ -41,7 +45,7 @@ pub fn executeLogRotationTask(
         else => return error.InvalidLogRotationTask,
     };
 
-    std.log.debug("[log-rotation] execute taskId={s} body_len={d}", .{ task_id, body.len });
+    log_log_rotation.debug("execute taskId={s} body_len={d}", .{ task_id, body.len });
 
     const rotated_files = try allocator.alloc([]const u8, 0);
 

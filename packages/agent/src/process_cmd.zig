@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_process_cmd = logger.Logger.create("process_cmd");
+
 const std = @import("std");
 
 const blocking_io = @import("blocking_io.zig");
@@ -13,7 +17,7 @@ pub fn runCommandVoid(allocator: std.mem.Allocator, argv: []const []const u8) !v
     defer allocator.free(captured.stderr);
 
     if (!captured.exited_normally or captured.exit_code != 0) {
-        std.log.debug("[process_cmd] command failed argv0={s} code={d} stderr={s}", .{
+        log_process_cmd.debug("command failed argv0={s} code={d} stderr={s}", .{
             argv[0],
             captured.exit_code,
             captured.stderr,
@@ -32,7 +36,7 @@ pub fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) ![]u8 
     defer allocator.free(captured.stderr);
 
     if (!captured.exited_normally or captured.exit_code != 0) {
-        std.log.debug("[process_cmd] command failed argv0={s} code={d} stderr={s}", .{
+        log_process_cmd.debug("command failed argv0={s} code={d} stderr={s}", .{
             argv[0],
             captured.exit_code,
             captured.stderr,

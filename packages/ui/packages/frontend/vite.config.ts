@@ -11,7 +11,7 @@ export default defineConfig({
     resolve: {
         alias: {
             "@naulite/sdk": path.resolve(rootDir, "../../../sdk/src/index.ts"),
-            "@naulite/shared": path.resolve(rootDir, "../../../shared/src/index.ts")
+            "@naulite/shared": path.resolve(rootDir, "../../../nodejs/shared/src/index.ts")
         }
     },
     server: {

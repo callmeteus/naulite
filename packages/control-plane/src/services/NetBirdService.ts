@@ -1,3 +1,7 @@
+import { Logger } from "../Logger";
+
+const log_netbird = Logger.create("netbird");
+
 /**
  * NetBird device metadata.
  */
@@ -328,8 +332,7 @@ export class NetBirdService {
         policyName: string,
         ports: string[] = []
     ): Promise<NetBirdAclRule> {
-        console.debug(
-            "[netbird] ensureGroupAccessPolicy policy=%s group=%s ports=%o",
+        log_netbird.debug("ensureGroupAccessPolicy policy=%s group=%s ports=%o",
             policyName,
             groupId,
             ports
@@ -356,12 +359,11 @@ export class NetBirdService {
         const uniquePeerIds = [...new Set(peerIds.filter((peerId) => peerId.length > 0))];
 
         if (uniquePeerIds.length === 0) {
-            console.debug("[netbird] syncPlatformNodePeers skipped empty peer list");
+            log_netbird.debug("syncPlatformNodePeers skipped empty peer list");
             return group;
         }
 
-        console.debug(
-            "[netbird] syncPlatformNodePeers group=%s peers=%d",
+        log_netbird.debug("syncPlatformNodePeers group=%s peers=%d",
             group.id,
             uniquePeerIds.length
         );

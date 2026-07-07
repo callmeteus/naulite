@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_http = logger.Logger.create("http");
+
 const std = @import("std");
 
 const backup_executor = @import("backup_executor.zig");
@@ -174,16 +178,16 @@ pub fn serve(
     var server = try address.listen(io, .{ .reuse_address = true });
     defer server.deinit(io);
 
-    std.log.info("[http] listening on {s}:{d}", .{ config.listen_address, config.listen_port });
+    log_http.info("listening on {s}:{d}", .{ config.listen_address, config.listen_port });
 
     while (true) {
         var stream = server.accept(io) catch |err| {
-            std.log.warn("[http] accept failed: {}", .{err});
+            log_http.warn("accept failed: {}", .{err});
             continue;
         };
 
         handleConnection(allocator, io, &docker_client, config.docker_socket, &stream) catch |err| {
-            std.log.warn("[http] connection failed: {}", .{err});
+            log_http.warn("connection failed: {}", .{err});
         };
         stream.close(io);
     }
@@ -229,7 +233,7 @@ fn handleConnection(
         }
 
         if (received.items.len >= 1024 * 1024) {
-            std.log.err("[http] request too large: {}", .{received.items.len});
+            log_http.err("request too large: {}", .{received.items.len});
             return error.RequestTooLarge;
         }
     }
@@ -308,7 +312,7 @@ fn handleConnection(
             docker_client,
             instance_id,
         ) catch |err| {
-            std.log.err("[http] exec websocket failed: {}", .{err});
+            log_http.err("exec websocket failed: {}", .{err});
             try writeRawResponse(io, stream, 500, "Internal Server Error", "application/json", "{\"error\":\"exec websocket failed\"}");
         };
         return;
@@ -324,7 +328,7 @@ fn handleConnection(
         service_name_hint,
         target,
     ) catch |err| {
-        std.log.err("[http] handler failed: {}", .{err});
+        log_http.err("handler failed: {}", .{err});
         try writeRawResponse(io, stream, 500, "Internal Server Error", "application/json", "{\"error\":\"internal server error\"}");
         return;
     };
@@ -339,7 +343,7 @@ fn handleExecutionApply(ctx: *const RouteContext, body: []const u8) !HttpRespons
     defer plan.deinit(ctx.allocator);
 
     ctx.docker_client.applyPlan(plan) catch |err| {
-        std.log.err("[http] execution apply failed: {}", .{err});
+        log_http.err("execution apply failed: {}", .{err});
         const response_body = try std.fmt.allocPrint(
             ctx.allocator,
             "{{\"accepted\":false,\"planId\":\"{s}\",\"message\":\"apply failed\"}}",

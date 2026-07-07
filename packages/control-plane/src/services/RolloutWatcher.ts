@@ -1,5 +1,8 @@
 import { ControlPlaneService } from "../ControlPlaneService";
 import { PipelineRunService } from "./PipelineRunService";
+import { Logger } from "../Logger";
+const log_rollout = Logger.create("rollout");
+
 
 /**
  * Watches instance health after apply and emits rollout completion events.
@@ -44,7 +47,7 @@ export namespace RolloutWatcher {
 
         const handle = setInterval(() => {
             void poll(runId, instanceIds, startedAt, timeoutMs, handle).catch((err) => {
-                console.error("[rollout] watch failed runId=%s err=%O", runId, err);
+                log_rollout.error("watch failed runId=%s err=%O", runId, err);
             });
         }, intervalMs);
 

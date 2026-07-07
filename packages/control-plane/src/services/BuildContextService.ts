@@ -5,6 +5,9 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { AgentProxyService } from "./AgentProxyService";
+import { Logger } from "../Logger";
+const log_build_context = Logger.create("build-context");
+
 
 const execFileAsync = promisify(execFile);
 
@@ -76,8 +79,7 @@ export namespace BuildContextService {
         const archive = await createContextArchive(localContextPath);
         const archiveBase64 = archive.toString("base64");
 
-        console.debug(
-            "[build-context] sync service=%s root=%s bytes=%d agent=%s",
+        log_build_context.debug("sync service=%s root=%s bytes=%d agent=%s",
             options.serviceName,
             localContextPath,
             archive.byteLength,

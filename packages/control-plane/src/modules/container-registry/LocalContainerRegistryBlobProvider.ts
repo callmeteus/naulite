@@ -7,6 +7,9 @@ import type { Readable } from "node:stream";
 import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, LocalContainerRegistryDestination } from "@naulite/shared";
 
 import { ContainerRegistryBlobProvider } from "./ContainerRegistryBlobProvider";
+import { Logger } from "../../Logger";
+const log_container_registry = Logger.create("container-registry");
+
 
 /**
  * Local filesystem container registry blob provider.
@@ -27,7 +30,7 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
         const destination = input.destination as LocalContainerRegistryDestination;
         const destinationPath = this.resolveBlobPath(destination, input.name, input.tag);
         await mkdir(path.dirname(destinationPath), { recursive: true });
-        console.debug("[container-registry] local write name=%s tag=%s path=%s", input.name, input.tag, destinationPath);
+        log_container_registry.debug("local write name=%s tag=%s path=%s", input.name, input.tag, destinationPath);
         await pipeline(input.body, createWriteStream(destinationPath));
 
         return { location: destinationPath };
@@ -40,7 +43,7 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
      * @returns Readable blob stream
      */
     async getStream(location: string): Promise<Readable> {
-        console.debug("[container-registry] local get location=%s", location);
+        log_container_registry.debug("local get location=%s", location);
         return createReadStream(location);
     }
 
@@ -53,14 +56,14 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
     async head(location: string): Promise<ContainerRegistryBlobHeadResult | null> {
         try {
             const fileStat = await stat(location);
-            console.debug("[container-registry] local head location=%s sizeBytes=%d", location, fileStat.size);
+            log_container_registry.debug("local head location=%s sizeBytes=%d", location, fileStat.size);
             return {
                 sizeBytes: fileStat.size,
                 digest: "",
                 contentType: "application/octet-stream"
             };
         } catch (err) {
-            console.debug("[container-registry] local head missing location=%s err=%o", location, err);
+            log_container_registry.debug("local head missing location=%s err=%o", location, err);
             return null;
         }
     }
@@ -72,7 +75,7 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
      * @returns Nothing.
      */
     async delete(location: string): Promise<void> {
-        console.debug("[container-registry] local delete location=%s", location);
+        log_container_registry.debug("local delete location=%s", location);
         await unlink(location);
     }
 
@@ -92,10 +95,10 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
 
         try {
             await mkdir(localDestination.path, { recursive: true });
-            console.debug("[container-registry] local validate path=%s healthy=true", localDestination.path);
+            log_container_registry.debug("local validate path=%s healthy=true", localDestination.path);
             return true;
         } catch (err) {
-            console.debug("[container-registry] local validate path=%s healthy=false err=%o", localDestination.path, err);
+            log_container_registry.debug("local validate path=%s healthy=false err=%o", localDestination.path, err);
             return false;
         }
     }

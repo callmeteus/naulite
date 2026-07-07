@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_agent_config = logger.Logger.create("agent-config");
+
 const std = @import("std");
 
 const bootstrap = @import("bootstrap.zig");
@@ -116,9 +120,9 @@ pub fn load(
     allocator.free(config_path);
 
     if (loadFromDisk(allocator, base.config_path, &base)) {
-        std.log.debug("[agent-config] loaded path={s} nodeId={s}", .{ base.config_path, base.node_id });
+        log_agent_config.debug("loaded path={s} nodeId={s}", .{ base.config_path, base.node_id });
     } else |_| {
-        std.log.debug("[agent-config] no file at path={s} using defaults", .{base.config_path});
+        log_agent_config.debug("no file at path={s} using defaults", .{base.config_path});
     }
 
     try applyEnvOverrides(allocator, os, &base);
@@ -169,7 +173,7 @@ pub fn save(
     try file_writer.interface.writeAll(output.items);
     try file_writer.interface.flush();
 
-    std.log.info("[agent-config] saved path={s} nodeId={s}", .{ config.config_path, config.node_id });
+    log_agent_config.info("saved path={s} nodeId={s}", .{ config.config_path, config.node_id });
 }
 
 fn loadDefaults(
@@ -403,8 +407,7 @@ pub fn applyRegistrationResponse(
         try replaceOptionalString(allocator, &config.netbird_device_id, device_id);
     }
 
-    std.log.debug(
-        "[agent-config] registration applied nodeId={s} hostname={s}",
+    log_agent_config.debug("registration applied nodeId={s} hostname={s}",
         .{ config.node_id, config.hostname },
     );
 }

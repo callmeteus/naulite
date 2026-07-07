@@ -5,6 +5,9 @@ import path from "node:path";
 import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, NodeBackupDestination } from "@naulite/shared";
 
 import { BackupDestinationProvider } from "./BackupDestinationProvider";
+import { Logger } from "../../Logger";
+const log_backups = Logger.create("backups");
+
 
 /**
  * Options for the node backup destination provider.
@@ -54,8 +57,7 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
         await mkdir(destinationDir, { recursive: true });
         const fileName = `${task.volumeName}-${task.taskId}.tar.gz`;
         const destinationPath = path.join(destinationDir, fileName);
-        console.debug(
-            "[backups] node write taskId=%s nodeId=%s destination=%s",
+        log_backups.debug("node write taskId=%s nodeId=%s destination=%s",
             task.taskId,
             this.nodeId,
             destinationPath
@@ -81,7 +83,7 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
             throw new Error(`NodeBackupDestinationProvider cannot handle provider ${task.destination.provider}`);
         }
 
-        console.debug("[backups] node read location=%s", location);
+        log_backups.debug("node read location=%s", location);
         const fileStat = await stat(location);
 
         return {
@@ -97,7 +99,7 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
      * @returns Nothing.
      */
     async delete(location: string): Promise<void> {
-        console.debug("[backups] node delete location=%s", location);
+        log_backups.debug("node delete location=%s", location);
         await unlink(location);
     }
 
@@ -120,10 +122,10 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
         try {
             const destinationDir = path.join(this.nodeRootDir, destination.path);
             await mkdir(destinationDir, { recursive: true });
-            console.debug("[backups] node validate nodeId=%s path=%s healthy=true", this.nodeId, destinationDir);
+            log_backups.debug("node validate nodeId=%s path=%s healthy=true", this.nodeId, destinationDir);
             return true;
         } catch (err) {
-            console.debug("[backups] node validate nodeId=%s healthy=false err=%o", this.nodeId, err);
+            log_backups.debug("node validate nodeId=%s healthy=false err=%o", this.nodeId, err);
             return false;
         }
     }

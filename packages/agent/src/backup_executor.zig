@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_backup = logger.Logger.create("backup");
+
 const std = @import("std");
 
 const process_cmd = @import("process_cmd.zig");
@@ -68,8 +72,7 @@ pub fn executeBackupTask(
     const excludes = try readStringArray(allocator, root.object, "excludes");
     defer freeStringArray(allocator, excludes);
 
-    std.log.debug(
-        "[backup] execute taskId={s} volume={s} mountPath={s} excludes={d}",
+    log_backup.debug("execute taskId={s} volume={s} mountPath={s} excludes={d}",
         .{ task_id, volume_name, mount_path, excludes.len },
     );
 
@@ -132,8 +135,7 @@ pub fn restoreBackupArchive(
     const mount_path = try resolveMountPath(allocator, root.object, volume_name);
     errdefer allocator.free(mount_path);
 
-    std.log.debug(
-        "[backup] restore backupId={s} volume={s} archive={s} mountPath={s}",
+    log_backup.debug("restore backupId={s} volume={s} archive={s} mountPath={s}",
         .{ backup_id, volume_name, archive_path, mount_path },
     );
 
@@ -170,7 +172,7 @@ pub fn receiveBackupArchive(
     body: []const u8,
 ) ![]const u8 {
     const io = blocking_io.io();
-    std.log.debug("[backup] receive archive bytes={d} backupId={s}", .{
+    log_backup.debug("receive archive bytes={d} backupId={s}", .{
         body.len,
         backup_id orelse "-",
     });
@@ -209,7 +211,7 @@ pub fn exportBackupArchive(
         return error.InvalidBackupArchivePath;
     }
 
-    std.log.debug("[backup] export archive path={s}", .{archive_path});
+    log_backup.debug("export archive path={s}", .{archive_path});
 
     return try std.Io.Dir.cwd().readFileAlloc(io, archive_path, allocator, .limited(std.math.maxInt(usize)));
 }

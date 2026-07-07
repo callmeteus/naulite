@@ -4,6 +4,9 @@ import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import { AesEncryption } from "../modules/secrets/AesEncryption";
 import { SecretModel } from "../database/models/index";
 import { JsonField } from "../util/RowMapper";
+import { Logger } from "../Logger";
+const log_secrets = Logger.create("secrets");
+
 
 const ENCRYPTED_VALUE_KEY = "__encrypted";
 
@@ -67,7 +70,7 @@ export class SecretsService {
             updatedAt: now
         };
 
-        console.debug("[secrets] upsert name=%s keys=%o scope=%s", input.name, metadata.keys, metadata.scope);
+        log_secrets.debug("upsert name=%s keys=%o scope=%s", input.name, metadata.keys, metadata.scope);
         await this.store.upsertClusterSecret({
             name: input.name,
             keys: metadata.keys,
@@ -87,7 +90,7 @@ export class SecretsService {
      * @returns Whether a secret was deleted
      */
     async deleteByName(name: string): Promise<boolean> {
-        console.debug("[secrets] delete name=%s", name);
+        log_secrets.debug("delete name=%s", name);
         return this.store.deleteSecretByName(name);
     }
 
@@ -115,7 +118,7 @@ export class SecretsService {
 
         if (typeof encrypted === "string") {
             const data = JSON.parse(this.encryption.decrypt(encrypted)) as Record<string, string>;
-            console.debug("[secrets] resolve name=%s keys=%o", name, Object.keys(data));
+            log_secrets.debug("resolve name=%s keys=%o", name, Object.keys(data));
             return data;
         }
 

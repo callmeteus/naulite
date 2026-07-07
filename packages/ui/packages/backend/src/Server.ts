@@ -1,5 +1,8 @@
 import { createApp } from "./App";
 import { resolveConfigFromEnv } from "./Config";
+import { Logger } from "./Logger";
+
+const log = Logger.create("server");
 
 /**
  * Running admin API server handle.
@@ -40,10 +43,10 @@ export async function startServer(): Promise<AdminApiServer> {
  */
 async function main(): Promise<void> {
     const server = await startServer();
-    console.log(`Admin API listening on http://${server.host}:${server.port}`);
+    log.info("Admin API listening on http://%s:%d", server.host, server.port);
 }
 
 main().catch((err) => {
-    console.error("Admin API failed to start:", err);
+    log.error("Admin API failed to start: %O", err);
     process.exit(1);
 });

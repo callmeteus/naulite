@@ -1,4 +1,7 @@
 import { HTTP502Error } from "../errors/TreatedError";
+import { Logger } from "../Logger";
+const log_metrics = Logger.create("metrics");
+
 
 /**
  * Prometheus HTTP API client used by control plane PromQL proxy routes.
@@ -43,14 +46,14 @@ export namespace PrometheusClient {
             url.searchParams.set(key, value);
         }
 
-        console.debug("[metrics] proxy path=%s url=%s", apiPath, url.toString());
+        log_metrics.debug("proxy path=%s url=%s", apiPath, url.toString());
 
         let response: Response;
 
         try {
             response = await fetch(url);
         } catch (err) {
-            console.error("[metrics] proxy fetch failed: %O", err);
+            log_metrics.error("proxy fetch failed: %O", err);
             throw new HTTP502Error("Failed to reach Prometheus.", {
                 prometheusUrl: resolveBaseUrl()
             });
@@ -68,8 +71,7 @@ export namespace PrometheusClient {
         }
 
         if (!response.ok) {
-            console.error(
-                "[metrics] proxy upstream status=%d path=%s body=%s",
+            log_metrics.error("proxy upstream status=%d path=%s body=%s",
                 response.status,
                 apiPath,
                 bodyText

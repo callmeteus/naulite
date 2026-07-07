@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_docker = logger.Logger.create("docker");
+
 const std = @import("std");
 
 const blocking_io = @import("../../blocking_io.zig");
@@ -136,7 +140,7 @@ pub const DockerApi = struct {
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
-            std.log.err("[docker] pull failed status={d} image={s} body={s}", .{
+            log_docker.err("pull failed status={d} image={s} body={s}", .{
                 response.status,
                 image,
                 response.body,
@@ -146,7 +150,7 @@ pub const DockerApi = struct {
         }
 
         if (std.mem.indexOf(u8, response.body, "\"error\"") != null) {
-            std.log.err("[docker] pull stream reported error image={s} body={s}", .{
+            log_docker.err("pull stream reported error image={s} body={s}", .{
                 image,
                 response.body,
             });
@@ -195,11 +199,11 @@ pub const DockerApi = struct {
 
         if (response.status < 200 or response.status >= 300) {
             if (response.status == 409) {
-                std.log.warn("[docker] create skipped existing container name={s}", .{container_name});
+                log_docker.warn("create skipped existing container name={s}", .{container_name});
                 return try self.allocator.dupe(u8, container_name);
             }
 
-            std.log.err("[docker] create failed status={d} name={s} body={s}", .{
+            log_docker.err("create failed status={d} name={s} body={s}", .{
                 response.status,
                 container_name,
                 response.body,
@@ -209,7 +213,7 @@ pub const DockerApi = struct {
         }
 
         return parseJsonStringField(self.allocator, response.body, "Id") catch |err| {
-            std.log.err("[docker] create response parse failed status={d} name={s} body={s}", .{
+            log_docker.err("create response parse failed status={d} name={s} body={s}", .{
                 response.status,
                 container_name,
                 response.body,
@@ -235,7 +239,7 @@ pub const DockerApi = struct {
         }
 
         if (response.status < 200 or response.status >= 300) {
-            std.log.err("[docker] start failed status={d} ref={s}", .{ response.status, container_ref });
+            log_docker.err("start failed status={d} ref={s}", .{ response.status, container_ref });
             return error.DockerStartFailed;
         }
     }
@@ -257,7 +261,7 @@ pub const DockerApi = struct {
         }
 
         if (response.status < 200 or response.status >= 300) {
-            std.log.err("[docker] stop failed status={d} ref={s}", .{ response.status, container_ref });
+            log_docker.err("stop failed status={d} ref={s}", .{ response.status, container_ref });
             return error.DockerStopFailed;
         }
     }
@@ -286,7 +290,7 @@ pub const DockerApi = struct {
         }
 
         if (response.status < 200 or response.status >= 300) {
-            std.log.err("[docker] remove failed status={d} ref={s}", .{ response.status, container_ref });
+            log_docker.err("remove failed status={d} ref={s}", .{ response.status, container_ref });
             return error.DockerRemoveFailed;
         }
     }
@@ -311,7 +315,7 @@ pub const DockerApi = struct {
             return;
         }
 
-        std.log.err("[docker] ensureVolume failed status={d} name={s}", .{ response.status, volume_name });
+        log_docker.err("ensureVolume failed status={d} name={s}", .{ response.status, volume_name });
         return error.DockerVolumeFailed;
     }
 
@@ -338,7 +342,7 @@ pub const DockerApi = struct {
         }
 
         if (response.status < 200 or response.status >= 300) {
-            std.log.err("[docker] removeVolume failed status={d} name={s}", .{ response.status, volume_name });
+            log_docker.err("removeVolume failed status={d} name={s}", .{ response.status, volume_name });
             return error.DockerVolumeRemoveFailed;
         }
     }
@@ -504,8 +508,7 @@ pub const DockerApi = struct {
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
-            std.log.err(
-                "[docker] connectNetwork failed status={d} network={s} container={s} body={s}",
+            log_docker.err("connectNetwork failed status={d} network={s} container={s} body={s}",
                 .{ response.status, network_name, container_ref, response.body },
             );
             return error.DockerNetworkConnectFailed;
@@ -536,8 +539,7 @@ pub const DockerApi = struct {
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
-            std.log.err(
-                "[docker] disconnectNetwork failed status={d} network={s} container={s} body={s}",
+            log_docker.err("disconnectNetwork failed status={d} network={s} container={s} body={s}",
                 .{ response.status, network_name, container_ref, response.body },
             );
             return error.DockerNetworkDisconnectFailed;
@@ -569,7 +571,7 @@ pub const DockerApi = struct {
         defer create_response.deinit(self.allocator);
 
         if (create_response.status < 200 or create_response.status >= 300) {
-            std.log.err("[docker] exec create failed status={d} ref={s} body={s}", .{
+            log_docker.err("exec create failed status={d} ref={s} body={s}", .{
                 create_response.status,
                 container_ref,
                 create_response.body,
@@ -588,7 +590,7 @@ pub const DockerApi = struct {
         defer start_response.deinit(self.allocator);
 
         if (start_response.status < 200 or start_response.status >= 300) {
-            std.log.err("[docker] exec start failed status={d} execId={s} body={s}", .{
+            log_docker.err("exec start failed status={d} execId={s} body={s}", .{
                 start_response.status,
                 exec_id,
                 start_response.body,
@@ -660,7 +662,7 @@ pub const DockerApi = struct {
         defer create_response.deinit(self.allocator);
 
         if (create_response.status < 200 or create_response.status >= 300) {
-            std.log.err("[docker] exec create failed status={d} ref={s} body={s}", .{
+            log_docker.err("exec create failed status={d} ref={s} body={s}", .{
                 create_response.status,
                 container_ref,
                 create_response.body,
@@ -719,7 +721,7 @@ pub const DockerApi = struct {
         }
 
         if (!std.mem.startsWith(u8, response_buffer.items, "HTTP/1.1 101")) {
-            std.log.err("[docker] exec hijack failed body={s}", .{response_buffer.items});
+            log_docker.err("exec hijack failed body={s}", .{response_buffer.items});
             stream.close(io);
             return error.DockerExecFailed;
         }

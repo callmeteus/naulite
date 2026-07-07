@@ -7,6 +7,9 @@ import type { DatabaseDialect, DatabaseMigrationResult } from "@naulite/shared";
 import type { Sequelize } from "sequelize";
 
 import { SchemaMigrationModel } from "./models/index";
+import { Logger } from "../Logger";
+const log_migrations = Logger.create("migrations");
+
 
 const migrationsRoot = join(dirname(fileURLToPath(import.meta.url)), "migrations");
 
@@ -99,7 +102,7 @@ export class MigrationRunner {
                 throw new Error("Timed out waiting for database migrations to be applied.");
             }
 
-            console.debug("[migrations] waiting for leader to apply pending migrations dialect=%s", this.dialect);
+            log_migrations.debug("waiting for leader to apply pending migrations dialect=%s", this.dialect);
             await new Promise((resolve) => {
                 setTimeout(resolve, pollMs);
             });
@@ -169,7 +172,7 @@ export class MigrationRunner {
                     appliedAt: new Date().toISOString()
                 });
                 applied.push(migrationName);
-                console.debug("[migrations] applied name=%s dialect=%s", migrationName, this.dialect);
+                log_migrations.debug("applied name=%s dialect=%s", migrationName, this.dialect);
             }
 
             return {

@@ -16,6 +16,9 @@ import { PipelineRunService } from "./PipelineRunService";
 import { RolloutWatcher } from "./RolloutWatcher";
 import { SecretsService } from "./SecretsService";
 import { TlsConfig } from "./TlsConfig";
+import { Logger } from "../Logger";
+const log_apply = Logger.create("apply");
+
 
 /**
  * Result of applying a manifest through the control plane.
@@ -159,7 +162,7 @@ export namespace ApplyService {
                 );
 
                 if (!schedule) {
-                    console.debug("[apply] schedule failed service=%s nodes=%d", service.name, nodes.length);
+                    log_apply.debug("schedule failed service=%s nodes=%d", service.name, nodes.length);
                     throw new HTTP503Error(`No eligible node found for service "${service.name}".`, {
                         serviceName: service.name
                     });
@@ -273,8 +276,7 @@ export namespace ApplyService {
                 const result = dispatch.find((entry) => entry.nodeId === nodeId);
 
                 if (result?.status !== "dispatched") {
-                    console.debug(
-                        "[apply] skip volume store delete name=%s nodeId=%s dispatchStatus=%s",
+                    log_apply.debug("skip volume store delete name=%s nodeId=%s dispatchStatus=%s",
                         volume.name,
                         nodeId,
                         result?.status ?? "missing"
@@ -424,8 +426,7 @@ export namespace ApplyService {
                 continue;
             }
 
-            console.debug(
-                "[apply] resolve secrets service=%s names=%o",
+            log_apply.debug("resolve secrets service=%s names=%o",
                 operation.serviceName,
                 filter.secretNames
             );
@@ -488,7 +489,7 @@ export namespace ApplyService {
         const builderNode = BuildService.resolveBuilderNode(nodes);
 
         if (!builderNode?.agentUrl) {
-            console.debug("[apply] skip build context sync reason=no-builder-node");
+            log_apply.debug("skip build context sync reason=no-builder-node");
             return;
         }
 
@@ -510,8 +511,7 @@ export namespace ApplyService {
                 continue;
             }
 
-            console.debug(
-                "[apply] sync build context service=%s root=%s context=%s",
+            log_apply.debug("sync build context service=%s root=%s context=%s",
                 serviceName,
                 buildContextRoot,
                 build.context
@@ -727,8 +727,7 @@ export namespace ApplyService {
 
             const target = resolveIngressTarget(manifest.name, serviceName, service, nodes, instanceNodes);
             if (!target) {
-                console.debug(
-                    "[apply] skip public ingress service=%s reason=no-scheduled-instance",
+                log_apply.debug("skip public ingress service=%s reason=no-scheduled-instance",
                     serviceName
                 );
                 continue;
@@ -748,7 +747,7 @@ export namespace ApplyService {
                 const material = await resolveIngressTlsMaterial(tls, context.secretsService);
 
                 if (material) {
-                    console.debug("[apply] install custom tls host=%s", service.ingress.host);
+                    log_apply.debug("install custom tls host=%s", service.ingress.host);
                     await context.gatewayProvider.installTls(service.ingress.host, material);
                 }
             } else if (tls?.enabled && TlsConfig.supportsAutoTls()) {
@@ -779,8 +778,7 @@ export namespace ApplyService {
         const keyValues = await secretsService.resolveValues(keyRef.secretName);
 
         if (!certValues || !keyValues) {
-            console.debug(
-                "[apply] tls secrets unresolved cert=%s key=%s",
+            log_apply.debug("tls secrets unresolved cert=%s key=%s",
                 certRef.secretName,
                 keyRef.secretName
             );
@@ -791,8 +789,7 @@ export namespace ApplyService {
         const privateKey = keyValues[keyRef.key ?? "tls.key"] ?? keyValues.privateKey;
 
         if (!certificate || !privateKey) {
-            console.debug(
-                "[apply] tls secret keys missing cert=%s key=%s",
+            log_apply.debug("tls secret keys missing cert=%s key=%s",
                 certRef.secretName,
                 keyRef.secretName
             );

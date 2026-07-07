@@ -15,6 +15,9 @@ import type { ControlPlaneContext } from "../ControlPlaneContext";
 
 import { AgentProxyError, AgentProxyService } from "./AgentProxyService";
 import { PipelineRunService } from "./PipelineRunService";
+import { Logger } from "../Logger";
+const log_build = Logger.create("build");
+
 
 /**
  * Resolved build configuration for a manifest service.
@@ -218,7 +221,7 @@ export namespace BuildService {
         });
 
         void executeBuildInBackground(context, nodes, manifest, buildConfig, options, run.id).catch((err) => {
-            console.error("[build] background build failed runId=%s err=%O", run.id, err);
+            log_build.error("background build failed runId=%s err=%O", run.id, err);
         });
 
         return {

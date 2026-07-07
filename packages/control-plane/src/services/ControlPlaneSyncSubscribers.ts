@@ -1,6 +1,9 @@
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 import { ClusterStateService } from "./ClusterStateService";
 import { ControlPlaneSync, type ControlPlaneSyncEvent } from "./ControlPlaneSync";
+import { Logger } from "../Logger";
+const log_sync = Logger.create("sync");
+
 
 /**
  * Default control plane sync event subscribers for HA cache invalidation.
@@ -20,8 +23,7 @@ export namespace ControlPlaneSyncSubscribers {
             void handleSecretChanged(context, event).catch(() => undefined);
         });
         context.controlPlaneSync.on(ControlPlaneSync.EVENTS.CLUSTER_INVALIDATED, (event) => {
-            console.debug(
-                "[sync] cluster invalidated source=%s payload=%o",
+            log_sync.debug("cluster invalidated source=%s payload=%o",
                 event.sourceInstanceId,
                 event.payload
             );
@@ -30,8 +32,7 @@ export namespace ControlPlaneSyncSubscribers {
             void context.gatewayRouteService.reloadFromDatabase().catch(() => undefined);
         });
         context.controlPlaneSync.on(ControlPlaneSync.EVENTS.LEADER_CHANGED, (event) => {
-            console.debug(
-                "[sync] leader changed leaderId=%s source=%s",
+            log_sync.debug("leader changed leaderId=%s source=%s",
                 event.payload.leaderId,
                 event.sourceInstanceId
             );
@@ -58,7 +59,7 @@ export namespace ControlPlaneSyncSubscribers {
 
         context.applyRevision = revision;
         await ClusterStateService.saveApplyRevision(revision);
-        console.debug("[sync] apply revision updated revision=%d source=%s", revision, event.sourceInstanceId);
+        log_sync.debug("apply revision updated revision=%d source=%s", revision, event.sourceInstanceId);
     }
 
     /**
@@ -72,8 +73,7 @@ export namespace ControlPlaneSyncSubscribers {
         context: ControlPlaneContext,
         event: ControlPlaneSyncEvent
     ): Promise<void> {
-        console.debug(
-            "[sync] secret changed name=%s source=%s",
+        log_sync.debug("secret changed name=%s source=%s",
             event.payload.name,
             event.sourceInstanceId
         );

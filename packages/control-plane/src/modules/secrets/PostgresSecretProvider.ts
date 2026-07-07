@@ -2,6 +2,9 @@ import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@n
 
 import type { SecretsService } from "../../services/SecretsService";
 import { SecretProvider } from "./SecretProvider";
+import { Logger } from "../../Logger";
+const log_secrets = Logger.create("secrets");
+
 
 /**
  * Postgres-backed secret provider that delegates to {@link SecretsService}.
@@ -57,7 +60,7 @@ export class PostgresSecretProvider extends SecretProvider {
             throw new Error(`Secret not found: ${name}`);
         }
 
-        console.debug("[secrets] resolve name=%s", name);
+        log_secrets.debug("resolve name=%s", name);
         return { name, data };
     }
 
@@ -68,7 +71,7 @@ export class PostgresSecretProvider extends SecretProvider {
      * @returns Filtered secret payloads safe for agent delivery
      */
     async resolveForAgent(filter: SecretFilter): Promise<ResolvedSecret[]> {
-        console.debug("[secrets] resolveForAgent names=%o", filter.secretNames);
+        log_secrets.debug("resolveForAgent names=%o", filter.secretNames);
         const resolved: ResolvedSecret[] = [];
 
         for (const secretName of filter.secretNames) {

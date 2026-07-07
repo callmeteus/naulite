@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_docker_stats = logger.Logger.create("docker-stats");
+
 const std = @import("std");
 
 const docker_api = @import("docker_api.zig");
@@ -96,8 +100,7 @@ pub fn collect(
     const disk_mb_used = @max(@divTrunc(disk_used_bytes, 1024 * 1024), 0);
     const disk_mb_total = @max(disk_mb_used * 4, 102_400);
 
-    std.log.debug(
-        "[docker-stats] cpu={d}/{d} mem={d}/{d} disk={d}/{d} containers={d}",
+    log_docker_stats.debug("cpu={d}/{d} mem={d}/{d} disk={d}/{d} containers={d}",
         .{ cpu_millis_used, cpu_millis_total, memory_mb_used, memory_mb_total, disk_mb_used, disk_mb_total, container_ids.len },
     );
 

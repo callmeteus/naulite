@@ -9,6 +9,10 @@ import {
 } from "../modules/secrets/PluginSecretProviderAdapter";
 import { RunNotificationDispatcher } from "../services/RunNotificationDispatcher";
 import type { LoadedPluginRegistration } from "./LoadedPluginRegistration";
+import { Logger } from "../Logger";
+const log_plugins = Logger.create("plugins");
+const log_secrets = Logger.create("secrets");
+
 
 /**
  * Wires discovered plugin providers into the control plane application context.
@@ -28,21 +32,21 @@ export namespace PluginRegistryWiring {
                 context.backupOrchestrator.register(
                     plugin.backupDestinationProvider as BackupDestinationProvider
                 );
-                console.debug("[plugins] wired backup destination id=%s", plugin.id);
+                log_plugins.debug("wired backup destination id=%s", plugin.id);
             }
 
             if (plugin.containerRegistryBlobProvider) {
                 context.containerRegistryService.register(
                     plugin.containerRegistryBlobProvider as ContainerRegistryBlobProvider
                 );
-                console.debug("[plugins] wired container registry blob id=%s", plugin.id);
+                log_plugins.debug("wired container registry blob id=%s", plugin.id);
             }
 
             if (plugin.type === "nodeProvisioner" && plugin.nodeProvisionerProvider) {
                 context.nodeProvisionerRegistry.register(
                     plugin.nodeProvisionerProvider as NodeProvisionerProvider
                 );
-                console.debug("[plugins] wired node provisioner id=%s", plugin.id);
+                log_plugins.debug("wired node provisioner id=%s", plugin.id);
             }
 
             if (plugin.type === "notification" && plugin.notificationProvider) {
@@ -50,7 +54,7 @@ export namespace PluginRegistryWiring {
                     plugin.id,
                     plugin.notificationProvider as NotificationProvider
                 );
-                console.debug("[plugins] wired notification provider id=%s", plugin.id);
+                log_plugins.debug("wired notification provider id=%s", plugin.id);
             }
 
             if (plugin.type === "secret" && plugin.secretProvider) {
@@ -58,7 +62,7 @@ export namespace PluginRegistryWiring {
                     plugin.id,
                     plugin.secretProvider as SecretProvider
                 );
-                console.debug("[plugins] wired secret provider id=%s", plugin.id);
+                log_plugins.debug("wired secret provider id=%s", plugin.id);
             }
         }
 
@@ -77,7 +81,7 @@ export namespace PluginRegistryWiring {
         }
 
         const backendId = resolveSecretBackendId();
-        console.debug("[secrets] backend=%s available=%o", backendId, context.secretProviderRegistry.listIds());
+        log_secrets.debug("backend=%s available=%o", backendId, context.secretProviderRegistry.listIds());
 
         if (backendId === "local" || backendId === "postgres") {
             return;
@@ -86,12 +90,12 @@ export namespace PluginRegistryWiring {
         const pluginProvider = context.secretProviderRegistry.get(backendId);
 
         if (!pluginProvider) {
-            console.debug("[secrets] backend=%s not registered, keeping default provider", backendId);
+            log_secrets.debug("backend=%s not registered, keeping default provider", backendId);
             return;
         }
 
         context.secretProvider = new PluginSecretProviderAdapter(pluginProvider);
-        console.debug("[secrets] active provider id=%s", backendId);
+        log_secrets.debug("active provider id=%s", backendId);
     }
 
     /**

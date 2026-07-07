@@ -5,6 +5,9 @@ import { pathToFileURL } from "node:url";
 import { PluginRegistry, type PluginRegistration } from "@naulite/shared";
 
 import type { LoadedPluginModule } from "./LoadedPluginRegistration";
+import { Logger } from "../Logger";
+const log_plugins = Logger.create("plugins");
+
 
 /**
  * Plugin loader that auto-discovers packages under packages/plugins/.
@@ -44,10 +47,10 @@ export class PluginLoader {
 
                 if (plugin) {
                     registry.register(directoryName, plugin as PluginRegistration);
-                    console.debug("[plugins] loaded id=%s type=%s dir=%s", plugin.id, plugin.type, directoryName);
+                    log_plugins.debug("loaded id=%s type=%s dir=%s", plugin.id, plugin.type, directoryName);
                 }
             } catch (err) {
-                console.debug("[plugins] skipped dir=%s error=%o", directoryName, err);
+                log_plugins.debug("skipped dir=%s error=%o", directoryName, err);
                 continue;
             }
         }

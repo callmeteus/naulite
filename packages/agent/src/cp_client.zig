@@ -1,3 +1,8 @@
+const logger = @import("logger");
+
+const log_agent_config = logger.Logger.create("agent-config");
+const log_cp = logger.Logger.create("cp");
+
 const std = @import("std");
 
 const agent_config = @import("agent_config.zig");
@@ -43,14 +48,14 @@ fn backgroundLoop(
 ) void {
     while (true) {
         registerNode(allocator, io, config) catch |err| {
-            std.log.warn("[cp] register failed: {}", .{err});
+            log_cp.warn("register failed: {}", .{err});
             blocking_io.sleepSeconds(2);
             continue;
         };
 
         while (true) {
             sendHeartbeat(allocator, io, config.*) catch |err| {
-                std.log.warn("[cp] heartbeat failed: {}", .{err});
+                log_cp.warn("heartbeat failed: {}", .{err});
                 break;
             };
             blocking_io.sleepSeconds(30);
@@ -106,10 +111,10 @@ fn registerNode(
 
     try agent_config.applyRegistrationResponse(allocator, config, response_body);
     agent_config.save(allocator, config) catch |err| {
-        std.log.warn("[agent-config] save after register failed: {}", .{err});
+        log_agent_config.warn("save after register failed: {}", .{err});
     };
 
-    std.log.info("[cp] registered node id={s} url={s}", .{ config.node_id, config.agent_url });
+    log_cp.info("registered node id={s} url={s}", .{ config.node_id, config.agent_url });
 }
 
 fn sendHeartbeat(
@@ -150,7 +155,7 @@ fn collectResources(
     var docker_client = docker.DockerClient.init(allocator, docker_socket);
     defer docker_client.deinit();
     return docker_client.collectNodeResources() catch {
-        std.log.debug("[cp] docker stats unavailable socket={s} using fallback", .{docker_socket});
+        log_cp.debug("docker stats unavailable socket={s} using fallback", .{docker_socket});
         return fallbackResources();
     };
 }
@@ -268,7 +273,7 @@ fn reportInstanceStatus(
     if (postJson(allocator, io, path, body, config.api_key)) |response| {
         defer allocator.free(response);
     } else |err| {
-        std.log.warn("[cp] instance status report failed id={s} status={s} err={}", .{ instance_id, status, err });
+        log_cp.warn("instance status report failed id={s} status={s} err={}", .{ instance_id, status, err });
     }
 }
 
@@ -372,8 +377,7 @@ fn reportRunEventIo(
     if (postJson(allocator, io, path, body, api_key)) |response| {
         defer allocator.free(response);
     } else |err| {
-        std.log.warn(
-            "[cp] run event report failed runId={s} kind={s} err={}",
+        log_cp.warn("run event report failed runId={s} kind={s} err={}",
             .{ run_id, kind, err },
         );
     }
@@ -523,7 +527,7 @@ fn postJson(
     var response = try receiveHttpHead(&req);
 
     if (response.head.status.class() != .success and response.head.status != .created) {
-        std.log.err("[cp] request failed status={} url={s}", .{ response.head.status, url });
+        log_cp.err("request failed status={} url={s}", .{ response.head.status, url });
         return error.ControlPlaneRequestFailed;
     }
 
@@ -596,7 +600,7 @@ fn putRegistryImageIo(
     var response = try receiveHttpHead(&req);
 
     if (response.head.status != .created and response.head.status.class() != .success) {
-        std.log.err("[cp] registry put failed status={} path={s}", .{ response.head.status, path });
+        log_cp.err("registry put failed status={} path={s}", .{ response.head.status, path });
         return error.ControlPlaneRequestFailed;
     }
 
@@ -653,7 +657,7 @@ fn getRegistryImageIo(
     var response = try receiveHttpHead(&req);
 
     if (response.head.status.class() != .success) {
-        std.log.err("[cp] registry get failed status={} path={s}", .{ response.head.status, path });
+        log_cp.err("registry get failed status={} path={s}", .{ response.head.status, path });
         return error.ControlPlaneRequestFailed;
     }
 

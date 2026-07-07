@@ -14,6 +14,9 @@ import { buildPaginatedList, paginationOffset } from "@naulite/shared";
 import { ContainerRegistryImageModel } from "../../database/models/ContainerRegistryImageModel";
 import { ContainerRegistryBlobProvider } from "./ContainerRegistryBlobProvider";
 import { LocalContainerRegistryBlobProvider } from "./LocalContainerRegistryBlobProvider";
+import { Logger } from "../../Logger";
+const log_container_registry = Logger.create("container-registry");
+
 
 /**
  * Options for {@link ContainerRegistryService}.
@@ -49,7 +52,7 @@ export class ContainerRegistryService {
      * @returns Nothing.
      */
     register(provider: ContainerRegistryBlobProvider): void {
-        console.debug("[container-registry] register provider=%s", provider.id);
+        log_container_registry.debug("register provider=%s", provider.id);
         this.providers.set(provider.id, provider);
     }
 
@@ -106,7 +109,7 @@ export class ContainerRegistryService {
     } | null> {
         const image = await this.getImage(name, tag);
         if (!image) {
-            console.debug("[container-registry] head missing name=%s tag=%s", name, tag);
+            log_container_registry.debug("head missing name=%s tag=%s", name, tag);
             return null;
         }
 
@@ -136,7 +139,7 @@ export class ContainerRegistryService {
             throw new Error(`No container registry provider registered for ${image.destination.provider}`);
         }
 
-        console.debug("[container-registry] get stream name=%s tag=%s provider=%s", name, tag, provider.id);
+        log_container_registry.debug("get stream name=%s tag=%s provider=%s", name, tag, provider.id);
         const stream = await provider.getStream(image.location);
         return { image, stream };
     }
@@ -162,7 +165,7 @@ export class ContainerRegistryService {
         }
 
         const digestTracker = ContainerRegistryService.createDigestTrackingStream();
-        console.debug("[container-registry] put name=%s tag=%s provider=%s", name, tag, provider.id);
+        log_container_registry.debug("put name=%s tag=%s provider=%s", name, tag, provider.id);
         const writePromise = provider.writeStream({
             name,
             tag,
@@ -211,7 +214,7 @@ export class ContainerRegistryService {
     async deleteImage(name: string, tag: string): Promise<boolean> {
         const image = await this.getImage(name, tag);
         if (!image) {
-            console.debug("[container-registry] delete missing name=%s tag=%s", name, tag);
+            log_container_registry.debug("delete missing name=%s tag=%s", name, tag);
             return false;
         }
 
@@ -220,7 +223,7 @@ export class ContainerRegistryService {
             throw new Error(`No container registry provider registered for ${image.destination.provider}`);
         }
 
-        console.debug("[container-registry] delete name=%s tag=%s provider=%s", name, tag, provider.id);
+        log_container_registry.debug("delete name=%s tag=%s provider=%s", name, tag, provider.id);
         await provider.delete(image.location);
         await ContainerRegistryImageModel.destroy({
             where: { name, tag }

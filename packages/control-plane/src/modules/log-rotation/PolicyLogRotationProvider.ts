@@ -5,6 +5,9 @@ import type { LogRotationProvider, LogRotationResult } from "@naulite/shared";
 import type { LogRotationPolicy, LogRotationTask } from "@naulite/shared";
 
 import { CronEvaluator } from "./CronEvaluator";
+import { Logger } from "../../Logger";
+const log_log_rotation = Logger.create("log-rotation");
+
 
 /**
  * Log rotation provider that evaluates cron policies and rotates files on the agent node.
@@ -40,7 +43,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
             try {
                 const fileStat = await stat(filePath);
                 const rotatedPath = `${filePath}.${timestamp}`;
-                console.debug("[log-rotation] rotate source=%s target=%s", filePath, rotatedPath);
+                log_log_rotation.debug("rotate source=%s target=%s", filePath, rotatedPath);
                 await rename(filePath, rotatedPath);
                 rotatedFiles.push(rotatedPath);
 
@@ -56,7 +59,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
                     await this.enforceMaxFiles(filePath, task.policy.maxFiles);
                 }
             } catch (err) {
-                console.debug("[log-rotation] skip path=%s err=%o", filePath, err);
+                log_log_rotation.debug("skip path=%s err=%o", filePath, err);
             }
         }
 
@@ -93,7 +96,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
     private async enforceMaxFiles(sourcePath: string, maxFiles: number): Promise<void> {
         const directory = path.dirname(sourcePath);
         const prefix = `${path.basename(sourcePath)}.`;
-        console.debug("[log-rotation] enforceMaxFiles source=%s maxFiles=%d", sourcePath, maxFiles);
+        log_log_rotation.debug("enforceMaxFiles source=%s maxFiles=%d", sourcePath, maxFiles);
 
         // Stub retention enforcement: only the current rotated artifact is tracked in-memory by callers.
         if (maxFiles <= 0) {
@@ -101,7 +104,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
             return;
         }
 
-        console.debug("[log-rotation] retention directory=%s prefix=%s", directory, prefix);
+        log_log_rotation.debug("retention directory=%s prefix=%s", directory, prefix);
     }
 }
 

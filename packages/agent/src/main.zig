@@ -1,3 +1,9 @@
+const logger = @import("logger");
+
+const log_agent = logger.Logger.create("agent");
+const log_agent_config = logger.Logger.create("agent-config");
+const log_netbird = logger.Logger.create("netbird");
+
 const std = @import("std");
 
 const agent_config = @import("agent_config.zig");
@@ -13,14 +19,16 @@ pub fn main(init: std.process.Init.Minimal) !void {
     blocking_io.init(allocator, init.environ);
     const io = blocking_io.io();
 
+    logger.init(io);
+
     const os = bootstrap.detectOsFamily();
-    std.log.info("[agent] starting os={s}", .{@tagName(os)});
+    log_agent.info("starting os={s}", .{@tagName(os)});
 
     var agent_cfg = try cp_client.loadConfig(allocator, os);
     defer agent_cfg.deinit(allocator);
 
     agent_config.save(allocator, &agent_cfg) catch |err| {
-        std.log.warn("[agent-config] bootstrap persist failed: {}", .{err});
+        log_agent_config.warn("bootstrap persist failed: {}", .{err});
     };
 
     ensureNetbirdConnected(allocator, &agent_cfg);
@@ -49,19 +57,19 @@ fn ensureNetbirdConnected(
         defer netbird_client.deinit();
 
         netbird_client.ensureConnected() catch |err| {
-            std.log.warn("[netbird] ensure connected failed: {}", .{err});
+            log_netbird.warn("ensure connected failed: {}", .{err});
         };
 
         if (netbird_client.getDeviceId()) |device_id| {
             agent_config.setNetbirdDeviceId(allocator, agent_cfg, device_id) catch |err| {
-                std.log.warn("[agent-config] netbird device id persist failed: {}", .{err});
+                log_agent_config.warn("netbird device id persist failed: {}", .{err});
             };
             agent_config.save(allocator, agent_cfg) catch |err| {
-                std.log.warn("[agent-config] save netbird device id failed: {}", .{err});
+                log_agent_config.warn("save netbird device id failed: {}", .{err});
             };
         }
     } else |err| {
-        std.log.warn("[netbird] skipped: {}", .{err});
+        log_netbird.warn("skipped: {}", .{err});
     }
 }
 

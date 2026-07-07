@@ -2,6 +2,9 @@ import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@n
 
 import { AesEncryption } from "./AesEncryption";
 import { SecretProvider } from "./SecretProvider";
+import { Logger } from "../../Logger";
+const log_secrets = Logger.create("secrets");
+
 
 /**
  * Options for the local encrypted secret provider.
@@ -38,7 +41,7 @@ export class LocalSecretProvider extends SecretProvider {
      * @returns Secret metadata entries
      */
     async list(): Promise<Secret[]> {
-        console.debug("[secrets] list count=%d", this.secrets.size);
+        log_secrets.debug("list count=%d", this.secrets.size);
         return [...this.secrets.values()].map((entry) => entry.metadata);
     }
 
@@ -62,7 +65,7 @@ export class LocalSecretProvider extends SecretProvider {
             updatedAt: now
         };
 
-        console.debug("[secrets] upsert name=%s keys=%o scope=%s", input.name, metadata.keys, metadata.scope);
+        log_secrets.debug("upsert name=%s keys=%o scope=%s", input.name, metadata.keys, metadata.scope);
         const ciphertext = this.encryption.encrypt(JSON.stringify(input.data));
         this.secrets.set(input.name, { metadata, ciphertext });
         return metadata;
@@ -75,7 +78,7 @@ export class LocalSecretProvider extends SecretProvider {
      * @returns Nothing.
      */
     async delete(name: string): Promise<void> {
-        console.debug("[secrets] delete name=%s", name);
+        log_secrets.debug("delete name=%s", name);
         this.secrets.delete(name);
     }
 
@@ -91,7 +94,7 @@ export class LocalSecretProvider extends SecretProvider {
             throw new Error(`Secret not found: ${name}`);
         }
 
-        console.debug("[secrets] resolve name=%s", name);
+        log_secrets.debug("resolve name=%s", name);
         const data = JSON.parse(this.encryption.decrypt(entry.ciphertext)) as Record<string, string>;
         return { name, data };
     }
@@ -103,7 +106,7 @@ export class LocalSecretProvider extends SecretProvider {
      * @returns Filtered secret payloads safe for agent delivery
      */
     async resolveForAgent(filter: SecretFilter): Promise<ResolvedSecret[]> {
-        console.debug("[secrets] resolveForAgent names=%o", filter.secretNames);
+        log_secrets.debug("resolveForAgent names=%o", filter.secretNames);
         const resolved: ResolvedSecret[] = [];
 
         for (const secretName of filter.secretNames) {

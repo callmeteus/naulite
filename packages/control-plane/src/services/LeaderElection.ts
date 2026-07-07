@@ -1,5 +1,8 @@
 import type { DatabaseProvider } from "../database/DatabaseProvider";
 import { ControlPlaneLeaderModel } from "../database/models/index";
+import { Logger } from "../Logger";
+const log_leader = Logger.create("leader");
+
 
 const DEFAULT_LEASE_KEY = "control-plane";
 const DEFAULT_LEASE_TTL_MS = 15_000;
@@ -132,7 +135,7 @@ export class LeaderElection {
                 });
                 this.isCurrentLeader = true;
                 this.leaderInstanceId = this.instanceId;
-                console.debug("[leader] acquired lease instanceId=%s", this.instanceId);
+                log_leader.debug("acquired lease instanceId=%s", this.instanceId);
                 return;
             } catch {
                 this.isCurrentLeader = false;
@@ -157,7 +160,7 @@ export class LeaderElection {
             if (affectedCount > 0) {
                 this.isCurrentLeader = true;
                 this.leaderInstanceId = this.instanceId;
-                console.debug("[leader] renewed lease instanceId=%s", this.instanceId);
+                log_leader.debug("renewed lease instanceId=%s", this.instanceId);
                 return;
             }
         }
@@ -167,15 +170,14 @@ export class LeaderElection {
             && current !== null
             && Date.parse(current.expiresAt) > now;
         this.leaderInstanceId = current?.leaderInstanceId ?? this.instanceId;
-        console.debug(
-            "[leader] follower instanceId=%s leaderId=%s isLeader=%s",
+        log_leader.debug("follower instanceId=%s leaderId=%s isLeader=%s",
             this.instanceId,
             this.leaderInstanceId,
             this.isCurrentLeader
         );
 
         if (this.isCurrentLeader && !this.wasLeader) {
-            console.debug("[leader] promotion instanceId=%s", this.instanceId);
+            log_leader.debug("promotion instanceId=%s", this.instanceId);
             void this.onBecameLeader?.();
         }
 

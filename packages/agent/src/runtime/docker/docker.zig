@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_docker = logger.Logger.create("docker");
+
 const std = @import("std");
 const execution_plan = @import("../../execution_plan.zig");
 const cp_client = @import("../../cp_client.zig");
@@ -54,8 +58,7 @@ pub const DockerClient = struct {
         // Parsed execution plan from the control plane.
         plan: execution_plan.ExecutionPlan,
     ) !void {
-        std.log.info(
-            "[docker] apply planId={s} revision={d} operations={d}",
+        log_docker.info("apply planId={s} revision={d} operations={d}",
             .{ plan.plan_id, plan.revision, plan.operations.len },
         );
 
@@ -92,8 +95,7 @@ pub const DockerClient = struct {
             }
 
             self.dispatchOperation(&api, op) catch |err| {
-                std.log.err(
-                    "[docker] dispatch op={s} failed err={} raw_json={s}",
+                log_docker.err("dispatch op={s} failed err={} raw_json={s}",
                     .{ @tagName(op.op_type), err, op.raw_json },
                 );
                 if (plan.run_id) |run_id| {
@@ -193,7 +195,7 @@ pub const DockerClient = struct {
         api: *const docker_api.DockerApi,
         op: execution_plan.ExecutionPlan.Operation,
     ) !void {
-        std.log.debug("[docker] dispatch type={s}", .{@tagName(op.op_type)});
+        log_docker.debug("dispatch type={s}", .{@tagName(op.op_type)});
 
         switch (op.op_type) {
             .pull => try self.handlePull(api, op.raw_json),
@@ -218,7 +220,7 @@ pub const DockerClient = struct {
         }
 
         if (std.mem.startsWith(u8, image, "naulite-cr/")) {
-            std.log.debug("[docker] skip pull for local naulite-cr image={s}", .{image});
+            log_docker.debug("skip pull for local naulite-cr image={s}", .{image});
             return;
         }
 
@@ -250,7 +252,7 @@ pub const DockerClient = struct {
         defer self.allocator.free(target_tag);
 
         try runDockerTag(self.allocator, self.socket_path, source_tag, target_tag);
-        std.log.info("[docker] loaded platform registry image source={s} target={s}", .{ source_tag, target_tag });
+        log_docker.info("loaded platform registry image source={s} target={s}", .{ source_tag, target_tag });
         _ = api;
     }
 
@@ -297,7 +299,7 @@ pub const DockerClient = struct {
         );
         defer self.allocator.free(container_id);
 
-        std.log.info("[docker] created container name={s} id={s}", .{ container_name, container_id });
+        log_docker.info("created container name={s} id={s}", .{ container_name, container_id });
     }
 
     fn handleStart(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
@@ -308,7 +310,7 @@ pub const DockerClient = struct {
         defer self.allocator.free(container_name);
 
         try api.startContainer(container_name);
-        std.log.info("[docker] started container name={s}", .{container_name});
+        log_docker.info("started container name={s}", .{container_name});
         if (self.cp_config) |config| {
             cp_client.reportInstanceRunning(self.allocator, config, instance_id);
         }
@@ -353,7 +355,7 @@ pub const DockerClient = struct {
 
         const force = try readBoolField(raw_json, "force", false);
         try api.removeVolume(volume_name, force);
-        std.log.info("[docker] removed volume name={s}", .{volume_name});
+        log_docker.info("removed volume name={s}", .{volume_name});
     }
 
     fn handleConnectNetwork(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
@@ -367,7 +369,7 @@ pub const DockerClient = struct {
         defer self.allocator.free(container_name);
 
         try api.connectNetwork(network_name, container_name);
-        std.log.info("[docker] connected container={s} network={s}", .{ container_name, network_name });
+        log_docker.info("connected container={s} network={s}", .{ container_name, network_name });
     }
 
     fn handleDisconnectNetwork(self: *DockerClient, api: *const docker_api.DockerApi, raw_json: []const u8) !void {
@@ -382,7 +384,7 @@ pub const DockerClient = struct {
         defer self.allocator.free(container_name);
 
         try api.disconnectNetwork(network_name, container_name, force);
-        std.log.info("[docker] disconnected container={s} network={s}", .{ container_name, network_name });
+        log_docker.info("disconnected container={s} network={s}", .{ container_name, network_name });
     }
 
     fn readStringField(allocator: std.mem.Allocator, raw_json: []const u8, field_name: []const u8) ![]u8 {

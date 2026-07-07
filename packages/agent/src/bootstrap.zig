@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_bootstrap = logger.Logger.create("bootstrap");
+
 const std = @import("std");
 const builtin = @import("builtin");
 
@@ -66,7 +70,7 @@ pub fn collectStatus(
     const arch = @tagName(builtin.cpu.arch);
 
     const os_version = detectOsVersion(allocator) catch |err| blk: {
-        std.log.debug("[bootstrap] os version detection failed os={s} err={}", .{ @tagName(os), err });
+        log_bootstrap.debug("os version detection failed os={s} err={}", .{ @tagName(os), err });
         break :blk try allocator.dupe(u8, switch (os) {
             .linux => "linux",
             .windows => "windows",
@@ -74,7 +78,7 @@ pub fn collectStatus(
             .unknown => "unknown",
         });
     };
-    std.log.debug("[bootstrap] detected os={s} os_version={s}", .{ @tagName(os), os_version });
+    log_bootstrap.debug("detected os={s} os_version={s}", .{ @tagName(os), os_version });
 
     const netbird_connected = if (netbird_client) |client| client.isConnected() else false;
 

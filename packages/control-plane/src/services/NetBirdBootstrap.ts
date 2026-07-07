@@ -3,6 +3,9 @@ import { randomBytes } from "node:crypto";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 
 import { NetBirdConfig } from "./NetBirdConfig";
+import { Logger } from "../Logger";
+const log_netbird = Logger.create("netbird");
+
 
 /**
  * Internal NetBird credentials managed by the control plane.
@@ -68,14 +71,14 @@ export namespace NetBirdBootstrap {
         const cached = await readStoredCredentials(store);
 
         if (cached) {
-            console.debug("[netbird] using stored internal credentials secret=%s", NETBIRD_INTERNAL_SECRET_NAME);
+            log_netbird.debug("using stored internal credentials secret=%s", NETBIRD_INTERNAL_SECRET_NAME);
             return cached;
         }
 
         const envToken = process.env.NETBIRD_TOKEN?.trim();
 
         if (envToken) {
-            console.debug("[netbird] importing credentials from NETBIRD_TOKEN env");
+            log_netbird.debug("importing credentials from NETBIRD_TOKEN env");
             const imported: NetBirdCredentials = {
                 apiToken: envToken,
                 superadminEmail: SUPERADMIN_EMAIL,
@@ -91,13 +94,13 @@ export namespace NetBirdBootstrap {
         try {
             const bootstrapped = await bootstrapSelfHosted(apiUrl, fetchImpl);
             await persistCredentials(store, bootstrapped);
-            console.debug("[netbird] bootstrap complete email=%s", bootstrapped.superadminEmail);
+            log_netbird.debug("bootstrap complete email=%s", bootstrapped.superadminEmail);
             return bootstrapped;
         } catch (err) {
             const raced = await readStoredCredentials(store);
 
             if (raced) {
-                console.debug("[netbird] using credentials written by another control plane instance");
+                log_netbird.debug("using credentials written by another control plane instance");
                 return raced;
             }
 
@@ -165,8 +168,7 @@ export namespace NetBirdBootstrap {
                 setupRequired = status.setupRequired;
                 break;
             } catch (err) {
-                console.debug(
-                    "[netbird] waiting for management API attempt=%d/%d err=%s",
+                log_netbird.debug("waiting for management API attempt=%d/%d err=%s",
                     attempt,
                     MAX_POLL_ATTEMPTS,
                     err instanceof Error ? err.message : String(err)

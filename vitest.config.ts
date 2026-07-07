@@ -8,7 +8,8 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
     resolve: {
         alias: {
-            "@naulite/shared": path.resolve(rootDir, "packages/shared/src/index.ts"),
+            "@naulite/shared": path.resolve(rootDir, "packages/nodejs/shared/src/index.ts"),
+            "@naulite/logger": path.resolve(rootDir, "packages/nodejs/logger/src/index.ts"),
             "@naulite/sdk": path.resolve(rootDir, "packages/sdk/src/index.ts"),
             "@naulite/gateway": path.resolve(rootDir, "packages/gateway/src/index.ts"),
             "@naulite/control-plane": path.resolve(rootDir, "packages/control-plane/src/index.ts"),

@@ -39,6 +39,9 @@ import { NetBirdService } from "./services/NetBirdService";
 import { createNodeProvisionService, type NodeProvisionService } from "./services/NodeProvisionService";
 import { createMetricsSyncService, type MetricsSyncService } from "./services/MetricsSyncService";
 import { SecretsService, resolveSecretMasterKey } from "./services/SecretsService";
+import { Logger } from "./Logger";
+const log_secrets = Logger.create("secrets");
+
 
 /**
  * Shared control plane application context.
@@ -180,7 +183,7 @@ function createBuilderProviders(): Map<string, BuilderProvider> {
  */
 function createDefaultSecretProvider(secretsService: SecretsService, masterKey: string): SecretProvider {
     const backendId = resolveSecretBackendId();
-    console.debug("[secrets] default provider backend=%s", backendId);
+    log_secrets.debug("default provider backend=%s", backendId);
 
     if (backendId === "local") {
         return createLocalSecretProvider({ masterKey });

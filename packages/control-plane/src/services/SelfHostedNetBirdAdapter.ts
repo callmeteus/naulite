@@ -1,3 +1,7 @@
+import { Logger } from "../Logger";
+
+const log_netbird = Logger.create("netbird");
+
 import type {
     NetBirdAclRule,
     NetBirdAdapter,
@@ -271,8 +275,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
         });
 
         if (!response.ok) {
-            console.debug(
-                "[netbird] api request failed status=%d path=%s base=%s",
+            log_netbird.debug("api request failed status=%d path=%s base=%s",
                 response.status,
                 path,
                 this.apiUrl

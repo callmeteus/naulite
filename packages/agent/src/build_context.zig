@@ -1,3 +1,7 @@
+const logger = @import("logger");
+
+const log_build_context = logger.Logger.create("build-context");
+
 const std = @import("std");
 
 const process_cmd = @import("process_cmd.zig");
@@ -37,8 +41,7 @@ pub fn receiveBuildContext(
     const context_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ default_build_root, service_name_owned });
     errdefer allocator.free(context_path);
 
-    std.log.debug(
-        "[build-context] receive service={s} bytes={d} contextPath={s}",
+    log_build_context.debug("receive service={s} bytes={d} contextPath={s}",
         .{ service_name_owned, archive_bytes.bytes.len, context_path },
     );
 

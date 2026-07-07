@@ -3,6 +3,9 @@ import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask }
 import { BackupDestinationProvider } from "./BackupDestinationProvider";
 import { LocalBackupDestinationProvider } from "./LocalBackupDestinationProvider";
 import { NodeBackupDestinationProvider } from "./NodeBackupDestinationProvider";
+import { Logger } from "../../Logger";
+const log_backups = Logger.create("backups");
+
 
 /**
  * Result of a backup orchestration run.
@@ -37,7 +40,7 @@ export class BackupOrchestrator {
      * @returns Nothing.
      */
     register(provider: BackupDestinationProvider): void {
-        console.debug("[backups] register provider=%s", provider.id);
+        log_backups.debug("register provider=%s", provider.id);
         this.providers.set(provider.id, provider);
     }
 
@@ -50,7 +53,7 @@ export class BackupOrchestrator {
     async validate(task: BackupTask): Promise<boolean> {
         const provider = this.resolveProvider(task);
         if (!provider) {
-            console.debug("[backups] validate taskId=%s provider=missing", task.taskId);
+            log_backups.debug("validate taskId=%s provider=missing", task.taskId);
             return false;
         }
 
@@ -70,7 +73,7 @@ export class BackupOrchestrator {
             throw new Error(`No backup destination provider registered for ${task.destination.provider}`);
         }
 
-        console.debug("[backups] write taskId=%s provider=%s", task.taskId, provider.id);
+        log_backups.debug("write taskId=%s provider=%s", task.taskId, provider.id);
         const result = await provider.write(task, archivePath);
         return {
             ...result,
@@ -92,7 +95,7 @@ export class BackupOrchestrator {
             throw new Error(`No backup destination provider registered for ${task.destination.provider}`);
         }
 
-        console.debug("[backups] read taskId=%s provider=%s location=%s", task.taskId, provider.id, location);
+        log_backups.debug("read taskId=%s provider=%s location=%s", task.taskId, provider.id, location);
         return provider.read(task, location);
     }
 
@@ -109,7 +112,7 @@ export class BackupOrchestrator {
             throw new Error(`No backup destination provider registered for ${providerId}`);
         }
 
-        console.debug("[backups] delete provider=%s location=%s", providerId, location);
+        log_backups.debug("delete provider=%s location=%s", providerId, location);
         await provider.delete(location);
     }
 

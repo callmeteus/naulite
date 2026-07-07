@@ -9,6 +9,9 @@ import { ComposeParser } from "../orchestration/ComposeParser";
 import { GitRepository } from "../gitops/GitRepository";
 import { ManifestMerge } from "../gitops/ManifestMerge";
 import { PipelineRunService } from "./PipelineRunService";
+import { Logger } from "../Logger";
+const log_gitops = Logger.create("gitops");
+
 
 /**
  * Git repository checkout options.
@@ -95,8 +98,7 @@ export namespace GitOpsService {
             }
         });
 
-        console.debug(
-            "[gitops] apply run created runId=%s manifest=%s commit=%s",
+        log_gitops.debug("apply run created runId=%s manifest=%s commit=%s",
             run.id,
             input.manifestName,
             input.commitSha ?? "-"
@@ -136,13 +138,13 @@ export namespace GitOpsService {
             const overlayFile = join(workDir, overlayPath);
 
             if (!existsSync(overlayFile)) {
-                console.debug("[gitops] overlay skip missing path=%s", overlayPath);
+                log_gitops.debug("overlay skip missing path=%s", overlayPath);
                 continue;
             }
 
             const overlayYaml = readFileSync(overlayFile, "utf8");
             manifestYaml = ManifestMerge.mergeYaml(manifestYaml, overlayYaml);
-            console.debug("[gitops] overlay merged path=%s", overlayPath);
+            log_gitops.debug("overlay merged path=%s", overlayPath);
         }
 
         return {

@@ -1,0 +1,23 @@
+{
+    "name": "@naulite/logger",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc -p tsconfig.json && node ../../../scripts/fix-esm-imports.mjs dist",
+        "lint": "eslint src/"
+    },
+    "dependencies": {
+        "winston": "^3.19.0",
+        "winston-daily-rotate-file": "^5.0.0"
+    },
+    "peerDependencies": {
+        "fastify": "^5.2.0"
+    },
+    "devDependencies": {
+        "fastify": "^5.2.0",
+        "typescript": "^5.7.2"
+    }
+}

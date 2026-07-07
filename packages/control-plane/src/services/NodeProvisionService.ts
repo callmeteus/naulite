@@ -17,6 +17,9 @@ import type { NodeProvisionerRegistry } from "../plugins/NodeProvisionerRegistry
 import { NodeProvisionUserDataTemplate } from "./NodeProvisionUserDataTemplate";
 import type { NetBirdEnrollmentService } from "./NetBirdEnrollmentService";
 import type { LeaderElection } from "./LeaderElection";
+import { Logger } from "../Logger";
+const log_node_provision = Logger.create("node-provision");
+
 
 type ProvisionNodeInput = z.infer<typeof ProvisionNodeBodySchema>;
 
@@ -62,11 +65,11 @@ export class NodeProvisionService {
             }
 
             void this.pollActiveProvisions().catch((err) => {
-                console.error("[node-provision] status poll failed: %O", err);
+                log_node_provision.error("status poll failed: %O", err);
             });
         }, intervalMs);
 
-        console.debug("[node-provision] status polling started intervalMs=%d", intervalMs);
+        log_node_provision.debug("status polling started intervalMs=%d", intervalMs);
     }
 
     /**
@@ -81,7 +84,7 @@ export class NodeProvisionService {
 
         clearInterval(this.statusPollTimer);
         this.statusPollTimer = null;
-        console.debug("[node-provision] status polling stopped");
+        log_node_provision.debug("status polling stopped");
     }
 
     /**
@@ -100,8 +103,7 @@ export class NodeProvisionService {
             const provider = this.registry.get(provision.provider);
 
             if (!provider) {
-                console.debug(
-                    "[node-provision] poll skip missing provider provisionId=%s provider=%s",
+                log_node_provision.debug("poll skip missing provider provisionId=%s provider=%s",
                     provision.id,
                     provision.provider
                 );
@@ -123,8 +125,7 @@ export class NodeProvisionService {
             });
             await this.store.saveNodeProvision(updated);
 
-            console.debug(
-                "[node-provision] poll updated provisionId=%s instanceId=%s status=%s machineStatus=%s",
+            log_node_provision.debug("poll updated provisionId=%s instanceId=%s status=%s machineStatus=%s",
                 provision.id,
                 provision.cloudInstanceId,
                 nextStatus,
@@ -211,8 +212,7 @@ export class NodeProvisionService {
             });
             await this.store.saveNodeProvision(bootstrapping);
 
-            console.debug(
-                "[node-provision] launched provisionId=%s instanceId=%s nodeId=%s",
+            log_node_provision.debug("launched provisionId=%s instanceId=%s nodeId=%s",
                 provisionId,
                 machine.cloudInstanceId,
                 nodeId
@@ -280,8 +280,7 @@ export class NodeProvisionService {
         });
         await this.store.saveNodeProvision(terminated);
 
-        console.debug(
-            "[node-provision] terminated provisionId=%s instanceId=%s",
+        log_node_provision.debug("terminated provisionId=%s instanceId=%s",
             id,
             provision.cloudInstanceId
         );
@@ -300,7 +299,7 @@ export class NodeProvisionService {
         const provision = await this.store.getNodeProvision(provisionId);
 
         if (!provision) {
-            console.debug("[node-provision] completeRegistration missing provisionId=%s", provisionId);
+            log_node_provision.debug("completeRegistration missing provisionId=%s", provisionId);
             return null;
         }
 
@@ -312,8 +311,7 @@ export class NodeProvisionService {
         });
         await this.store.saveNodeProvision(registered);
 
-        console.debug(
-            "[node-provision] registered provisionId=%s nodeId=%s",
+        log_node_provision.debug("registered provisionId=%s nodeId=%s",
             provisionId,
             nodeId
         );
@@ -355,7 +353,7 @@ export class NodeProvisionService {
             description: `Provision-scoped setup key for node provision ${provisionId}.`
         });
 
-        console.debug("[node-provision] created setup key provisionId=%s", provisionId);
+        log_node_provision.debug("created setup key provisionId=%s", provisionId);
         return setupKey;
     }
 }

@@ -1,6 +1,9 @@
 import type { NotificationProvider, PipelineNotificationEvent } from "@naulite/shared";
 
 import { NotificationProviderFilterStore } from "../database/NotificationProviderFilterStore";
+import { Logger } from "../Logger";
+const log_pipeline = Logger.create("pipeline");
+
 
 /**
  * Dispatches pipeline notifications to registered notification providers.
@@ -17,7 +20,7 @@ export namespace RunNotificationDispatcher {
      */
     export function register(id: string, provider: NotificationProvider): void {
         providers.set(id, provider);
-        console.debug("[pipeline] notification provider registered id=%s count=%d", id, providers.size);
+        log_pipeline.debug("notification provider registered id=%s count=%d", id, providers.size);
     }
 
     /**
@@ -55,7 +58,7 @@ export namespace RunNotificationDispatcher {
      */
     export async function dispatch(event: PipelineNotificationEvent): Promise<void> {
         if (providers.size === 0) {
-            console.debug("[pipeline] notification skipped kind=%s providers=0", event.kind);
+            log_pipeline.debug("notification skipped kind=%s providers=0", event.kind);
             return;
         }
 
@@ -66,17 +69,17 @@ export namespace RunNotificationDispatcher {
                 try {
                     allowedKinds = await NotificationProviderFilterStore.getAllowedKinds(id);
                 } catch (filterErr) {
-                    console.debug("[pipeline] notification filter lookup failed id=%s: %O", id, filterErr);
+                    log_pipeline.debug("notification filter lookup failed id=%s: %O", id, filterErr);
                 }
 
                 if (allowedKinds && !allowedKinds.includes(event.kind)) {
-                    console.debug("[pipeline] notification filtered id=%s kind=%s", id, event.kind);
+                    log_pipeline.debug("notification filtered id=%s kind=%s", id, event.kind);
                     return;
                 }
 
                 await provider.onPipelineEvent(event);
             } catch (err) {
-                console.error("[pipeline] notification provider failed: %O", err);
+                log_pipeline.error("notification provider failed: %O", err);
             }
         }));
     }
