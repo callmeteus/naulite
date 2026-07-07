@@ -9,6 +9,7 @@ import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 
 const { t } = useI18n();
 const users = ref<AdminUser[]>([]);
@@ -254,12 +255,7 @@ async function confirmDisableUser(): Promise<void> {
                             <td><span class="badge badge-outline">{{ user.role }}</span></td>
                             <td>{{ user.createdAt }}</td>
                             <td>
-                                <span v-if="user.disabledAt" class="badge badge-ghost">
-                                    {{ t("pages.adminUsers.statusDisabled") }}
-                                </span>
-                                <span v-else class="badge badge-success badge-outline">
-                                    {{ t("pages.adminUsers.statusActive") }}
-                                </span>
+                                <StatusPill :status="user.disabledAt ? 'disabled' : 'active'" />
                             </td>
                             <td class="flex flex-wrap gap-2">
                                 <button

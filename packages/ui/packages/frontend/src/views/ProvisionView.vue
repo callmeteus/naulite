@@ -9,6 +9,7 @@ import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useServerPagination } from "../composables/useServerPagination";
 import { useClusterStore } from "../stores/Cluster";
 
@@ -232,7 +233,7 @@ async function selectProvision(provisionId: string): Promise<void> {
                     <p><span class="font-medium">{{ t("common.id") }}:</span> {{ activeProvision.id }}</p>
                     <p>
                         <span class="font-medium">{{ t("pages.runs.statusFilter") }}:</span>
-                        <span class="badge badge-outline ml-2">{{ activeProvision.status }}</span>
+                        <StatusPill class="ml-2" :status="activeProvision.status" size="md" />
                     </p>
                     <p v-if="activeProvision.cloudInstanceId">
                         <span class="font-medium">{{ t("pages.provision.cloudInstance") }}:</span>
@@ -287,7 +288,7 @@ async function selectProvision(provisionId: string): Promise<void> {
                             <tr v-for="provision in provisionHistory" :key="provision.id">
                                 <td>{{ provision.id }}</td>
                                 <td>{{ provision.provider }}</td>
-                                <td><span class="badge badge-outline">{{ provision.status }}</span></td>
+                                <td><StatusPill :status="provision.status" /></td>
                                 <td>{{ provision.instanceType }}</td>
                                 <td>
                                     <button type="button" class="btn btn-outline btn-sm" @click="selectProvision(provision.id)">

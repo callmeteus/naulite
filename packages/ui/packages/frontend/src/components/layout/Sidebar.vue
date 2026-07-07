@@ -55,18 +55,24 @@ function changeLocale(value: AppLocale): void {
             </p>
         </div>
 
-        <nav class="flex-1 overflow-y-auto p-3">
-            <div v-for="section in visibleSections" :key="section.id" class="mb-4">
-                <p class="menu-title px-2 text-xs uppercase tracking-wide">{{ t(section.labelKey) }}</p>
-                <ul class="menu menu-sm rounded-box">
-                    <li v-for="item in section.items" :key="item.path">
+        <nav class="flex-1 overflow-y-auto px-3 py-4">
+            <div v-for="section in visibleSections" :key="section.id" class="mb-5">
+                <p class="menu-title mb-2 px-3 text-xs uppercase tracking-wide opacity-70">
+                    {{ t(section.labelKey) }}
+                </p>
+                <ul class="flex w-full flex-col gap-1">
+                    <li v-for="item in section.items" :key="item.path" class="w-full">
                         <router-link
                             :to="item.path"
-                            class="gap-2"
-                            :class="{ active: route.path === item.path }"
+                            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
+                            :class="
+                                route.path === item.path
+                                    ? 'bg-primary text-primary-content shadow-sm'
+                                    : 'text-base-content/80 hover:bg-base-100 hover:text-base-content'
+                            "
                         >
-                            <component :is="item.icon" class="size-4 shrink-0" />
-                            {{ t(item.labelKey) }}
+                            <component :is="item.icon" class="size-5 shrink-0" />
+                            <span class="truncate">{{ t(item.labelKey) }}</span>
                         </router-link>
                     </li>
                 </ul>

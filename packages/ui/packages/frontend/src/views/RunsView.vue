@@ -10,6 +10,7 @@ import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useServerPagination } from "../composables/useServerPagination";
 import { useClusterStore } from "../stores/Cluster";
 
@@ -355,7 +356,7 @@ async function confirmRedeploy(): Promise<void> {
                         <tr v-for="run in paginatedRuns" :key="run.id">
                             <td>{{ run.id }}</td>
                             <td>{{ run.kind }}</td>
-                            <td><span class="badge badge-outline">{{ run.status }}</span></td>
+                            <td><StatusPill :status="run.status" /></td>
                             <td>{{ run.serviceName ?? "-" }}</td>
                             <td>{{ run.startedAt ?? run.createdAt }}</td>
                             <td class="flex flex-wrap gap-2">
@@ -407,7 +408,7 @@ async function confirmRedeploy(): Promise<void> {
 
                 <p>
                     {{ t("pages.runs.statusFilter") }}:
-                    <span class="badge badge-outline">{{ selectedRun.status }}</span>
+                    <StatusPill class="ml-2" :status="selectedRun.status" size="md" />
                     <span v-if="streamActive" class="ml-2 text-sm text-base-content/70">
                         ({{ t("pages.runs.streaming") }})
                     </span>
@@ -449,11 +450,12 @@ async function confirmRedeploy(): Promise<void> {
                         <li v-for="step in selectedRun.steps ?? []" :key="step.id">
                             <button
                                 type="button"
-                                class="btn btn-sm"
+                                class="btn btn-sm inline-flex items-center gap-2"
                                 :class="step.id === selectedStepId ? 'btn-primary' : 'btn-outline'"
                                 @click="selectStep(step.id)"
                             >
-                                {{ step.name }} - {{ step.status }}
+                                <span>{{ step.name }}</span>
+                                <StatusPill :status="step.status" />
                             </button>
                         </li>
                     </ul>

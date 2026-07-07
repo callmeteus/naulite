@@ -6,6 +6,7 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
@@ -48,7 +49,7 @@ onMounted(() => {
                         <tr v-for="volume in store.volumes" :key="volume.id">
                             <td>{{ volume.name }}</td>
                             <td>{{ volume.manifestName }}</td>
-                            <td><span class="badge badge-outline">{{ volume.status }}</span></td>
+                            <td><StatusPill :status="volume.status" /></td>
                             <td>{{ volume.mountPath }}</td>
                         </tr>
                     </tbody>

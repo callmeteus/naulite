@@ -8,6 +8,7 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
@@ -112,7 +113,7 @@ function closeLogsDialog(): void {
                             <td>{{ instance.id }}</td>
                             <td>{{ instance.serviceName }}</td>
                             <td>{{ instance.nodeId }}</td>
-                            <td><span class="badge badge-outline">{{ instance.status }}</span></td>
+                            <td><StatusPill :status="instance.status" /></td>
                             <td><code class="text-xs">{{ instance.image }}</code></td>
                             <td>
                                 <button

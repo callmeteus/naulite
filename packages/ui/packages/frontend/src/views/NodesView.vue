@@ -6,6 +6,7 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
@@ -49,7 +50,7 @@ onMounted(() => {
                         <tr v-for="node in store.nodes" :key="node.id">
                             <td>{{ node.id }}</td>
                             <td>{{ node.hostname }}</td>
-                            <td><span class="badge badge-outline">{{ node.status }}</span></td>
+                            <td><StatusPill :status="node.status" /></td>
                             <td>{{ node.resources.cpuMillisUsed }}</td>
                             <td>{{ node.resources.memoryMbUsed }} MB</td>
                         </tr>

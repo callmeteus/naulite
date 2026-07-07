@@ -13,7 +13,3 @@ body,
 body {
     margin: 0;
 }
-
-.router-link-active {
-    @apply bg-base-200 font-semibold;
-}

@@ -104,6 +104,43 @@
         "notLeader": "The control plane leader is unavailable. Retry in a moment.",
         "detailsToggle": "Show details"
     },
+    "status": {
+        "unknown": "Unknown",
+        "values": {
+            "registering": "Registering",
+            "online": "Online",
+            "offline": "Offline",
+            "draining": "Draining",
+            "unhealthy": "Unhealthy",
+            "healthy": "Healthy",
+            "degraded": "Degraded",
+            "ok": "OK",
+            "pending": "Pending",
+            "deploying": "Deploying",
+            "running": "Running",
+            "stopped": "Stopped",
+            "failed": "Failed",
+            "pulling": "Pulling image",
+            "creating": "Creating",
+            "starting": "Starting",
+            "stopping": "Stopping",
+            "removing": "Removing",
+            "bound": "Bound",
+            "available": "Available",
+            "deleting": "Deleting",
+            "succeeded": "Succeeded",
+            "launching": "Launching",
+            "bootstrapping": "Bootstrapping",
+            "registered": "Registered",
+            "terminated": "Terminated",
+            "completed": "Completed",
+            "cancelled": "Cancelled",
+            "queued": "Queued",
+            "active": "Active",
+            "disabled": "Disabled",
+            "unknown": "Unknown"
+        }
+    },
     "pages": {
         "adminUsers": {
             "title": "Admin users",

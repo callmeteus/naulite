@@ -6,6 +6,7 @@ import type { PipelineEvent, PipelineRun } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
@@ -222,7 +223,7 @@ async function triggerBuild(): Promise<void> {
                     <div class="space-y-4">
                         <p>
                             {{ t("pages.runs.statusFilter") }}:
-                            <span class="badge badge-outline">{{ activeRun.status }}</span>
+                            <StatusPill :status="activeRun.status" size="md" />
                             <span v-if="streamActive" class="ml-2 text-sm text-base-content/70">
                                 ({{ t("pages.runs.streaming") }})
                             </span>
@@ -244,11 +245,12 @@ async function triggerBuild(): Promise<void> {
                                 <li v-for="step in activeRun.steps ?? []" :key="step.id">
                                     <button
                                         type="button"
-                                        class="btn btn-sm"
+                                        class="btn btn-sm inline-flex items-center gap-2"
                                         :class="step.id === selectedStepId ? 'btn-primary' : 'btn-outline'"
                                         @click="selectedStepId = step.id"
                                     >
-                                        {{ step.name }} - {{ step.status }}
+                                        <span>{{ step.name }}</span>
+                                        <StatusPill :status="step.status" />
                                     </button>
                                 </li>
                             </ul>

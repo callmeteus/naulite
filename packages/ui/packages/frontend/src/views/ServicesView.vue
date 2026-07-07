@@ -6,6 +6,7 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
@@ -47,9 +48,12 @@ onMounted(() => {
                     <tbody>
                         <tr v-for="service in store.services" :key="service.name">
                             <td>{{ service.name }}</td>
-                            <td><span class="badge badge-outline">{{ service.status }}</span></td>
+                            <td><StatusPill :status="service.status" /></td>
                             <td>{{ service.desiredReplicas }}</td>
-                            <td>{{ service.lifecycleStatus ?? "-" }}</td>
+                            <td>
+                                <StatusPill v-if="service.lifecycleStatus" :status="service.lifecycleStatus" />
+                                <span v-else>-</span>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

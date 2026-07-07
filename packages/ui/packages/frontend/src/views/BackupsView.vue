@@ -7,6 +7,7 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useServerPagination } from "../composables/useServerPagination";
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
@@ -130,7 +131,7 @@ async function restoreBackup(backupId: string): Promise<void> {
                         <tr v-for="backup in paginatedBackups" :key="backup.id">
                             <td>{{ backup.id }}</td>
                             <td>{{ backup.volumeName }}</td>
-                            <td><span class="badge badge-outline">{{ backup.status }}</span></td>
+                            <td><StatusPill :status="backup.status" /></td>
                             <td>{{ backup.destination ?? "-" }}</td>
                             <td class="flex flex-wrap gap-2">
                                 <button

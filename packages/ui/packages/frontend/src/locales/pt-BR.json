@@ -104,6 +104,43 @@
         "notLeader": "O líder do plano de controle está indisponível. Tente novamente em instantes.",
         "detailsToggle": "Mostrar detalhes"
     },
+    "status": {
+        "unknown": "Desconhecido",
+        "values": {
+            "registering": "Registrando",
+            "online": "Online",
+            "offline": "Offline",
+            "draining": "Drenando",
+            "unhealthy": "Instável",
+            "healthy": "Saudável",
+            "degraded": "Degradado",
+            "ok": "OK",
+            "pending": "Pendente",
+            "deploying": "Implantando",
+            "running": "Em execução",
+            "stopped": "Parado",
+            "failed": "Falhou",
+            "pulling": "Baixando imagem",
+            "creating": "Criando",
+            "starting": "Iniciando",
+            "stopping": "Parando",
+            "removing": "Removendo",
+            "bound": "Vinculado",
+            "available": "Disponível",
+            "deleting": "Excluindo",
+            "succeeded": "Concluído",
+            "launching": "Lançando",
+            "bootstrapping": "Inicializando",
+            "registered": "Registrado",
+            "terminated": "Encerrado",
+            "completed": "Concluído",
+            "cancelled": "Cancelado",
+            "queued": "Na fila",
+            "active": "Ativo",
+            "disabled": "Desabilitado",
+            "unknown": "Desconhecido"
+        }
+    },
     "pages": {
         "adminUsers": {
             "title": "Usuários admin",

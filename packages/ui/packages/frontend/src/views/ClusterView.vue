@@ -6,6 +6,7 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import StatusPill from "../components/ui/StatusPill.vue";
 import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
@@ -35,7 +36,7 @@ onMounted(() => {
             <div class="card-body gap-2">
                 <p>
                     <span class="font-medium">{{ t("common.status") }}:</span>
-                    <span class="badge badge-outline ml-2">{{ store.clusterStatus.health.status }}</span>
+                    <StatusPill class="ml-2" :status="store.clusterStatus.health.status" size="md" />
                 </p>
                 <p>
                     <span class="font-medium">{{ t("menu.infrastructure.nodes") }}:</span>
