@@ -4,48 +4,29 @@
 export interface AdminApiConfig {
     host: string;
     port: number;
-    controlPlaneUrl: string;
-    leaderInstanceUrls?: Record<string, string>;
+    controlPlaneInstances: string[];
     adminApiKey?: string;
 }
 
 /**
- * Parses control plane instance ids mapped to base URLs.
+ * Parses comma-separated control plane base URLs.
  *
- * Format: cp-1=http://control-plane-1:8080,cp-2=http://control-plane-2:8080
+ * Format: http://control-plane-1:8080,http://control-plane-2:8080
  *
  * @param raw Environment variable value
- * @returns Instance id to base URL map
+ * @returns Normalized control plane base URLs
  */
-export function parseLeaderInstanceUrls(raw: string | undefined): Record<string, string> | undefined {
+export function parseControlPlaneInstances(raw: string | undefined): string[] {
     if (!raw?.trim()) {
-        return undefined;
+        return ["http://localhost:8080"];
     }
 
-    const entries = raw
+    const instances = raw
         .split(",")
-        .map((part) => part.trim())
+        .map((part) => part.trim().replace(/\/$/, ""))
         .filter((part) => part.length > 0);
-    const map: Record<string, string> = {};
 
-    for (const entry of entries) {
-        const separatorIndex = entry.indexOf("=");
-
-        if (separatorIndex <= 0) {
-            continue;
-        }
-
-        const instanceId = entry.slice(0, separatorIndex).trim();
-        const baseUrl = entry.slice(separatorIndex + 1).trim().replace(/\/$/, "");
-
-        if (!instanceId || !baseUrl) {
-            continue;
-        }
-
-        map[instanceId] = baseUrl;
-    }
-
-    return Object.keys(map).length > 0 ? map : undefined;
+    return instances.length > 0 ? instances : ["http://localhost:8080"];
 }
 
 /**
@@ -56,15 +37,13 @@ export function parseLeaderInstanceUrls(raw: string | undefined): Record<string,
 export function resolveConfigFromEnv(): AdminApiConfig {
     const host = process.env.HOST ?? "0.0.0.0";
     const port = Number(process.env.PORT ?? 3001);
-    const controlPlaneUrl = process.env.CONTROL_PLANE_URL ?? "http://localhost:8080";
-    const leaderInstanceUrls = parseLeaderInstanceUrls(process.env.CONTROL_PLANE_INSTANCES);
+    const controlPlaneInstances = parseControlPlaneInstances(process.env.CONTROL_PLANE_INSTANCES);
     const adminApiKey = process.env.ADMIN_API_KEY?.trim() || undefined;
 
     return {
         host,
         port,
-        controlPlaneUrl,
-        leaderInstanceUrls,
+        controlPlaneInstances,
         adminApiKey
     };
 }

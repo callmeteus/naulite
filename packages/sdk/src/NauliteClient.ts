@@ -81,6 +81,23 @@ function resolveFetchImpl(fetchImpl?: typeof fetch): typeof fetch {
 }
 
 /**
+ * Normalizes control plane base URLs from client options.
+ *
+ * @param options Client configuration
+ * @returns Non-empty list of base URLs
+ */
+function normalizeControlPlaneInstances(options: NauliteClientOptions): string[] {
+    const rawInstances = options.controlPlaneInstances
+        ?? (options.baseUrl ? [options.baseUrl] : ["http://localhost:8080"]);
+
+    const instances = rawInstances
+        .map((url) => url.trim().replace(/\/$/, ""))
+        .filter((url) => url.length > 0);
+
+    return instances.length > 0 ? instances : ["http://localhost:8080"];
+}
+
+/**
  * Typed HTTP client for all control plane REST routes.
  */
 export class NauliteClient {
@@ -90,7 +107,7 @@ export class NauliteClient {
     private readonly csrfToken?: string;
     private readonly credentials?: "omit" | "same-origin" | "include";
     private readonly fetchImpl: typeof fetch;
-    private readonly leaderInstanceUrls?: Record<string, string>;
+    private readonly controlPlaneInstances: string[];
 
     /**
      * Creates a platform API client.
@@ -98,13 +115,14 @@ export class NauliteClient {
      * @param options Client configuration
      */
     constructor(options: NauliteClientOptions) {
-        this.baseUrl = options.baseUrl.replace(/\/$/, "");
+        const instances = normalizeControlPlaneInstances(options);
+        this.baseUrl = instances[0];
+        this.controlPlaneInstances = instances;
         this.token = options.token;
         this.sessionToken = options.sessionToken;
         this.csrfToken = options.csrfToken;
         this.credentials = options.credentials;
         this.fetchImpl = resolveFetchImpl(options.fetchImpl);
-        this.leaderInstanceUrls = options.leaderInstanceUrls;
     }
 
     /**
@@ -121,7 +139,7 @@ export class NauliteClient {
             csrfToken: this.csrfToken,
             credentials: this.credentials,
             fetchImpl: this.fetchImpl,
-            leaderInstanceUrls: this.leaderInstanceUrls
+            controlPlaneInstances: this.controlPlaneInstances
         });
     }
 
@@ -139,7 +157,7 @@ export class NauliteClient {
             csrfToken,
             credentials: this.credentials,
             fetchImpl: this.fetchImpl,
-            leaderInstanceUrls: this.leaderInstanceUrls
+            controlPlaneInstances: this.controlPlaneInstances
         });
     }
 
@@ -1364,12 +1382,12 @@ export class NauliteClient {
             const error = new NauliteApiError(response.status, message, parsed);
 
             if (allowLeaderRetry && error.status === 503 && error.code === "not_leader") {
-                const leaderUrl = error.leaderId
-                    ? this.leaderInstanceUrls?.[error.leaderId]
-                    : undefined;
+                for (const peerUrl of this.controlPlaneInstances) {
+                    if (peerUrl === baseUrl) {
+                        continue;
+                    }
 
-                if (leaderUrl && leaderUrl !== baseUrl) {
-                    return this.requestOnBaseUrl<T>(leaderUrl, method, path, body, false);
+                    return this.requestOnBaseUrl<T>(peerUrl, method, path, body, false);
                 }
             }
 

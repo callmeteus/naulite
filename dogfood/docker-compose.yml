@@ -163,8 +163,7 @@ services:
             - control-plane-1
         environment:
             NODE_ENV: production
-            CONTROL_PLANE_URL: http://control-plane-1:8080
-            CONTROL_PLANE_INSTANCES: cp-1=http://control-plane-1:8080,cp-2=http://control-plane-2:8080
+            CONTROL_PLANE_INSTANCES: http://control-plane-1:8080,http://control-plane-2:8080
             ADMIN_API_KEY: ${ADMIN_API_KEY:-}
             NAULITE_LOG_LEVEL: ${NAULITE_LOG_LEVEL:-debug}
             NAULITE_LOG_DIR: ${NAULITE_LOG_DIR:-/tmp/naulite/logs}

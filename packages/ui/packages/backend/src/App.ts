@@ -16,8 +16,7 @@ import { registerRoutes } from "./routes/index";
  * Options for creating the admin API Fastify application.
  */
 export interface CreateAppOptions {
-    controlPlaneUrl?: string;
-    leaderInstanceUrls?: Record<string, string>;
+    controlPlaneInstances?: string[];
     adminApiKey?: string;
     logger?: boolean;
 }
@@ -30,10 +29,11 @@ export interface CreateAppOptions {
  */
 export async function createApp(options: CreateAppOptions = {}): Promise<FastifyInstance> {
     const envConfig = resolveConfigFromEnv();
+    const controlPlaneInstances = options.controlPlaneInstances ?? envConfig.controlPlaneInstances;
     const controlPlane = new NauliteClient({
-        baseUrl: options.controlPlaneUrl ?? envConfig.controlPlaneUrl,
-        token: options.adminApiKey ?? envConfig.adminApiKey,
-        leaderInstanceUrls: options.leaderInstanceUrls ?? envConfig.leaderInstanceUrls
+        baseUrl: controlPlaneInstances[0] ?? "http://localhost:8080",
+        controlPlaneInstances,
+        token: options.adminApiKey ?? envConfig.adminApiKey
     });
 
     const httpLog = Logger.create("http");

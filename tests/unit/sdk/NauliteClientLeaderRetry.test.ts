@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { NauliteClient } from "../../../packages/sdk/src/NauliteClient";
 
 describe("NauliteClient leader retry", () => {
-    it("retries mutating requests on the elected leader instance", async () => {
+    it("retries mutating requests on another control plane instance", async () => {
         const fetchImpl = vi.fn(async (url: string) => {
             if (url.includes("control-plane-1")) {
                 return new Response(JSON.stringify({
@@ -20,11 +20,10 @@ describe("NauliteClient leader retry", () => {
         });
 
         const client = new NauliteClient({
-            baseUrl: "http://control-plane-1:8080",
-            leaderInstanceUrls: {
-                "cp-1": "http://control-plane-1:8080",
-                "cp-2": "http://control-plane-2:8080"
-            },
+            controlPlaneInstances: [
+                "http://control-plane-1:8080",
+                "http://control-plane-2:8080"
+            ],
             fetchImpl
         });
 
