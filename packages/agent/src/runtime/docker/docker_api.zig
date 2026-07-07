@@ -818,12 +818,14 @@ pub const DockerApi = struct {
         const body = body_blk: {
             if (transfer_encoding) |encoding| {
                 if (std.ascii.eqlIgnoreCase(encoding, "chunked")) {
-                    const decoded = decodeChunkedBody(allocator, raw_body) catch |err| {
+                    const decoded = decodeChunkedBody(allocator, raw_body) catch {
                         if (extractJsonPayload(raw_body)) |payload| {
                             break :body_blk try allocator.dupe(u8, payload);
                         }
 
-                        return err;
+                        // Some daemons (or proxies) occasionally mislabel responses as chunked.
+                        // In that case, keep the raw bytes so callers can attempt to parse.
+                        break :body_blk try allocator.dupe(u8, raw_body);
                     };
 
                     if (decoded.len == 0) {

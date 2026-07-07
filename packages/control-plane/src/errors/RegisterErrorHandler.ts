@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { enrichApiErrorMessage, formatValidationDetails } from "@naulite/shared";
+import { formatValidationDetails } from "@naulite/shared";
 
 import { ComposeParserError } from "./orchestration/compose/ComposeParserError";
 import { Logger } from "../Logger";
