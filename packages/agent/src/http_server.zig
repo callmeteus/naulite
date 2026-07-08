@@ -1,8 +1,6 @@
-const logger = @import("logger");
-
-const log_http = logger.Logger.create("http");
-
 const std = @import("std");
+
+const logger = @import("logger");
 
 const backup_executor = @import("backup_executor.zig");
 const blocking_io = @import("blocking_io.zig");
@@ -11,9 +9,12 @@ const build_context = @import("build_context.zig");
 const build_executor = @import("build_executor.zig");
 const exec_stream = @import("exec_stream.zig");
 const execution_plan = @import("execution_plan.zig");
+const function_executor = @import("function_executor.zig");
 const log_rotation_executor = @import("log_rotation_executor.zig");
-const metrics_exporter = @import("runtime/docker/metrics_exporter.zig");
 const docker = @import("runtime/docker/docker.zig");
+const metrics_exporter = @import("runtime/docker/metrics_exporter.zig");
+
+const log_http = logger.Logger.create("http");
 
 pub const Config = struct {
     // Listen address for the agent HTTP server.
@@ -143,6 +144,10 @@ pub fn handleRequestWithSocket(
         return try handleLogRotationTask(&ctx, body);
     }
 
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/function")) {
+        return try handleFunctionTask(&ctx, body);
+    }
+
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/backups/receive")) {
         return try handleBackupReceive(&ctx, body, raw_target);
     }
@@ -163,14 +168,23 @@ pub fn handleRequestWithSocket(
     };
 }
 
-/// Starts the REST HTTP server and blocks until interrupted.
+/// Starts the REST HTTP server on the shared process I/O runtime.
 pub fn serve(
     allocator: std.mem.Allocator,
     // HTTP server and Docker client configuration.
     config: Config,
 ) !void {
-    const io = blocking_io.io();
+    return serveWithIo(allocator, blocking_io.io(), config);
+}
 
+/// Starts the REST HTTP server on a dedicated I/O runtime and blocks until interrupted.
+pub fn serveWithIo(
+    allocator: std.mem.Allocator,
+    // Dedicated I/O handle for accept/read/write (must not be shared with background workers).
+    io: std.Io,
+    // HTTP server and Docker client configuration.
+    config: Config,
+) !void {
     var docker_client = docker.DockerClient.init(allocator, config.docker_socket);
     defer docker_client.deinit();
 
@@ -193,6 +207,16 @@ pub fn serve(
     }
 }
 
+/// Reads up to `dest.len` bytes from an accepted TCP stream.
+fn streamRead(
+    io: std.Io,
+    stream: *const std.Io.net.Stream,
+    dest: []u8,
+) !usize {
+    var slices = [_][]u8{dest};
+    return io.vtable.netRead(io.userdata, stream.socket.handle, &slices);
+}
+
 fn handleConnection(
     allocator: std.mem.Allocator,
     // Process I/O handle.
@@ -210,8 +234,7 @@ fn handleConnection(
     var read_buffer: [4096]u8 = undefined;
 
     while (true) {
-        var net_reader = stream.reader(io, &read_buffer);
-        const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch |err| {
+        const read_count = streamRead(io, stream, &read_buffer) catch |err| {
             return err;
         };
 
@@ -276,8 +299,7 @@ fn handleConnection(
 
         var index = already_read;
         while (index < content_length) {
-            var net_reader = stream.reader(io, &read_buffer);
-            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch |err| {
+            const read_count = streamRead(io, stream, &read_buffer) catch |err| {
                 return err;
             };
 
@@ -588,6 +610,45 @@ fn handleLogRotationTask(ctx: *const RouteContext, body: []const u8) !HttpRespon
         ctx.allocator,
         "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"rotatedFiles\":[]}}",
         .{ result.task_id, result.status },
+    );
+
+    return .{
+        .status = 202,
+        .content_type = "application/json",
+        .body = response_body,
+    };
+}
+
+fn handleFunctionTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try function_executor.executeFunctionTask(ctx.allocator, ctx.docker_socket, body);
+    defer ctx.allocator.free(result.task_id);
+    defer ctx.allocator.free(result.status);
+
+    const logs_json = if (result.logs) |logs| try jsonStringLiteral(ctx.allocator, logs) else try ctx.allocator.dupe(u8, "null");
+    defer ctx.allocator.free(logs_json);
+
+    const error_json = if (result.error_message) |error_message| try jsonStringLiteral(ctx.allocator, error_message) else try ctx.allocator.dupe(u8, "null");
+    defer ctx.allocator.free(error_json);
+
+    if (result.logs) |logs| {
+        ctx.allocator.free(logs);
+    }
+
+    if (result.error_message) |error_message| {
+        ctx.allocator.free(error_message);
+    }
+
+    const response_body = try std.fmt.allocPrint(
+        ctx.allocator,
+        "{{\"taskId\":\"{s}\",\"status\":\"{s}\",\"exitCode\":{d},\"timedOut\":{s},\"logs\":{s},\"error\":{s}}}",
+        .{
+            result.task_id,
+            result.status,
+            result.exit_code,
+            if (result.timed_out) "true" else "false",
+            logs_json,
+            error_json,
+        },
     );
 
     return .{

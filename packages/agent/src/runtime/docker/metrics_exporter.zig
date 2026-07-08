@@ -27,11 +27,21 @@ pub const Snapshot = struct {
 };
 
 const SharedState = struct {
-    mutex: std.Io.Mutex = .init,
+    mutex: std.atomic.Mutex = .unlocked,
     snapshot: ?Snapshot = null,
 };
 
 var shared_state: SharedState = .{};
+
+fn lockSnapshot() void {
+    while (!shared_state.mutex.tryLock()) {
+        std.Thread.yield() catch {};
+    }
+}
+
+fn unlockSnapshot() void {
+    shared_state.mutex.unlock();
+}
 
 /// Starts the background metrics collector loop.
 ///
@@ -55,8 +65,8 @@ pub fn startBackground(
 /// @param allocator Allocator used to duplicate returned strings
 /// @returns Cached snapshot or null when not yet collected
 pub fn latestSnapshot(allocator: std.mem.Allocator) ?Snapshot {
-    shared_state.mutex.lock(blocking_io.io()) catch {};
-    defer shared_state.mutex.unlock(blocking_io.io());
+    lockSnapshot();
+    defer unlockSnapshot();
 
     const cached = shared_state.snapshot orelse return null;
     return duplicateSnapshot(allocator, cached) catch return null;
@@ -67,8 +77,8 @@ pub fn latestSnapshot(allocator: std.mem.Allocator) ?Snapshot {
 /// @param allocator Allocator for the output buffer
 /// @returns Prometheus metrics document
 pub fn formatPrometheusText(allocator: std.mem.Allocator) ![]u8 {
-    shared_state.mutex.lock(blocking_io.io()) catch {};
-    defer shared_state.mutex.unlock(blocking_io.io());
+    lockSnapshot();
+    defer unlockSnapshot();
 
     const snapshot = shared_state.snapshot orelse {
         return try std.fmt.allocPrint(
@@ -121,8 +131,8 @@ fn collectOnce(
             .instances = empty_instances,
         };
 
-        shared_state.mutex.lock(blocking_io.io()) catch {};
-        defer shared_state.mutex.unlock(blocking_io.io());
+        lockSnapshot();
+        defer unlockSnapshot();
 
         if (shared_state.snapshot) |*previous| {
             freeSnapshot(allocator, previous);
@@ -166,8 +176,8 @@ fn collectOnce(
         .instances = instances[0..instance_count],
     };
 
-    shared_state.mutex.lock(blocking_io.io()) catch {};
-    defer shared_state.mutex.unlock(blocking_io.io());
+    lockSnapshot();
+    defer unlockSnapshot();
 
     if (shared_state.snapshot) |*previous| {
         freeSnapshot(allocator, previous);

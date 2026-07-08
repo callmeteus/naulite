@@ -8,6 +8,7 @@ import {
     ManifestRegistrySchema,
     ManifestPipelineNotificationsSchema,
     ManifestSchema,
+    ManifestFunctionSchema,
     ManifestServiceSchema,
     ManifestVolumeSchema
 } from "../schemas/Manifest";
@@ -15,6 +16,7 @@ import {
 export type BuildOptions = z.infer<typeof BuildOptionsSchema>;
 export type ManifestBuild = z.infer<typeof ManifestBuildSchema>;
 export type ManifestDefaults = z.infer<typeof ManifestDefaultsSchema>;
+export type ManifestFunction = z.infer<typeof ManifestFunctionSchema>;
 export type ManifestService = z.infer<typeof ManifestServiceSchema>;
 export type ManifestVolume = z.infer<typeof ManifestVolumeSchema>;
 export type ManifestNetwork = z.infer<typeof ManifestNetworkSchema>;

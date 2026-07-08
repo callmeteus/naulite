@@ -28,6 +28,10 @@ export class GitRevisionModel extends Model {
     @Column({ type: DataType.JSON, field: "overlay_paths" })
     declare overlayPaths: string[];
 
+    @Default([])
+    @Column({ type: DataType.JSON, field: "child_manifests" })
+    declare childManifests: unknown[];
+
     @Column({ type: DataType.STRING, field: "applied_at" })
     declare appliedAt: string;
 

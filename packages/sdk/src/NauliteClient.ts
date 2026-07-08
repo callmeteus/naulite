@@ -32,6 +32,8 @@ import type {
     InstanceReconcileResult,
     LogRotationRun,
     LogRotationTask,
+    FunctionRun,
+    FunctionRunSummary,
     PaginatedResponse,
     PaginationQuery,
     PipelineEvent,
@@ -998,6 +1000,35 @@ export class NauliteClient {
      */
     async listIngress(): Promise<IngressSummary[]> {
         return this.request<IngressSummary[]>("GET", "/ingress");
+    }
+
+    async invokeFunction(
+        name: string,
+        input: { payload?: unknown; environment?: Record<string, string> } = {}
+    ): Promise<{ runId: string }> {
+        return this.request<{ runId: string }>(
+            "POST",
+            `/functions/${encodeURIComponent(name)}/invoke`,
+            input
+        );
+    }
+
+    async listFunctionRuns(
+        name: string,
+        query: PaginationQuery = {}
+    ): Promise<PaginatedResponse<FunctionRunSummary>> {
+        return this.requestPaginated<FunctionRunSummary>(
+            "GET",
+            `/functions/${encodeURIComponent(name)}/runs`,
+            query
+        );
+    }
+
+    async getFunctionRun(name: string, runId: string): Promise<FunctionRun> {
+        return this.request<FunctionRun>(
+            "GET",
+            `/functions/${encodeURIComponent(name)}/runs/${encodeURIComponent(runId)}`
+        );
     }
 
     /**

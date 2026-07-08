@@ -45,6 +45,7 @@ export interface GitRevisionRecord {
     manifestName: string;
     manifestYaml: string;
     overlayPaths: string[];
+    childManifests?: unknown[];
     appliedAt: string;
     rolledBackFromId?: string;
 }
@@ -179,6 +180,7 @@ export namespace GitOpsService {
             manifestName: manifest.name,
             manifestYaml,
             overlayPaths: options.overlayPaths ?? [],
+            childManifests: [],
             appliedAt: new Date().toISOString(),
             rolledBackFromId
         };
@@ -191,12 +193,61 @@ export namespace GitOpsService {
             manifestName: record.manifestName,
             manifestYaml: record.manifestYaml,
             overlayPaths: record.overlayPaths,
+            childManifests: record.childManifests ?? [],
             appliedAt: record.appliedAt,
             rolledBackFromId: record.rolledBackFromId ?? null
         });
 
         if (runId) {
             await PipelineRunService.linkRevision(runId, record.id);
+        }
+
+        return record;
+    }
+
+    export async function recordCatalogRevision(options: {
+        repositoryUrl: string;
+        branch: string;
+        commitSha: string;
+        catalogName: string;
+        catalogYaml: string;
+        childManifests: Array<{ appName: string; manifestName: string; manifestYaml: string; extendsSources: string[] }>;
+        overlayPaths?: string[];
+        runId?: string;
+    }): Promise<GitRevisionRecord> {
+        /**
+         * Stores a composed GitOps revision for app-of-apps catalogs.
+         *
+         * The catalog YAML is stored as `manifestYaml` and child manifests are stored under `childManifests`.
+         * This enables audit/rollback workflows without requiring the child repositories to remain reachable.
+         */
+        const record: GitRevisionRecord = {
+            id: randomUUID(),
+            repositoryUrl: options.repositoryUrl,
+            branch: options.branch,
+            commitSha: options.commitSha,
+            manifestName: options.catalogName,
+            manifestYaml: options.catalogYaml,
+            overlayPaths: options.overlayPaths ?? [],
+            childManifests: options.childManifests,
+            appliedAt: new Date().toISOString()
+        };
+
+        await GitRevisionModel.create({
+            id: record.id,
+            repositoryUrl: record.repositoryUrl,
+            branch: record.branch,
+            commitSha: record.commitSha,
+            manifestName: record.manifestName,
+            manifestYaml: record.manifestYaml,
+            overlayPaths: record.overlayPaths,
+            childManifests: record.childManifests ?? [],
+            appliedAt: record.appliedAt,
+            rolledBackFromId: null
+        });
+
+        if (options.runId) {
+            await PipelineRunService.linkRevision(options.runId, record.id);
         }
 
         return record;
@@ -262,6 +313,7 @@ export namespace GitOpsService {
         manifestName: string;
         manifestYaml: string;
         overlayPaths: unknown;
+        childManifests?: unknown;
         appliedAt: string;
         rolledBackFromId: string | null;
     }): GitRevisionRecord {
@@ -273,6 +325,7 @@ export namespace GitOpsService {
             manifestName: row.manifestName,
             manifestYaml: row.manifestYaml,
             overlayPaths: parseOverlayPaths(row.overlayPaths),
+            childManifests: parseChildManifests(row.childManifests),
             appliedAt: row.appliedAt,
             rolledBackFromId: row.rolledBackFromId ?? undefined
         };
@@ -291,6 +344,22 @@ export namespace GitOpsService {
 
         if (typeof value === "string") {
             return JSON.parse(value) as string[];
+        }
+
+        return [];
+    }
+
+    function parseChildManifests(value: unknown): unknown[] {
+        if (Array.isArray(value)) {
+            return value;
+        }
+
+        if (typeof value === "string") {
+            try {
+                return JSON.parse(value) as unknown[];
+            } catch {
+                return [];
+            }
         }
 
         return [];

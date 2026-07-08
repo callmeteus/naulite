@@ -58,3 +58,18 @@ export const LifecycleStatusSchema = z.enum([
  * ISO-8601 timestamp string.
  */
 export const TimestampSchema = z.string().datetime({ offset: true });
+
+/**
+ * Human-friendly duration string.
+ *
+ * Supported v1 units:
+ * - s (seconds)
+ * - m (minutes)
+ * - h (hours)
+ *
+ * Examples: "30s", "1m", "2h"
+ */
+export const DurationSchema = z
+    .string()
+    .min(2)
+    .regex(/^\d+(s|m|h)$/, "Invalid duration format. Expected e.g. \"30s\" or \"1m\".");

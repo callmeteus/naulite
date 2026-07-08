@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { SecretReferenceSchema } from "./Common";
+import { CronExpressionSchema, DurationSchema, SecretReferenceSchema } from "./Common";
 import { VolumeBackupPolicySchema } from "./BackupTask";
 import { ClusterPlacementSchema } from "./ClusterLabels";
 import { IngressSchema } from "./Ingress";
@@ -45,6 +45,14 @@ export const ManifestDefaultsSchema = z.object({
     logRotation: LogRotationPolicySchema.optional()
 });
 
+export const ManifestFunctionSchema = z.object({
+    timeout: DurationSchema.default("60s"),
+    trigger: z.object({
+        http: z.boolean().default(false),
+        cron: CronExpressionSchema.optional()
+    }).default({ http: false })
+});
+
 /**
  * Service definition inside a Compose-compatible manifest.
  */
@@ -52,6 +60,7 @@ export const ManifestServiceSchema = z.object({
     image: z.string().min(1).optional(),
     build: z.union([z.string().min(1), ManifestBuildSchema]).optional(),
     command: z.union([z.string(), z.array(z.string())]).optional(),
+    function: ManifestFunctionSchema.optional(),
     environment: z.record(z.string(), z.string()).optional(),
     ports: z.array(z.union([
         z.string(),
@@ -87,6 +96,32 @@ export const ManifestServiceSchema = z.object({
             message: "Service must declare image or build.",
             path: ["image"]
         });
+    }
+
+    if (service.function) {
+        if (service.deploy?.replicas) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Function service cannot declare deploy.replicas.",
+                path: ["deploy", "replicas"]
+            });
+        }
+
+        if (service.logRotation) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Function service cannot declare logRotation.",
+                path: ["logRotation"]
+            });
+        }
+
+        if (service.ingress && !service.function.trigger.http) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Function ingress requires function.trigger.http = true.",
+                path: ["function", "trigger", "http"]
+            });
+        }
     }
 });
 

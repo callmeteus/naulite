@@ -33,7 +33,7 @@ pub fn resolveTarget(
         },
         allocator,
         response.body,
-        .{},
+        .{ .ignore_unknown_fields = true },
     );
     defer parsed.deinit();
 

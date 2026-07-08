@@ -9,6 +9,7 @@ export {
 
 export {
     CronExpressionSchema,
+    DurationSchema,
     GlobPatternSchema,
     SecretReferenceSchema,
     ResourceRequirementsSchema,
@@ -92,6 +93,12 @@ export {
 } from "./LogRotationTask";
 
 export {
+    FunctionTaskSchema,
+    FunctionTaskResultSchema,
+    FunctionTaskStatusSchema
+} from "./FunctionTask";
+
+export {
     ExecutionPlanSchema,
     ExecutionOperationSchema,
     PullOperationSchema,
@@ -108,6 +115,7 @@ export {
 export {
     ManifestSchema,
     ManifestServiceSchema,
+    ManifestFunctionSchema,
     ManifestVolumeSchema,
     ManifestNetworkSchema,
     ManifestRegistrySchema,
@@ -116,6 +124,25 @@ export {
     ManifestPipelineNotificationsSchema,
     BuildOptionsSchema
 } from "./Manifest";
+
+export {
+    GitCredentialsSchema,
+    RootExtendsSchema,
+    RootExtendsEntrySchema,
+    ServiceExtendsSchema,
+    ManifestVarsSchema,
+    AppsCatalogSchema
+} from "./ComposeExtends";
+
+export type {
+    GitCredentials,
+    RootExtends,
+    RootExtendsEntry,
+    ServiceExtends,
+    ManifestVars,
+    AppsCatalog,
+    AppEntry
+} from "./ComposeExtends";
 
 export {
     PipelineRunSchema,

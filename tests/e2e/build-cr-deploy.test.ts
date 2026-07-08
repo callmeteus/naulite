@@ -46,16 +46,8 @@ describe("build container registry deploy", () => {
         }
 
         const manifestYaml = await readFile(fixturePath, "utf8");
-        const response = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                manifestYaml,
-                buildContextRoot: "/naulite/build-fixtures/minimal-web"
-            })
+        const response = await LocalTestCluster.applyManifest(manifestYaml, {
+            buildContextRoot: "/naulite/build-fixtures/minimal-web"
         });
 
         expect(response.ok).toBe(true);

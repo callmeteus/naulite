@@ -149,6 +149,36 @@ export interface LogRotationRun {
     completedAt?: string;
 }
 
+export interface FunctionRunSummary {
+    id: string;
+    serviceName: string;
+    manifestName: string;
+    nodeId: string;
+    status: string;
+    source: string;
+    startedAt?: string;
+    completedAt?: string;
+    exitCode?: number;
+}
+
+export interface FunctionRun {
+    id: string;
+    serviceId: string;
+    serviceName: string;
+    manifestName: string;
+    nodeId: string;
+    status: string;
+    source: string;
+    exitCode?: number;
+    logs?: string;
+    payload: Record<string, unknown>;
+    startedAt?: string;
+    completedAt?: string;
+    durationMs?: number;
+    errorMessage?: string;
+    createdAt: string;
+}
+
 /**
  * Build request payload.
  */

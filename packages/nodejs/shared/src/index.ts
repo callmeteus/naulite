@@ -34,3 +34,5 @@ export {
     enrichApiErrorMessage,
     formatValidationDetails
 } from "./util/formatValidationDetails";
+
+export { DurationUtils } from "./util/DurationUtils";

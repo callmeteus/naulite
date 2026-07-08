@@ -193,6 +193,40 @@ export class LocalTestCluster {
     }
 
     /**
+     * Waits until the default worker agent responds on `/health`.
+     *
+     * @param nodeId Simulated node identifier
+     * @param timeoutMs Maximum wait time in milliseconds
+     * @returns Nothing.
+     */
+    static async waitForAgentHealthy(nodeId = "node-a", timeoutMs = 120_000): Promise<void> {
+        const url = `${this.getAgentUrl(nodeId)}/health`;
+        const startedAt = Date.now();
+
+        while (Date.now() - startedAt < timeoutMs) {
+            try {
+                const response = await fetch(url);
+
+                if (response.ok) {
+                    const body = await response.json() as { status?: string };
+
+                    if (body.status === "ok") {
+                        return;
+                    }
+                }
+            } catch {
+                // Retry until timeout.
+            }
+
+            await new Promise((resolve) => {
+                setTimeout(resolve, 2_000);
+            });
+        }
+
+        throw new Error(`Agent did not become healthy at ${url}`);
+    }
+
+    /**
      * Waits until the primary control plane responds on `/health/live`.
      *
      * @param timeoutMs Maximum wait time in milliseconds
@@ -458,6 +492,60 @@ export class LocalTestCluster {
         }
 
         throw new Error("No control plane leader is currently elected.");
+    }
+
+    /**
+     * Returns the base URL of the elected control plane leader.
+     *
+     * @returns Leader control plane URL
+     */
+    static async getLeaderControlPlaneUrl(): Promise<string> {
+        const leaderPort = await this.getLeaderPort();
+        return this.getControlPlaneUrlForPort(leaderPort);
+    }
+
+    /**
+     * Posts a manifest YAML payload to `/apply` on the elected control plane leader.
+     *
+     * @param manifestYaml Compose manifest body
+     * @param options Optional apply request fields (for example `buildContextRoot`)
+     * @returns Raw fetch response from the leader
+     */
+    static async applyManifest(
+        manifestYaml: string,
+        options?: {
+            buildContextRoot?: string;
+            headers?: Record<string, string>;
+        }
+    ): Promise<Response> {
+        const leaderUrl = await this.getLeaderControlPlaneUrl();
+
+        return fetch(`${leaderUrl}/apply`, {
+            method: "POST",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                ...(options?.headers ?? {})
+            },
+            body: JSON.stringify({
+                manifestYaml,
+                ...(options?.buildContextRoot ? { buildContextRoot: options.buildContextRoot } : {})
+            })
+        });
+    }
+
+    /**
+     * Fetches a control plane API path on the elected leader.
+     *
+     * @param path API path beginning with `/`
+     * @param init Optional fetch init (method, body, headers)
+     * @returns Raw fetch response from the leader
+     */
+    static async fetchLeader(path: string, init?: RequestInit): Promise<Response> {
+        const leaderUrl = await this.getLeaderControlPlaneUrl();
+        const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+        return fetch(`${leaderUrl}${normalizedPath}`, init);
     }
 
     /**

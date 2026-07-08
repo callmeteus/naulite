@@ -126,7 +126,7 @@ describe("build pipeline runs", () => {
         try {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
-            controlPlaneUrl = LocalTestCluster.getControlPlaneUrl();
+            controlPlaneUrl = await LocalTestCluster.getLeaderControlPlaneUrl();
         } catch (err) {
             LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;

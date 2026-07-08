@@ -50,14 +50,7 @@ describe("self-signed TLS ingress via gateway routes", () => {
         }
 
         const manifestYaml = await readFile(fixturePath, "utf8");
-        const applyResponse = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml })
-        });
+        const applyResponse = await LocalTestCluster.applyManifest(manifestYaml);
         expect(applyResponse.ok).toBe(true);
 
         const traefikConfigResponse = await fetch(

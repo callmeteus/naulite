@@ -30,7 +30,7 @@ describe("apply teardown removes services", () => {
         try {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
-            controlPlaneUrl = LocalTestCluster.getControlPlaneUrl();
+            controlPlaneUrl = await LocalTestCluster.getLeaderControlPlaneUrl();
             client = new NauliteClient({ baseUrl: controlPlaneUrl });
         } catch (err) {
             LocalTestCluster.rethrowIfDockerRequired(err);
@@ -57,27 +57,13 @@ describe("apply teardown removes services", () => {
         const minimalYaml = await readFile(minimalFixturePath, "utf8");
         const emptyYaml = await readFile(emptyFixturePath, "utf8");
 
-        const applyResponse = await fetch(`${controlPlaneUrl}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml: minimalYaml })
-        });
+        const applyResponse = await LocalTestCluster.applyManifest(minimalYaml);
         expect(applyResponse.ok).toBe(true);
 
         const servicesAfterApply = await client.listServices();
         expect(servicesAfterApply.some((service) => service.name === "web")).toBe(true);
 
-        const teardownResponse = await fetch(`${controlPlaneUrl}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml: emptyYaml })
-        });
+        const teardownResponse = await LocalTestCluster.applyManifest(emptyYaml);
         expect(teardownResponse.ok).toBe(true);
 
         const teardownBody = await teardownResponse.json() as {

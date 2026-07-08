@@ -54,15 +54,7 @@ describe("apply minimal manifest via SDK", () => {
         const health = await client.getHealth();
         expect(health.status).toBe("healthy");
 
-        const leaderPort = await LocalTestCluster.getLeaderPort();
-        const response = await fetch(`${LocalTestCluster.getControlPlaneUrlForPort(leaderPort)}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml })
-        });
+        const response = await LocalTestCluster.applyManifest(manifestYaml);
         expect(response.ok).toBe(true);
 
         const body = await response.json() as {

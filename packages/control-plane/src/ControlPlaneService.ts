@@ -199,6 +199,18 @@ export namespace ControlPlaneService {
             return backing().listServices();
         }
 
+        export function listFunctionRuns(
+            ...args: Parameters<ControlPlaneStore["listFunctionRuns"]>
+        ): ReturnType<ControlPlaneStore["listFunctionRuns"]> {
+            return backing().listFunctionRuns(...args);
+        }
+
+        export function getFunctionRun(
+            ...args: Parameters<ControlPlaneStore["getFunctionRun"]>
+        ): ReturnType<ControlPlaneStore["getFunctionRun"]> {
+            return backing().getFunctionRun(...args);
+        }
+
         /**
          * @returns Cluster instances
          */
@@ -444,6 +456,12 @@ export namespace ControlPlaneService {
             ...args: Parameters<typeof GitOpsService.recordRevision>
         ): ReturnType<typeof GitOpsService.recordRevision> {
             return GitOpsService.recordRevision(...args);
+        }
+
+        export function recordCatalogRevision(
+            ...args: Parameters<typeof GitOpsService.recordCatalogRevision>
+        ): ReturnType<typeof GitOpsService.recordCatalogRevision> {
+            return GitOpsService.recordCatalogRevision(...args);
         }
 
         /**

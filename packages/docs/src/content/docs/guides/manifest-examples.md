@@ -7,6 +7,31 @@ description: Reference Compose manifests with platform extensions for common dep
 
 These samples were previously under `platform/examples/manifests/`. Use them as starting points for `naulite cluster manifests apply` or GitOps repositories.
 
+## function-invoke.compose.yml
+
+Ephemeral server function with HTTP trigger (no long-running replicas):
+
+```yaml
+name: function-invoke
+
+services:
+  hello:
+    image: alpine:latest
+    command: ["sh", "-lc", "echo hello-from-function"]
+    function:
+      timeout: 30s
+      trigger:
+        http: true
+```
+
+Invoke after apply:
+
+```bash
+naulite cluster functions invoke hello
+```
+
+See [Server functions](/guides/server-functions/) for cron, ingress, API, and run history.
+
 ## minimal.compose.yml
 
 Smallest valid manifest - single nginx service:
@@ -509,3 +534,69 @@ naulite cluster manifests apply -f minimal.compose.yml
 ```
 
 See the [Manifest reference](/manifest/) for field documentation and [First workload](/get-started/first-workload/) for a step-by-step first apply.
+
+## App-of-apps catalog (extends + vars) {#app-of-apps-catalog-extends--vars}
+
+GitOps catalog that applies multiple apps from a single repository. See the [App-of-apps guide](/guides/app-of-apps/) for resolution order, fail-fast behavior, and webhook flow.
+
+### `compose.yaml` (catalog entrypoint)
+
+```yaml
+name: e7-platform
+
+vars:
+  PLATFORM_NODE_AMOUNT: "5"
+  VERSION: "2026.07.07"
+
+apps:
+  rushpedia:
+    path: apps/rushpedia/compose.yaml
+  metrics:
+    path: apps/metrics/compose.yaml
+```
+
+### `apps/rushpedia/compose.yaml` (service extends from git)
+
+Thin child manifest - pulls service definitions from the product repo and overrides provisioning with catalog `vars`:
+
+```yaml
+name: rushpedia
+
+services:
+  api:
+    extends:
+      file: github:techtail/rushpedia#main
+      service: api
+      credentials:
+        from: secret
+        secret: github-deploy-key
+        kind: ssh
+    image: ghcr.io/techtail/rushpedia-api:${VERSION}
+    deploy:
+      replicas: ${PLATFORM_NODE_AMOUNT}
+
+  frontend:
+    extends:
+      file: github:techtail/rushpedia#main
+      service: frontend
+    image: ghcr.io/techtail/rushpedia-frontend:${VERSION}
+```
+
+### `apps/metrics/compose.yaml` (root extends from git)
+
+Child manifest that bases the entire file on a shared stack repo:
+
+```yaml
+name: metrics
+
+extends:
+  file: github:org/observability-stack#main/metrics/compose.yaml
+
+vars:
+  RETENTION_DAYS: "30"
+
+services:
+  prometheus:
+    deploy:
+      replicas: ${PLATFORM_NODE_AMOUNT}
+```

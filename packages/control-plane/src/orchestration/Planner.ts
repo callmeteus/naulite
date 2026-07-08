@@ -193,8 +193,9 @@ export class Planner {
             capabilities: service.capabilities,
             networks: service.networks ?? [],
             ingress: service.ingress,
-            logRotation: service.logRotation ?? manifest.defaults?.logRotation,
+            logRotation: service.function ? undefined : (service.logRotation ?? manifest.defaults?.logRotation),
             deploySpec: Planner.buildDeploySpec(service),
+            functionSpec: service.function,
             createdAt: now,
             updatedAt: now
         }));
@@ -488,6 +489,10 @@ export class Planner {
             return true;
         }
 
+        if (!Planner.valuesEqual(current.functionSpec, desired.functionSpec)) {
+            return true;
+        }
+
         const desiredSpec = Planner.buildDeploySpec(manifestService);
         return !Planner.valuesEqual(current.deploySpec, desiredSpec);
     }
@@ -515,6 +520,10 @@ export class Planner {
      * @returns Desired replica count
      */
     private static resolveReplicas(service: ManifestService): number {
+        if (service.function) {
+            return 0;
+        }
+
         return service.deploy?.replicas ?? 1;
     }
 

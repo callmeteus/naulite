@@ -44,12 +44,13 @@ describe("naulite CLI smoke", () => {
             context.skip();
         }
 
+        const leaderUrl = await LocalTestCluster.getLeaderControlPlaneUrl();
         const { stdout } = await execFileAsync(
             process.execPath,
             [
                 cliEntrypoint,
                 "--url",
-                LocalTestCluster.getControlPlaneUrl(),
+                leaderUrl,
                 "cluster",
                 "status",
                 "get"

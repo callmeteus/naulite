@@ -298,6 +298,27 @@ fn dispatch(
     if (matchesAction(argv, "ingress", "get")) {
         return try runVoid(commands.listIngress(allocator, client));
     }
+    if (std.mem.eql(u8, argv[1], "functions") and std.mem.eql(u8, argv[2], "invoke")) {
+        if (argv.len < 4) {
+            return error.InvalidArgument;
+        }
+        const payload_flag = readOptionalFlagValue(argv, "--payload");
+        return try runVoid(commands.invokeFunction(allocator, client, argv[3], payload_flag));
+    }
+    if (std.mem.eql(u8, argv[1], "functions") and std.mem.eql(u8, argv[2], "runs")) {
+        if (argv.len < 5) {
+            return error.InvalidArgument;
+        }
+        if (std.mem.eql(u8, argv[3], "list")) {
+            return try runVoid(commands.listFunctionRuns(allocator, client, argv[4]));
+        }
+        if (std.mem.eql(u8, argv[3], "get")) {
+            if (argv.len < 6) {
+                return error.InvalidArgument;
+            }
+            return try runVoid(commands.getFunctionRun(allocator, client, argv[4], argv[5]));
+        }
+    }
     if (std.mem.eql(u8, argv[1], "backups") and std.mem.eql(u8, argv[2], "run")) {
         if (argv.len < 4) {
             return error.InvalidArgument;
@@ -391,6 +412,9 @@ fn printUsage(writer: anytype) !void {
         \\  naulite cluster builds run --service <name> [--provider <name>] [--registry <name>]
         \\  naulite cluster registries get
         \\  naulite cluster ingress get
+        \\  naulite cluster functions invoke <name> [--payload @file.json]
+        \\  naulite cluster functions runs list <name>
+        \\  naulite cluster functions runs get <name> <runId>
         \\
         \\  naulite runs list
         \\  naulite runs get <runId>

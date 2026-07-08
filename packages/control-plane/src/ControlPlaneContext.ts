@@ -20,6 +20,7 @@ import { ExposurePlanner } from "./orchestration/ExposurePlanner";
 import { Planner } from "./orchestration/Planner";
 import { Scheduler } from "./orchestration/Scheduler";
 import { BackupScheduler } from "./modules/backup/BackupScheduler";
+import { FunctionScheduler } from "./modules/functions/FunctionScheduler";
 import { LogRotationScheduler } from "./modules/log-rotation/LogRotationScheduler";
 import { NodeProvisionerRegistry } from "./plugins/NodeProvisionerRegistry";
 import { PluginLoader } from "./plugins/PluginLoader";
@@ -64,6 +65,7 @@ export interface ControlPlaneContext {
     exposurePlanner: ExposurePlanner;
     backupScheduler: BackupScheduler;
     logRotationScheduler: LogRotationScheduler;
+    functionScheduler: FunctionScheduler;
     containerRegistryService: ContainerRegistryService;
     controlPlaneSync: ControlPlaneSync;
     leaderElection: LeaderElection;
@@ -147,6 +149,9 @@ export function createControlPlaneContext(
             isLeader: () => leaderElection.isLeader()
         }),
         logRotationScheduler: new LogRotationScheduler(60_000, AgentProxyService.postTask, {
+            isLeader: () => leaderElection.isLeader()
+        }),
+        functionScheduler: new FunctionScheduler(60_000, {
             isLeader: () => leaderElection.isLeader()
         }),
         containerRegistryService: createContainerRegistryService(),

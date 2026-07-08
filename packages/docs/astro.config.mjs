@@ -1,68 +1,70 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
-import starlight from '@astrojs/starlight';
+import starlight from "@astrojs/starlight";
+import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
     integrations: [
         starlight({
-            title: 'Platform',
-            description: 'Distributed orchestration platform documentation.',
-            defaultLocale: 'root',
+            title: "Platform",
+            description: "Distributed orchestration platform documentation.",
+            defaultLocale: "root",
             locales: {
                 root: {
-                    label: 'English',
-                    lang: 'en',
+                    label: "English",
+                    lang: "en",
                 },
             },
             sidebar: [
                 {
-                    label: 'Overview',
+                    label: "Overview",
                     items: [
-                        { label: 'Introduction', slug: 'index' },
-                        { label: 'Alpha scope', slug: 'alpha-scope' },
-                        { label: 'Dogfood README', slug: 'dogfood/readme' },
+                        { label: "Introduction", slug: "index" },
+                        { label: "Alpha scope", slug: "alpha-scope" },
+                        { label: "Dogfood README", slug: "dogfood/readme" },
                     ],
                 },
                 {
-                    label: 'Architecture',
+                    label: "Architecture",
                     items: [
-                        { label: 'Architecture', slug: 'architecture' },
-                        { label: 'Manifest reference', slug: 'manifest' },
-                        { label: 'Networks', slug: 'networks' },
-                        { label: 'NetBird', slug: 'netbird' },
+                        { label: "Architecture", slug: "architecture" },
+                        { label: "Manifest reference", slug: "manifest" },
+                        { label: "Networks", slug: "networks" },
+                        { label: "NetBird", slug: "netbird" },
                     ],
                 },
                 {
-                    label: 'Get Started',
+                    label: "Get Started",
                     items: [
-                        { label: 'Overview', slug: 'get-started' },
-                        { label: 'Install', slug: 'get-started/install' },
-                        { label: 'TLS modes', slug: 'get-started/tls' },
-                        { label: 'Database', slug: 'get-started/database' },
-                        { label: 'First workload', slug: 'get-started/first-workload' },
+                        { label: "Overview", slug: "get-started" },
+                        { label: "Install", slug: "get-started/install" },
+                        { label: "TLS modes", slug: "get-started/tls" },
+                        { label: "Database", slug: "get-started/database" },
+                        { label: "First workload", slug: "get-started/first-workload" },
                     ],
                 },
                 {
-                    label: 'Operations',
-                    items: [{ autogenerate: { directory: 'operations' } }],
+                    label: "Operations",
+                    items: [{ autogenerate: { directory: "operations" } }],
                 },
                 {
-                    label: 'Guides',
+                    label: "Guides",
                     items: [
-                        { label: 'Manifest examples', slug: 'guides/manifest-examples' },
-                        { label: 'Bootstrap', slug: 'bootstrap' },
-                        { label: 'Backups', slug: 'backups' },
-                        { label: 'Log rotation', slug: 'log-rotation' },
-                        { label: 'Admin authentication', slug: 'admin-auth' },
-                        { label: 'Continuous integration', slug: 'ci' },
-                        { label: 'Release', slug: 'release' },
+                        { label: "Manifest examples", slug: "guides/manifest-examples" },
+                        { label: "App-of-apps", slug: "guides/app-of-apps" },
+                        { label: "Server functions", slug: "guides/server-functions" },
+                        { label: "Bootstrap", slug: "bootstrap" },
+                        { label: "Backups", slug: "backups" },
+                        { label: "Log rotation", slug: "log-rotation" },
+                        { label: "Admin authentication", slug: "admin-auth" },
+                        { label: "Continuous integration", slug: "ci" },
+                        { label: "Release", slug: "release" },
                     ],
                 },
                 {
-                    label: 'Development',
+                    label: "Development",
                     items: [
-                        { label: 'Zig code guidelines', slug: 'zig-guidelines' },
+                        { label: "Zig code guidelines", slug: "zig-guidelines" },
                     ],
                 },
             ],

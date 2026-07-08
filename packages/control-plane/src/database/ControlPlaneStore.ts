@@ -21,6 +21,7 @@ import { JsonField, RowMapper } from "../util/RowMapper";
 import {
     ApiKeyModel,
     BackupRunModel,
+    FunctionRunModel,
     InstanceModel,
     NodeModel,
     NodeProvisionModel,
@@ -232,6 +233,120 @@ export class ControlPlaneStore {
         return rows.map((row) => RowMapper.service(row.get({ plain: true })));
     }
 
+    async listFunctionRuns(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<{
+        id: string;
+        serviceName: string;
+        manifestName: string;
+        nodeId: string;
+        status: string;
+        source: string;
+        startedAt?: string;
+        completedAt?: string;
+        exitCode?: number;
+    }>> {
+        const page = pagination.page;
+        const limit = pagination.limit;
+        const { count, rows } = await FunctionRunModel.findAndCountAll({
+            order: [["createdAt", "DESC"]],
+            limit,
+            offset: paginationOffset(page, limit)
+        });
+
+        const items = rows.map((row) => {
+            const plain = row.get({ plain: true }) as FunctionRunModel;
+            return {
+                id: plain.id,
+                serviceName: plain.serviceName,
+                manifestName: plain.manifestName,
+                nodeId: plain.nodeId,
+                status: plain.status,
+                source: plain.source,
+                startedAt: plain.startedAt ?? undefined,
+                completedAt: plain.completedAt ?? undefined,
+                exitCode: plain.exitCode ?? undefined
+            };
+        });
+
+        return buildPaginatedList(items, count, page, limit);
+    }
+
+    async getFunctionRun(id: string): Promise<{
+        id: string;
+        serviceId: string;
+        serviceName: string;
+        manifestName: string;
+        nodeId: string;
+        status: string;
+        source: string;
+        exitCode?: number;
+        logs?: string;
+        payload: Record<string, unknown>;
+        startedAt?: string;
+        completedAt?: string;
+        durationMs?: number;
+        errorMessage?: string;
+        createdAt: string;
+    } | null> {
+        const row = await FunctionRunModel.findByPk(id);
+        if (!row) {
+            return null;
+        }
+
+        const plain = row.get({ plain: true }) as FunctionRunModel;
+        return {
+            id: plain.id,
+            serviceId: plain.serviceId,
+            serviceName: plain.serviceName,
+            manifestName: plain.manifestName,
+            nodeId: plain.nodeId,
+            status: plain.status,
+            source: plain.source,
+            exitCode: plain.exitCode ?? undefined,
+            logs: plain.logs ?? undefined,
+            payload: plain.payload ?? {},
+            startedAt: plain.startedAt ?? undefined,
+            completedAt: plain.completedAt ?? undefined,
+            durationMs: plain.durationMs ?? undefined,
+            errorMessage: plain.errorMessage ?? undefined,
+            createdAt: plain.createdAt
+        };
+    }
+
+    async createFunctionRun(payload: {
+        id: string;
+        serviceId: string;
+        serviceName: string;
+        manifestName: string;
+        nodeId: string;
+        status: string;
+        source: string;
+        payload: Record<string, unknown>;
+    }): Promise<void> {
+        await FunctionRunModel.create({
+            id: payload.id,
+            serviceId: payload.serviceId,
+            serviceName: payload.serviceName,
+            manifestName: payload.manifestName,
+            nodeId: payload.nodeId,
+            status: payload.status,
+            source: payload.source,
+            payload: payload.payload,
+            createdAt: new Date().toISOString()
+        });
+    }
+
+    async updateFunctionRun(id: string, patch: {
+        status?: string;
+        exitCode?: number | null;
+        logs?: string | null;
+        startedAt?: string | null;
+        completedAt?: string | null;
+        durationMs?: number | null;
+        errorMessage?: string | null;
+    }): Promise<void> {
+        await FunctionRunModel.update(patch, { where: { id } });
+    }
+
     /**
      * Lists all instances.
      *
@@ -344,6 +459,7 @@ export class ControlPlaneStore {
             ingress: service.ingress ?? null,
             logRotation: service.logRotation ?? null,
             deploySpec: service.deploySpec ?? null,
+            functionSpec: service.functionSpec ?? null,
             lifecycleStatus: service.lifecycleStatus ?? null,
             createdAt: service.createdAt,
             updatedAt

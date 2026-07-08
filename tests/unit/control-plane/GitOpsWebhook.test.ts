@@ -73,6 +73,25 @@ vi.mock("../../../packages/control-plane/src/services/ApplyService", async () =>
     };
 });
 
+vi.mock("../../../packages/control-plane/src/services/AppOfAppsService", async () => {
+    const actual = await vi.importActual<typeof import("../../../packages/control-plane/src/services/AppOfAppsService")>(
+        "../../../packages/control-plane/src/services/AppOfAppsService"
+    );
+
+    return {
+        ...actual,
+        AppOfAppsService: {
+            ...actual.AppOfAppsService,
+            applyCatalog: vi.fn(async () => ({
+                manifestName: "catalog",
+                commitSha: "abc123def456abc123def456abc123def456abcd",
+                results: {},
+                appliedApps: []
+            }))
+        }
+    };
+});
+
 const ENV_KEYS = [
     "GITOPS_WEBHOOK_SECRET",
     "GITOPS_WEBHOOK_PROVIDER"
@@ -245,6 +264,48 @@ describe("gitops webhook signature integration", () => {
                 runId: "gitops-apply-run-1"
             }
         );
+
+        await app.close();
+    });
+
+    it("routes catalogs with apps to AppOfAppsService", async () => {
+        snapshotEnv();
+        const secret = "naulite-secret";
+        process.env.GITOPS_WEBHOOK_SECRET = secret;
+        process.env.GITOPS_WEBHOOK_PROVIDER = "generic";
+
+        mocks.checkoutAndMerge.mockResolvedValueOnce({
+            manifestYaml: "name: catalog\napps:\n  rushpedia:\n    path: apps/rushpedia/compose.yaml\nvars:\n  VERSION: \"1\"",
+            commitSha: "abc123def456abc123def456abc123def456abcd",
+            workDir: "/tmp/gitops-test"
+        });
+
+        const app = await createApp({
+            context: createWebhookTestContext(),
+            logger: false
+        });
+
+        const payload = {
+            repositoryUrl: "https://example.com/acme/app.git",
+            branch: "main"
+        };
+        const rawBody = JSON.stringify(payload);
+        const digest = createHmac("sha256", secret).update(rawBody).digest("hex");
+
+        const response = await app.inject({
+            method: "POST",
+            url: "/gitops/webhook",
+            headers: {
+                "content-type": "application/json",
+                "x-naulite-signature": digest
+            }
+            ,
+            payload: rawBody
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(response.json().manifestName).toBe("catalog");
+        expect(mocks.applyExecute).not.toHaveBeenCalled();
 
         await app.close();
     });

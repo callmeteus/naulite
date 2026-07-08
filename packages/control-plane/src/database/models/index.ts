@@ -9,6 +9,7 @@ import { ClusterStateModel } from "./ClusterStateModel";
 import { ContainerRegistryImageModel } from "./ContainerRegistryImageModel";
 import { ControlPlaneEventModel } from "./ControlPlaneEventModel";
 import { ControlPlaneLeaderModel } from "./ControlPlaneLeaderModel";
+import { FunctionRunModel } from "./FunctionRunModel";
 import { GatewayRouteModel } from "./GatewayRouteModel";
 import { GitRevisionModel } from "./GitRevisionModel";
 import { InstanceModel } from "./InstanceModel";
@@ -34,6 +35,7 @@ export {
     ContainerRegistryImageModel,
     ControlPlaneEventModel,
     ControlPlaneLeaderModel,
+    FunctionRunModel,
     GatewayRouteModel,
     GitRevisionModel,
     InstanceModel,
@@ -67,6 +69,7 @@ export const controlPlaneModels = [
     VolumeModel,
     SecretModel,
     BackupRunModel,
+    FunctionRunModel,
     ContainerRegistryImageModel,
     LogRotationRunModel,
     GitRevisionModel,

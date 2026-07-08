@@ -173,6 +173,73 @@ pub fn applyManifest(
     try printJson(stdout, response.body);
 }
 
+/// Invokes a function service by name.
+pub fn invokeFunction(
+    allocator: std.mem.Allocator,
+    client: *Client,
+    name: []const u8,
+    payload_flag: ?[]const u8,
+) !void {
+    const stdout = io_output.stdoutWriter();
+    var payload_value: ?[]const u8 = null;
+    var payload_owned: ?[]u8 = null;
+    defer if (payload_owned) |owned| allocator.free(owned);
+
+    if (payload_flag) |flag| {
+        if (flag.len > 1 and flag[0] == '@') {
+            const file_path = flag[1..];
+            const buffer = try allocator.alloc(u8, 2 * 1024 * 1024);
+            defer allocator.free(buffer);
+            const slice = try std.Io.Dir.readFile(std.Io.Dir.cwd(), client.io, file_path, buffer);
+            payload_owned = try allocator.dupe(u8, slice);
+            payload_value = payload_owned;
+        } else {
+            payload_value = flag;
+        }
+    }
+
+    const body = if (payload_value) |payload_text|
+        try std.fmt.allocPrint(allocator, "{{\"payload\":{s}}}", .{payload_text})
+    else
+        try allocator.dupe(u8, "{}");
+    defer allocator.free(body);
+
+    const path = try std.fmt.allocPrint(allocator, "/functions/{s}/invoke", .{name});
+    defer allocator.free(path);
+    const response = try client.postJson(path, body);
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Lists function runs for a function by name.
+pub fn listFunctionRuns(
+    allocator: std.mem.Allocator,
+    client: *Client,
+    name: []const u8,
+) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/functions/{s}/runs", .{name});
+    defer allocator.free(path);
+    const response = try client.get(path);
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Gets a function run by name and run id.
+pub fn getFunctionRun(
+    allocator: std.mem.Allocator,
+    client: *Client,
+    name: []const u8,
+    run_id: []const u8,
+) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/functions/{s}/runs/{s}", .{ name, run_id });
+    defer allocator.free(path);
+    const response = try client.get(path);
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
 /// Deletes a cluster resource by kind and name.
 pub fn deleteResource(allocator: std.mem.Allocator, client: *Client, kind: []const u8, name: []const u8) !void {
     const stdout = io_output.stdoutWriter();

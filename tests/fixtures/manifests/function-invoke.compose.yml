@@ -1,0 +1,10 @@
+name: function-invoke
+
+services:
+  hello:
+    image: alpine:latest
+    command: ["sh", "-lc", "echo hello-from-function"]
+    function:
+      timeout: 30s
+      trigger:
+        http: true

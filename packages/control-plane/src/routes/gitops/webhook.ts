@@ -1,8 +1,10 @@
 import { GitOpsWebhookBodySchema, LooseObjectSchema } from "@naulite/shared";
+import { parse as parseYaml } from "yaml";
 
 import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { LeaderPreHandlers } from "../../auth/LeaderPreHandlers";
 import { ApplyService } from "../../services/ApplyService";
+import { AppOfAppsService } from "../../services/AppOfAppsService";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { HTTP401Error } from "../../errors/TreatedError";
 import { WebhookSignature } from "../../gitops/WebhookSignature";
@@ -74,27 +76,72 @@ export const POST = defineRoute({
             manifestPath: body.manifestPath ?? "compose.yaml"
         });
 
-        const manifest = ControlPlaneService.Orchestration.ComposeParser.parse(checkout.manifestYaml);
+        // Detect app-of-apps catalogs by presence of root-level `apps`.
+        let doc: unknown = null;
+        try {
+            doc = parseYaml(checkout.manifestYaml) as unknown;
+        } catch {
+            doc = null;
+        }
+
+        const catalogName = readStringField(doc, "name") ?? "catalog";
+
         const applyRun = await ControlPlaneService.GitOps.createApplyRun({
-            manifestName: manifest.name,
+            manifestName: catalogName,
             repositoryUrl: body.repositoryUrl,
             branch: body.branch ?? "main",
             commitSha: body.commitSha ?? body.revision ?? checkout.commitSha
         });
 
-        const applyResult = await ApplyService.execute(checkout.manifestYaml, {
-            repositoryUrl: body.repositoryUrl,
-            branch: body.branch ?? "main",
-            commitSha: body.commitSha ?? body.revision ?? checkout.commitSha,
-            buildContextRoot: checkout.workDir,
-            runId: applyRun.id
-        });
+        let applyResult: unknown;
+
+        if (isRecord(doc) && isRecord(doc.apps) && Object.keys(doc.apps).length > 0) {
+            applyResult = await AppOfAppsService.applyCatalog({
+                catalogYaml: checkout.manifestYaml,
+                catalogWorkDir: checkout.workDir,
+                repositoryUrl: body.repositoryUrl,
+                branch: body.branch ?? "main",
+                commitSha: body.commitSha ?? body.revision ?? checkout.commitSha,
+                runId: applyRun.id
+            });
+        } else {
+            // Single-manifest apply (legacy path)
+            applyResult = await ApplyService.execute(checkout.manifestYaml, {
+                repositoryUrl: body.repositoryUrl,
+                branch: body.branch ?? "main",
+                commitSha: body.commitSha ?? body.revision ?? checkout.commitSha,
+                buildContextRoot: checkout.workDir,
+                runId: applyRun.id
+            });
+        }
 
         await ControlPlaneService.Sync.publish("gitops.webhook", {
-            revision: applyResult.revision,
-            manifestName: applyResult.manifestName
+            revision: readNumberField(applyResult, "revision"),
+            manifestName: readStringField(applyResult, "manifestName") ?? catalogName
         });
 
         return applyResult;
     }
 });
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readStringField(value: unknown, key: string): string | undefined {
+    if (!isRecord(value)) {
+        return undefined;
+    }
+
+    const raw = value[key];
+    return typeof raw === "string" && raw.trim() ? raw : undefined;
+}
+
+function readNumberField(value: unknown, key: string): number | undefined {
+    if (!isRecord(value)) {
+        return undefined;
+    }
+
+    const raw = value[key];
+    return typeof raw === "number" ? raw : undefined;
+}

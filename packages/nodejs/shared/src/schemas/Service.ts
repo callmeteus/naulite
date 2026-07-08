@@ -4,6 +4,7 @@ import { LifecycleStatusSchema, SecretReferenceSchema, TimestampSchema } from ".
 import { ClusterPlacementSchema } from "./ClusterLabels";
 import { IngressSchema } from "./Ingress";
 import { LogRotationPolicySchema } from "./LogRotationTask";
+import { ManifestFunctionSchema } from "./Manifest";
 
 /**
  * Container runtime spec persisted for planner diffing between applies.
@@ -52,6 +53,7 @@ export const ServiceSchema = z.object({
     ingress: IngressSchema.optional(),
     logRotation: LogRotationPolicySchema.optional(),
     deploySpec: ServiceDeploySpecSchema.optional(),
+    functionSpec: ManifestFunctionSchema.optional(),
     lifecycleStatus: LifecycleStatusSchema.optional(),
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema

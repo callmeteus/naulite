@@ -27,7 +27,7 @@ describe("backup flow", () => {
         try {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
-            controlPlaneUrl = LocalTestCluster.getControlPlaneUrl();
+            controlPlaneUrl = await LocalTestCluster.getLeaderControlPlaneUrl();
             client = new NauliteClient({ baseUrl: controlPlaneUrl });
         } catch (err) {
             LocalTestCluster.rethrowIfDockerRequired(err);
@@ -53,14 +53,7 @@ describe("backup flow", () => {
 
         const manifestYaml = await readFile(fixturePath, "utf8");
 
-        const applyResponse = await fetch(`${controlPlaneUrl}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml })
-        });
+        const applyResponse = await LocalTestCluster.applyManifest(manifestYaml);
         expect(applyResponse.ok).toBe(true);
 
         const volumes = await client.listVolumes();

@@ -17,6 +17,7 @@ const manifestPath = path.resolve(
 describe("naulite exec CLI", () => {
     let dockerEnabled = false;
     let instanceId: string | null = null;
+    let controlPlaneUrl = "";
 
     beforeAll(async () => {
         dockerEnabled = await LocalTestCluster.isDockerAvailable();
@@ -28,19 +29,13 @@ describe("naulite exec CLI", () => {
         try {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
+            controlPlaneUrl = await LocalTestCluster.getLeaderControlPlaneUrl();
 
             const manifestYaml = await readFile(manifestPath, "utf8");
-            const applyResponse = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/apply`, {
-                method: "POST",
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ manifestYaml })
-            });
+            const applyResponse = await LocalTestCluster.applyManifest(manifestYaml);
             expect(applyResponse.ok).toBe(true);
 
-            instanceId = await waitForRunningWebInstance(LocalTestCluster.getControlPlaneUrl());
+            instanceId = await waitForRunningWebInstance(controlPlaneUrl);
         } catch (err) {
             LocalTestCluster.rethrowIfDockerRequired(err);
             dockerEnabled = false;
@@ -68,7 +63,7 @@ describe("naulite exec CLI", () => {
             [
                 cliEntrypoint,
                 "--url",
-                LocalTestCluster.getControlPlaneUrl(),
+                controlPlaneUrl,
                 "exec",
                 instanceId!,
                 "--",
@@ -94,7 +89,7 @@ describe("naulite exec CLI", () => {
             [
                 cliEntrypoint,
                 "--url",
-                LocalTestCluster.getControlPlaneUrl(),
+                controlPlaneUrl,
                 "exec",
                 "web",
                 "--",
@@ -120,7 +115,7 @@ describe("naulite exec CLI", () => {
             [
                 cliEntrypoint,
                 "--url",
-                LocalTestCluster.getControlPlaneUrl(),
+                controlPlaneUrl,
                 "exec",
                 "-t",
                 instanceId!,

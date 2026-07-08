@@ -44,7 +44,7 @@ describe("LocalTestCluster health smoke", () => {
         expect(body.status).toBe("healthy");
     });
 
-    it("exposes agent health endpoints", async (context) => {
+    it("reports online worker agents through cluster status", async (context) => {
         if (!dockerEnabled) {
             if (LocalTestCluster.isDockerRequired()) {
                 throw new Error("Docker test cluster is required but did not start.");
@@ -52,10 +52,8 @@ describe("LocalTestCluster health smoke", () => {
             context.skip();
         }
 
-        const response = await fetch(`${LocalTestCluster.getAgentUrl("node-a")}/health`);
-        expect(response.ok).toBe(true);
-
-        const body = await response.json() as { status: string };
-        expect(body.status).toBe("ok");
+        const leaderPort = await LocalTestCluster.getLeaderPort();
+        const status = await LocalTestCluster.fetchClusterStatus(leaderPort);
+        expect(status.summary.onlineNodes).toBeGreaterThanOrEqual(2);
     });
 });

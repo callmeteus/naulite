@@ -16,7 +16,7 @@ See `CONTEXT.md` at the repository root for the canonical overview. This documen
 - Compose parser, planner, and scheduler
 - Plugin loader for `packages/plugins/*`
 - Backup and log rotation schedulers
-- GitOps revision tracking
+- GitOps revision tracking (single manifests and app-of-apps catalogs with `child_manifests`)
 - NetBird service integration (self-hosted API only)
 
 ### Agent

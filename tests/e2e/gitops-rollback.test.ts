@@ -26,7 +26,7 @@ describe("gitops rollback", () => {
         try {
             await LocalTestCluster.start();
             await LocalTestCluster.waitHealthy();
-            controlPlaneUrl = LocalTestCluster.getControlPlaneUrl();
+            controlPlaneUrl = await LocalTestCluster.getLeaderControlPlaneUrl();
             client = new NauliteClient({ baseUrl: controlPlaneUrl });
         } catch (err) {
             LocalTestCluster.rethrowIfDockerRequired(err);
@@ -56,24 +56,10 @@ describe("gitops rollback", () => {
             "nginx:1.28-alpine"
         );
 
-        const firstApply = await fetch(`${controlPlaneUrl}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml })
-        });
+        const firstApply = await LocalTestCluster.applyManifest(manifestYaml);
         expect(firstApply.ok).toBe(true);
 
-        const secondApply = await fetch(`${controlPlaneUrl}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml: updatedManifestYaml })
-        });
+        const secondApply = await LocalTestCluster.applyManifest(updatedManifestYaml);
         expect(secondApply.ok).toBe(true);
 
         const revisionsResponse = await fetch(`${controlPlaneUrl}/gitops/revisions?manifestName=minimal`, {

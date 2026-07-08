@@ -95,7 +95,8 @@ export class ComposeParser {
             ingress: (platform.ingress ?? rawService.ingress) as ManifestService["ingress"],
             logRotation: (platform.logRotation ?? rawService.logRotation) as ManifestService["logRotation"],
             secrets: (platform.secrets ?? rawService.secrets ?? []) as ManifestService["secrets"],
-            deploy: ComposeParser.mapDeploy(platform.deploy ?? rawService.deploy)
+            deploy: ComposeParser.mapDeploy(platform.deploy ?? rawService.deploy),
+            function: (platform.function ?? rawService.function) as ManifestService["function"]
         };
     }
 

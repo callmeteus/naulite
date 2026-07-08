@@ -150,6 +150,12 @@ export namespace ApplyService {
 
         const instanceNodes = buildInstanceNodeMap(instances, diff);
 
+        // Delete retiring instances first to avoid unique constraint violations
+        // when recreate planning schedules new instances with the same ids.
+        for (const instance of diff.instancesToRemove) {
+            await ControlPlaneService.Store.deleteInstance(instance.id);
+        }
+
         for (const service of [...diff.servicesToCreate, ...diff.servicesToUpdate]) {
             const manifestService = manifest.services[service.name];
             const newInstances = diff.instancesToCreate.filter((entry) => entry.serviceId === service.id);
@@ -180,10 +186,6 @@ export namespace ApplyService {
             }
 
             await ControlPlaneService.Store.upsertService(service);
-        }
-
-        for (const instance of diff.instancesToRemove) {
-            await ControlPlaneService.Store.deleteInstance(instance.id);
         }
 
         for (const service of diff.servicesToRemove) {
@@ -735,7 +737,8 @@ export namespace ApplyService {
                 continue;
             }
 
-            const target = resolveIngressTarget(manifest.name, serviceName, service, nodes, instanceNodes);
+            const controlPlaneTarget = service.function?.trigger.http ? resolveControlPlaneIngressTarget() : undefined;
+            const target = controlPlaneTarget ?? resolveIngressTarget(manifest.name, serviceName, service, nodes, instanceNodes);
             if (!target) {
                 log_apply.debug("skip public ingress service=%s reason=no-scheduled-instance",
                     serviceName
@@ -747,8 +750,8 @@ export namespace ApplyService {
             await ControlPlaneService.Gateway.upsertRoute({
                 serviceName,
                 ingress: service.ingress,
-                targetHost: target.hostname,
-                targetPort: pathRule.port
+                targetHost: controlPlaneTarget?.hostname ?? target.hostname,
+                targetPort: controlPlaneTarget?.port ?? pathRule.port
             });
 
             const tls = service.ingress.tls;
@@ -840,6 +843,15 @@ export namespace ApplyService {
         }
 
         return nodes.find((node) => node.status === "online") ?? nodes[0];
+    }
+
+    function resolveControlPlaneIngressTarget(): { hostname: string; port: number } {
+        const url = process.env.NAULITE_PUBLIC_URL?.replace(/\/+$/, "") ?? "http://localhost:8080";
+        const parsed = new URL(url);
+        return {
+            hostname: parsed.hostname,
+            port: parsed.port ? Number(parsed.port) : parsed.protocol === "https:" ? 443 : 80
+        };
     }
 
     /**

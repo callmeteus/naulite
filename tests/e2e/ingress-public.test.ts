@@ -94,17 +94,10 @@ describe("public ingress via gateway routes", () => {
         }
 
         const manifestYaml = await readFile(fixturePath, "utf8");
-        const applyResponse = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml })
-        });
+        const applyResponse = await LocalTestCluster.applyManifest(manifestYaml);
         expect(applyResponse.ok).toBe(true);
 
-        const routesResponse = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/gateway/routes`);
+        const routesResponse = await fetch(`${leaderUrl}/gateway/routes`);
         expect(routesResponse.ok).toBe(true);
 
         const routes = await routesResponse.json() as Array<{
@@ -139,14 +132,7 @@ describe("public ingress via gateway routes", () => {
         }
 
         const manifestYaml = await readFile(fixturePath, "utf8");
-        const applyResponse = await fetch(`${LocalTestCluster.getControlPlaneUrl()}/apply`, {
-            method: "POST",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ manifestYaml })
-        });
+        const applyResponse = await LocalTestCluster.applyManifest(manifestYaml);
         expect(applyResponse.ok).toBe(true);
 
         await waitForTraefikIngress("web.test.local");

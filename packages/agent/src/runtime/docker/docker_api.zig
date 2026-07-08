@@ -6,6 +6,16 @@ const std = @import("std");
 
 const blocking_io = @import("../../blocking_io.zig");
 
+/// Reads up to `dest.len` bytes from a connected stream.
+fn streamRead(
+    io: std.Io,
+    stream: *const std.Io.net.Stream,
+    dest: []u8,
+) !usize {
+    var slices = [_][]u8{dest};
+    return io.vtable.netRead(io.userdata, stream.socket.handle, &slices);
+}
+
 /// Minimum Docker Engine API version supported by current daemons.
 const docker_api_version = "v1.44";
 
@@ -99,8 +109,7 @@ pub const DockerApi = struct {
 
         var read_buffer: [4096]u8 = undefined;
         while (true) {
-            var net_reader = stream.reader(io, &read_buffer);
-            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch |err| {
+            const read_count = streamRead(io, &stream, &read_buffer) catch |err| {
                 if (response_buffer.items.len > 0) {
                     break;
                 }
@@ -727,8 +736,7 @@ pub const DockerApi = struct {
 
         var read_buffer: [4096]u8 = undefined;
         while (true) {
-            var net_reader = stream.reader(io, &read_buffer);
-            const read_count = std.Io.Reader.readSliceShort(&net_reader.interface, read_buffer[0..]) catch break;
+            const read_count = streamRead(io, &stream, &read_buffer) catch break;
             if (read_count == 0) {
                 break;
             }
@@ -778,7 +786,7 @@ pub const DockerApi = struct {
         const tail_count = tail orelse 200;
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/v1.44/containers/{s}/logs?stdout=true&stderr=true&tail={d}",
+            "/v1.44/containers/{s}/logs?stdout=true&stderr=false&timestamps=false&tail={d}",
             .{ container_ref, tail_count },
         );
 
@@ -792,6 +800,61 @@ pub const DockerApi = struct {
         }
 
         return try demuxDockerLogs(self.allocator, response.body);
+    }
+
+    pub const ContainerState = struct {
+        running: bool,
+        exit_code: i32,
+    };
+
+    /// Inspects a container and returns minimal runtime state.
+    pub fn inspectContainerState(
+        self: *const DockerApi,
+        container_ref: []const u8,
+    ) !ContainerState {
+        const path = try std.fmt.allocPrint(
+            self.allocator,
+            "/v1.44/containers/{s}/json",
+            .{container_ref},
+        );
+        defer self.allocator.free(path);
+
+        var response = try self.request("GET", path, null);
+        defer response.deinit(self.allocator);
+
+        if (response.status < 200 or response.status >= 300) {
+            return error.DockerInspectFailed;
+        }
+
+        const json_body = extractJsonPayload(response.body) orelse response.body;
+        const parsed = std.json.parseFromSlice(std.json.Value, self.allocator, json_body, .{}) catch {
+            return error.InvalidDockerResponse;
+        };
+        defer parsed.deinit();
+
+        if (parsed.value != .object) {
+            return error.InvalidDockerResponse;
+        }
+
+        const state_value = parsed.value.object.get("State") orelse return error.InvalidDockerResponse;
+        if (state_value != .object) {
+            return error.InvalidDockerResponse;
+        }
+
+        const running_value = state_value.object.get("Running") orelse return error.InvalidDockerResponse;
+        const running = switch (running_value) {
+            .bool => |b| b,
+            else => return error.InvalidDockerResponse,
+        };
+
+        const exit_code_value = state_value.object.get("ExitCode") orelse std.json.Value{ .integer = 0 };
+        const exit_code: i32 = switch (exit_code_value) {
+            .integer => |i| @intCast(i),
+            .float => |f| @intCast(@as(i64, @intFromFloat(f))),
+            else => 0,
+        };
+
+        return .{ .running = running, .exit_code = exit_code };
     }
 
     /// Parses a HTTP response from a raw string.
@@ -1104,6 +1167,14 @@ pub const DockerApi = struct {
         };
     }
 
+    /// Decodes Docker log bytes (plain text or multiplexed stream framing).
+    pub fn decodeDockerLogBytes(
+        allocator: std.mem.Allocator,
+        payload: []const u8,
+    ) ![]u8 {
+        return demuxDockerLogs(allocator, payload);
+    }
+
     /// Demuxes Docker logs into a single payload.
     fn demuxDockerLogs(
         // The allocator to use.
@@ -1113,6 +1184,15 @@ pub const DockerApi = struct {
     ) ![]u8 {
         var output: std.ArrayList(u8) = .empty;
         errdefer output.deinit(allocator);
+
+        if (payload.len == 0) {
+            return try output.toOwnedSlice(allocator);
+        }
+
+        // Non-multiplexed log streams start with printable payload bytes.
+        if (payload[0] != 1 and payload[0] != 2) {
+            return try allocator.dupe(u8, payload);
+        }
 
         var index: usize = 0;
         while (index + 8 <= payload.len) {
@@ -1132,8 +1212,8 @@ pub const DockerApi = struct {
             index += frame_size;
         }
 
-        if (output.items.len == 0 and payload.len > 0) {
-            return try allocator.dupe(u8, payload);
+        if (output.items.len == 0) {
+            return try allocator.alloc(u8, 0);
         }
 
         return try output.toOwnedSlice(allocator);

@@ -93,6 +93,7 @@ export namespace RowMapper {
         ingress: unknown;
         logRotation: unknown;
         deploySpec: unknown;
+        functionSpec: unknown;
         lifecycleStatus: string | null;
         createdAt: string;
         updatedAt: string;
@@ -110,6 +111,7 @@ export namespace RowMapper {
             ingress: JsonField.parse(row.ingress),
             logRotation: JsonField.parse(row.logRotation),
             deploySpec: JsonField.parse(row.deploySpec),
+            functionSpec: JsonField.parse(row.functionSpec),
             lifecycleStatus: row.lifecycleStatus as Service["lifecycleStatus"],
             createdAt: row.createdAt,
             updatedAt: row.updatedAt
