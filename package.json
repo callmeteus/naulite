@@ -22,10 +22,9 @@
         "dev:docker": "node -e \"process.platform==='win32'?require('child_process').spawn('powershell',['-NoProfile','-File','dogfood/bin/dev.ps1'],{stdio:'inherit',cwd:process.cwd()}):require('child_process').spawn('bash',['dogfood/bin/dev.sh'],{stdio:'inherit',cwd:process.cwd()})\""
     },
     "devDependencies": {
+        "@lemon/linting": "git+https://github.com/even7hq/lemon-linting.git",
         "@types/node": "^22.10.5",
-        "typescript-eslint": "^8.19.1",
-        "globals": "^15.14.0",
-        "eslint": "^9.17.0",
+        "eslint": "^9",
         "turbo": "^2.3.3",
         "typescript": "^5.7.2",
         "vitest": "^2.1.8"
