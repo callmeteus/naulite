@@ -71,6 +71,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
                 })
             }
         });
+
         return container.id;
     }
 
@@ -121,6 +122,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
     async getLogs(instanceId: string, options?: LogStreamOptions): Promise<string[]> {
         console.debug("[runtime-docker] getLogs instanceId=%s tail=%s", instanceId, options?.tail ?? "-");
         const container = this.client.getContainer(instanceId);
+
         if (options?.follow) {
             const stream = await container.logs({
                 stdout: true,
@@ -129,6 +131,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
                 follow: true,
                 since: options.since ? Math.floor(Date.parse(options.since) / 1000) : undefined
             });
+
             const output = await this.collectStream(stream);
             return output.split(/\r?\n/).filter((line) => line.length > 0);
         }
@@ -140,6 +143,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
             follow: false,
             since: options?.since ? Math.floor(Date.parse(options.since) / 1000) : undefined
         });
+
         return buffer.toString("utf8").split(/\r?\n/).filter((line) => line.length > 0);
     }
 
@@ -158,6 +162,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
             AttachStdout: true,
             AttachStderr: true
         });
+
         const stream = await exec.start({ hijack: true, stdin: false });
         const output = await this.collectStream(stream);
         const inspect = await exec.inspect();
@@ -193,6 +198,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
      * @param volumeName Volume name
      * @param force Whether to force removal when the volume is in use
      * @returns Nothing.
+     * @throws {unknown}
      */
     async removeVolume(volumeName: string, force = false): Promise<void> {
         console.debug("[runtime-docker] removeVolume name=%s force=%s", volumeName, force);
@@ -237,6 +243,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
                         resources: operation.resources,
                         secrets: operation.secrets
                     });
+
                     break;
                 case "start":
                     await this.start(operation.instanceId);
@@ -275,6 +282,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
             const key = `${port.containerPort}/${protocol}`;
             bindings[key] = [{ HostPort: String(port.hostPort ?? port.containerPort) }];
         }
+
         return bindings;
     }
 
@@ -289,6 +297,7 @@ export class DockerRuntimeProvider implements RuntimeProvider {
         for await (const chunk of stream) {
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
         }
+
         return Buffer.concat(chunks).toString("utf8");
     }
 }

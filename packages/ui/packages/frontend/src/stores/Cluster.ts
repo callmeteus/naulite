@@ -1,5 +1,5 @@
-import type { ApplyResponse, BackupRun, BuildRequest, BuildResponse, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, Instance, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, Node, NodeProvision, PipelineEvent, PipelineRun, ProvisionNodeInput, Secret, Service, Volume } from "@naulite/sdk";
 import { reactive } from "vue";
+import type { ApplyResponse, BackupRun, BuildRequest, BuildResponse, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, Instance, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, Node, NodeProvision, PipelineEvent, PipelineRun, ProvisionNodeInput, Secret, Service, Volume } from "@naulite/sdk";
 
 import { nauliteClient } from "../api/Client";
 import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
@@ -58,6 +58,7 @@ export const clusterStore = reactive({
                 nauliteClient.listNodes(),
                 nauliteClient.listServices()
             ]);
+
             this.nodes = nodes;
             this.services = services;
         } catch (err) {
@@ -232,6 +233,7 @@ export const clusterStore = reactive({
                 nauliteClient.listNetBirdGroups(),
                 nauliteClient.listNetBirdAcls()
             ]);
+
             this.netBirdTopology = topology;
             this.netBirdDevices = devices;
             this.netBirdGroups = groups;
@@ -250,6 +252,7 @@ export const clusterStore = reactive({
      * @param data Secret key-value pairs
      * @param description Optional description
      * @returns Nothing.
+     * @throws {unknown}
      */
     async upsertSecret(name: string, data: Record<string, string>, description?: string): Promise<void> {
         this.loading = true;
@@ -271,6 +274,7 @@ export const clusterStore = reactive({
      *
      * @param name Secret name
      * @returns Nothing.
+     * @throws {unknown}
      */
     async deleteSecret(name: string): Promise<void> {
         this.loading = true;
@@ -292,6 +296,7 @@ export const clusterStore = reactive({
      *
      * @param volumeName Volume name
      * @returns Nothing.
+     * @throws {unknown}
      */
     async runBackup(volumeName: string): Promise<void> {
         this.loading = true;
@@ -313,6 +318,7 @@ export const clusterStore = reactive({
      *
      * @param backupId Backup run identifier
      * @returns Nothing.
+     * @throws {unknown}
      */
     async restoreBackup(backupId: string): Promise<void> {
         this.loading = true;
@@ -353,6 +359,7 @@ export const clusterStore = reactive({
      * @param name Image name
      * @param tag Image tag
      * @returns Nothing.
+     * @throws {unknown}
      */
     async deleteContainerRegistryImage(name: string, tag: string): Promise<void> {
         this.loading = true;
@@ -413,6 +420,7 @@ export const clusterStore = reactive({
      *
      * @param request Build request payload
      * @returns Build response with optional run identifier
+     * @throws {unknown}
      */
     async triggerBuild(request: BuildRequest): Promise<BuildResponse> {
         this.loading = true;
@@ -433,6 +441,7 @@ export const clusterStore = reactive({
      *
      * @param input Node provision request payload
      * @returns Created node provision record
+     * @throws {unknown}
      */
     async provisionNode(input: ProvisionNodeInput): Promise<NodeProvision> {
         this.loading = true;
@@ -481,6 +490,7 @@ export const clusterStore = reactive({
      *
      * @param manifestYaml Raw manifest YAML
      * @returns Apply revision summary
+     * @throws {unknown}
      */
     async applyManifest(manifestYaml: string): Promise<string> {
         this.loading = true;

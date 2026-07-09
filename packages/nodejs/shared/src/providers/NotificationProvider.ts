@@ -1,5 +1,5 @@
-import type { PipelineEventKindSchema } from "../schemas/PipelineRun";
 import type { z } from "zod";
+import type { PipelineEventKindSchema } from "../schemas/PipelineRun";
 
 /**
  * Pipeline notification payload dispatched to external sinks.

@@ -4,15 +4,14 @@ import { Op } from "sequelize";
 
 import type { BackupTask, Volume } from "@naulite/shared";
 
+import { Logger } from "../../Logger";
 import { BackupRunModel, NodeModel, VolumeModel } from "../../database/models/index";
 import { AgentProxyService } from "../../services/AgentProxyService";
 import { BackupCompletionService } from "../../services/BackupCompletionService";
 import { RowMapper } from "../../util/RowMapper";
 import { CronEvaluator } from "../log-rotation/CronEvaluator";
 import type { BackupOrchestrator } from "./BackupOrchestrator";
-import { Logger } from "../../Logger";
-const log_backups = Logger.create("backups");
-
+const logBackups = Logger.create("backups");
 
 /**
  * Dispatches a JSON task payload to a node agent.
@@ -70,7 +69,7 @@ export class BackupScheduler {
 
         this.intervalHandle = setInterval(() => {
             void this.tick().catch((err) => {
-                log_backups.debug("scheduler tick failed err=%o", err);
+                logBackups.debug("scheduler tick failed err=%o", err);
             });
         }, this.pollIntervalMs);
     }
@@ -94,7 +93,7 @@ export class BackupScheduler {
      */
     async tick(): Promise<void> {
         if (!this.isLeader()) {
-            log_backups.debug("scheduler tick skipped reason=not-leader");
+            logBackups.debug("scheduler tick skipped reason=not-leader");
             return;
         }
 
@@ -113,7 +112,7 @@ export class BackupScheduler {
             }
 
             if (await this.hasRecentRun(volume.id, now)) {
-                log_backups.debug("skip recent run volume=%s", volume.name);
+                logBackups.debug("skip recent run volume=%s", volume.name);
                 continue;
             }
 
@@ -130,8 +129,9 @@ export class BackupScheduler {
      */
     private async enqueueBackupRun(volume: Volume, now: Date): Promise<void> {
         const node = await this.resolveNode(volume.nodeId);
+
         if (!node?.agentUrl) {
-            log_backups.debug("skip dispatch volume=%s reason=no-agent", volume.name);
+            logBackups.debug("skip dispatch volume=%s reason=no-agent", volume.name);
             return;
         }
 
@@ -177,7 +177,7 @@ export class BackupScheduler {
                 { where: { id: taskId } }
             );
 
-            log_backups.debug("dispatched taskId=%s volume=%s node=%s", taskId, volume.name, node.id);
+            logBackups.debug("dispatched taskId=%s volume=%s node=%s", taskId, volume.name, node.id);
 
             if (this.backupOrchestrator) {
                 const task: BackupTask = {
@@ -192,9 +192,11 @@ export class BackupScheduler {
                         provider: "local",
                         path: "/var/lib/naulite/backups"
                     },
+
                     resolvedSecrets: payload.resolvedSecrets,
                     status: "running"
                 };
+
                 const result = await BackupCompletionService.completeRun(
                     this.backupOrchestrator,
                     task,
@@ -215,7 +217,8 @@ export class BackupScheduler {
                 },
                 { where: { id: taskId } }
             );
-            log_backups.debug("dispatch failed taskId=%s volume=%s err=%o", taskId, volume.name, err);
+
+            logBackups.debug("dispatch failed taskId=%s volume=%s err=%o", taskId, volume.name, err);
         }
     }
 
@@ -258,6 +261,7 @@ export class BackupScheduler {
     private async resolveNode(nodeId?: string) {
         if (nodeId) {
             const node = await NodeModel.findByPk(nodeId);
+
             if (node) {
                 return RowMapper.node(node.get({ plain: true }));
             }

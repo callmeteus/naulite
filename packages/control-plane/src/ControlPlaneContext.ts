@@ -1,49 +1,48 @@
 import { createDockerBuilderProvider } from "@naulite/builder-docker";
 import { createKanikoBuilderProvider } from "@naulite/builder-kaniko";
-import { PluginRegistry } from "@naulite/shared";
 import {
     createTraefikNetBirdGatewayProvider,
     type TraefikNetBirdGatewayProvider
 } from "@naulite/gateway";
+import { PluginRegistry } from "@naulite/shared";
 import type { BuilderProvider } from "@naulite/shared";
 
+import { Logger } from "./Logger";
 import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import type { DatabaseProvider } from "./database/DatabaseProvider";
 import { createBackupOrchestrator, type BackupOrchestrator } from "./modules/backup/BackupOrchestrator";
+import { BackupScheduler } from "./modules/backup/BackupScheduler";
 import { createContainerRegistryService, type ContainerRegistryService } from "./modules/container-registry/ContainerRegistryService";
+import { FunctionScheduler } from "./modules/functions/FunctionScheduler";
+import { LogRotationScheduler } from "./modules/log-rotation/LogRotationScheduler";
 import { createLocalSecretProvider } from "./modules/secrets/LocalSecretProvider";
-import { createPostgresSecretProvider } from "./modules/secrets/PostgresSecretProvider";
 import { resolveSecretBackendId } from "./modules/secrets/PluginSecretProviderAdapter";
+import { createPostgresSecretProvider } from "./modules/secrets/PostgresSecretProvider";
 import type { SecretProvider } from "./modules/secrets/SecretProvider";
 import { ComposeParser } from "./orchestration/ComposeParser";
 import { ExposurePlanner } from "./orchestration/ExposurePlanner";
 import { Planner } from "./orchestration/Planner";
 import { Scheduler } from "./orchestration/Scheduler";
-import { BackupScheduler } from "./modules/backup/BackupScheduler";
-import { FunctionScheduler } from "./modules/functions/FunctionScheduler";
-import { LogRotationScheduler } from "./modules/log-rotation/LogRotationScheduler";
 import { NodeProvisionerRegistry } from "./plugins/NodeProvisionerRegistry";
 import { PluginLoader } from "./plugins/PluginLoader";
 import { SecretProviderRegistry } from "./plugins/SecretProviderRegistry";
 import { RuntimeLoader } from "./runtimes/RuntimeLoader";
-import { RuntimeRegistry } from "./runtimes/RuntimeRegistry";
+import type { RuntimeRegistry } from "./runtimes/RuntimeRegistry";
+import { AgentProxyService } from "./services/AgentProxyService";
 import { ControlPlaneInstanceId } from "./services/ControlPlaneInstanceId";
 import { ControlPlaneSync } from "./services/ControlPlaneSync";
-import { AgentProxyService } from "./services/AgentProxyService";
 import { createNetBirdAdapter } from "./services/CreateNetBirdService";
 import { GatewayConfig } from "./services/GatewayConfig";
 import { GatewayRouteService } from "./services/GatewayRouteService";
+import { createInstanceReconcilerService, type InstanceReconcilerService } from "./services/InstanceReconcilerService";
 import { LeaderElection } from "./services/LeaderElection";
-import { NetBirdEnrollmentService } from "./services/NetBirdEnrollmentService";
+import { createMetricsSyncService, type MetricsSyncService } from "./services/MetricsSyncService";
 import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
+import { NetBirdEnrollmentService } from "./services/NetBirdEnrollmentService";
 import { NetBirdService } from "./services/NetBirdService";
 import { createNodeProvisionService, type NodeProvisionService } from "./services/NodeProvisionService";
-import { createInstanceReconcilerService, type InstanceReconcilerService } from "./services/InstanceReconcilerService";
-import { createMetricsSyncService, type MetricsSyncService } from "./services/MetricsSyncService";
 import { SecretsService, resolveSecretMasterKey } from "./services/SecretsService";
-import { Logger } from "./Logger";
-const log_secrets = Logger.create("secrets");
-
+const logSecrets = Logger.create("secrets");
 
 /**
  * Shared control plane application context.
@@ -116,6 +115,7 @@ export function createControlPlaneContext(
         nodeProvisionerRegistry,
         () => process.env.NAULITE_PUBLIC_URL?.replace(/\/+$/, "") ?? "http://localhost:8080"
     );
+
     const builderProviders = createBuilderProviders();
     const backupOrchestrator = createBackupOrchestrator();
     const leaderElection = new LeaderElection(databaseProvider, instanceId);
@@ -125,6 +125,7 @@ export function createControlPlaneContext(
         traefikApiUrl: GatewayConfig.resolveTraefikApiUrl(),
         traefikDynamicConfigUrl: GatewayConfig.resolveTraefikDynamicConfigUrl()
     });
+
     const gatewayRouteService = new GatewayRouteService(gatewayProvider, leaderElection, controlPlaneSync);
     const metricsSyncService = createMetricsSyncService(store, leaderElection);
     const secretsService = new SecretsService(store, masterKey);
@@ -148,12 +149,15 @@ export function createControlPlaneContext(
             backupOrchestrator,
             isLeader: () => leaderElection.isLeader()
         }),
+
         logRotationScheduler: new LogRotationScheduler(60_000, AgentProxyService.postTask, {
             isLeader: () => leaderElection.isLeader()
         }),
+
         functionScheduler: new FunctionScheduler(60_000, {
             isLeader: () => leaderElection.isLeader()
         }),
+
         containerRegistryService: createContainerRegistryService(),
         controlPlaneSync,
         leaderElection,
@@ -200,7 +204,7 @@ function createBuilderProviders(): Map<string, BuilderProvider> {
  */
 function createDefaultSecretProvider(secretsService: SecretsService, masterKey: string): SecretProvider {
     const backendId = resolveSecretBackendId();
-    log_secrets.debug("default provider backend=%s", backendId);
+    logSecrets.debug("default provider backend=%s", backendId);
 
     if (backendId === "local") {
         return createLocalSecretProvider({ masterKey });

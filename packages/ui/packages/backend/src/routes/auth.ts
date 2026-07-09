@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { CsrfProtection, NAULITE_CSRF_COOKIE } from "../auth/CsrfProtection";
-import { buildClearSessionCookie, buildSessionCookie, parseCookies, resolveSecureCookies } from "../auth/SessionCookie";
 import { RolePreHandlers } from "../auth/RolePreHandlers";
+import { buildClearSessionCookie, buildSessionCookie, parseCookies, resolveSecureCookies } from "../auth/SessionCookie";
 
 const LoginBodySchema = z.object({
     email: z.string().email(),
@@ -49,6 +49,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
             buildClearSessionCookie(),
             CsrfProtection.buildClearCsrfCookie(resolveSecureCookies())
         ]);
+
         return { ok: true };
     });
 
@@ -60,6 +61,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
                 const session = await request.server.controlPlane
                     .withSession(sessionToken)
                     .getAdminMe();
+
                 const cookies = parseCookies(request.headers.cookie);
                 const csrfToken = cookies[NAULITE_CSRF_COOKIE];
 

@@ -17,6 +17,7 @@ export const GET = defineRoute({
             200: z.array(InstanceSchema)
         }
     },
+
     async handler(req) {
         const { serviceName, nodeId } = req.query;
         return (await ControlPlaneService.Store.listInstances())

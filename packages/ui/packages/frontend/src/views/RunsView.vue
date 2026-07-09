@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from "vue-router";
 
 import type { ListPipelineRunsQuery, PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
@@ -317,14 +317,21 @@ async function confirmRedeploy(): Promise<void> {
                     <option value="failed">failed</option>
                 </select>
             </label>
-            <button type="button" class="btn btn-outline btn-sm" :disabled="listLoading" @click="refreshList">
+            <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                :disabled="listLoading"
+                @click="refreshList"
+            >
                 {{ t("pages.runs.refresh") }}
             </button>
         </template>
 
         <ErrorAlert :error="listErrorMessage" />
 
-        <p v-if="actionMessage" class="alert alert-success">{{ actionMessage }}</p>
+        <p v-if="actionMessage" class="alert alert-success">
+            {{ actionMessage }}
+        </p>
 
         <div v-if="listLoading && paginatedRuns.length === 0" class="flex items-center gap-2">
             <LoadingSpinner />
@@ -386,11 +393,21 @@ async function confirmRedeploy(): Promise<void> {
                 </table>
 
                 <div v-if="paginatedRuns.length > 0" class="mt-4 flex items-center justify-end gap-2">
-                    <button type="button" class="btn btn-sm" :disabled="!canGoPrevious" @click="previousPage">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :disabled="!canGoPrevious"
+                        @click="previousPage"
+                    >
                         {{ t("common.paginationPrevious") }}
                     </button>
                     <span class="text-sm">{{ pageLabel }}</span>
-                    <button type="button" class="btn btn-sm" :disabled="!canGoNext" @click="nextPage">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :disabled="!canGoNext"
+                        @click="nextPage"
+                    >
                         {{ t("common.paginationNext") }}
                     </button>
                 </div>
@@ -400,7 +417,9 @@ async function confirmRedeploy(): Promise<void> {
         <div v-if="selectedRun" class="card bg-base-100 shadow">
             <div class="card-body gap-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <h3 class="text-lg font-semibold">{{ t("pages.runs.detailTitle") }}: {{ selectedRun.id }}</h3>
+                    <h3 class="text-lg font-semibold">
+                        {{ t("pages.runs.detailTitle") }}: {{ selectedRun.id }}
+                    </h3>
                     <button type="button" class="btn btn-outline btn-sm" @click="clearSelection">
                         {{ t("pages.runs.closeDetail") }}
                     </button>
@@ -440,12 +459,16 @@ async function confirmRedeploy(): Promise<void> {
                 <ErrorAlert :error="selectedRun.errorMessage ?? null" />
 
                 <div v-if="selectedRun.failureLog" class="rounded-box bg-base-300 p-4">
-                    <h4 class="font-semibold">{{ t("pages.runs.failureLog") }}</h4>
+                    <h4 class="font-semibold">
+                        {{ t("pages.runs.failureLog") }}
+                    </h4>
                     <pre class="mt-2 max-h-64 overflow-auto text-xs">{{ selectedRun.failureLog }}</pre>
                 </div>
 
                 <div>
-                    <h4 class="font-semibold">{{ t("pages.runs.steps") }}</h4>
+                    <h4 class="font-semibold">
+                        {{ t("pages.runs.steps") }}
+                    </h4>
                     <ul class="mt-2 flex flex-wrap gap-2">
                         <li v-for="step in selectedRun.steps ?? []" :key="step.id">
                             <button
@@ -462,13 +485,19 @@ async function confirmRedeploy(): Promise<void> {
                 </div>
 
                 <div v-if="selectedStep?.logText" class="rounded-box bg-base-300 p-4">
-                    <h4 class="font-semibold">{{ t("pages.runs.stepLog") }}: {{ selectedStep.name }}</h4>
+                    <h4 class="font-semibold">
+                        {{ t("pages.runs.stepLog") }}: {{ selectedStep.name }}
+                    </h4>
                     <pre class="mt-2 max-h-64 overflow-auto text-xs">{{ selectedStep.logText }}</pre>
                 </div>
-                <p v-else-if="selectedStep" class="text-sm text-base-content/70">{{ t("pages.runs.stepLogEmpty") }}</p>
+                <p v-else-if="selectedStep" class="text-sm text-base-content/70">
+                    {{ t("pages.runs.stepLogEmpty") }}
+                </p>
 
                 <div>
-                    <h4 class="font-semibold">{{ t("pages.runs.events") }}</h4>
+                    <h4 class="font-semibold">
+                        {{ t("pages.runs.events") }}
+                    </h4>
                     <ul class="mt-2 space-y-2">
                         <li
                             v-for="event in runEvents"

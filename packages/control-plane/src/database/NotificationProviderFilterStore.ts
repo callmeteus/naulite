@@ -41,6 +41,7 @@ export namespace NotificationProviderFilterStore {
                 allowedKinds,
                 updatedAt
             });
+
             return;
         }
 

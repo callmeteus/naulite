@@ -1,6 +1,13 @@
 <script setup lang="ts">
 defineProps<{
+    /**
+     * i18n key for the page title.
+     */
     titleKey: string;
+
+    /**
+     * Optional i18n key for the page hint text.
+     */
     hintKey?: string;
 }>();
 </script>
@@ -9,8 +16,12 @@ defineProps<{
     <section class="flex flex-col gap-6">
         <header class="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-bold">{{ $t(titleKey) }}</h1>
-                <p v-if="hintKey" class="mt-1 text-sm text-base-content/70">{{ $t(hintKey) }}</p>
+                <h1 class="text-2xl font-bold">
+                    {{ $t(titleKey) }}
+                </h1>
+                <p v-if="hintKey" class="mt-1 text-sm text-base-content/70">
+                    {{ $t(hintKey) }}
+                </p>
             </div>
             <div v-if="$slots.actions" class="flex flex-wrap items-center gap-2">
                 <slot name="actions" />

@@ -6,8 +6,8 @@ import {
     CreateApiKeyBodySchema
 } from "@naulite/shared";
 
-import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../ControlPlaneService";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
 
 export const GET = defineRoute({
@@ -21,6 +21,7 @@ export const GET = defineRoute({
             200: z.array(ApiKeySchema)
         }
     },
+
     async handler() {
         return ControlPlaneService.Store.listApiKeys();
     }
@@ -38,6 +39,7 @@ export const POST = defineRoute({
             200: CreatedApiKeySchema
         }
     },
+
     async handler(req) {
         const { name } = req.body;
         return ControlPlaneService.Store.createApiKey(name);

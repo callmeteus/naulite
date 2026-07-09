@@ -17,6 +17,7 @@ export const GET = defineRoute({
             200: z.array(VolumeSchema)
         }
     },
+
     async handler(req) {
         const { manifestName } = req.query;
         return (await ControlPlaneService.Store.listVolumes())

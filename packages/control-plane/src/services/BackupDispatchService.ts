@@ -45,6 +45,7 @@ export namespace BackupDispatchService {
                 provider: "local",
                 path: "/var/lib/naulite/backups"
             },
+
             resolvedSecrets: {},
             status: "pending"
         };
@@ -56,6 +57,7 @@ export namespace BackupDispatchService {
      * @param node Target node with an agent URL
      * @param payload Backup task payload
      * @returns Agent response payload
+     * @throws {Error} {@link Error}
      */
     export async function dispatchBackupTask(node: Node, payload: BackupTask): Promise<unknown> {
         if (!node.agentUrl) {
@@ -74,6 +76,7 @@ export namespace BackupDispatchService {
      * @param node Target node with an agent URL
      * @param input Restore request payload
      * @returns Agent response payload
+     * @throws {Error} {@link Error}
      */
     export async function dispatchRestoreTask(
         node: Node,

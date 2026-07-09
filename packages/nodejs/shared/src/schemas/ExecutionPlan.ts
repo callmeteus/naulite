@@ -26,12 +26,14 @@ export const CreateInstanceOperationSchema = z.object({
         mountPath: z.string().min(1),
         readOnly: z.boolean().default(false)
     })).default([]),
+
     networks: z.array(z.string()).default([]),
     ports: z.array(z.object({
         containerPort: z.number().int().positive(),
         hostPort: z.number().int().positive().optional(),
         protocol: z.enum(["tcp", "udp"]).default("tcp")
     })).default([]),
+
     resources: ResourceRequirementsSchema.optional(),
     secrets: z.array(ResolvedSecretSchema).default([])
 });

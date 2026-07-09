@@ -1,9 +1,8 @@
 import type { ControlPlaneContext } from "../ControlPlaneContext";
+import { Logger } from "../Logger";
 import { ClusterStateService } from "./ClusterStateService";
 import { ControlPlaneSync, type ControlPlaneSyncEvent } from "./ControlPlaneSync";
-import { Logger } from "../Logger";
-const log_sync = Logger.create("sync");
-
+const logSync = Logger.create("sync");
 
 /**
  * Default control plane sync event subscribers for HA cache invalidation.
@@ -19,23 +18,28 @@ export namespace ControlPlaneSyncSubscribers {
         context.controlPlaneSync.on(ControlPlaneSync.EVENTS.APPLY_REVISION_CHANGED, (event) => {
             void handleApplyRevisionChanged(context, event).catch(() => undefined);
         });
+
         context.controlPlaneSync.on(ControlPlaneSync.EVENTS.SECRET_CHANGED, (event) => {
             void handleSecretChanged(context, event).catch(() => undefined);
         });
+
         context.controlPlaneSync.on(ControlPlaneSync.EVENTS.CLUSTER_INVALIDATED, (event) => {
-            log_sync.debug("cluster invalidated source=%s payload=%o",
+            logSync.debug("cluster invalidated source=%s payload=%o",
                 event.sourceInstanceId,
                 event.payload
             );
         });
+
         context.controlPlaneSync.on(ControlPlaneSync.EVENTS.GATEWAY_ROUTE_CHANGED, () => {
             void context.gatewayRouteService.reloadFromDatabase().catch(() => undefined);
         });
+
         context.controlPlaneSync.on(ControlPlaneSync.EVENTS.LEADER_CHANGED, (event) => {
-            log_sync.debug("leader changed leaderId=%s source=%s",
+            logSync.debug("leader changed leaderId=%s source=%s",
                 event.payload.leaderId,
                 event.sourceInstanceId
             );
+
             void context.gatewayRouteService.reloadFromDatabase().catch(() => undefined);
         });
     }
@@ -59,7 +63,7 @@ export namespace ControlPlaneSyncSubscribers {
 
         context.applyRevision = revision;
         await ClusterStateService.saveApplyRevision(revision);
-        log_sync.debug("apply revision updated revision=%d source=%s", revision, event.sourceInstanceId);
+        logSync.debug("apply revision updated revision=%d source=%s", revision, event.sourceInstanceId);
     }
 
     /**
@@ -73,10 +77,11 @@ export namespace ControlPlaneSyncSubscribers {
         context: ControlPlaneContext,
         event: ControlPlaneSyncEvent
     ): Promise<void> {
-        log_sync.debug("secret changed name=%s source=%s",
+        logSync.debug("secret changed name=%s source=%s",
             event.payload.name,
             event.sourceInstanceId
         );
+
         void context;
     }
 }

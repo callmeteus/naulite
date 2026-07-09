@@ -26,6 +26,7 @@ export namespace ControlPlaneService {
      * Returns the installed control plane context.
      *
      * @returns Active control plane context
+     * @throws {Error} {@link Error}
      */
     export function requireContext(): ControlPlaneContext {
         if (!context) {
@@ -101,6 +102,7 @@ export namespace ControlPlaneService {
             await ControlPlaneService.Sync.publish(ControlPlaneSync.EVENTS.SECRET_CHANGED, {
                 name: input.name
             });
+
             return secret;
         }
 
@@ -733,7 +735,12 @@ export namespace ControlPlaneService {
         }
 
         /**
+         * Reconciles a single instance against desired state.
+         *
          * @param instanceId Instance identifier
+         * @param instances Optional cached instance list
+         * @param nodes Optional cached node list
+         * @param options Reconcile options
          * @returns Nothing.
          */
         export function reconcileInstance(
@@ -818,6 +825,7 @@ export namespace ControlPlaneService {
             await ControlPlaneService.Sync.publish(ControlPlaneSync.EVENTS.APPLY_REVISION_CHANGED, {
                 revision: active.applyRevision
             });
+
             return active.applyRevision;
         }
     }

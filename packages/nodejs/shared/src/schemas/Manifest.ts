@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { CronExpressionSchema, DurationSchema, SecretReferenceSchema } from "./Common";
 import { VolumeBackupPolicySchema } from "./BackupTask";
 import { ClusterPlacementSchema } from "./ClusterLabels";
+import { CronExpressionSchema, DurationSchema, SecretReferenceSchema } from "./Common";
 import { IngressSchema } from "./Ingress";
 import { LogRotationPolicySchema } from "./LogRotationTask";
 
@@ -70,6 +70,7 @@ export const ManifestServiceSchema = z.object({
             protocol: z.enum(["tcp", "udp"]).default("tcp")
         })
     ])).optional(),
+
     volumes: z.array(z.string()).optional(),
     networks: z.array(z.string()).optional(),
     dependsOn: z.array(z.string()).optional(),

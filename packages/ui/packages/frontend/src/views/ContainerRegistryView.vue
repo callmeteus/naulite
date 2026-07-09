@@ -115,11 +115,21 @@ function formatSize(sizeBytes: number): string {
                 </table>
 
                 <div v-if="paginatedImages.length > 0" class="mt-4 flex items-center justify-end gap-2">
-                    <button type="button" class="btn btn-sm" :disabled="!canGoPrevious" @click="previousPage">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :disabled="!canGoPrevious"
+                        @click="previousPage"
+                    >
                         {{ t("common.paginationPrevious") }}
                     </button>
                     <span class="text-sm">{{ pageLabel }}</span>
-                    <button type="button" class="btn btn-sm" :disabled="!canGoNext" @click="nextPage">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :disabled="!canGoNext"
+                        @click="nextPage"
+                    >
                         {{ t("common.paginationNext") }}
                     </button>
                 </div>

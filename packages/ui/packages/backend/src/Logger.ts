@@ -1,5 +1,8 @@
 import { Logger as CoreLogger } from "@naulite/logger";
 
+/**
+ * Winston service name for ui-backend log lines.
+ */
 const SERVICE = "ui-backend";
 
 /**

@@ -80,6 +80,7 @@ function removeEntry(index: number): void {
  * Builds the secret data map from form rows.
  *
  * @returns Parsed secret data
+ * @throws {Error} {@link Error}
  */
 function buildSecretData(): Record<string, string> {
     const data: Record<string, string> = {};
@@ -139,8 +140,12 @@ defineExpose({ open, close });
 <template>
     <dialog ref="dialogRef" class="modal">
         <div class="modal-box max-w-2xl">
-            <h3 class="text-lg font-bold">{{ t("pages.secrets.addTitle") }}</h3>
-            <p class="mt-1 text-sm text-base-content/70">{{ t("pages.secrets.addHint") }}</p>
+            <h3 class="text-lg font-bold">
+                {{ t("pages.secrets.addTitle") }}
+            </h3>
+            <p class="mt-1 text-sm text-base-content/70">
+                {{ t("pages.secrets.addHint") }}
+            </p>
 
             <form class="mt-4 grid gap-4" @submit.prevent="submit">
                 <label class="form-control w-full">
@@ -213,16 +218,24 @@ defineExpose({ open, close });
                     />
                 </label>
 
-                <p v-if="formError" class="text-sm text-error">{{ formError }}</p>
+                <p v-if="formError" class="text-sm text-error">
+                    {{ formError }}
+                </p>
 
                 <div class="modal-action mt-2">
-                    <button type="button" class="btn" @click="close">{{ t("common.cancel") }}</button>
-                    <button type="submit" class="btn btn-primary">{{ t("pages.secrets.save") }}</button>
+                    <button type="button" class="btn" @click="close">
+                        {{ t("common.cancel") }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        {{ t("pages.secrets.save") }}
+                    </button>
                 </div>
             </form>
         </div>
         <form method="dialog" class="modal-backdrop">
-            <button type="button" @click="close">close</button>
+            <button type="button" @click="close">
+                close
+            </button>
         </form>
     </dialog>
 </template>

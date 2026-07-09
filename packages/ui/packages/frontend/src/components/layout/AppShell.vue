@@ -9,7 +9,12 @@ const drawerOpen = ref(false);
 
 <template>
     <div class="drawer lg:drawer-open">
-        <input id="app-drawer" v-model="drawerOpen" type="checkbox" class="drawer-toggle" />
+        <input
+            id="app-drawer"
+            v-model="drawerOpen"
+            type="checkbox"
+            class="drawer-toggle"
+        />
         <div class="drawer-content flex min-h-screen flex-col">
             <div class="navbar bg-base-100 shadow-sm lg:hidden">
                 <label for="app-drawer" class="btn btn-ghost btn-square" aria-label="Menu">

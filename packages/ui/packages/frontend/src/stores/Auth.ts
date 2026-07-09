@@ -1,7 +1,7 @@
+import { reactive } from "vue";
 import { NauliteClient, NauliteApiError } from "@naulite/sdk";
 import type { AdminRole, AdminUser, NaulitePermission } from "@naulite/sdk";
 import { RolePermissions } from "@naulite/shared";
-import { reactive } from "vue";
 const baseUrl = import.meta.env.VITE_ADMIN_API_URL ?? "/api";
 
 /**
@@ -102,6 +102,7 @@ export const authStore = reactive({
      * @param email Operator email
      * @param password Operator password
      * @returns Authenticated user
+     * @throws {unknown}
      */
     async login(email: string, password: string): Promise<AdminUser> {
         this.loading = true;

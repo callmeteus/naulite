@@ -1,13 +1,12 @@
-import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
 import { createReadStream } from "node:fs";
+import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 
 import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, NodeBackupDestination } from "@naulite/shared";
 
-import { BackupDestinationProvider } from "./BackupDestinationProvider";
 import { Logger } from "../../Logger";
-const log_backups = Logger.create("backups");
-
+import { BackupDestinationProvider } from "./BackupDestinationProvider";
+const logBackups = Logger.create("backups");
 
 /**
  * Options for the node backup destination provider.
@@ -42,11 +41,13 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
      * @param task Backup task resolved by the control plane
      * @param archivePath Local archive path on the agent
      * @returns Destination result metadata
+     * @throws {Error} {@link Error}
      */
     async write(task: BackupTask, archivePath: string): Promise<BackupDestinationResult> {
         if (task.destination.provider !== "node") {
             throw new Error(`NodeBackupDestinationProvider cannot handle provider ${task.destination.provider}`);
         }
+
         const destination = task.destination as NodeBackupDestination;
 
         if (destination.nodeId !== this.nodeId) {
@@ -57,11 +58,12 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
         await mkdir(destinationDir, { recursive: true });
         const fileName = `${task.volumeName}-${task.taskId}.tar.gz`;
         const destinationPath = path.join(destinationDir, fileName);
-        log_backups.debug("node write taskId=%s nodeId=%s destination=%s",
+        logBackups.debug("node write taskId=%s nodeId=%s destination=%s",
             task.taskId,
             this.nodeId,
             destinationPath
         );
+
         await copyFile(archivePath, destinationPath);
         const fileStat = await stat(destinationPath);
 
@@ -77,13 +79,14 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
      * @param task Backup task containing destination configuration
      * @param location Destination-specific location identifier
      * @returns Readable backup archive stream
+     * @throws {Error} {@link Error}
      */
     async read(task: BackupTask, location: string): Promise<BackupDestinationReadResult> {
         if (task.destination.provider !== "node") {
             throw new Error(`NodeBackupDestinationProvider cannot handle provider ${task.destination.provider}`);
         }
 
-        log_backups.debug("node read location=%s", location);
+        logBackups.debug("node read location=%s", location);
         const fileStat = await stat(location);
 
         return {
@@ -99,7 +102,7 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
      * @returns Nothing.
      */
     async delete(location: string): Promise<void> {
-        log_backups.debug("node delete location=%s", location);
+        logBackups.debug("node delete location=%s", location);
         await unlink(location);
     }
 
@@ -115,6 +118,7 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
         }
 
         const destination = task.destination as NodeBackupDestination;
+
         if (destination.nodeId !== this.nodeId) {
             return false;
         }
@@ -122,10 +126,10 @@ export class NodeBackupDestinationProvider extends BackupDestinationProvider {
         try {
             const destinationDir = path.join(this.nodeRootDir, destination.path);
             await mkdir(destinationDir, { recursive: true });
-            log_backups.debug("node validate nodeId=%s path=%s healthy=true", this.nodeId, destinationDir);
+            logBackups.debug("node validate nodeId=%s path=%s healthy=true", this.nodeId, destinationDir);
             return true;
         } catch (err) {
-            log_backups.debug("node validate nodeId=%s healthy=false err=%o", this.nodeId, err);
+            logBackups.debug("node validate nodeId=%s healthy=false err=%o", this.nodeId, err);
             return false;
         }
     }

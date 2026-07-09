@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
-import { defineRoute } from "../../../routing/DefineRoute";
 import { HTTP401Error } from "../../../errors/TreatedError";
+import { defineRoute } from "../../../routing/DefineRoute";
 
 const AdminMeResponseSchema = z.object({
     user: z.object({
@@ -31,6 +31,7 @@ export const GET = defineRoute({
             401: AdminMeUnauthorizedSchema
         }
     },
+
     async handler(req) {
         if (!req.adminUser) {
             throw new HTTP401Error("Unauthorized.");

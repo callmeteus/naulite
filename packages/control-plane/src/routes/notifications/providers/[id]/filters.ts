@@ -4,9 +4,9 @@ import { PipelineEventKindSchema } from "@naulite/shared";
 
 import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
 import { NotificationProviderFilterStore } from "../../../../database/NotificationProviderFilterStore";
-import { RunNotificationDispatcher } from "../../../../services/RunNotificationDispatcher";
 import { HTTP404Error } from "../../../../errors/TreatedError";
 import { defineRoute } from "../../../../routing/DefineRoute";
+import { RunNotificationDispatcher } from "../../../../services/RunNotificationDispatcher";
 
 const ProviderIdParamsSchema = z.object({
     id: z.string().min(1)
@@ -33,6 +33,7 @@ export const GET = defineRoute({
             200: NotificationProviderFiltersResponseSchema
         }
     },
+
     async handler(req) {
         const { id } = req.params;
 
@@ -64,6 +65,7 @@ export const PATCH = defineRoute({
             200: NotificationProviderFiltersResponseSchema
         }
     },
+
     async handler(req) {
         const { id } = req.params;
         const { allowedKinds } = req.body;

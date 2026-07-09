@@ -2,9 +2,9 @@ import { z } from "zod";
 
 import { NameParamsSchema, PaginationQuerySchema } from "@naulite/shared";
 
+import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
-import { ControlPlaneService } from "../../../ControlPlaneService";
 
 const FunctionRunListItemSchema = z.object({
     id: z.string().min(1),
@@ -38,6 +38,7 @@ export const GET = defineRoute({
             200: FunctionRunsListResponseSchema
         }
     },
+
     async handler(req) {
         // v1: list all runs (service filter is applied in memory).
         const runs = await ControlPlaneService.Store.listFunctionRuns(req.query);

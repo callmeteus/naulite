@@ -19,6 +19,7 @@ export const GET = defineRoute({
             200: PaginatedListSchema(BackupRunSummarySchema)
         }
     },
+
     async handler(req) {
         return ControlPlaneService.Store.listBackupRuns(req.query);
     }

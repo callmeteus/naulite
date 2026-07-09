@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: "LoadingSpinner" });
 </script>
 
 <template>

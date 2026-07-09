@@ -4,6 +4,9 @@ import { createHash, randomBytes } from "node:crypto";
  * Generates and validates panel-issued CLI API keys.
  */
 export namespace ApiKeyCrypto {
+    /**
+     * Prefix applied to generated API key secrets.
+     */
     const PREFIX = "plt_";
 
     /**

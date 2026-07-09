@@ -1,11 +1,11 @@
-import { ControlPlaneService } from "../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
-import { defineRoute } from "../../routing/DefineRoute";
 import {
     DeletedByNameResponseSchema,
     NameParamsSchema,
     RouteErrorResponseSchema
 } from "@naulite/shared";
+import { ControlPlaneService } from "../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
+import { defineRoute } from "../../routing/DefineRoute";
 
 export const DELETE = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:write"),
@@ -20,6 +20,7 @@ export const DELETE = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { name } = req.params;
         const deleted = await ControlPlaneService.Store.deleteVolumeByName(name);

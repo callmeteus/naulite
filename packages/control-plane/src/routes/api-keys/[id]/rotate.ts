@@ -2,9 +2,9 @@ import { z } from "zod";
 
 import { CreatedApiKeySchema } from "@naulite/shared";
 
+import { ControlPlaneService } from "../../../ControlPlaneService";
 import { ApiKeyRotationConfig } from "../../../auth/ApiKeyRotationConfig";
 import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
-import { ControlPlaneService } from "../../../ControlPlaneService";
 import { HTTP404Error, HTTP503Error } from "../../../errors/TreatedError";
 import { defineRoute } from "../../../routing/DefineRoute";
 
@@ -33,6 +33,7 @@ export const POST = defineRoute({
             503: RotateApiKeyDisabledSchema
         }
     },
+
     async handler(req) {
         if (!ApiKeyRotationConfig.isEnabled()) {
             throw new HTTP503Error("API key rotation is disabled.", {

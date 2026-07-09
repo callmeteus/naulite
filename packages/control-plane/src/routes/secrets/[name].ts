@@ -25,6 +25,7 @@ export const GET = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req) {
         const { name } = req.params;
         const secret = await ControlPlaneService.Secrets.getByName(name);
@@ -44,6 +45,7 @@ export const PUT = defineRoute({
         ...PermissionPreHandlers.authorizedWithPermission("secrets:write"),
         LeaderPreHandlers.requireLeader()
     ],
+
     schema: {
         summary: "Update secret",
         description: "Updates a cluster secret with encrypted values at rest.",
@@ -56,6 +58,7 @@ export const PUT = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req) {
         const { name } = req.params;
         const existing = await ControlPlaneService.Secrets.getByName(name);
@@ -82,6 +85,7 @@ export const DELETE = defineRoute({
         ...PermissionPreHandlers.authorizedWithPermission("secrets:write"),
         LeaderPreHandlers.requireLeader()
     ],
+
     schema: {
         summary: "Delete secret",
         description: "Deletes a cluster secret by name.",
@@ -93,6 +97,7 @@ export const DELETE = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { name } = req.params;
         const deleted = await ControlPlaneService.Secrets.deleteByName(name);

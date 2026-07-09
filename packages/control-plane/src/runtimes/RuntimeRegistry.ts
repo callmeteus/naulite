@@ -32,6 +32,7 @@ export class RuntimeRegistry {
      *
      * @param id Runtime identifier
      * @returns Provider instance
+     * @throws {Error} {@link Error}
      */
     require(id: string): RuntimeProvider {
         const provider = this.get(id);

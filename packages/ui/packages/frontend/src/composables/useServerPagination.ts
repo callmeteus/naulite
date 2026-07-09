@@ -1,5 +1,5 @@
-import type { PaginatedResponse } from "@naulite/sdk";
 import { computed, ref, type Ref } from "vue";
+import type { PaginatedResponse } from "@naulite/sdk";
 
 /**
  * Server-side pagination state backed by paginated API responses.

@@ -1,9 +1,9 @@
+import { z } from "zod";
 import {
     IdParamsSchema,
     NotificationDestinationSchema,
     UpdateNotificationDestinationBodySchema
 } from "@naulite/shared";
-import { z } from "zod";
 
 import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { NotificationDestinationStore } from "../../../database/NotificationDestinationStore";
@@ -66,6 +66,7 @@ export const PATCH = defineRoute({
             200: NotificationDestinationSchema
         }
     },
+
     async handler(req) {
         const destination = await NotificationDestinationStore.update(req.params.id, req.body);
         await NotificationDestinationRuntime.syncFromDatabase();
@@ -85,6 +86,7 @@ export const DELETE = defineRoute({
             200: DeleteNotificationDestinationResponseSchema
         }
     },
+
     async handler(req) {
         const deleted = await NotificationDestinationStore.remove(req.params.id);
 

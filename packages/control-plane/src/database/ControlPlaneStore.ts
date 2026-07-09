@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { Op } from "sequelize";
 import type {
     ApiKey,
     CreatedApiKey,
@@ -11,8 +13,6 @@ import type {
     Volume
 } from "@naulite/shared";
 import { buildPaginatedList, paginationOffset } from "@naulite/shared";
-import { randomUUID } from "node:crypto";
-import { Op } from "sequelize";
 
 import { ApiKeyCrypto } from "../auth/ApiKeyCrypto";
 import { ApiKeyRotationConfig } from "../auth/ApiKeyRotationConfig";
@@ -172,9 +172,11 @@ export class ControlPlaneStore {
                     : typeof plain.payload.location === "string"
                         ? plain.payload.location
                         : undefined,
+
                 location: typeof plain.payload.location === "string"
                     ? plain.payload.location
                     : undefined,
+
                 archivePath: typeof plain.payload.archivePath === "string"
                     ? plain.payload.archivePath
                     : undefined
@@ -288,6 +290,7 @@ export class ControlPlaneStore {
         createdAt: string;
     } | null> {
         const row = await FunctionRunModel.findByPk(id);
+
         if (!row) {
             return null;
         }
@@ -405,6 +408,7 @@ export class ControlPlaneStore {
      *
      * @param input Secret metadata and values
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     async upsertClusterSecret(input: {
         name: string;
@@ -590,6 +594,7 @@ export class ControlPlaneStore {
         await ServiceModel.destroy({
             where: { id: serviceId }
         });
+
         await InstanceModel.destroy({
             where: { serviceId }
         });
@@ -740,6 +745,7 @@ export class ControlPlaneStore {
         const rows = await ApiKeyModel.findAll({
             where: { revokedAt: { [Op.is]: null } }
         });
+
         return rows.map((row) => RowMapper.apiKey(row.get({ plain: true })));
     }
 
@@ -909,6 +915,7 @@ export class ControlPlaneStore {
                     [Op.in]: ["pending", "launching", "bootstrapping"]
                 }
             },
+
             order: [["createdAt", "ASC"]]
         });
 

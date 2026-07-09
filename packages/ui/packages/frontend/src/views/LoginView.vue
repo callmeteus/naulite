@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from "vue-router";
 
 import NauliteBrand from "../components/brand/NauliteBrand.vue";
 import { useAuthStore } from "../stores/Auth";
@@ -37,13 +37,19 @@ async function submitLogin(): Promise<void> {
         <div class="w-full max-w-md space-y-6">
             <header class="flex flex-col items-center text-center">
                 <NauliteBrand size="lg" />
-                <p class="mt-2 text-sm text-base-content/70">{{ t("pages.login.tagline") }}</p>
+                <p class="mt-2 text-sm text-base-content/70">
+                    {{ t("pages.login.tagline") }}
+                </p>
             </header>
 
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
-                    <h2 class="card-title">{{ t("pages.login.title") }}</h2>
-                    <p class="text-sm text-base-content/70">{{ t("pages.login.hint") }}</p>
+                    <h2 class="card-title">
+                        {{ t("pages.login.title") }}
+                    </h2>
+                    <p class="text-sm text-base-content/70">
+                        {{ t("pages.login.hint") }}
+                    </p>
 
                     <div v-if="auth.error" role="alert" class="alert alert-error mt-2">
                         <span>{{ auth.error }}</span>

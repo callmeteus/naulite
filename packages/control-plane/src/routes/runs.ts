@@ -19,6 +19,7 @@ export const GET = defineRoute({
             200: PaginatedListSchema(PipelineRunSummarySchema)
         }
     },
+
     async handler(req) {
         return PipelineRunService.listRuns(req.query);
     }

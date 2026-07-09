@@ -171,11 +171,14 @@ export namespace TraefikDynamicConfig {
 
             if (usePassthrough && wantsTls) {
                 router.tls = { passthrough: true };
-            } else if (hasInlineTls) {
+            } else
+            if (hasInlineTls) {
                 router.tls = {};
-            } else if (useSelfSigned && wantsTls) {
+            } else
+            if (useSelfSigned && wantsTls) {
                 router.tls = {};
-            } else if (useAcme && (autoTlsHosts.has(route.ingress.host) || route.ingress.tls?.enabled)) {
+            } else
+            if (useAcme && (autoTlsHosts.has(route.ingress.host) || route.ingress.tls?.enabled)) {
                 router.tls = { certResolver };
             }
 

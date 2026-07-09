@@ -1,10 +1,10 @@
+import type { Readable } from "node:stream";
 import type {
     ContainerRegistryBlobHeadResult,
     ContainerRegistryBlobWriteInput,
     ContainerRegistryBlobWriteResult,
     ContainerRegistryDestination
 } from "@naulite/shared";
-import type { Readable } from "node:stream";
 
 /**
  * Abstract container registry blob provider contract for local and plugin backends.

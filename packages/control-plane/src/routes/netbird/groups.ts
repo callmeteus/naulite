@@ -1,11 +1,11 @@
-import { ControlPlaneService } from "../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
-import { defineRoute } from "../../routing/DefineRoute";
 import {
     EnsureNetBirdGroupBodySchema,
     NetBirdGroupResponseSchema,
     NetBirdGroupsListResponseSchema
 } from "@naulite/shared";
+import { ControlPlaneService } from "../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
+import { defineRoute } from "../../routing/DefineRoute";
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("netbird:read"),
@@ -18,6 +18,7 @@ export const GET = defineRoute({
             200: NetBirdGroupsListResponseSchema
         }
     },
+
     async handler() {
         return {
             groups: await ControlPlaneService.NetBird.listGroups()
@@ -37,6 +38,7 @@ export const POST = defineRoute({
             200: NetBirdGroupResponseSchema
         }
     },
+
     async handler(req) {
         const { name } = req.body;
 

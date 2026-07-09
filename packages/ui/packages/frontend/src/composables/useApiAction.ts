@@ -1,6 +1,6 @@
+import { ref } from "vue";
 import { NauliteApiError } from "@naulite/sdk";
 import { enrichApiErrorMessage } from "@naulite/shared";
-import { ref } from "vue";
 
 import { useToast } from "../stores/Toast";
 

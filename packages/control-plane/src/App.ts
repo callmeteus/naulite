@@ -1,11 +1,11 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { createFastifyLoggerOptions } from "@naulite/logger";
 
-import { ControlPlaneService } from "./ControlPlaneService";
 import { createControlPlaneContext, type ControlPlaneContext } from "./ControlPlaneContext";
+import { ControlPlaneService } from "./ControlPlaneService";
+import { Logger } from "./Logger";
 import { DatabaseProvider } from "./database/DatabaseProvider";
 import { registerErrorHandler } from "./errors/RegisterErrorHandler";
-import { Logger } from "./Logger";
 import { registerOpenApi } from "./openapi/RegisterOpenApi";
 import { registerRawBodyParser } from "./openapi/RegisterRawBodyParser";
 import { registerRoutes } from "./routes/index";

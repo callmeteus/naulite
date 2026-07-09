@@ -103,6 +103,7 @@ export class S3ObjectStore {
      * @param config S3 connection settings
      * @param key Object key
      * @returns Readable object stream
+     * @throws {Error} {@link Error}
      */
     async getObjectStream(config: S3ObjectStoreConfig, key: string): Promise<Readable> {
         const client = this.resolveClient(config);
@@ -125,6 +126,7 @@ export class S3ObjectStore {
      * @param config S3 connection settings
      * @param key Object key
      * @returns Object metadata or null when missing
+     * @throws {unknown}
      */
     async headObject(config: S3ObjectStoreConfig, key: string): Promise<S3ObjectHeadResult | null> {
         const client = this.resolveClient(config);
@@ -172,12 +174,14 @@ export class S3ObjectStore {
      * @param location S3 location URI
      * @param metadata Optional region and endpoint overrides from backup metadata
      * @returns Parsed bucket and key
+     * @throws {Error} {@link Error}
      */
     parseLocation(
         location: string,
         metadata?: Pick<S3ObjectStoreConfig, "region" | "endpoint">
     ): { bucket: string; key: string; config: S3ObjectStoreConfig } {
         const match = /^s3:\/\/([^/]+)\/(.+)$/.exec(location);
+
         if (!match) {
             throw new Error(`Invalid S3 location: ${location}`);
         }
@@ -186,6 +190,7 @@ export class S3ObjectStore {
             ?? process.env.AWS_REGION
             ?? process.env.AWS_DEFAULT_REGION
             ?? "us-east-1";
+
         const endpoint = metadata?.endpoint ?? process.env.S3_ENDPOINT;
 
         console.debug(

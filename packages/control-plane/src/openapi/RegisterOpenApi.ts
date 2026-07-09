@@ -1,6 +1,6 @@
+import type { FastifyInstance } from "fastify";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
-import type { FastifyInstance } from "fastify";
 
 /**
  * Registers OpenAPI documentation routes on the control plane.
@@ -17,6 +17,7 @@ export async function registerOpenApi(app: FastifyInstance): Promise<void> {
                 description: "Distributed orchestration control plane HTTP API.",
                 version: "0.1.0"
             },
+
             components: {
                 securitySchemes: {
                     bearerAuth: {
@@ -26,6 +27,7 @@ export async function registerOpenApi(app: FastifyInstance): Promise<void> {
                     }
                 }
             },
+
             security: [
                 {
                     bearerAuth: []

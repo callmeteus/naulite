@@ -3,20 +3,19 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApp } from "./App";
 import { createControlPlaneContext } from "./ControlPlaneContext";
+import { Logger } from "./Logger";
 import { ControlPlaneStore } from "./database/ControlPlaneStore";
 import { DatabaseProvider } from "./database/DatabaseProvider";
-import { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";
 import { AdminBootstrap } from "./modules/admin/AdminBootstrap";
+import { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";
 import { ClusterStateService } from "./services/ClusterStateService";
+import { ControlPlaneInstanceId } from "./services/ControlPlaneInstanceId";
 import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { ControlPlaneSyncSubscribers } from "./services/ControlPlaneSyncSubscribers";
-import { ControlPlaneInstanceId } from "./services/ControlPlaneInstanceId";
 import { LeaderElection } from "./services/LeaderElection";
 import { NetBirdBootstrap } from "./services/NetBirdBootstrap";
 import { NotificationDestinationRuntime } from "./services/NotificationDestinationRuntime";
-import { Logger } from "./Logger";
-const log_migrations = Logger.create("migrations");
-
+const logMigrations = Logger.create("migrations");
 
 /**
  * Server startup options.
@@ -57,7 +56,7 @@ async function runMigrationsWithLeaderGate(
     }
 
     if (!await databaseProvider.hasLeaderElectionTable()) {
-        log_migrations.debug("bootstrap leader table missing, running full migrate instanceId=%s", instanceId);
+        logMigrations.debug("bootstrap leader table missing, running full migrate instanceId=%s", instanceId);
         await databaseProvider.migrate();
         return;
     }
@@ -67,10 +66,10 @@ async function runMigrationsWithLeaderGate(
     await waitForLeaderElectionReady(bootstrapLeader, 20_000);
 
     if (bootstrapLeader.isLeader()) {
-        log_migrations.debug("leader applying pending migrations instanceId=%s", instanceId);
+        logMigrations.debug("leader applying pending migrations instanceId=%s", instanceId);
         await databaseProvider.migrate();
     } else {
-        log_migrations.debug("follower waiting for migrations instanceId=%s", instanceId);
+        logMigrations.debug("follower waiting for migrations instanceId=%s", instanceId);
         await databaseProvider.waitUntilMigrationsApplied();
     }
 
@@ -113,6 +112,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     const packagesDir = options.packagesDir
         ?? process.env.NAULITE_PACKAGES_DIR
         ?? join(moduleDir, "..", "..");
+
     const databaseProvider = options.databaseProvider ?? new DatabaseProvider();
     const instanceId = ControlPlaneInstanceId.resolve();
 
@@ -128,6 +128,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
         applyRevision,
         instanceId
     });
+
     await context.pluginLoader.load(context.pluginRegistry);
     PluginRegistryWiring.wire(context);
     await NotificationDestinationRuntime.syncFromDatabase();
@@ -139,6 +140,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
             leaderId: context.instanceId
         });
     });
+
     context.leaderElection.start();
     context.nodeProvisionService.startStatusPolling(context.leaderElection);
     context.instanceReconcilerService.startPolling(context.leaderElection);
@@ -192,6 +194,7 @@ async function main(): Promise<void> {
     process.on("SIGINT", () => {
         void shutdown();
     });
+
     process.on("SIGTERM", () => {
         void shutdown();
     });

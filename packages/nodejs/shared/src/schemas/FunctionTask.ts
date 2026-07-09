@@ -25,6 +25,7 @@ export const FunctionTaskSchema = z.object({
         mountPath: z.string().min(1),
         readOnly: z.boolean().default(false)
     })).default([]),
+
     timeoutMs: z.number().int().positive(),
     runId: z.string().min(1).optional(),
     triggeredBy: z.enum(["api", "cli", "cron", "http"]).default("api"),

@@ -31,6 +31,7 @@ export class NodeProvisionerRegistry {
      *
      * @param id Registered provider id
      * @returns Provider instance
+     * @throws {Error} {@link Error}
      */
     require(id: string): NodeProvisionerProvider {
         const provider = this.get(id);

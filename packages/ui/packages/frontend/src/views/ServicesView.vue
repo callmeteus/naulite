@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { Service } from "@naulite/sdk";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import type { Service } from "@naulite/sdk";
 
 import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
@@ -79,7 +79,9 @@ async function redispatchService(serviceName: string): Promise<void> {
     <PageLayout title-key="pages.services.title" hint-key="pages.services.hint">
         <ErrorAlert :error="store.error || actionError" />
 
-        <p v-if="actionMessage" class="alert alert-success">{{ actionMessage }}</p>
+        <p v-if="actionMessage" class="alert alert-success">
+            {{ actionMessage }}
+        </p>
 
         <div v-if="store.loading" class="flex items-center gap-2">
             <LoadingSpinner />
@@ -103,7 +105,9 @@ async function redispatchService(serviceName: string): Promise<void> {
                             <th>{{ t("common.status") }}</th>
                             <th>{{ t("common.tableColumns.replicas") }}</th>
                             <th>{{ t("common.tableColumns.lifecycle") }}</th>
-                            <th v-if="canWrite">{{ t("common.actions") }}</th>
+                            <th v-if="canWrite">
+                                {{ t("common.actions") }}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>

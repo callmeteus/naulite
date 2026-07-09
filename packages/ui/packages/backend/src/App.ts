@@ -1,17 +1,17 @@
-import { NauliteApiError, NauliteClient } from "@naulite/sdk";
-import { enrichApiErrorMessage, formatValidationDetails } from "@naulite/shared";
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
 import { createFastifyLoggerOptions } from "@naulite/logger";
+import { NauliteApiError, NauliteClient } from "@naulite/sdk";
+import { enrichApiErrorMessage, formatValidationDetails } from "@naulite/shared";
 
+import { resolveConfigFromEnv } from "./Config";
+import { Logger } from "./Logger";
 import { AuthPreHandlers } from "./auth/AuthPreHandlers";
 import { CsrfProtection } from "./auth/CsrfProtection";
 import {
     PermissionPreHandlers,
     resolveBffRoutePermissions
 } from "./auth/PermissionPreHandlers";
-import { resolveConfigFromEnv } from "./Config";
-import { Logger } from "./Logger";
 import { registerRoutes } from "./routes/index";
 
 /**

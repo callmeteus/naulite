@@ -3,10 +3,9 @@ import path from "node:path";
 
 import type { ProvisionVolumeOptions, Volume } from "@naulite/shared";
 
-import { VolumeProvider } from "./VolumeProvider";
 import { Logger } from "../../Logger";
-const log_volumes = Logger.create("volumes");
-
+import { VolumeProvider } from "./VolumeProvider";
+const logVolumes = Logger.create("volumes");
 
 /**
  * Options for the local cluster-scoped volume provider.
@@ -42,7 +41,7 @@ export class LocalVolumeProvider extends VolumeProvider {
      * @returns Volume metadata entries
      */
     async list(): Promise<Volume[]> {
-        log_volumes.debug("list count=%d", this.volumes.size);
+        logVolumes.debug("list count=%d", this.volumes.size);
         return [...this.volumes.values()].map((volume) => this.toPublicVolume(volume));
     }
 
@@ -56,7 +55,7 @@ export class LocalVolumeProvider extends VolumeProvider {
         const now = new Date().toISOString();
         const volumeId = `vol_${options.volumeName}`;
         const hostPath = path.join(this.rootDir, options.volumeName);
-        log_volumes.debug("provision volumeName=%s nodeId=%s hostPath=%s",
+        logVolumes.debug("provision volumeName=%s nodeId=%s hostPath=%s",
             options.volumeName,
             options.nodeId ?? "-",
             hostPath
@@ -77,6 +76,7 @@ export class LocalVolumeProvider extends VolumeProvider {
             updatedAt: now,
             hostPath
         };
+
         this.volumes.set(volumeId, stored);
         return this.toPublicVolume(stored);
     }
@@ -90,12 +90,13 @@ export class LocalVolumeProvider extends VolumeProvider {
      */
     async release(volumeId: string, deleteData = false): Promise<void> {
         const volume = this.volumes.get(volumeId);
+
         if (!volume) {
-            log_volumes.debug("release missing volumeId=%s", volumeId);
+            logVolumes.debug("release missing volumeId=%s", volumeId);
             return;
         }
 
-        log_volumes.debug("release volumeId=%s deleteData=%s", volumeId, deleteData);
+        logVolumes.debug("release volumeId=%s deleteData=%s", volumeId, deleteData);
         volume.status = "deleting";
         volume.updatedAt = new Date().toISOString();
 
@@ -115,17 +116,18 @@ export class LocalVolumeProvider extends VolumeProvider {
      */
     async resolveHostPath(volumeId: string, nodeId: string): Promise<string | undefined> {
         const volume = this.volumes.get(volumeId);
+
         if (!volume) {
-            log_volumes.debug("resolveHostPath missing volumeId=%s", volumeId);
+            logVolumes.debug("resolveHostPath missing volumeId=%s", volumeId);
             return undefined;
         }
 
         if (volume.nodeId && volume.nodeId !== nodeId) {
-            log_volumes.debug("resolveHostPath node mismatch volumeId=%s nodeId=%s", volumeId, nodeId);
+            logVolumes.debug("resolveHostPath node mismatch volumeId=%s nodeId=%s", volumeId, nodeId);
             return undefined;
         }
 
-        log_volumes.debug("resolveHostPath volumeId=%s path=%s", volumeId, volume.hostPath);
+        logVolumes.debug("resolveHostPath volumeId=%s path=%s", volumeId, volume.hostPath);
         return volume.hostPath;
     }
 

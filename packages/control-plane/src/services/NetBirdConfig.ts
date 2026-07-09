@@ -2,7 +2,14 @@
  * Resolves and validates self-hosted NetBird configuration.
  */
 export namespace NetBirdConfig {
+    /**
+     * Hostname suffix identifying NetBird cloud endpoints.
+     */
     const CLOUD_HOST_SUFFIX = ".netbird.io";
+
+    /**
+     * Known NetBird cloud hostnames rejected for self-hosted mode.
+     */
     const CLOUD_HOSTS = new Set([
         "api.netbird.io",
         "app.netbird.io",
@@ -30,6 +37,7 @@ export namespace NetBirdConfig {
      * 
      * @param url NetBird API or management URL
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     export function assertSelfHosted(url: string): void {
         let parsed: URL;
@@ -51,6 +59,7 @@ export namespace NetBirdConfig {
      * Resolves the self-hosted NetBird API base URL from environment variables.
      * 
      * @returns Normalized API base URL without trailing slash
+     * @throws {Error} {@link Error}
      */
     export function resolveApiUrl(): string {
         const raw = process.env.NETBIRD_API_URL ?? process.env.NETBIRD_MANAGEMENT_URL;

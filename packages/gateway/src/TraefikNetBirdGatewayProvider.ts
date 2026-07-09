@@ -48,6 +48,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
         this.traefikApiUrl = options.traefikApiUrl ?? "http://127.0.0.1:8080";
         this.traefikDynamicConfigUrl = options.traefikDynamicConfigUrl
             ?? `${this.traefikApiUrl.replace(/\/+$/, "")}/naulite/dynamic-config`;
+
         this.tlsMode = options.tlsMode ?? process.env.NAULITE_TLS_MODE?.trim().toLowerCase() ?? "acme_tls";
         this.fetchImpl = options.fetchImpl ?? fetch;
     }
@@ -69,6 +70,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
             this.netbirdEndpoint,
             this.traefikApiUrl
         );
+
         this.routes.set(key, { serviceName: route.serviceName, host: route.ingress.host, route });
         await this.pushDynamicConfig();
     }
@@ -101,6 +103,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
             certificate: material.certificate,
             privateKey: material.privateKey
         });
+
         await this.pushDynamicConfig();
     }
 
@@ -124,6 +127,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
      */
     async resolveTls(ingress: Ingress): Promise<GatewayTlsMaterial | undefined> {
         const stored = this.tlsByHost.get(ingress.host);
+
         if (stored) {
             console.debug("[gateway] resolveTls host=%s source=installed", ingress.host);
             return {
@@ -182,6 +186,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
      * Pushes the current dynamic configuration to Traefik.
      *
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     private async pushDynamicConfig(): Promise<void> {
         const configuration = TraefikDynamicConfig.build(
@@ -206,6 +211,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
                 Accept: "application/json",
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify(configuration)
         });
 
@@ -215,6 +221,7 @@ export class TraefikNetBirdGatewayProvider implements GatewayProvider {
                 response.status,
                 this.traefikDynamicConfigUrl
             );
+
             throw new Error(`Traefik dynamic configuration push failed with status ${response.status}.`);
         }
     }

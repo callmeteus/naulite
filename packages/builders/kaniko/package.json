@@ -7,7 +7,7 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "build": "tsc -p tsconfig.json && node ../../../scripts/fix-esm-imports.mjs dist",
-        "lint": "eslint src/"
+        "lint": "eslint src/ --max-warnings=0"
     },
     "dependencies": {
         "@naulite/shared": "0.1.0"

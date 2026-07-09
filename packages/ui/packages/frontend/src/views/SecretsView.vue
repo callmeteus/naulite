@@ -158,7 +158,9 @@ async function confirmDeleteSecret(): Promise<void> {
             </nav>
 
             <div v-if="browserEntries.length === 0" class="rounded-box border border-dashed border-base-300 px-6 py-10 text-center">
-                <p class="text-sm text-base-content/70">{{ t("pages.secrets.emptyFolder") }}</p>
+                <p class="text-sm text-base-content/70">
+                    {{ t("pages.secrets.emptyFolder") }}
+                </p>
             </div>
 
             <div v-else class="card bg-base-100 shadow">
@@ -255,7 +257,9 @@ async function confirmDeleteSecret(): Promise<void> {
             danger
             @confirm="confirmDeleteSecret"
         >
-            <p v-if="deleteTarget" class="py-4">{{ deleteTarget }}</p>
+            <p v-if="deleteTarget" class="py-4">
+                {{ deleteTarget }}
+            </p>
         </ConfirmModal>
     </PageLayout>
 </template>

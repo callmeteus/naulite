@@ -1,14 +1,24 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { Logger } from "../Logger";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import type { LeaderElection } from "./LeaderElection";
-import { Logger } from "../Logger";
-const log_metrics_sync = Logger.create("metrics-sync");
+const logMetricsSync = Logger.create("metrics-sync");
 
-
+/**
+ * Default interval between Prometheus file_sd syncs in milliseconds.
+ */
 const DEFAULT_SYNC_INTERVAL_MS = 30_000;
+
+/**
+ * Default directory for Prometheus file service discovery targets.
+ */
 const DEFAULT_FILE_SD_DIR = "/var/lib/naulite/prometheus/file_sd";
+
+/**
+ * Filename written for Naulite Prometheus scrape targets.
+ */
 const TARGETS_FILE_NAME = "naulite_targets.json";
 
 /**
@@ -69,12 +79,12 @@ export class MetricsSyncService {
 
         this.intervalHandle = setInterval(() => {
             void this.syncIfLeader().catch((err) => {
-                log_metrics_sync.error("sync failed: %O", err);
+                logMetricsSync.error("sync failed: %O", err);
             });
         }, this.syncIntervalMs);
 
         void this.syncIfLeader().catch((err) => {
-            log_metrics_sync.error("initial sync failed: %O", err);
+            logMetricsSync.error("initial sync failed: %O", err);
         });
     }
 
@@ -103,7 +113,7 @@ export class MetricsSyncService {
         const targets = await this.buildTargetGroups();
         await this.writeTargetsFile(targets);
 
-        log_metrics_sync.debug("wrote targets groups=%d dir=%s",
+        logMetricsSync.debug("wrote targets groups=%d dir=%s",
             targets.length,
             this.fileSdDir
         );

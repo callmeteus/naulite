@@ -8,7 +8,7 @@ import { Logger } from "../Logger";
 import type { SecretsService } from "../services/SecretsService";
 
 const execFileAsync = promisify(execFile);
-const log_gitops = Logger.create("gitops");
+const logGitops = Logger.create("gitops");
 
 export namespace GitSourceRepository {
     /**
@@ -93,6 +93,7 @@ export namespace GitSourceRepository {
             get(key) {
                 return cache.get(key);
             },
+
             set(key, value) {
                 cache.set(key, value);
             }
@@ -118,6 +119,7 @@ export namespace GitSourceRepository {
             const composePath = path.isAbsolute(parsed.path)
                 ? parsed.path
                 : path.resolve(base, parsed.path);
+
             const yaml = await import("node:fs/promises").then((fs) => fs.readFile(composePath, "utf8"));
             return {
                 workDir: path.dirname(composePath),
@@ -129,6 +131,7 @@ export namespace GitSourceRepository {
 
         const cacheKey = `${parsed.cloneUrl}#${parsed.ref ?? ""}/${parsed.filePath ?? ""}`;
         const cached = cache?.get(cacheKey);
+
         if (cached) {
             return cached;
         }
@@ -136,7 +139,7 @@ export namespace GitSourceRepository {
         const workDir = await mkdtemp(path.join(tmpdir(), "naulite-git-src-"));
         const env = await buildGitEnv(secrets, options.credentials, workDir);
 
-        log_gitops.debug("[gitops] git source clone url=%s ref=%s file=%s", parsed.cloneUrl, parsed.ref ?? "-", parsed.filePath ?? "-");
+        logGitops.debug("[gitops] git source clone url=%s ref=%s file=%s", parsed.cloneUrl, parsed.ref ?? "-", parsed.filePath ?? "-");
 
         const cloneUrl = rewriteHttpsUrlWithToken(parsed.cloneUrl, env);
 
@@ -202,6 +205,7 @@ export namespace GitSourceRepository {
         }
 
         const slashIndex = hashPart.indexOf("/");
+
         if (slashIndex === -1) {
             return { kind: "git", cloneUrl, ref: hashPart, filePath: defaultFilePath };
         }
@@ -254,6 +258,7 @@ export namespace GitSourceRepository {
      * @param credentials The credentials to use for the git command.
      * @param workDir The working directory for the git command.
      * @returns The environment variables for the git command.
+     * @throws {Error} {@link Error}
      */
     async function buildGitEnv(
         secrets: SecretsService,
@@ -271,6 +276,7 @@ export namespace GitSourceRepository {
 
         if (credentials.from === "secret") {
             const values = await secrets.resolveValues(credentials.secret);
+
             if (!values) {
                 throw new Error(`Secret de credenciais não encontrado: ${credentials.secret}`);
             }
@@ -335,6 +341,7 @@ export namespace GitSourceRepository {
 
     function rewriteHttpsUrlWithToken(cloneUrl: string, env: NodeJS.ProcessEnv): string {
         const token = env.NAULITE_GIT_TOKEN;
+
         if (!token || typeof token !== "string" || token.trim() === "") {
             return cloneUrl;
         }

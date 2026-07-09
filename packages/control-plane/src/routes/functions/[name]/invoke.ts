@@ -23,6 +23,7 @@ export const POST = defineRoute({
         LeaderPreHandlers.requireLeader(),
         PermissionPreHandlers.requirePermission("workloads:write")
     ],
+
     schema: {
         summary: "Invoke function service",
         description: "Invokes a function-mode service and returns the run id.",
@@ -34,6 +35,7 @@ export const POST = defineRoute({
             200: InvokeFunctionResponseSchema
         }
     },
+
     async handler(req) {
         const { name } = req.params;
         return FunctionInvokeService.invoke(name, {

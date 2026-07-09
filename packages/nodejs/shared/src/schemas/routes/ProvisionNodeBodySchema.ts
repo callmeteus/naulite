@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { ClusterLabelsSchema } from "../ClusterLabels";
 import { NodeProvisionProvider } from "../../types/NodeProvisionProvider";
+import { ClusterLabelsSchema } from "../ClusterLabels";
 
 /**
  * Request body for POST /nodes/provision.

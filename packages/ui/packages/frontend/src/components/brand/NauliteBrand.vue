@@ -3,8 +3,19 @@ import nauliteMarkUrl from "~root/assets/naulite-mark.svg?url";
 
 withDefaults(
     defineProps<{
+        /**
+         * Whether to show the Naulite wordmark text.
+         */
         showWordmark?: boolean;
+
+        /**
+         * Whether to show the Naulite mark icon.
+         */
         showMark?: boolean;
+
+        /**
+         * Visual size preset for the brand assets.
+         */
         size?: "sm" | "md" | "lg";
     }>(),
     {

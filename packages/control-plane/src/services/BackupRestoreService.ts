@@ -1,13 +1,12 @@
-import { Readable } from "node:stream";
+import type { Readable } from "node:stream";
 
 import type { BackupTask, Node, Volume } from "@naulite/shared";
 
+import { Logger } from "../Logger";
 import type { BackupOrchestrator } from "../modules/backup/BackupOrchestrator";
 import { AgentProxyService } from "./AgentProxyService";
 import { BackupDispatchService } from "./BackupDispatchService";
-import { Logger } from "../Logger";
-const log_backups = Logger.create("backups");
-
+const logBackups = Logger.create("backups");
 
 /**
  * Backup run details required to coordinate a restore.
@@ -39,6 +38,7 @@ export namespace BackupRestoreService {
      *
      * @param options Restore coordination options
      * @returns Agent restore response payload
+     * @throws {Error} {@link Error}
      */
     export async function restore(options: BackupRestoreOptions): Promise<unknown> {
         const { backupId, run, node, volume, orchestrator } = options;
@@ -47,7 +47,7 @@ export namespace BackupRestoreService {
         const location = typeof payload.location === "string" ? payload.location : undefined;
         const archivePath = typeof payload.archivePath === "string" ? payload.archivePath : undefined;
 
-        log_backups.debug("restore backupId=%s provider=%s location=%s archivePath=%s",
+        logBackups.debug("restore backupId=%s provider=%s location=%s archivePath=%s",
             backupId,
             provider,
             location ?? "-",
@@ -68,6 +68,7 @@ export namespace BackupRestoreService {
                 archiveBytes,
                 "application/gzip"
             );
+
             const storedPath = parseStoredPath(receiveResponse);
 
             return BackupDispatchService.dispatchRestoreTask(node, {
@@ -103,6 +104,7 @@ export namespace BackupRestoreService {
 
         if (typeof destination === "object" && destination !== null) {
             const provider = (destination as { provider?: unknown }).provider;
+
             if (typeof provider === "string" && provider.length > 0) {
                 return provider;
             }
@@ -118,6 +120,7 @@ export namespace BackupRestoreService {
      * @param backupId Backup run identifier
      * @param volumeName Volume name fallback
      * @returns Backup task used for destination provider reads
+     * @throws {Error} {@link Error}
      */
     export function extractBackupTask(
         payload: Record<string, unknown>,
@@ -142,6 +145,7 @@ export namespace BackupRestoreService {
             resolvedSecrets: typeof payload.resolvedSecrets === "object" && payload.resolvedSecrets !== null
                 ? payload.resolvedSecrets as Record<string, string>
                 : {},
+
             status: "completed"
         };
     }
@@ -151,6 +155,7 @@ export namespace BackupRestoreService {
      *
      * @param response Agent response payload
      * @returns Stored archive path on the agent
+     * @throws {Error} {@link Error}
      */
     export function parseStoredPath(response: unknown): string {
         if (typeof response !== "object" || response === null) {

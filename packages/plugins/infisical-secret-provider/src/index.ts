@@ -150,6 +150,7 @@ export class InfisicalSecretProvider {
      *
      * @param detail Optional operation detail
      * @returns Nothing.
+     * @throws {InfisicalNotConfiguredError} {@link InfisicalNotConfiguredError}
      */
     private assertConfigured(detail?: string): void {
         if (!this.client.isConfigured()) {

@@ -1,10 +1,9 @@
+import { RegistryListResponseSchema } from "@naulite/shared";
 import { ControlPlaneService } from "../ControlPlaneService";
+import { Logger } from "../Logger";
 import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
-import { RegistryListResponseSchema } from "@naulite/shared";
-import { Logger } from "../Logger";
-const log_registry = Logger.create("registry");
-
+const logRegistry = Logger.create("registry");
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
@@ -17,12 +16,14 @@ export const GET = defineRoute({
             200: RegistryListResponseSchema
         }
     },
+
     async handler() {
         const revisions = await ControlPlaneService.GitOps.listRevisions();
         const latestByManifest = new Map<string, (typeof revisions)[number]>();
 
         for (const revision of revisions) {
             const current = latestByManifest.get(revision.manifestName);
+
             if (!current || revision.appliedAt > current.appliedAt) {
                 latestByManifest.set(revision.manifestName, revision);
             }
@@ -36,7 +37,7 @@ export const GET = defineRoute({
                     registryIds.add(registryName);
                 }
             } catch (err) {
-                log_registry.debug("skip manifest=%s parse failed: %o", revision.manifestName, err);
+                logRegistry.debug("skip manifest=%s parse failed: %o", revision.manifestName, err);
             }
         }
 

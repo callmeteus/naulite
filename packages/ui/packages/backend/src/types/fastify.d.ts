@@ -1,4 +1,4 @@
-import type { NauliteClient } from "@naulite/sdk";
+import type { NauliteClient, AdminUser } from "@naulite/sdk";
 
 declare module "fastify" {
     interface FastifyInstance {
@@ -6,7 +6,7 @@ declare module "fastify" {
     }
 
     interface FastifyRequest {
-        adminUser?: import("@naulite/sdk").AdminUser;
+        adminUser?: AdminUser;
         sessionToken?: string;
     }
 }

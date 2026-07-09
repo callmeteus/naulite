@@ -4,10 +4,6 @@ import { useI18n } from "vue-i18n";
 
 import type { NodeProvision } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
-import {
-    NodeProvisionProvider,
-    NodeProvisionProviderRelation
-} from "../domain/NodeProvisionProvider";
 import PageLayout from "../components/layout/PageLayout.vue";
 import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
@@ -16,8 +12,12 @@ import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import RelationSelect from "../components/ui/RelationSelect.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
 import { useServerPagination } from "../composables/useServerPagination";
-import { getRelationLabel } from "../utils/Relation";
+import {
+    NodeProvisionProvider,
+    NodeProvisionProviderRelation
+} from "../domain/NodeProvisionProvider";
 import { useClusterStore } from "../stores/Cluster";
+import { getRelationLabel } from "../utils/Relation";
 
 const { t } = useI18n();
 const store = useClusterStore();
@@ -183,7 +183,9 @@ async function selectProvision(provisionId: string): Promise<void> {
                         :relation="NodeProvisionProviderRelation"
                         :disabled="store.loading"
                     >
-                        <template #label>{{ t("pages.provision.provider") }}</template>
+                        <template #label>
+                            {{ t("pages.provision.provider") }}
+                        </template>
                     </RelationSelect>
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.provision.instanceType") }}</span>
@@ -209,7 +211,13 @@ async function selectProvision(provisionId: string): Promise<void> {
                     </label>
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.provision.count") }}</span>
-                        <input v-model.number="count" type="number" min="1" max="10" class="input input-bordered w-full" />
+                        <input
+                            v-model.number="count"
+                            type="number"
+                            min="1"
+                            max="10"
+                            class="input input-bordered w-full"
+                        />
                     </label>
                     <div class="flex items-end">
                         <button
@@ -222,7 +230,9 @@ async function selectProvision(provisionId: string): Promise<void> {
                     </div>
                 </form>
 
-                <p v-if="provisionMessage" class="text-sm text-base-content/70">{{ provisionMessage }}</p>
+                <p v-if="provisionMessage" class="text-sm text-base-content/70">
+                    {{ provisionMessage }}
+                </p>
 
                 <div v-if="activeProvision" class="space-y-4 rounded-box border border-base-300 p-4">
                     <ul class="steps steps-vertical w-full lg:steps-horizontal">
@@ -269,7 +279,9 @@ async function selectProvision(provisionId: string): Promise<void> {
 
         <div class="card bg-base-100 shadow">
             <div class="card-body gap-4">
-                <h3 class="text-lg font-semibold">{{ t("pages.provision.history") }}</h3>
+                <h3 class="text-lg font-semibold">
+                    {{ t("pages.provision.history") }}
+                </h3>
 
                 <div v-if="historyLoading && provisionHistory.length === 0" class="flex items-center gap-2">
                     <LoadingSpinner />
@@ -309,11 +321,21 @@ async function selectProvision(provisionId: string): Promise<void> {
                     </table>
 
                     <div v-if="provisionHistory.length > 0" class="mt-4 flex items-center justify-end gap-2">
-                        <button type="button" class="btn btn-sm" :disabled="!canGoPrevious" @click="previousPage">
+                        <button
+                            type="button"
+                            class="btn btn-sm"
+                            :disabled="!canGoPrevious"
+                            @click="previousPage"
+                        >
                             {{ t("common.paginationPrevious") }}
                         </button>
                         <span class="text-sm">{{ pageLabel }}</span>
-                        <button type="button" class="btn btn-sm" :disabled="!canGoNext" @click="nextPage">
+                        <button
+                            type="button"
+                            class="btn btn-sm"
+                            :disabled="!canGoNext"
+                            @click="nextPage"
+                        >
                             {{ t("common.paginationNext") }}
                         </button>
                     </div>

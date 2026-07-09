@@ -1,11 +1,10 @@
 import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask } from "@naulite/shared";
 
-import { BackupDestinationProvider } from "./BackupDestinationProvider";
-import { LocalBackupDestinationProvider } from "./LocalBackupDestinationProvider";
-import { NodeBackupDestinationProvider } from "./NodeBackupDestinationProvider";
 import { Logger } from "../../Logger";
-const log_backups = Logger.create("backups");
-
+import type { BackupDestinationProvider } from "./BackupDestinationProvider";
+import { LocalBackupDestinationProvider } from "./LocalBackupDestinationProvider";
+import type { NodeBackupDestinationProvider } from "./NodeBackupDestinationProvider";
+const logBackups = Logger.create("backups");
 
 /**
  * Result of a backup orchestration run.
@@ -28,6 +27,7 @@ export class BackupOrchestrator {
      */
     constructor(nodeProvider?: NodeBackupDestinationProvider) {
         this.providers.set("local", new LocalBackupDestinationProvider());
+
         if (nodeProvider) {
             this.providers.set("node", nodeProvider);
         }
@@ -40,7 +40,7 @@ export class BackupOrchestrator {
      * @returns Nothing.
      */
     register(provider: BackupDestinationProvider): void {
-        log_backups.debug("register provider=%s", provider.id);
+        logBackups.debug("register provider=%s", provider.id);
         this.providers.set(provider.id, provider);
     }
 
@@ -52,8 +52,9 @@ export class BackupOrchestrator {
      */
     async validate(task: BackupTask): Promise<boolean> {
         const provider = this.resolveProvider(task);
+
         if (!provider) {
-            log_backups.debug("validate taskId=%s provider=missing", task.taskId);
+            logBackups.debug("validate taskId=%s provider=missing", task.taskId);
             return false;
         }
 
@@ -66,14 +67,16 @@ export class BackupOrchestrator {
      * @param task Backup task resolved by the control plane
      * @param archivePath Local archive path on the agent
      * @returns Orchestration result metadata
+     * @throws {Error} {@link Error}
      */
     async write(task: BackupTask, archivePath: string): Promise<BackupOrchestrationResult> {
         const provider = this.resolveProvider(task);
+
         if (!provider) {
             throw new Error(`No backup destination provider registered for ${task.destination.provider}`);
         }
 
-        log_backups.debug("write taskId=%s provider=%s", task.taskId, provider.id);
+        logBackups.debug("write taskId=%s provider=%s", task.taskId, provider.id);
         const result = await provider.write(task, archivePath);
         return {
             ...result,
@@ -88,14 +91,16 @@ export class BackupOrchestrator {
      * @param task Backup task resolved by the control plane
      * @param location Destination-specific location identifier
      * @returns Readable backup archive stream
+     * @throws {Error} {@link Error}
      */
     async read(task: BackupTask, location: string): Promise<BackupDestinationReadResult> {
         const provider = this.resolveProvider(task);
+
         if (!provider) {
             throw new Error(`No backup destination provider registered for ${task.destination.provider}`);
         }
 
-        log_backups.debug("read taskId=%s provider=%s location=%s", task.taskId, provider.id, location);
+        logBackups.debug("read taskId=%s provider=%s location=%s", task.taskId, provider.id, location);
         return provider.read(task, location);
     }
 
@@ -105,14 +110,16 @@ export class BackupOrchestrator {
      * @param providerId Destination provider identifier
      * @param location Destination-specific location identifier
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     async delete(providerId: string, location: string): Promise<void> {
         const provider = this.providers.get(providerId);
+
         if (!provider) {
             throw new Error(`No backup destination provider registered for ${providerId}`);
         }
 
-        log_backups.debug("delete provider=%s location=%s", providerId, location);
+        logBackups.debug("delete provider=%s location=%s", providerId, location);
         await provider.delete(location);
     }
 

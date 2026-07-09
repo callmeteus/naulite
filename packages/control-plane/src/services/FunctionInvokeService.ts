@@ -4,10 +4,10 @@ import type { ResolvedSecret, SecretFilter, Service } from "@naulite/shared";
 import { DurationUtils } from "@naulite/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
+import { Logger } from "../Logger";
 import { HTTP404Error, HTTP503Error } from "../errors/TreatedError";
 import { AgentProxyService } from "./AgentProxyService";
-import { Logger } from "../Logger";
-const log_functions = Logger.create("functions");
+const logFunctions = Logger.create("functions");
 
 /**
  * Orchestrates ephemeral server function invocations: scheduling, agent dispatch,
@@ -20,12 +20,15 @@ export class FunctionInvokeService {
      * @param serviceName Logical service name from the manifest
      * @param options Invocation source and optional payload or environment overrides
      * @returns Newly created function run identifier
+     * @throws {HTTP404Error} {@link HTTP404Error}
+     * @throws {HTTP503Error} {@link HTTP503Error}
      */
     static async invoke(serviceName: string, options: {
         source: "api" | "cli" | "cron" | "http";
         payload?: unknown;
         environment?: Record<string, string>;
-    }): Promise<{ runId: string }> {        const context = ControlPlaneService.requireContext();
+    }): Promise<{ runId: string }> {
+        const context = ControlPlaneService.requireContext();
         const services = await ControlPlaneService.Store.listServices();
         const service = services.find((entry) => entry.name === serviceName);
 
@@ -69,7 +72,7 @@ export class FunctionInvokeService {
             ...(options.environment ?? {})
         };
 
-        log_functions.debug(
+        logFunctions.debug(
             "invoke runId=%s service=%s node=%s timeoutMs=%d",
             runId,
             service.name,
@@ -122,6 +125,7 @@ export class FunctionInvokeService {
                 completedAt: new Date().toISOString(),
                 errorMessage: err instanceof Error ? err.message : "Function dispatch failed."
             });
+
             throw err;
         }
     }
@@ -143,6 +147,7 @@ export class FunctionInvokeService {
             if (!trigger.cron) {
                 throw new HTTP503Error("Function cron trigger is not configured.");
             }
+
             return;
         }
 
@@ -159,6 +164,7 @@ export class FunctionInvokeService {
 
         for (const reference of secrets) {
             secretNames.push(reference.secretName);
+
             if (reference.key) {
                 allowedKeys[reference.secretName] = [
                     ...(allowedKeys[reference.secretName] ?? []),

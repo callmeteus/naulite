@@ -1,5 +1,8 @@
 import { AdminService } from "./AdminService";
 
+/**
+ * Default username for the first admin user created at bootstrap.
+ */
 const DEFAULT_BOOTSTRAP_USERNAME = "admin";
 
 /**

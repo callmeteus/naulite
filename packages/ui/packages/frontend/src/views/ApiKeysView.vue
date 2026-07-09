@@ -100,7 +100,9 @@ onMounted(() => {
             <div class="flex w-full flex-col gap-2">
                 <p><strong>{{ t("pages.apiKeys.created") }}</strong></p>
                 <code class="break-all rounded bg-base-300 p-2 text-sm">{{ createdSecret }}</code>
-                <p class="text-sm">{{ t("pages.apiKeys.copyOnce") }}</p>
+                <p class="text-sm">
+                    {{ t("pages.apiKeys.copyOnce") }}
+                </p>
                 <button type="button" class="btn btn-sm w-fit" @click="dismissSecret">
                     {{ t("common.dismiss") }}
                 </button>

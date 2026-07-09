@@ -1,10 +1,10 @@
 import type { z } from "zod";
 
-import {
+import type {
     DockerfileStepMarkerSchema,
     DockerfileStepNameSchema
 } from "../schemas/DockerfileStepMarker";
-import {
+import type {
     PipelineEventKindSchema,
     PipelineEventSchema,
     PipelineRunKindSchema,

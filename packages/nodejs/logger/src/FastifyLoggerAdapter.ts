@@ -1,5 +1,5 @@
-import type { FastifyBaseLogger, FastifyServerOptions } from "fastify";
 import { format } from "node:util";
+import type { FastifyBaseLogger, FastifyServerOptions } from "fastify";
 
 import type winston from "winston";
 

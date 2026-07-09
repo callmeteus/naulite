@@ -1,19 +1,20 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import type { DatabaseDialect, DatabaseMigrationResult } from "@naulite/shared";
 import type { Sequelize } from "sequelize";
+import type { DatabaseDialect, DatabaseMigrationResult } from "@naulite/shared";
 
-import { SchemaMigrationModel } from "./models/index";
 import { Logger } from "../Logger";
-const log_migrations = Logger.create("migrations");
-
+import { SchemaMigrationModel } from "./models/index";
+const logMigrations = Logger.create("migrations");
 
 const migrationsRoot = join(dirname(fileURLToPath(import.meta.url)), "migrations");
 
-/** PostgreSQL advisory lock id so HA nodes never apply migrations concurrently. */
+/**
+ * PostgreSQL advisory lock id so HA nodes never apply migrations concurrently.
+ */
 const POSTGRES_MIGRATION_ADVISORY_LOCK_ID = 0x504c5446;
 
 /**
@@ -93,6 +94,7 @@ export class MigrationRunner {
      * @param pollMs Poll interval in milliseconds
      * @param timeoutMs Maximum wait time in milliseconds
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     async waitUntilApplied(pollMs = 1_000, timeoutMs = 300_000): Promise<void> {
         const startedAt = Date.now();
@@ -102,7 +104,7 @@ export class MigrationRunner {
                 throw new Error("Timed out waiting for database migrations to be applied.");
             }
 
-            log_migrations.debug("waiting for leader to apply pending migrations dialect=%s", this.dialect);
+            logMigrations.debug("waiting for leader to apply pending migrations dialect=%s", this.dialect);
             await new Promise((resolve) => {
                 setTimeout(resolve, pollMs);
             });
@@ -152,6 +154,7 @@ export class MigrationRunner {
             const files = (await readdir(migrationDir))
                 .filter((fileName) => fileName.endsWith(".sql"))
                 .sort();
+
             const applied: string[] = [];
             const pending: string[] = [];
 
@@ -171,8 +174,9 @@ export class MigrationRunner {
                     name: migrationName,
                     appliedAt: new Date().toISOString()
                 });
+
                 applied.push(migrationName);
-                log_migrations.debug("applied name=%s dialect=%s", migrationName, this.dialect);
+                logMigrations.debug("applied name=%s dialect=%s", migrationName, this.dialect);
             }
 
             return {

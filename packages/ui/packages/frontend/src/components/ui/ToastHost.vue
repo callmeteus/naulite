@@ -17,7 +17,9 @@ const { toasts, dismiss } = useToast();
             }"
         >
             <span>{{ toast.message }}</span>
-            <button type="button" class="btn btn-ghost btn-xs" @click="dismiss(toast.id)">×</button>
+            <button type="button" class="btn btn-ghost btn-xs" @click="dismiss(toast.id)">
+                ×
+            </button>
         </div>
     </div>
 </template>

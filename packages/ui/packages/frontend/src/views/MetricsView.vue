@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import uPlot from "uplot";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { PromQLSeries } from "@naulite/sdk";
-import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 
 import { nauliteClient } from "../api/Client";
@@ -245,6 +245,7 @@ async function refreshMetrics(): Promise<void> {
             serviceName: instanceCpu.data?.result?.find((entry) =>
                 (entry.metric.instance_id ?? entry.metric.instanceId) === instanceId
             )?.metric.service_name ?? "-",
+
             cpu: cpuByInstance.get(instanceId) ?? "-",
             memory: memByInstance.get(instanceId) ?? "-"
         }));
@@ -300,7 +301,9 @@ async function refreshMetrics(): Promise<void> {
 
         <div class="card bg-base-100 shadow">
             <div class="card-body gap-4">
-                <h3 class="text-lg font-semibold">{{ t("pages.metrics.instances") }}</h3>
+                <h3 class="text-lg font-semibold">
+                    {{ t("pages.metrics.instances") }}
+                </h3>
 
                 <EmptyState
                     v-if="instanceRows.length === 0"

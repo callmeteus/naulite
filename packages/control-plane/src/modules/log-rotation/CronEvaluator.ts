@@ -1,6 +1,6 @@
 import { Logger } from "../../Logger";
 
-const log_log_rotation = Logger.create("log-rotation");
+const logLogRotation = Logger.create("log-rotation");
 
 /**
  * Evaluates five-field cron expressions against a timestamp.
@@ -15,8 +15,9 @@ export class CronEvaluator {
      */
     static isDue(schedule: string, now: Date): boolean {
         const fields = schedule.trim().split(/\s+/);
+
         if (fields.length !== 5) {
-            log_log_rotation.debug("cron invalid fieldCount=%d schedule=%s", fields.length, schedule);
+            logLogRotation.debug("cron invalid fieldCount=%d schedule=%s", fields.length, schedule);
             return false;
         }
 
@@ -30,7 +31,7 @@ export class CronEvaluator {
         ];
 
         const due = matches.every(Boolean);
-        log_log_rotation.debug("cron schedule=%s due=%s", schedule, due);
+        logLogRotation.debug("cron schedule=%s due=%s", schedule, due);
         return due;
     }
 

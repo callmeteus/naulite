@@ -1,5 +1,5 @@
-import type { NauliteClient } from "@naulite/sdk";
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { NauliteClient } from "@naulite/sdk";
 
 /**
  * Returns a control plane client scoped to the current request session.

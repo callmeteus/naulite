@@ -2,6 +2,9 @@ import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 
 import type { NetBirdAdapter } from "./NetBirdService";
 
+/**
+ * Cluster secret name storing the reusable NetBird agent setup key.
+ */
 const SETUP_KEY_SECRET_NAME = "netbird/setup-key";
 
 /**

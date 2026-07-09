@@ -4,10 +4,9 @@ import path from "node:path";
 import type { LogRotationProvider, LogRotationResult } from "@naulite/shared";
 import type { LogRotationPolicy, LogRotationTask } from "@naulite/shared";
 
-import { CronEvaluator } from "./CronEvaluator";
 import { Logger } from "../../Logger";
-const log_log_rotation = Logger.create("log-rotation");
-
+import { CronEvaluator } from "./CronEvaluator";
+const logLogRotation = Logger.create("log-rotation");
 
 /**
  * Log rotation provider that evaluates cron policies and rotates files on the agent node.
@@ -43,7 +42,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
             try {
                 const fileStat = await stat(filePath);
                 const rotatedPath = `${filePath}.${timestamp}`;
-                log_log_rotation.debug("rotate source=%s target=%s", filePath, rotatedPath);
+                logLogRotation.debug("rotate source=%s target=%s", filePath, rotatedPath);
                 await rename(filePath, rotatedPath);
                 rotatedFiles.push(rotatedPath);
 
@@ -59,7 +58,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
                     await this.enforceMaxFiles(filePath, task.policy.maxFiles);
                 }
             } catch (err) {
-                log_log_rotation.debug("skip path=%s err=%o", filePath, err);
+                logLogRotation.debug("skip path=%s err=%o", filePath, err);
             }
         }
 
@@ -75,6 +74,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
      */
     private matchesPolicy(filePath: string, policy: LogRotationPolicy): boolean {
         const fileName = path.basename(filePath);
+
         if (policy.excludes.some((pattern) => fileName.includes(pattern.replace(/\*/g, "")))) {
             return false;
         }
@@ -96,7 +96,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
     private async enforceMaxFiles(sourcePath: string, maxFiles: number): Promise<void> {
         const directory = path.dirname(sourcePath);
         const prefix = `${path.basename(sourcePath)}.`;
-        log_log_rotation.debug("enforceMaxFiles source=%s maxFiles=%d", sourcePath, maxFiles);
+        logLogRotation.debug("enforceMaxFiles source=%s maxFiles=%d", sourcePath, maxFiles);
 
         // Stub retention enforcement: only the current rotated artifact is tracked in-memory by callers.
         if (maxFiles <= 0) {
@@ -104,7 +104,7 @@ export class PolicyLogRotationProvider implements LogRotationProvider {
             return;
         }
 
-        log_log_rotation.debug("retention directory=%s prefix=%s", directory, prefix);
+        logLogRotation.debug("retention directory=%s prefix=%s", directory, prefix);
     }
 }
 

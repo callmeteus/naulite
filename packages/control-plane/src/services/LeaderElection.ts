@@ -1,11 +1,21 @@
+import { Logger } from "../Logger";
 import type { DatabaseProvider } from "../database/DatabaseProvider";
 import { ControlPlaneLeaderModel } from "../database/models/index";
-import { Logger } from "../Logger";
-const log_leader = Logger.create("leader");
+const logLeader = Logger.create("leader");
 
-
+/**
+ * Default lease key for control plane leader election.
+ */
 const DEFAULT_LEASE_KEY = "control-plane";
+
+/**
+ * Default leader lease TTL in milliseconds.
+ */
 const DEFAULT_LEASE_TTL_MS = 15_000;
+
+/**
+ * Default interval between leader lease renewals in milliseconds.
+ */
 const DEFAULT_RENEW_INTERVAL_MS = 5_000;
 
 /**
@@ -100,6 +110,7 @@ export class LeaderElection {
      * Throws when this instance is not the elected leader.
      *
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     requireLeader(): void {
         if (!this.isLeader()) {
@@ -133,14 +144,16 @@ export class LeaderElection {
                     expiresAt,
                     updatedAt
                 });
+
                 this.isCurrentLeader = true;
                 this.leaderInstanceId = this.instanceId;
-                log_leader.debug("acquired lease instanceId=%s", this.instanceId);
+                logLeader.debug("acquired lease instanceId=%s", this.instanceId);
                 return;
             } catch {
                 this.isCurrentLeader = false;
             }
-        } else if (leaseExpired || existing.leaderInstanceId === this.instanceId) {
+        } else
+        if (leaseExpired || existing.leaderInstanceId === this.instanceId) {
             const [affectedCount] = await ControlPlaneLeaderModel.update(
                 {
                     leaderInstanceId: this.instanceId,
@@ -160,7 +173,7 @@ export class LeaderElection {
             if (affectedCount > 0) {
                 this.isCurrentLeader = true;
                 this.leaderInstanceId = this.instanceId;
-                log_leader.debug("renewed lease instanceId=%s", this.instanceId);
+                logLeader.debug("renewed lease instanceId=%s", this.instanceId);
                 return;
             }
         }
@@ -169,15 +182,16 @@ export class LeaderElection {
         this.isCurrentLeader = current?.leaderInstanceId === this.instanceId
             && current !== null
             && Date.parse(current.expiresAt) > now;
+
         this.leaderInstanceId = current?.leaderInstanceId ?? this.instanceId;
-        log_leader.debug("follower instanceId=%s leaderId=%s isLeader=%s",
+        logLeader.debug("follower instanceId=%s leaderId=%s isLeader=%s",
             this.instanceId,
             this.leaderInstanceId,
             this.isCurrentLeader
         );
 
         if (this.isCurrentLeader && !this.wasLeader) {
-            log_leader.debug("promotion instanceId=%s", this.instanceId);
+            logLeader.debug("promotion instanceId=%s", this.instanceId);
             void this.onBecameLeader?.();
         }
 

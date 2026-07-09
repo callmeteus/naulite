@@ -1,9 +1,8 @@
 import type { Instance, Node } from "@naulite/shared";
 
-import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import { Logger } from "../Logger";
-const log_agent_proxy = Logger.create("agent-proxy");
-
+import type { ControlPlaneStore } from "../database/ControlPlaneStore";
+const logAgentProxy = Logger.create("agent-proxy");
 
 /**
  * Proxies instance-scoped requests from the control plane to node agents.
@@ -15,6 +14,7 @@ export namespace AgentProxyService {
      * @param store Control plane store
      * @param instanceId Instance identifier
      * @returns Agent URL and instance metadata
+     * @throws {AgentProxyError} {@link AgentProxyError}
      */
     export async function resolveAgentForInstance(
         store: ControlPlaneStore,
@@ -54,6 +54,7 @@ export namespace AgentProxyService {
      * @param store Control plane store
      * @param instanceId Instance identifier
      * @returns Log payload from the agent
+     * @throws {AgentProxyError} {@link AgentProxyError}
      */
     export async function fetchLogs(
         store: ControlPlaneStore,
@@ -84,6 +85,7 @@ export namespace AgentProxyService {
      * @param instanceId Instance identifier
      * @param command Command argv
      * @returns Exec result from the agent
+     * @throws {AgentProxyError} {@link AgentProxyError}
      */
     export async function execCommand(
         store: ControlPlaneStore,
@@ -102,6 +104,7 @@ export namespace AgentProxyService {
                 Accept: "application/json",
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify({ command })
         });
 
@@ -134,6 +137,7 @@ export namespace AgentProxyService {
      * @param path Agent path
      * @param payload Request body
      * @returns Parsed JSON response
+     * @throws {AgentProxyError} {@link AgentProxyError}
      */
     export async function postTask(
         agentUrl: string,
@@ -146,6 +150,7 @@ export namespace AgentProxyService {
                 Accept: "application/json",
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify(payload)
         });
 
@@ -166,10 +171,11 @@ export namespace AgentProxyService {
      * @param agentUrl Node agent base URL
      * @param archivePath Absolute archive path on the agent
      * @returns Backup archive bytes
+     * @throws {AgentProxyError} {@link AgentProxyError}
      */
     export async function fetchBackupArchive(agentUrl: string, archivePath: string): Promise<Buffer> {
         const url = `${agentUrl}/backups/archive?archivePath=${encodeURIComponent(archivePath)}`;
-        log_agent_proxy.debug("fetch backup archive path=%s", archivePath);
+        logAgentProxy.debug("fetch backup archive path=%s", archivePath);
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -191,6 +197,7 @@ export namespace AgentProxyService {
      * @param body Binary request body
      * @param contentType Request content type
      * @returns Parsed JSON response
+     * @throws {AgentProxyError} {@link AgentProxyError}
      */
     export async function postBinary(
         agentUrl: string,
@@ -198,13 +205,14 @@ export namespace AgentProxyService {
         body: Buffer,
         contentType = "application/octet-stream"
     ): Promise<unknown> {
-        log_agent_proxy.debug("post binary path=%s bytes=%d", path, body.length);
+        logAgentProxy.debug("post binary path=%s bytes=%d", path, body.length);
         const response = await fetch(`${agentUrl}${path}`, {
             method: "POST",
             headers: {
                 Accept: "application/json",
                 "Content-Type": contentType
             },
+
             body
         });
 

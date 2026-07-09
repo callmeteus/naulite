@@ -1,4 +1,7 @@
 export namespace ManifestInterpolator {
+    /**
+     * Pattern matching `${VAR}` and `${VAR:-default}` manifest placeholders.
+     */
     const VAR_PATTERN = /\$\{([A-Z0-9_]+)(:-([^}]*))?\}/g;
 
     export interface InterpolateOptions {
@@ -111,6 +114,7 @@ export namespace ManifestInterpolator {
 
             if (typeof replicas === "string" && replicas.trim() !== "") {
                 const n = Number(replicas);
+
                 if (Number.isInteger(n) && n > 0) {
                     outServices[serviceName] = {
                         ...service,

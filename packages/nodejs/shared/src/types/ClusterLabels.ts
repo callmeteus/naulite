@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import {
+import type {
     ClusterLabelsSchema,
     ClusterPlacementSchema
 } from "../schemas/ClusterLabels";

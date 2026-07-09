@@ -24,6 +24,7 @@ export const GET = defineRoute({
             200: PrometheusQueryResponseSchema
         }
     },
+
     async handler(req) {
         return PrometheusClient.proxyGet(`/api/v1/label/${encodeURIComponent(req.params.name)}/values`, {
             start: req.query.start,

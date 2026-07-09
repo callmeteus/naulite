@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { NaulitePermission } from "@naulite/sdk";
 
+import { useAuthStore } from "../stores/Auth";
 import AdminUsersView from "../views/AdminUsersView.vue";
 import ApiKeysView from "../views/ApiKeysView.vue";
 import BackupsView from "../views/BackupsView.vue";
@@ -8,21 +9,20 @@ import BuildView from "../views/BuildView.vue";
 import ClusterView from "../views/ClusterView.vue";
 import ContainerRegistryView from "../views/ContainerRegistryView.vue";
 import DeployView from "../views/DeployView.vue";
+import ForbiddenView from "../views/ForbiddenView.vue";
 import GatewayRoutesView from "../views/GatewayRoutesView.vue";
 import GitOpsView from "../views/GitOpsView.vue";
 import InstancesView from "../views/InstancesView.vue";
-import ForbiddenView from "../views/ForbiddenView.vue";
 import LoginView from "../views/LoginView.vue";
 import MetricsView from "../views/MetricsView.vue";
 import NetBirdView from "../views/NetBirdView.vue";
-import NotificationsView from "../views/NotificationsView.vue";
 import NodesView from "../views/NodesView.vue";
+import NotificationsView from "../views/NotificationsView.vue";
 import ProvisionView from "../views/ProvisionView.vue";
 import RunsView from "../views/RunsView.vue";
 import SecretsView from "../views/SecretsView.vue";
 import ServicesView from "../views/ServicesView.vue";
 import VolumesView from "../views/VolumesView.vue";
-import { useAuthStore } from "../stores/Auth";
 
 /**
  * Dashboard router with resource-focused views.

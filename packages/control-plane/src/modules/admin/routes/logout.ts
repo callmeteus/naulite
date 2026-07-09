@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
-import { defineRoute } from "../../../routing/DefineRoute";
 import { HTTP401Error } from "../../../errors/TreatedError";
+import { defineRoute } from "../../../routing/DefineRoute";
 import { AdminService } from "../AdminService";
 
 const AdminLogoutResponseSchema = z.object({
@@ -25,6 +25,7 @@ export const POST = defineRoute({
             401: AdminLogoutUnauthorizedSchema
         }
     },
+
     async handler(req) {
         const sessionToken = AuthPreHandlers.readSessionToken(req);
 

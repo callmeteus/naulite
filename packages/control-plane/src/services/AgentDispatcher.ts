@@ -43,6 +43,7 @@ export namespace AgentDispatcher {
                     status: "skipped",
                     message: "Node has no agentUrl."
                 });
+
                 continue;
             }
 
@@ -69,6 +70,7 @@ export namespace AgentDispatcher {
                         "Content-Type": "application/json",
                         "Content-Length": String(Buffer.byteLength(requestBody))
                     },
+
                     body: requestBody
                 });
 
@@ -82,6 +84,7 @@ export namespace AgentDispatcher {
                         httpStatus: response.status,
                         message: text || `Agent returned HTTP ${response.status}.`
                     });
+
                     continue;
                 }
 

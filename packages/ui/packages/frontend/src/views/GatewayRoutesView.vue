@@ -33,7 +33,12 @@ onMounted(() => {
 <template>
     <PageLayout title-key="pages.gatewayRoutes.title" hint-key="pages.gatewayRoutes.hint">
         <template #actions>
-            <button type="button" class="btn btn-outline btn-sm" :disabled="loading" @click="refresh">
+            <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                :disabled="loading"
+                @click="refresh"
+            >
                 {{ t("common.refresh") }}
             </button>
         </template>
@@ -75,11 +80,21 @@ onMounted(() => {
                 </table>
 
                 <div v-if="paginatedRoutes.length > 0" class="mt-4 flex items-center justify-end gap-2">
-                    <button type="button" class="btn btn-sm" :disabled="!canGoPrevious" @click="previousPage">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :disabled="!canGoPrevious"
+                        @click="previousPage"
+                    >
                         {{ t("common.paginationPrevious") }}
                     </button>
                     <span class="text-sm">{{ pageLabel }}</span>
-                    <button type="button" class="btn btn-sm" :disabled="!canGoNext" @click="nextPage">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :disabled="!canGoNext"
+                        @click="nextPage"
+                    >
                         {{ t("common.paginationNext") }}
                     </button>
                 </div>

@@ -1,6 +1,6 @@
 import { Logger } from "../Logger";
 
-const log_netbird = Logger.create("netbird");
+const logNetbird = Logger.create("netbird");
 
 import type {
     NetBirdAclRule,
@@ -99,6 +99,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
      */
     async ensureGroup(name: string): Promise<NetBirdGroup> {
         const existing = (await this.listGroups()).find((group) => group.name === name);
+
         if (existing) {
             return existing;
         }
@@ -116,6 +117,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
      *
      * @param input Policy definition
      * @returns Created or existing ACL metadata
+     * @throws {Error} {@link Error}
      */
     async ensurePolicy(input: NetBirdPolicyEnsureInput): Promise<NetBirdAclRule> {
         const existingPolicies = await this.request<{ items?: RawNetBirdPolicy[] }>("/policies");
@@ -124,6 +126,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
 
         if (existing) {
             const mapped = SelfHostedNetBirdAdapter.mapPolicy(existing);
+
             if (mapped[0]) {
                 return mapped[0];
             }
@@ -151,6 +154,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
         });
 
         const mapped = SelfHostedNetBirdAdapter.mapPolicy(created);
+
         if (!mapped[0]) {
             throw new Error(`NetBird policy ${input.name} was created without rules.`);
         }
@@ -164,6 +168,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
      * @param groupId NetBird group identifier
      * @param peerIds Peer identifiers to assign
      * @returns Updated group metadata
+     * @throws {Error} {@link Error}
      */
     async assignPeersToGroup(groupId: string, peerIds: string[]): Promise<NetBirdGroup> {
         const groups = await this.listGroups();
@@ -256,6 +261,7 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
      * @param path API path relative to the configured base URL
      * @param init Optional fetch init overrides
      * @returns Parsed JSON response body
+     * @throws {Error} {@link Error}
      */
     private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
         const headers = new Headers(init.headers);
@@ -275,11 +281,12 @@ export class SelfHostedNetBirdAdapter implements NetBirdAdapter {
         });
 
         if (!response.ok) {
-            log_netbird.debug("api request failed status=%d path=%s base=%s",
+            logNetbird.debug("api request failed status=%d path=%s base=%s",
                 response.status,
                 path,
                 this.apiUrl
             );
+
             throw new Error(`NetBird API request failed with status ${response.status}.`);
         }
 

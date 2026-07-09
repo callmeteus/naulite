@@ -1,12 +1,5 @@
-import type { FastifyRequest } from "fastify";
 import { Readable } from "node:stream";
-
-import { ControlPlaneService } from "../../../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
-import { HTTP400Error } from "../../../../errors/TreatedError";
-import { defineRoute } from "../../../../routing/DefineRoute";
-import { Logger } from "../../../../Logger";
-const log_container_registry = Logger.create("container-registry");
+import type { FastifyRequest } from "fastify";
 
 import {
     CrImageDeleteResponseSchema,
@@ -14,6 +7,14 @@ import {
     CrImagePushResponseSchema,
     RouteErrorResponseSchema
 } from "@naulite/shared";
+
+import { ControlPlaneService } from "../../../../ControlPlaneService";
+import { Logger } from "../../../../Logger";
+import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
+import { HTTP400Error } from "../../../../errors/TreatedError";
+import { defineRoute } from "../../../../routing/DefineRoute";
+
+const logContainerRegistry = Logger.create("container-registry");
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
@@ -27,6 +28,7 @@ export const GET = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { name, tag } = req.params;
 
@@ -37,7 +39,7 @@ export const GET = defineRoute({
             res.header("Digest", image.digest);
             return res.send(stream);
         } catch (err) {
-            log_container_registry.debug("get failed name=%s tag=%s err=%o", name, tag, err);
+            logContainerRegistry.debug("get failed name=%s tag=%s err=%o", name, tag, err);
             return res.status(404).send({
                 error: "not_found",
                 message: `Container image ${name}:${tag} not found.`
@@ -58,6 +60,7 @@ export const HEAD = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { name, tag } = req.params;
         const head = await ControlPlaneService.ContainerRegistry.headImage(name, tag);
@@ -88,6 +91,7 @@ export const PUT = defineRoute({
             201: CrImagePushResponseSchema
         }
     },
+
     async handler(req, res) {
         const { name, tag } = req.params;
         const body = resolveUploadStream(req);
@@ -101,6 +105,7 @@ export const PUT = defineRoute({
  *
  * @param req Incoming Fastify request
  * @returns Readable upload body
+ * @throws {HTTP400Error} {@link HTTP400Error}
  */
 function resolveUploadStream(req: FastifyRequest): Readable {
     if (req.raw.readable && !req.raw.readableEnded) {
@@ -131,6 +136,7 @@ export const DELETE = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { name, tag } = req.params;
         const deleted = await ControlPlaneService.ContainerRegistry.deleteImage(name, tag);

@@ -3,12 +3,15 @@ import { Op } from "sequelize";
 
 import type { AdminLoginResult, AdminRole, AdminUserPublic } from "../../auth/AdminAuthTypes";
 import { parseAdminRole } from "../../auth/AdminAuthTypes";
-import { AdminAuditService } from "./AdminAuditService";
 import { AdminSessionModel, AdminUserModel } from "../../database/models/index";
+import { AdminAuditService } from "./AdminAuditService";
 
 import { AdminPasswordCrypto } from "./AdminPasswordCrypto";
 import { AdminSessionCrypto } from "./AdminSessionCrypto";
 
+/**
+ * Default admin session lifetime in seconds.
+ */
 const DEFAULT_SESSION_TTL_SECONDS = 86_400;
 
 /**
@@ -42,6 +45,7 @@ export class AdminStore {
      *
      * @param input User creation payload
      * @returns Created public user
+     * @throws {Error} {@link Error}
      */
     async createUser(input: {
         username: string;
@@ -109,6 +113,7 @@ export class AdminStore {
      * @param userId Admin user identifier
      * @param input Update payload
      * @returns Updated public user when found
+     * @throws {Error} {@link Error}
      */
     async updateUser(
         userId: string,
@@ -264,6 +269,7 @@ export class AdminStore {
                 action: "login.failed",
                 detail: { username: normalized }
             });
+
             return null;
         }
 
@@ -275,6 +281,7 @@ export class AdminStore {
                 actorUserId: user.id,
                 detail: { username: normalized }
             });
+
             return null;
         }
 

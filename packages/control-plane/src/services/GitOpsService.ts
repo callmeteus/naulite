@@ -4,14 +4,13 @@ import { join } from "node:path";
 
 import type { Manifest } from "@naulite/shared";
 
+import { Logger } from "../Logger";
 import { GitRevisionModel } from "../database/models/index";
-import { ComposeParser } from "../orchestration/ComposeParser";
 import { GitRepository } from "../gitops/GitRepository";
 import { ManifestMerge } from "../gitops/ManifestMerge";
+import { ComposeParser } from "../orchestration/ComposeParser";
 import { PipelineRunService } from "./PipelineRunService";
-import { Logger } from "../Logger";
-const log_gitops = Logger.create("gitops");
-
+const logGitops = Logger.create("gitops");
 
 /**
  * Git repository checkout options.
@@ -99,7 +98,7 @@ export namespace GitOpsService {
             }
         });
 
-        log_gitops.debug("apply run created runId=%s manifest=%s commit=%s",
+        logGitops.debug("apply run created runId=%s manifest=%s commit=%s",
             run.id,
             input.manifestName,
             input.commitSha ?? "-"
@@ -113,6 +112,7 @@ export namespace GitOpsService {
      *
      * @param options Checkout options
      * @returns Merged manifest YAML and resolved commit SHA
+     * @throws {Error} {@link Error}
      */
     export async function checkoutAndMerge(options: GitOpsCheckoutOptions): Promise<CheckoutMergeResult> {
         mkdirSync(baseWorkDir, { recursive: true });
@@ -139,13 +139,13 @@ export namespace GitOpsService {
             const overlayFile = join(workDir, overlayPath);
 
             if (!existsSync(overlayFile)) {
-                log_gitops.debug("overlay skip missing path=%s", overlayPath);
+                logGitops.debug("overlay skip missing path=%s", overlayPath);
                 continue;
             }
 
             const overlayYaml = readFileSync(overlayFile, "utf8");
             manifestYaml = ManifestMerge.mergeYaml(manifestYaml, overlayYaml);
-            log_gitops.debug("overlay merged path=%s", overlayPath);
+            logGitops.debug("overlay merged path=%s", overlayPath);
         }
 
         return {
@@ -288,6 +288,7 @@ export namespace GitOpsService {
      *
      * @param revisionId Revision id to roll back to
      * @returns Parsed manifest from the rolled back revision
+     * @throws {Error} {@link Error}
      */
     export async function rollback(revisionId: string): Promise<Manifest> {
         const revision = await getRevision(revisionId);

@@ -6,8 +6,19 @@ import type { RelationEntry } from "../../utils/Relation";
 
 const props = withDefaults(
     defineProps<{
+        /**
+         * Selectable relation entries.
+         */
         relation: RelationEntry<T>[];
+
+        /**
+         * Currently selected relation value.
+         */
         modelValue: T;
+
+        /**
+         * Whether the select input is disabled.
+         */
         disabled?: boolean;
     }>(),
     {

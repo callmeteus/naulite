@@ -28,6 +28,7 @@ export const GET = defineRoute({
             200: PaginatedListSchema(GatewayRouteSummarySchema)
         }
     },
+
     async handler(req) {
         const paginated = await ControlPlaneService.Gateway.listRoutes(req.query);
 

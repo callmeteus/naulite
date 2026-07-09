@@ -1,14 +1,16 @@
 import type { Service } from "@naulite/shared";
 
+import { Logger } from "../../Logger";
 import { ServiceModel } from "../../database/models/index";
+import { FunctionInvokeService } from "../../services/FunctionInvokeService";
 import { RowMapper } from "../../util/RowMapper";
 import { CronEvaluator } from "../log-rotation/CronEvaluator";
-import { FunctionInvokeService } from "../../services/FunctionInvokeService";
-import { Logger } from "../../Logger";
-const log_functions = Logger.create("functions");
+const logFunctions = Logger.create("functions");
 
 export interface FunctionSchedulerOptions {
-    /** Returns whether this control plane replica may dispatch cron invocations. */
+    /**
+     * Returns whether this control plane replica may dispatch cron invocations.
+     */
     isLeader?: () => boolean;
 }
 
@@ -37,7 +39,7 @@ export class FunctionScheduler {
 
         this.intervalHandle = setInterval(() => {
             void this.tick().catch((err) => {
-                log_functions.debug("scheduler tick failed err=%o", err);
+                logFunctions.debug("scheduler tick failed err=%o", err);
             });
         }, this.pollIntervalMs);
     }
@@ -54,7 +56,7 @@ export class FunctionScheduler {
      */
     async tick(): Promise<void> {
         if (!this.isLeader()) {
-            log_functions.debug("scheduler tick skipped reason=not-leader");
+            logFunctions.debug("scheduler tick skipped reason=not-leader");
             return;
         }
 
@@ -65,6 +67,7 @@ export class FunctionScheduler {
         for (const row of rows) {
             const service = RowMapper.service(row.get({ plain: true })) as Service;
             const cron = service.functionSpec?.trigger?.cron;
+
             if (!cron) {
                 continue;
             }
@@ -74,12 +77,13 @@ export class FunctionScheduler {
             }
 
             const last = this.lastDispatchedByService.get(service.id);
+
             if (last === minuteKey) {
                 continue;
             }
 
             this.lastDispatchedByService.set(service.id, minuteKey);
-            log_functions.debug("cron due service=%s schedule=%s", service.name, cron);
+            logFunctions.debug("cron due service=%s schedule=%s", service.name, cron);
             await FunctionInvokeService.invoke(service.name, { source: "cron" });
         }
     }

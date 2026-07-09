@@ -6,8 +6,8 @@ import {
 
 import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { NotificationDestinationStore } from "../../database/NotificationDestinationStore";
-import { NotificationDestinationRuntime } from "../../services/NotificationDestinationRuntime";
 import { defineRoute } from "../../routing/DefineRoute";
+import { NotificationDestinationRuntime } from "../../services/NotificationDestinationRuntime";
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("notifications:read"),
@@ -20,6 +20,7 @@ export const GET = defineRoute({
             200: NotificationDestinationsResponseSchema
         }
     },
+
     async handler() {
         return {
             destinations: await NotificationDestinationStore.list()
@@ -39,6 +40,7 @@ export const POST = defineRoute({
             200: NotificationDestinationSchema
         }
     },
+
     async handler(req) {
         const destination = await NotificationDestinationStore.create(req.body);
         await NotificationDestinationRuntime.syncFromDatabase();

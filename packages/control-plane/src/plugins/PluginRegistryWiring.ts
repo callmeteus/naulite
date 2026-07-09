@@ -1,17 +1,16 @@
 import type { NodeProvisionerProvider, SecretProvider } from "@naulite/shared";
 
 import type { ControlPlaneContext } from "../ControlPlaneContext";
-import { BackupDestinationProvider } from "../modules/backup/BackupDestinationProvider";
-import { ContainerRegistryBlobProvider } from "../modules/container-registry/ContainerRegistryBlobProvider";
+import { Logger } from "../Logger";
+import type { BackupDestinationProvider } from "../modules/backup/BackupDestinationProvider";
+import type { ContainerRegistryBlobProvider } from "../modules/container-registry/ContainerRegistryBlobProvider";
 import {
     PluginSecretProviderAdapter,
     resolveSecretBackendId
 } from "../modules/secrets/PluginSecretProviderAdapter";
 import type { LoadedPluginRegistration } from "./LoadedPluginRegistration";
-import { Logger } from "../Logger";
-const log_plugins = Logger.create("plugins");
-const log_secrets = Logger.create("secrets");
-
+const logPlugins = Logger.create("plugins");
+const logSecrets = Logger.create("secrets");
 
 /**
  * Wires discovered plugin providers into the control plane application context.
@@ -31,25 +30,28 @@ export namespace PluginRegistryWiring {
                 context.backupOrchestrator.register(
                     plugin.backupDestinationProvider as BackupDestinationProvider
                 );
-                log_plugins.debug("wired backup destination id=%s", plugin.id);
+
+                logPlugins.debug("wired backup destination id=%s", plugin.id);
             }
 
             if (plugin.containerRegistryBlobProvider) {
                 context.containerRegistryService.register(
                     plugin.containerRegistryBlobProvider as ContainerRegistryBlobProvider
                 );
-                log_plugins.debug("wired container registry blob id=%s", plugin.id);
+
+                logPlugins.debug("wired container registry blob id=%s", plugin.id);
             }
 
             if (plugin.type === "nodeProvisioner" && plugin.nodeProvisionerProvider) {
                 context.nodeProvisionerRegistry.register(
                     plugin.nodeProvisionerProvider as NodeProvisionerProvider
                 );
-                log_plugins.debug("wired node provisioner id=%s", plugin.id);
+
+                logPlugins.debug("wired node provisioner id=%s", plugin.id);
             }
 
             if (plugin.type === "notification") {
-                log_plugins.debug("skipped env notification provider id=%s (panel destinations)", plugin.id);
+                logPlugins.debug("skipped env notification provider id=%s (panel destinations)", plugin.id);
                 continue;
             }
 
@@ -58,7 +60,8 @@ export namespace PluginRegistryWiring {
                     plugin.id,
                     plugin.secretProvider as SecretProvider
                 );
-                log_plugins.debug("wired secret provider id=%s", plugin.id);
+
+                logPlugins.debug("wired secret provider id=%s", plugin.id);
             }
         }
 
@@ -77,7 +80,7 @@ export namespace PluginRegistryWiring {
         }
 
         const backendId = resolveSecretBackendId();
-        log_secrets.debug("backend=%s available=%o", backendId, context.secretProviderRegistry.listIds());
+        logSecrets.debug("backend=%s available=%o", backendId, context.secretProviderRegistry.listIds());
 
         if (backendId === "local" || backendId === "postgres") {
             return;
@@ -86,12 +89,12 @@ export namespace PluginRegistryWiring {
         const pluginProvider = context.secretProviderRegistry.get(backendId);
 
         if (!pluginProvider) {
-            log_secrets.debug("backend=%s not registered, keeping default provider", backendId);
+            logSecrets.debug("backend=%s not registered, keeping default provider", backendId);
             return;
         }
 
         context.secretProvider = new PluginSecretProviderAdapter(pluginProvider);
-        log_secrets.debug("active provider id=%s", backendId);
+        logSecrets.debug("active provider id=%s", backendId);
     }
 
     /**

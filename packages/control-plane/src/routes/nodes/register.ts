@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { ClusterLabelsSchema, NodeResourcesSchema, NodeSchema } from "@naulite/shared";
 import { z } from "zod";
+import { ClusterLabelsSchema, NodeResourcesSchema, NodeSchema } from "@naulite/shared";
 
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
@@ -30,12 +30,14 @@ export const POST = defineRoute({
             201: NodeSchema
         }
     },
+
     async handler(req, res) {
         const body = req.body;
         const now = new Date().toISOString();
         const existing = body.id
             ? await ControlPlaneService.Store.getNode(body.id)
             : await ControlPlaneService.Store.getNodeByHostname(body.hostname);
+
         const node = NodeSchema.parse({
             id: body.id ?? existing?.id ?? randomUUID(),
             hostname: body.hostname,

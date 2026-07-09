@@ -36,6 +36,7 @@ export async function registerAdminUserRoutes(app: FastifyInstance): Promise<voi
         const client = request.sessionToken
             ? app.controlPlane.withSession(request.sessionToken)
             : app.controlPlane;
+
         return client.listAdminUsers();
     });
 
@@ -44,6 +45,7 @@ export async function registerAdminUserRoutes(app: FastifyInstance): Promise<voi
         const client = request.sessionToken
             ? app.controlPlane.withSession(request.sessionToken)
             : app.controlPlane;
+
         return client.getAdminUser(params.id);
     });
 
@@ -52,6 +54,7 @@ export async function registerAdminUserRoutes(app: FastifyInstance): Promise<voi
         const client = request.sessionToken
             ? app.controlPlane.withSession(request.sessionToken)
             : app.controlPlane;
+
         return client.createAdminUser(body);
     });
 
@@ -61,6 +64,7 @@ export async function registerAdminUserRoutes(app: FastifyInstance): Promise<voi
         const client = request.sessionToken
             ? app.controlPlane.withSession(request.sessionToken)
             : app.controlPlane;
+
         return client.updateAdminUser(params.id, body);
     });
 
@@ -70,6 +74,7 @@ export async function registerAdminUserRoutes(app: FastifyInstance): Promise<voi
         const client = request.sessionToken
             ? app.controlPlane.withSession(request.sessionToken)
             : app.controlPlane;
+
         return client.disableAdminUser(params.id, body);
     });
 
@@ -78,6 +83,7 @@ export async function registerAdminUserRoutes(app: FastifyInstance): Promise<voi
         const client = request.sessionToken
             ? app.controlPlane.withSession(request.sessionToken)
             : app.controlPlane;
+
         return client.enableAdminUser(params.id);
     });
 }

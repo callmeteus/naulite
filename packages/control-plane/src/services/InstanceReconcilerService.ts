@@ -1,15 +1,29 @@
 import type { Instance, Node } from "@naulite/shared";
 
+import { Logger } from "../Logger";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
-import type { LeaderElection } from "./LeaderElection";
+import type { ComposeParser } from "../orchestration/ComposeParser";
 import { Planner } from "../orchestration/Planner";
 import { AgentDispatcher } from "./AgentDispatcher";
 import { ApplyService } from "./ApplyService";
 import { GitOpsService } from "./GitOpsService";
-import { ComposeParser } from "../orchestration/ComposeParser";
+import type { LeaderElection } from "./LeaderElection";
 
+const logInstanceReconcile = Logger.create("instance-reconcile");
+
+/**
+ * Default instance reconciliation poll interval in milliseconds.
+ */
 const DEFAULT_RECONCILE_INTERVAL_MS = 30_000;
+
+/**
+ * Grace period before retrying a failed instance reconcile in milliseconds.
+ */
 const DEFAULT_RECONCILE_GRACE_MS = 15_000;
+
+/**
+ * Maximum reconcile attempts before an instance is marked failed.
+ */
 const DEFAULT_MAX_RETRIES = 5;
 
 export type InstanceReconcileOutcome = {
@@ -66,7 +80,7 @@ export class InstanceReconcilerService {
             }
 
             void this.reconcileAll().catch((err) => {
-                console.error("[instance-reconcile] poll failed: %O", err);
+                logInstanceReconcile.error("poll failed: %O", err);
             });
         }, intervalMs);
 
@@ -98,6 +112,7 @@ export class InstanceReconcilerService {
             this.store.listInstances(),
             this.store.listNodes()
         ]);
+
         const now = new Date();
 
         for (const instance of instances) {
@@ -120,6 +135,7 @@ export class InstanceReconcilerService {
             this.store.listInstances(),
             this.store.listNodes()
         ]);
+
         const now = new Date();
 
         for (const instance of instances) {
@@ -160,10 +176,12 @@ export class InstanceReconcilerService {
             this.store.listInstances(),
             this.store.listNodes()
         ]);
+
         const targets = instances.filter((instance) => {
             return instance.serviceId === service.id
                 && (instance.status === "pending" || instance.status === "failed");
         });
+
         const results: InstanceReconcileOutcome[] = [];
 
         for (const instance of targets) {
@@ -236,6 +254,7 @@ export class InstanceReconcilerService {
 
         const revisions = (await GitOpsService.listRevisions(service.manifestName))
             .sort((left, right) => right.appliedAt.localeCompare(left.appliedAt));
+
         const latestRevision = revisions[0];
 
         if (!latestRevision) {
@@ -244,6 +263,7 @@ export class InstanceReconcilerService {
                 instanceId,
                 service.manifestName
             );
+
             return {
                 instanceId,
                 status: "skipped",
@@ -255,12 +275,14 @@ export class InstanceReconcilerService {
         const operations = ApplyService.addPullOperations(
             Planner.buildInstanceDeployOperations(manifest, instance)
         );
+
         const plan = this.planner.buildExecutionPlan(
             manifest.name,
             node.id,
             this.resolveApplyRevision(),
             operations
         );
+
         const dispatch = await AgentDispatcher.dispatchPlans([plan], [node]);
         const result = dispatch[0];
         const attempts = (instance.dispatchAttempts ?? 0) + 1;
@@ -274,11 +296,13 @@ export class InstanceReconcilerService {
                 lastDispatchedAt: timestamp,
                 lastError: null
             });
+
             console.debug("[instance-reconcile] dispatched instanceId=%s nodeId=%s attempt=%d",
                 instanceId,
                 node.id,
                 attempts
             );
+
             return {
                 instanceId,
                 status: "dispatched"
@@ -291,6 +315,7 @@ export class InstanceReconcilerService {
             lastDispatchedAt: timestamp,
             lastError: result?.message ?? "Reconcile dispatch failed."
         });
+
         console.debug(
             "[instance-reconcile] dispatch failed instanceId=%s nodeId=%s attempt=%d maxRetries=%d err=%s",
             instanceId,
@@ -299,6 +324,7 @@ export class InstanceReconcilerService {
             maxRetries,
             result?.message ?? "unknown"
         );
+
         return {
             instanceId,
             status: "failed",

@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { defineRoute } from "../../../routing/DefineRoute";
-import { HTTP400Error, HTTP403Error } from "../../../errors/TreatedError";
 import { isLocalBootstrapRequest } from "../../../bootstrap/BootstrapUrls";
+import { HTTP400Error, HTTP403Error } from "../../../errors/TreatedError";
+import { defineRoute } from "../../../routing/DefineRoute";
 import { AdminService } from "../AdminService";
 
 const BootstrapAdminBodySchema = z.object({
@@ -39,6 +39,7 @@ export const POST = defineRoute({
             409: BootstrapAdminConflictSchema
         }
     },
+
     async handler(req) {
         if (!isLocalBootstrapRequest(req)) {
             throw new HTTP403Error("Forbidden.");

@@ -1,15 +1,14 @@
 import { randomUUID } from "node:crypto";
 
+import type { TraefikNetBirdGatewayProvider } from "@naulite/gateway";
 import type { GatewayRoute, Ingress, PaginatedList, PaginationQuery } from "@naulite/shared";
 import { buildPaginatedList, paginationOffset } from "@naulite/shared";
-import type { TraefikNetBirdGatewayProvider } from "@naulite/gateway";
 
+import { Logger } from "../Logger";
 import { GatewayRouteModel } from "../database/models/index";
 import { ControlPlaneSync } from "./ControlPlaneSync";
 import type { LeaderElection } from "./LeaderElection";
-import { Logger } from "../Logger";
-const log_gateway = Logger.create("gateway");
-
+const logGateway = Logger.create("gateway");
 
 /**
  * Persisted gateway route row mapped to the shared contract.
@@ -81,6 +80,7 @@ export class GatewayRouteService {
                 host
             }
         });
+
         const autoTls = route.ingress.tls?.enabled ?? false;
         const record = {
             id: existing?.id ?? randomUUID(),
@@ -100,7 +100,7 @@ export class GatewayRouteService {
             await GatewayRouteModel.create(record);
         }
 
-        log_gateway.debug("persisted route service=%s host=%s target=%s:%d",
+        logGateway.debug("persisted route service=%s host=%s target=%s:%d",
             route.serviceName,
             host,
             route.targetHost,
@@ -135,7 +135,7 @@ export class GatewayRouteService {
             return false;
         }
 
-        log_gateway.debug("removed route service=%s host=%s", serviceName, host);
+        logGateway.debug("removed route service=%s host=%s", serviceName, host);
         await this.publishRoutesIfLeader();
         await this.controlPlaneSync.publish(ControlPlaneSync.EVENTS.GATEWAY_ROUTE_CHANGED, {
             serviceName,
@@ -194,7 +194,7 @@ export class GatewayRouteService {
      */
     private async publishRoutesIfLeader(): Promise<void> {
         if (!this.leaderElection.isLeader()) {
-            log_gateway.debug("skip traefik push reason=not_leader");
+            logGateway.debug("skip traefik push reason=not_leader");
             return;
         }
 
@@ -213,7 +213,7 @@ export class GatewayRouteService {
             await this.traefikProvider.requestAutoTls(route.host);
         }
 
-        log_gateway.debug("traefik sync routes=%d", gatewayRoutes.length);
+        logGateway.debug("traefik sync routes=%d", gatewayRoutes.length);
     }
 
     /**

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { Instance, LogsResponse } from "@naulite/sdk";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import type { Instance, LogsResponse } from "@naulite/sdk";
 
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
@@ -131,7 +131,9 @@ async function redispatchInstance(instanceId: string): Promise<void> {
     <PageLayout title-key="pages.instances.title" hint-key="pages.instances.hint">
         <ErrorAlert :error="store.error || actionError" />
 
-        <p v-if="actionMessage" class="alert alert-success">{{ actionMessage }}</p>
+        <p v-if="actionMessage" class="alert alert-success">
+            {{ actionMessage }}
+        </p>
 
         <div v-if="store.loading" class="flex items-center gap-2">
             <LoadingSpinner />
@@ -222,7 +224,9 @@ async function redispatchInstance(instanceId: string): Promise<void> {
                 </div>
             </div>
             <form method="dialog" class="modal-backdrop">
-                <button type="button" @click="closeLogsDialog">close</button>
+                <button type="button" @click="closeLogsDialog">
+                    close
+                </button>
             </form>
         </dialog>
     </PageLayout>

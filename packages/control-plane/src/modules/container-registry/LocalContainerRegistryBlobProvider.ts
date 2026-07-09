@@ -1,15 +1,14 @@
 import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
-import { pipeline } from "node:stream/promises";
 import type { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, LocalContainerRegistryDestination } from "@naulite/shared";
 
-import { ContainerRegistryBlobProvider } from "./ContainerRegistryBlobProvider";
 import { Logger } from "../../Logger";
-const log_container_registry = Logger.create("container-registry");
-
+import { ContainerRegistryBlobProvider } from "./ContainerRegistryBlobProvider";
+const logContainerRegistry = Logger.create("container-registry");
 
 /**
  * Local filesystem container registry blob provider.
@@ -22,15 +21,17 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
      *
      * @param input Write input including destination configuration and request body stream
      * @returns Destination-specific location identifier
+     * @throws {Error} {@link Error}
      */
     async writeStream(input: ContainerRegistryBlobWriteInput): Promise<{ location: string }> {
         if (input.destination.provider !== "local") {
             throw new Error(`LocalContainerRegistryBlobProvider cannot handle provider ${input.destination.provider}`);
         }
+
         const destination = input.destination as LocalContainerRegistryDestination;
         const destinationPath = this.resolveBlobPath(destination, input.name, input.tag);
         await mkdir(path.dirname(destinationPath), { recursive: true });
-        log_container_registry.debug("local write name=%s tag=%s path=%s", input.name, input.tag, destinationPath);
+        logContainerRegistry.debug("local write name=%s tag=%s path=%s", input.name, input.tag, destinationPath);
         await pipeline(input.body, createWriteStream(destinationPath));
 
         return { location: destinationPath };
@@ -43,7 +44,7 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
      * @returns Readable blob stream
      */
     async getStream(location: string): Promise<Readable> {
-        log_container_registry.debug("local get location=%s", location);
+        logContainerRegistry.debug("local get location=%s", location);
         return createReadStream(location);
     }
 
@@ -56,14 +57,14 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
     async head(location: string): Promise<ContainerRegistryBlobHeadResult | null> {
         try {
             const fileStat = await stat(location);
-            log_container_registry.debug("local head location=%s sizeBytes=%d", location, fileStat.size);
+            logContainerRegistry.debug("local head location=%s sizeBytes=%d", location, fileStat.size);
             return {
                 sizeBytes: fileStat.size,
                 digest: "",
                 contentType: "application/octet-stream"
             };
         } catch (err) {
-            log_container_registry.debug("local head missing location=%s err=%o", location, err);
+            logContainerRegistry.debug("local head missing location=%s err=%o", location, err);
             return null;
         }
     }
@@ -75,7 +76,7 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
      * @returns Nothing.
      */
     async delete(location: string): Promise<void> {
-        log_container_registry.debug("local delete location=%s", location);
+        logContainerRegistry.debug("local delete location=%s", location);
         await unlink(location);
     }
 
@@ -91,14 +92,15 @@ export class LocalContainerRegistryBlobProvider extends ContainerRegistryBlobPro
         if (destination.provider !== "local") {
             return false;
         }
+
         const localDestination = destination as LocalContainerRegistryDestination;
 
         try {
             await mkdir(localDestination.path, { recursive: true });
-            log_container_registry.debug("local validate path=%s healthy=true", localDestination.path);
+            logContainerRegistry.debug("local validate path=%s healthy=true", localDestination.path);
             return true;
         } catch (err) {
-            log_container_registry.debug("local validate path=%s healthy=false err=%o", localDestination.path, err);
+            logContainerRegistry.debug("local validate path=%s healthy=false err=%o", localDestination.path, err);
             return false;
         }
     }

@@ -1,5 +1,8 @@
 export type StatusTone = "success" | "warning" | "error" | "info" | "neutral";
 
+/**
+ * Status values mapped to the success tone.
+ */
 const SUCCESS_STATUSES = new Set([
     "online",
     "healthy",
@@ -13,6 +16,9 @@ const SUCCESS_STATUSES = new Set([
     "active"
 ]);
 
+/**
+ * Status values mapped to the warning tone.
+ */
 const WARNING_STATUSES = new Set([
     "registering",
     "pending",
@@ -30,6 +36,9 @@ const WARNING_STATUSES = new Set([
     "queued"
 ]);
 
+/**
+ * Status values mapped to the error tone.
+ */
 const ERROR_STATUSES = new Set([
     "offline",
     "unhealthy",
@@ -39,6 +48,9 @@ const ERROR_STATUSES = new Set([
     "disabled"
 ]);
 
+/**
+ * Status values mapped to the info tone.
+ */
 const INFO_STATUSES = new Set([
     "stopped",
     "unknown"

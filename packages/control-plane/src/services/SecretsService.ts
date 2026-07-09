@@ -1,13 +1,15 @@
 import type { Secret, SecretUpsertInput } from "@naulite/shared";
 
+import { Logger } from "../Logger";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import { SecretModel } from "../database/models/index";
-import { Logger } from "../Logger";
 import { AesEncryption } from "../modules/secrets/AesEncryption";
 import { JsonField } from "../util/RowMapper";
-const log_secrets = Logger.create("secrets");
+const logSecrets = Logger.create("secrets");
 
-
+/**
+ * JSON key used to store encrypted secret payloads at rest.
+ */
 const ENCRYPTED_VALUE_KEY = "__encrypted";
 
 /**
@@ -70,13 +72,14 @@ export class SecretsService {
             updatedAt: now
         };
 
-        log_secrets.debug("upsert name=%s keys=%o scope=%s", input.name, metadata.keys, metadata.scope);
+        logSecrets.debug("upsert name=%s keys=%o scope=%s", input.name, metadata.keys, metadata.scope);
         await this.store.upsertClusterSecret({
             name: input.name,
             keys: metadata.keys,
             value: {
                 [ENCRYPTED_VALUE_KEY]: ciphertext
             },
+
             description: input.description
         });
 
@@ -90,7 +93,7 @@ export class SecretsService {
      * @returns Whether a secret was deleted
      */
     async deleteByName(name: string): Promise<boolean> {
-        log_secrets.debug("delete name=%s", name);
+        logSecrets.debug("delete name=%s", name);
         return this.store.deleteSecretByName(name);
     }
 
@@ -118,7 +121,7 @@ export class SecretsService {
 
         if (typeof encrypted === "string") {
             const data = JSON.parse(this.encryption.decrypt(encrypted)) as Record<string, string>;
-            log_secrets.debug("resolve name=%s keys=%o", name, Object.keys(data));
+            logSecrets.debug("resolve name=%s keys=%o", name, Object.keys(data));
             return data;
         }
 

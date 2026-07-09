@@ -1,5 +1,8 @@
 import { useI18n } from "vue-i18n";
 
+/**
+ * Local storage key for persisted locale preference.
+ */
 const STORAGE_KEY = "naulite-ui-locale";
 
 export type AppLocale = "en" | "pt-BR";

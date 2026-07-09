@@ -16,6 +16,7 @@ export const GET = defineRoute({
             }
         }
     },
+
     async handler(_req, res) {
         const body = await PrometheusMetrics.collectText();
         return res.type("text/plain; version=0.0.4; charset=utf-8").send(body);

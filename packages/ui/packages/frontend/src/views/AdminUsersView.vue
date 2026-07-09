@@ -231,7 +231,9 @@ async function confirmDisableUser(): Promise<void> {
 
         <ErrorAlert :error="error" />
 
-        <p v-if="message" class="alert alert-success">{{ message }}</p>
+        <p v-if="message" class="alert alert-success">
+            {{ message }}
+        </p>
 
         <div v-if="loading && users.length === 0" class="flex items-center gap-2">
             <LoadingSpinner />
@@ -302,7 +304,9 @@ async function confirmDisableUser(): Promise<void> {
 
         <dialog ref="createModalRef" class="modal">
             <div class="modal-box">
-                <h3 class="text-lg font-bold">{{ t("pages.adminUsers.create") }}</h3>
+                <h3 class="text-lg font-bold">
+                    {{ t("pages.adminUsers.create") }}
+                </h3>
                 <form class="mt-4 grid gap-4" @submit.prevent="createUser">
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.login.email") }}</span>
@@ -326,7 +330,9 @@ async function confirmDisableUser(): Promise<void> {
                         </select>
                     </label>
                     <div class="modal-action mt-2 px-0">
-                        <button type="button" class="btn" @click="closeCreateModal">{{ t("common.cancel") }}</button>
+                        <button type="button" class="btn" @click="closeCreateModal">
+                            {{ t("common.cancel") }}
+                        </button>
                         <button
                             type="submit"
                             class="btn btn-primary"
@@ -338,17 +344,26 @@ async function confirmDisableUser(): Promise<void> {
                 </form>
             </div>
             <form method="dialog" class="modal-backdrop">
-                <button type="button" @click="closeCreateModal">close</button>
+                <button type="button" @click="closeCreateModal">
+                    close
+                </button>
             </form>
         </dialog>
 
         <dialog ref="editModalRef" class="modal">
             <div class="modal-box">
-                <h3 class="text-lg font-bold">{{ t("pages.adminUsers.editTitle") }}</h3>
+                <h3 class="text-lg font-bold">
+                    {{ t("pages.adminUsers.editTitle") }}
+                </h3>
                 <form v-if="editUser" class="mt-4 grid gap-4" @submit.prevent="saveEditUser">
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.login.email") }}</span>
-                        <input v-model="editEmail" type="email" class="input input-bordered w-full" required />
+                        <input
+                            v-model="editEmail"
+                            type="email"
+                            class="input input-bordered w-full"
+                            required
+                        />
                     </label>
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.adminUsers.role") }}</span>
@@ -363,7 +378,9 @@ async function confirmDisableUser(): Promise<void> {
                         <input v-model="editPassword" type="password" class="input input-bordered w-full" />
                     </label>
                     <div class="modal-action mt-2 px-0">
-                        <button type="button" class="btn" @click="closeEditModal">{{ t("common.cancel") }}</button>
+                        <button type="button" class="btn" @click="closeEditModal">
+                            {{ t("common.cancel") }}
+                        </button>
                         <button type="submit" class="btn btn-primary" :disabled="loading || !editEmail.trim()">
                             {{ t("common.save") }}
                         </button>
@@ -371,7 +388,9 @@ async function confirmDisableUser(): Promise<void> {
                 </form>
             </div>
             <form method="dialog" class="modal-backdrop">
-                <button type="button" @click="closeEditModal">close</button>
+                <button type="button" @click="closeEditModal">
+                    close
+                </button>
             </form>
         </dialog>
 

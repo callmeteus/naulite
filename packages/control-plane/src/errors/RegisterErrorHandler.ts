@@ -3,9 +3,9 @@ import { z } from "zod";
 
 import { formatValidationDetails } from "@naulite/shared";
 
-import { ComposeParserError } from "./orchestration/compose/ComposeParserError";
 import { Logger } from "../Logger";
 import { TreatedError } from "./TreatedError";
+import { ComposeParserError } from "./orchestration/compose/ComposeParserError";
 
 const log = Logger.create("http");
 
@@ -41,10 +41,12 @@ export function registerErrorHandler(app: FastifyInstance): void {
                 validation?: unknown;
                 validationContext?: string;
             };
+
             const details = {
                 validation: validationError.validation,
                 validationContext: validationError.validationContext
             };
+
             const formatted = formatValidationDetails(details);
             reply.code(400);
             return {

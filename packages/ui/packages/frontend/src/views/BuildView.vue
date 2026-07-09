@@ -217,7 +217,9 @@ async function triggerBuild(): Promise<void> {
                     </div>
                 </form>
 
-                <p v-if="buildMessage" class="text-sm text-base-content/70">{{ buildMessage }}</p>
+                <p v-if="buildMessage" class="text-sm text-base-content/70">
+                    {{ buildMessage }}
+                </p>
 
                 <div v-if="activeRun" class="grid gap-6 lg:grid-cols-2">
                     <div class="space-y-4">
@@ -235,12 +237,16 @@ async function triggerBuild(): Promise<void> {
                         <ErrorAlert :error="activeRun.errorMessage ?? null" />
 
                         <div v-if="activeRun.failureLog" class="rounded-box bg-base-300 p-4">
-                            <h4 class="font-semibold">{{ t("pages.runs.failureLog") }}</h4>
+                            <h4 class="font-semibold">
+                                {{ t("pages.runs.failureLog") }}
+                            </h4>
                             <pre class="mt-2 max-h-64 overflow-auto text-xs">{{ activeRun.failureLog }}</pre>
                         </div>
 
                         <div>
-                            <h4 class="font-semibold">{{ t("pages.runs.steps") }}</h4>
+                            <h4 class="font-semibold">
+                                {{ t("pages.runs.steps") }}
+                            </h4>
                             <ul class="mt-2 flex flex-wrap gap-2">
                                 <li v-for="step in activeRun.steps ?? []" :key="step.id">
                                     <button
@@ -257,7 +263,9 @@ async function triggerBuild(): Promise<void> {
                         </div>
 
                         <div v-if="selectedStep?.logText" class="rounded-box bg-base-300 p-4">
-                            <h4 class="font-semibold">{{ t("pages.runs.stepLog") }}: {{ selectedStep.name }}</h4>
+                            <h4 class="font-semibold">
+                                {{ t("pages.runs.stepLog") }}: {{ selectedStep.name }}
+                            </h4>
                             <pre class="mt-2 max-h-64 overflow-auto text-xs">{{ selectedStep.logText }}</pre>
                         </div>
                     </div>
@@ -271,7 +279,9 @@ async function triggerBuild(): Promise<void> {
                         </router-link>
 
                         <div>
-                            <h4 class="font-semibold">{{ t("pages.runs.events") }}</h4>
+                            <h4 class="font-semibold">
+                                {{ t("pages.runs.events") }}
+                            </h4>
                             <ul class="mt-2 space-y-2">
                                 <li
                                     v-for="event in runEvents"

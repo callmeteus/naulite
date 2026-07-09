@@ -83,7 +83,9 @@ async function restoreBackup(backupId: string): Promise<void> {
     <PageLayout title-key="pages.backups.title" hint-key="pages.backups.hint">
         <ErrorAlert :error="combinedError" />
 
-        <p v-if="backupMessage" class="alert alert-success">{{ backupMessage }}</p>
+        <p v-if="backupMessage" class="alert alert-success">
+            {{ backupMessage }}
+        </p>
 
         <div v-if="auth.hasPermission('backups:run')" class="card bg-base-100 shadow">
             <div class="card-body">
@@ -158,11 +160,21 @@ async function restoreBackup(backupId: string): Promise<void> {
                 </table>
 
                 <div v-if="paginatedBackups.length > 0" class="mt-4 flex items-center justify-end gap-2">
-                    <button type="button" class="btn btn-sm" :disabled="!canGoPrevious" @click="previousPage">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :disabled="!canGoPrevious"
+                        @click="previousPage"
+                    >
                         {{ t("common.paginationPrevious") }}
                     </button>
                     <span class="text-sm">{{ pageLabel }}</span>
-                    <button type="button" class="btn btn-sm" :disabled="!canGoNext" @click="nextPage">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :disabled="!canGoNext"
+                        @click="nextPage"
+                    >
                         {{ t("common.paginationNext") }}
                     </button>
                 </div>

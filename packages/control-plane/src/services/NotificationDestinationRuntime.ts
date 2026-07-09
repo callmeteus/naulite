@@ -2,11 +2,11 @@ import { SlackNotificationProvider } from "@naulite/plugin-notification-slack";
 import { WebhookNotificationProvider } from "@naulite/plugin-notification-webhook";
 import type { NotificationProvider } from "@naulite/shared";
 
+import { Logger } from "../Logger";
 import { NotificationDestinationStore } from "../database/NotificationDestinationStore";
 import { RunNotificationDispatcher } from "./RunNotificationDispatcher";
-import { Logger } from "../Logger";
 
-const log_notifications = Logger.create("notifications");
+const logNotifications = Logger.create("notifications");
 
 /**
  * Hydrates notification destinations from the database into the dispatcher.
@@ -28,7 +28,7 @@ export namespace NotificationDestinationRuntime {
         }));
 
         RunNotificationDispatcher.replaceAll(entries);
-        log_notifications.debug("destinations synced count=%d", entries.length);
+        logNotifications.debug("destinations synced count=%d", entries.length);
     }
 
     /**

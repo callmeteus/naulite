@@ -40,6 +40,7 @@ export const POST = defineRoute({
             404: z.object({ message: z.string() })
         }
     },
+
     async handler(req) {
         const disabled = await AdminService.disableUser(req.params.id);
 

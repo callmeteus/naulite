@@ -1,5 +1,5 @@
-import type { AdminRole, AdminUser } from "@naulite/sdk";
 import type { FastifyRequest, preHandlerHookHandler } from "fastify";
+import type { AdminRole, AdminUser } from "@naulite/sdk";
 
 import { NAULITE_SESSION_COOKIE, parseCookies } from "./SessionCookie";
 

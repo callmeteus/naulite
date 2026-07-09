@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { defineRoute } from "../../../routing/DefineRoute";
 import { HTTP401Error } from "../../../errors/TreatedError";
+import { defineRoute } from "../../../routing/DefineRoute";
 import { AdminService } from "../AdminService";
 
 const AdminLoginBodySchema = z.object({
@@ -41,6 +41,7 @@ export const POST = defineRoute({
             401: AdminLoginUnauthorizedSchema
         }
     },
+
     async handler(req) {
         const username = (req.body.email ?? req.body.username ?? "").trim();
         const result = await AdminService.login(username, req.body.password);

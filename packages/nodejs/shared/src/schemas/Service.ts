@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { LifecycleStatusSchema, SecretReferenceSchema, TimestampSchema } from "./Common";
 import { ClusterPlacementSchema } from "./ClusterLabels";
+import { LifecycleStatusSchema, SecretReferenceSchema, TimestampSchema } from "./Common";
 import { IngressSchema } from "./Ingress";
 import { LogRotationPolicySchema } from "./LogRotationTask";
 import { ManifestFunctionSchema } from "./Manifest";
@@ -17,6 +17,7 @@ export const ServiceDeploySpecSchema = z.object({
         hostPort: z.number().int().positive().optional(),
         protocol: z.enum(["tcp", "udp"]).default("tcp")
     })).default([]),
+
     secrets: z.array(SecretReferenceSchema).default([]),
     volumeMounts: z.array(z.object({
         volumeName: z.string().min(1),

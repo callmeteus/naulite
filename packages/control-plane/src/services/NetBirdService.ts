@@ -1,6 +1,6 @@
 import { Logger } from "../Logger";
 
-const log_netbird = Logger.create("netbird");
+const logNetbird = Logger.create("netbird");
 
 /**
  * NetBird device metadata.
@@ -168,6 +168,7 @@ export class MockNetBirdAdapter implements NetBirdAdapter {
             name,
             peers: []
         };
+
         this.groups.set(group.id, group);
         return group;
     }
@@ -193,6 +194,7 @@ export class MockNetBirdAdapter implements NetBirdAdapter {
             ports: (input.ports ?? []).map((port) => Number(port)).filter((port) => Number.isFinite(port)),
             protocol: input.protocol === "udp" ? "udp" : "tcp"
         };
+
         this.acls.set(acl.id, acl);
         return acl;
     }
@@ -203,6 +205,7 @@ export class MockNetBirdAdapter implements NetBirdAdapter {
      * @param groupId NetBird group identifier
      * @param peerIds Peer identifiers to assign
      * @returns Updated group metadata
+     * @throws {Error} {@link Error}
      */
     async assignPeersToGroup(groupId: string, peerIds: string[]): Promise<NetBirdGroup> {
         const group = this.groups.get(groupId);
@@ -216,6 +219,7 @@ export class MockNetBirdAdapter implements NetBirdAdapter {
             ...group,
             peers: [...merged]
         };
+
         this.groups.set(groupId, updated);
         return updated;
     }
@@ -332,7 +336,7 @@ export class NetBirdService {
         policyName: string,
         ports: string[] = []
     ): Promise<NetBirdAclRule> {
-        log_netbird.debug("ensureGroupAccessPolicy policy=%s group=%s ports=%o",
+        logNetbird.debug("ensureGroupAccessPolicy policy=%s group=%s ports=%o",
             policyName,
             groupId,
             ports
@@ -359,11 +363,11 @@ export class NetBirdService {
         const uniquePeerIds = [...new Set(peerIds.filter((peerId) => peerId.length > 0))];
 
         if (uniquePeerIds.length === 0) {
-            log_netbird.debug("syncPlatformNodePeers skipped empty peer list");
+            logNetbird.debug("syncPlatformNodePeers skipped empty peer list");
             return group;
         }
 
-        log_netbird.debug("syncPlatformNodePeers group=%s peers=%d",
+        logNetbird.debug("syncPlatformNodePeers group=%s peers=%d",
             group.id,
             uniquePeerIds.length
         );

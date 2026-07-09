@@ -1,5 +1,5 @@
-import { ComposeParserError } from "./ComposeParserError";
 import { formatValidationDetails } from "@naulite/shared";
+import { ComposeParserError } from "./ComposeParserError";
 
 /**
  * Thrown when a parsed manifest fails platform schema validation.

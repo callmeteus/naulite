@@ -1,9 +1,9 @@
-import { AgentProxyService } from "../../../services/AgentProxyService";
-import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
+import { IdParamsSchema, LooseObjectSchema } from "@naulite/shared";
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
-import { IdParamsSchema, LooseObjectSchema } from "@naulite/shared";
+import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
+import { AgentProxyService } from "../../../services/AgentProxyService";
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:read"),
@@ -17,6 +17,7 @@ export const GET = defineRoute({
             200: LooseObjectSchema
         }
     },
+
     async handler(req, res) {
         const { id } = req.params;
 

@@ -8,7 +8,6 @@ import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 
-
 export const POST = defineRoute({
     preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
     schema: {
@@ -23,6 +22,7 @@ export const POST = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { id } = req.params;
         const body = req.body;

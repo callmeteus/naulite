@@ -34,6 +34,7 @@ export class PodmanRuntimeProvider implements RuntimeProvider {
             client: options.client,
             socketPath: options.socketPath ?? process.env.PODMAN_SOCKET ?? "/run/podman/podman.sock"
         };
+
         this.delegate = new DockerRuntimeProvider(dockerOptions);
     }
 

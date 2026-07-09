@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest, FastifySchema, preHandlerHookHandler } from "fastify";
-import { z, type ZodTypeAny } from "zod";
+import type { z} from "zod";
+import { type ZodTypeAny } from "zod";
 
 import { resolveRouteSchema, type RouteSchemaInput } from "./ZodSchema";
 

@@ -6,7 +6,14 @@ import { resolveStatusTone, statusBadgeClass } from "../../utils/StatusPill";
 
 const props = withDefaults(
     defineProps<{
+        /**
+         * Raw platform status value to display.
+         */
         status: string;
+
+        /**
+         * Badge size preset.
+         */
         size?: "sm" | "md";
     }>(),
     {

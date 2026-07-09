@@ -1,5 +1,5 @@
-import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, S3BackupDestination } from "@naulite/shared";
 import { BackupDestinationProvider } from "@naulite/control-plane";
+import type { BackupDestinationReadResult, BackupDestinationResult, BackupTask, S3BackupDestination } from "@naulite/shared";
 
 import { S3ObjectStore, type S3ObjectStoreOptions } from "./S3ObjectStore";
 
@@ -33,11 +33,13 @@ export class S3BackupDestinationProvider extends BackupDestinationProvider {
      * @param task Backup task resolved by the control plane
      * @param archivePath Local archive path on the agent
      * @returns Destination result metadata
+     * @throws {Error} {@link Error}
      */
     async write(task: BackupTask, archivePath: string): Promise<BackupDestinationResult> {
         if (task.destination.provider !== "s3") {
             throw new Error(`S3BackupDestinationProvider cannot handle provider ${task.destination.provider}`);
         }
+
         const destination = task.destination as S3BackupDestination;
         const key = this.buildObjectKey(task, destination);
         const sizeBytes = await this.objectStore.putObjectFile(
@@ -62,16 +64,19 @@ export class S3BackupDestinationProvider extends BackupDestinationProvider {
      * @param task Backup task containing destination configuration
      * @param location Destination-specific location identifier
      * @returns Readable backup archive stream
+     * @throws {Error} {@link Error}
      */
     async read(task: BackupTask, location: string): Promise<BackupDestinationReadResult> {
         if (task.destination.provider !== "s3") {
             throw new Error(`S3BackupDestinationProvider cannot handle provider ${task.destination.provider}`);
         }
+
         const destination = task.destination as S3BackupDestination;
         const parsed = this.objectStore.parseLocation(location, {
             region: destination.region,
             endpoint: destination.endpoint
         });
+
         const stream = await this.objectStore.getObjectStream(parsed.config, parsed.key);
         const head = await this.objectStore.headObject(parsed.config, parsed.key);
 
@@ -102,18 +107,21 @@ export class S3BackupDestinationProvider extends BackupDestinationProvider {
         if (task.destination.provider !== "s3") {
             return false;
         }
+
         const destination = task.destination as S3BackupDestination;
 
         const hasCredentials = Boolean(
             task.resolvedSecrets[destination.credentialsSecret.secretName]
             ?? Object.keys(task.resolvedSecrets).length > 0
         );
+
         console.debug(
             "[s3-storage] validate backup bucket=%s region=%s credentials=%s",
             destination.bucket,
             destination.region,
             hasCredentials
         );
+
         return hasCredentials && destination.bucket.length > 0;
     }
 

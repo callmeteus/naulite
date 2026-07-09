@@ -10,7 +10,7 @@ import {
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
-
+import { NodeHealthWatcher } from "../../../services/NodeHealthWatcher";
 
 const NodeHeartbeatBodySchema = z.object({
     status: NodeStatusSchema.exclude(["registering"]).default("online"),
@@ -31,6 +31,7 @@ export const POST = defineRoute({
             404: RouteMessageResponseSchema
         }
     },
+
     async handler(req, res) {
         const { id } = req.params;
         const body = req.body;
@@ -44,7 +45,6 @@ export const POST = defineRoute({
             return { message: "Node not found." };
         }
 
-        const { NodeHealthWatcher } = await import("../../../services/NodeHealthWatcher");
         await NodeHealthWatcher.onHeartbeat(updated);
 
         return updated;

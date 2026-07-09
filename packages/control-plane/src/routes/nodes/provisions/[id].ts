@@ -1,7 +1,7 @@
 import { NodeProvisionSchema, IdParamsSchema } from "@naulite/shared";
 
-import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
 
 export const GET = defineRoute({
@@ -16,6 +16,7 @@ export const GET = defineRoute({
             200: NodeProvisionSchema
         }
     },
+
     async handler(req) {
         return ControlPlaneService.NodeProvision.getProvision(req.params.id);
     }
@@ -33,6 +34,7 @@ export const DELETE = defineRoute({
             200: NodeProvisionSchema
         }
     },
+
     async handler(req) {
         return ControlPlaneService.NodeProvision.terminateProvision(req.params.id);
     }

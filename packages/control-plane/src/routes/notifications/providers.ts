@@ -32,6 +32,7 @@ export const GET = defineRoute({
             200: NotificationProvidersResponseSchema
         }
     },
+
     async handler() {
         return {
             providers: NotificationProviderEnvStatus.list(RunNotificationDispatcher.listIds())

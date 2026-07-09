@@ -52,7 +52,9 @@ async function confirmRollback(): Promise<void> {
     <PageLayout title-key="pages.gitops.title" hint-key="pages.gitops.hint">
         <ErrorAlert :error="store.error" />
 
-        <p v-if="rollbackMessage" class="alert alert-success">{{ rollbackMessage }}</p>
+        <p v-if="rollbackMessage" class="alert alert-success">
+            {{ rollbackMessage }}
+        </p>
 
         <div v-if="store.loading" class="flex items-center gap-2">
             <LoadingSpinner />

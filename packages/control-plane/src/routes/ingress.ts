@@ -1,9 +1,9 @@
 import { z } from "zod";
 
+import { IngressRouteSchema } from "@naulite/shared";
 import { ControlPlaneService } from "../ControlPlaneService";
 import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
-import { IngressRouteSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("registry:read"),
@@ -16,6 +16,7 @@ export const GET = defineRoute({
             200: z.array(IngressRouteSchema)
         }
     },
+
     async handler() {
         const services = await ControlPlaneService.Store.listServices();
 

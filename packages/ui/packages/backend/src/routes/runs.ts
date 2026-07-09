@@ -1,6 +1,6 @@
-import type { FastifyInstance } from "fastify";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { PipelineRunKindSchema, PipelineRunListQuerySchema, PipelineRunStatusSchema } from "@naulite/shared";
@@ -58,6 +58,7 @@ export async function registerRunsRoutes(app: FastifyInstance): Promise<void> {
                     since: query.since,
                     limit: query.limit
                 });
+
                 return paginateArray(runs, query.page, query.limit);
             }
         }

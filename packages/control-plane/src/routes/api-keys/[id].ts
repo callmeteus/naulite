@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 
 const RevokeApiKeyParamsSchema = z.object({
@@ -29,6 +29,7 @@ export const DELETE = defineRoute({
             404: RevokeApiKeyNotFoundSchema
         }
     },
+
     async handler(req, res) {
         const { id } = req.params;
         const revoked = await ControlPlaneService.Store.revokeApiKey(id);

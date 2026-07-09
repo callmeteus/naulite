@@ -1,13 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import websocket from "@fastify/websocket";
 import WebSocket from "ws";
+import websocket from "@fastify/websocket";
 
-import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../ControlPlaneService";
-import { AgentProxyService } from "../services/AgentProxyService";
 import { Logger } from "../Logger";
-const log_exec_ws = Logger.create("exec-ws");
-
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
+import { AgentProxyService } from "../services/AgentProxyService";
+const logExecWs = Logger.create("exec-ws");
 
 /**
  * Registers the interactive exec WebSocket proxy route.
@@ -26,7 +25,7 @@ export async function registerExecWebSocket(app: FastifyInstance): Promise<void>
         },
         (clientSocket, request) => {
             void proxyExecWebSocket(clientSocket, request.params as { id: string }).catch((err) => {
-                log_exec_ws.error("proxy failed: %O", err);
+                logExecWs.error("proxy failed: %O", err);
                 clientSocket.close(1011, "exec proxy failed");
             });
         }
@@ -48,7 +47,7 @@ async function proxyExecWebSocket(
     const { agentUrl } = await AgentProxyService.resolveAgentForInstance(store, params.id);
     const upstreamUrl = `${toWebSocketUrl(agentUrl)}/containers/${encodeURIComponent(params.id)}/exec/ws`;
 
-    log_exec_ws.debug("proxy instanceId=%s upstream=%s", params.id, upstreamUrl);
+    logExecWs.debug("proxy instanceId=%s upstream=%s", params.id, upstreamUrl);
 
     const upstreamSocket = new WebSocket(upstreamUrl);
 
@@ -92,12 +91,12 @@ async function proxyExecWebSocket(
     });
 
     clientSocket.on("error", (err) => {
-        log_exec_ws.error("client socket error: %O", err);
+        logExecWs.error("client socket error: %O", err);
         closeBoth(1011, "client socket error");
     });
 
     upstreamSocket.on("error", (err) => {
-        log_exec_ws.error("upstream socket error: %O", err);
+        logExecWs.error("upstream socket error: %O", err);
         closeBoth(1011, "upstream socket error");
     });
 }

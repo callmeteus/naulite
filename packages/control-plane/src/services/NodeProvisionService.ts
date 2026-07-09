@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import type { z } from "zod";
 import {
     NodeProvisionSchema,
     type NodeProvision,
@@ -8,22 +9,27 @@ import {
     type ProvisionNodeBodySchema,
     type MachineStatus
 } from "@naulite/shared";
-import type { z } from "zod";
 
+import { Logger } from "../Logger";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import { HTTP400Error, HTTP404Error } from "../errors/TreatedError";
 import type { NodeProvisionerRegistry } from "../plugins/NodeProvisionerRegistry";
 
-import { NodeProvisionUserDataTemplate } from "./NodeProvisionUserDataTemplate";
-import type { NetBirdEnrollmentService } from "./NetBirdEnrollmentService";
 import type { LeaderElection } from "./LeaderElection";
-import { Logger } from "../Logger";
-const log_node_provision = Logger.create("node-provision");
-
+import type { NetBirdEnrollmentService } from "./NetBirdEnrollmentService";
+import { NodeProvisionUserDataTemplate } from "./NodeProvisionUserDataTemplate";
+const logNodeProvision = Logger.create("node-provision");
 
 type ProvisionNodeInput = z.infer<typeof ProvisionNodeBodySchema>;
 
+/**
+ * Secret name prefix for per-provision NetBird setup keys.
+ */
 const PROVISION_SETUP_KEY_PREFIX = "netbird/provision-setup-key/";
+
+/**
+ * Default interval for polling cloud provision status in milliseconds.
+ */
 const DEFAULT_STATUS_POLL_INTERVAL_MS = 30_000;
 
 /**
@@ -65,11 +71,11 @@ export class NodeProvisionService {
             }
 
             void this.pollActiveProvisions().catch((err) => {
-                log_node_provision.error("status poll failed: %O", err);
+                logNodeProvision.error("status poll failed: %O", err);
             });
         }, intervalMs);
 
-        log_node_provision.debug("status polling started intervalMs=%d", intervalMs);
+        logNodeProvision.debug("status polling started intervalMs=%d", intervalMs);
     }
 
     /**
@@ -84,7 +90,7 @@ export class NodeProvisionService {
 
         clearInterval(this.statusPollTimer);
         this.statusPollTimer = null;
-        log_node_provision.debug("status polling stopped");
+        logNodeProvision.debug("status polling stopped");
     }
 
     /**
@@ -103,10 +109,11 @@ export class NodeProvisionService {
             const provider = this.registry.get(provision.provider);
 
             if (!provider) {
-                log_node_provision.debug("poll skip missing provider provisionId=%s provider=%s",
+                logNodeProvision.debug("poll skip missing provider provisionId=%s provider=%s",
                     provision.id,
                     provision.provider
                 );
+
                 continue;
             }
 
@@ -123,9 +130,10 @@ export class NodeProvisionService {
                 error: machineStatus === "failed" ? "Cloud instance entered failed state." : provision.error,
                 updatedAt: new Date().toISOString()
             });
+
             await this.store.saveNodeProvision(updated);
 
-            log_node_provision.debug("poll updated provisionId=%s instanceId=%s status=%s machineStatus=%s",
+            logNodeProvision.debug("poll updated provisionId=%s instanceId=%s status=%s machineStatus=%s",
                 provision.id,
                 provision.cloudInstanceId,
                 nextStatus,
@@ -139,6 +147,8 @@ export class NodeProvisionService {
      *
      * @param input Provision request payload
      * @returns Created node provision record
+     * @throws {HTTP400Error} {@link HTTP400Error}
+     * @throws {Error} {@link Error}
      */
     async provision(input: ProvisionNodeInput): Promise<NodeProvision> {
         const provider = this.registry.get(input.provider);
@@ -191,6 +201,7 @@ export class NodeProvisionService {
                 iamInstanceProfile: input.iamInstanceProfile,
                 keyName: input.keyName
             });
+
             const machine = machines[0];
 
             if (!machine?.cloudInstanceId) {
@@ -203,6 +214,7 @@ export class NodeProvisionService {
                 status: "launching",
                 updatedAt: new Date().toISOString()
             });
+
             await this.store.saveNodeProvision(launching);
 
             const bootstrapping = NodeProvisionSchema.parse({
@@ -210,9 +222,10 @@ export class NodeProvisionService {
                 status: "bootstrapping",
                 updatedAt: new Date().toISOString()
             });
+
             await this.store.saveNodeProvision(bootstrapping);
 
-            log_node_provision.debug("launched provisionId=%s instanceId=%s nodeId=%s",
+            logNodeProvision.debug("launched provisionId=%s instanceId=%s nodeId=%s",
                 provisionId,
                 machine.cloudInstanceId,
                 nodeId
@@ -226,6 +239,7 @@ export class NodeProvisionService {
                 error: err instanceof Error ? err.message : String(err),
                 updatedAt: new Date().toISOString()
             });
+
             await this.store.saveNodeProvision(failed);
             throw err;
         }
@@ -246,6 +260,7 @@ export class NodeProvisionService {
      *
      * @param id Provision identifier
      * @returns Node provision record
+     * @throws {HTTP404Error} {@link HTTP404Error}
      */
     async getProvision(id: string): Promise<NodeProvision> {
         const provision = await this.store.getNodeProvision(id);
@@ -262,6 +277,7 @@ export class NodeProvisionService {
      *
      * @param id Provision identifier
      * @returns Updated node provision record
+     * @throws {HTTP400Error} {@link HTTP400Error}
      */
     async terminateProvision(id: string): Promise<NodeProvision> {
         const provision = await this.getProvision(id);
@@ -278,9 +294,10 @@ export class NodeProvisionService {
             status: "terminated",
             updatedAt: new Date().toISOString()
         });
+
         await this.store.saveNodeProvision(terminated);
 
-        log_node_provision.debug("terminated provisionId=%s instanceId=%s",
+        logNodeProvision.debug("terminated provisionId=%s instanceId=%s",
             id,
             provision.cloudInstanceId
         );
@@ -299,7 +316,7 @@ export class NodeProvisionService {
         const provision = await this.store.getNodeProvision(provisionId);
 
         if (!provision) {
-            log_node_provision.debug("completeRegistration missing provisionId=%s", provisionId);
+            logNodeProvision.debug("completeRegistration missing provisionId=%s", provisionId);
             return null;
         }
 
@@ -309,9 +326,10 @@ export class NodeProvisionService {
             status: "registered",
             updatedAt: new Date().toISOString()
         });
+
         await this.store.saveNodeProvision(registered);
 
-        log_node_provision.debug("registered provisionId=%s nodeId=%s",
+        logNodeProvision.debug("registered provisionId=%s nodeId=%s",
             provisionId,
             nodeId
         );
@@ -353,7 +371,7 @@ export class NodeProvisionService {
             description: `Provision-scoped setup key for node provision ${provisionId}.`
         });
 
-        log_node_provision.debug("created setup key provisionId=%s", provisionId);
+        logNodeProvision.debug("created setup key provisionId=%s", provisionId);
         return setupKey;
     }
 }

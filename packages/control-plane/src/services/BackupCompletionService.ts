@@ -1,11 +1,10 @@
 import type { BackupTask } from "@naulite/shared";
 
+import { Logger } from "../Logger";
 import { BackupRunModel } from "../database/models/index";
 import type { BackupOrchestrator } from "../modules/backup/BackupOrchestrator";
 import { BackupArchiveStagingService } from "./BackupArchiveStagingService";
-import { Logger } from "../Logger";
-const log_backups = Logger.create("backups");
-
+const logBackups = Logger.create("backups");
 
 /**
  * Parsed agent backup task response.
@@ -25,6 +24,7 @@ export namespace BackupCompletionService {
      *
      * @param agentResponse Raw agent response body
      * @returns Parsed archive path, status, and task id
+     * @throws {Error} {@link Error}
      */
     export function parseAgentResponse(agentResponse: unknown): ParsedAgentBackupResponse {
         if (typeof agentResponse !== "object" || agentResponse === null) {
@@ -53,6 +53,7 @@ export namespace BackupCompletionService {
      * @param agentResponse Raw agent response body
      * @param options Optional agent URL used to stage archives before remote uploads
      * @returns Destination location and provider id
+     * @throws {Error} {@link Error}
      */
     export async function completeRun(
         orchestrator: BackupOrchestrator,
@@ -62,7 +63,7 @@ export namespace BackupCompletionService {
     ): Promise<{ location: string; provider: string }> {
         const parsed = parseAgentResponse(agentResponse);
 
-        log_backups.debug("complete taskId=%s status=%s archivePath=%s",
+        logBackups.debug("complete taskId=%s status=%s archivePath=%s",
             parsed.taskId,
             parsed.status,
             parsed.archivePath
@@ -98,7 +99,7 @@ export namespace BackupCompletionService {
             { where: { id: task.taskId } }
         );
 
-        log_backups.debug("completed taskId=%s provider=%s location=%s",
+        logBackups.debug("completed taskId=%s provider=%s location=%s",
             task.taskId,
             writeResult.provider,
             writeResult.location

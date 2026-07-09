@@ -12,12 +12,16 @@ const bcryptPackageRoot = join(
     "node_modules",
     "bcryptjs"
 );
+
 const require = createRequire(join(bcryptPackageRoot, "package.json"));
 const bcrypt = require(bcryptPackageRoot) as {
     hash: (password: string, rounds: number) => string;
     compare: (password: string, hash: string) => boolean;
 };
 
+/**
+ * bcrypt cost factor for admin password hashes.
+ */
 const BCRYPT_ROUNDS = 12;
 
 /**

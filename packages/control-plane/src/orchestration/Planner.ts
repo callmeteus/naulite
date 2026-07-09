@@ -52,6 +52,7 @@ export class Planner {
         const servicesToCreate = desiredServices.filter((service) => !actualByName.has(service.name));
         const servicesToUpdate = desiredServices.filter((service) => {
             const current = actualByName.get(service.name);
+
             if (!current) {
                 return false;
             }
@@ -59,6 +60,7 @@ export class Planner {
             const manifestService = manifest.services[service.name];
             return Planner.serviceNeedsUpdate(current, service, manifestService);
         });
+
         const servicesToRemove = actual.services.filter((service) => {
             return service.manifestName === manifest.name && !desiredServiceIds.has(service.id);
         });
@@ -93,7 +95,8 @@ export class Planner {
                     instancesToCreate.push(
                         ...Planner.buildScaledInstances(service, scaleDelta, existingInstances, now)
                     );
-                } else if (scaleDelta < 0) {
+                } else
+                if (scaleDelta < 0) {
                     instancesToRemove.push(
                         ...Planner.pickInstancesToRetire(existingInstances, Math.abs(scaleDelta))
                     );
@@ -296,6 +299,7 @@ export class Planner {
                 type: "stop",
                 instanceId: instance.id
             });
+
             operations.push({
                 type: "remove",
                 instanceId: instance.id,
@@ -330,6 +334,7 @@ export class Planner {
             const survivingInstances = existingInstances.filter((instance) => {
                 return instance.serviceId === service.id && !instancesToRemoveIds.has(instance.id);
             });
+
             const previousNetworks = current.networks ?? [];
             const nextNetworks = service.networks ?? [];
             const removedNetworks = previousNetworks.filter((network) => !nextNetworks.includes(network));
@@ -411,6 +416,7 @@ export class Planner {
         const usedIndexes = existingInstances
             .map((instance) => Number(instance.id.slice(prefix.length)))
             .filter((index) => Number.isInteger(index) && index > 0);
+
         let nextIndex = usedIndexes.length > 0 ? Math.max(...usedIndexes) + 1 : 1;
         const instances: Instance[] = [];
 
@@ -425,6 +431,7 @@ export class Planner {
                 createdAt: now,
                 updatedAt: now
             });
+
             nextIndex += 1;
         }
 

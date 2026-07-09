@@ -1,13 +1,13 @@
-import { ControlPlaneService } from "../ControlPlaneService";
-import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
-import { defineRoute } from "../routing/DefineRoute";
-import { BuildService, BuildServiceError } from "../services/BuildService";
 import {
     BuildServiceBodySchema,
     BuildWaitQuerySchema,
     LooseObjectSchema,
     RouteErrorResponseSchema
 } from "@naulite/shared";
+import { ControlPlaneService } from "../ControlPlaneService";
+import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
+import { defineRoute } from "../routing/DefineRoute";
+import { BuildService, BuildServiceError } from "../services/BuildService";
 
 export const POST = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("runs:write"),
@@ -24,6 +24,7 @@ export const POST = defineRoute({
             503: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { serviceName, provider, registry } = req.body;
         const services = await ControlPlaneService.Store.listServices();

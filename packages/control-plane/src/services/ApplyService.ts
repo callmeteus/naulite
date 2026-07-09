@@ -1,24 +1,23 @@
-import type { ExecutionOperation, Instance, IngressTls, Manifest, ManifestService, Node, SecretFilter } from "@naulite/shared";
 import { resolveManifestBuild } from "@naulite/shared";
+import type { ExecutionOperation, Instance, IngressTls, Manifest, ManifestService, Node, SecretFilter } from "@naulite/shared";
 import type { GatewayTlsMaterial } from "@naulite/shared";
 
-import { ControlPlaneService } from "../ControlPlaneService";
 import type { ControlPlaneContext } from "../ControlPlaneContext";
+import { ControlPlaneService } from "../ControlPlaneService";
+import { Logger } from "../Logger";
 import { HTTP503Error } from "../errors/TreatedError";
+import type { SecretProvider } from "../modules/secrets/SecretProvider";
 import { NetworkGroupId } from "../orchestration/NetworkGroupId";
 import type { PlannerDiff } from "../orchestration/Planner";
-import type { SecretProvider } from "../modules/secrets/SecretProvider";
 
 import { AgentDispatcher, type AgentDispatchResult } from "./AgentDispatcher";
 import { BuildContextService } from "./BuildContextService";
 import { BuildService } from "./BuildService";
 import { PipelineRunService } from "./PipelineRunService";
 import { RolloutWatcher } from "./RolloutWatcher";
-import { SecretsService } from "./SecretsService";
+import type { SecretsService } from "./SecretsService";
 import { TlsConfig } from "./TlsConfig";
-import { Logger } from "../Logger";
-const log_apply = Logger.create("apply");
-
+const logApply = Logger.create("apply");
 
 /**
  * Result of applying a manifest through the control plane.
@@ -96,6 +95,7 @@ export namespace ApplyService {
      * @param manifestYaml Manifest document body
      * @param options Optional Git metadata for revision recording
      * @returns Apply summary including dispatch results
+     * @throws {HTTP503Error} {@link HTTP503Error}
      */
     export async function execute(
         manifestYaml: string,
@@ -142,7 +142,8 @@ export namespace ApplyService {
                     branch: options.branch
                 }
             });
-        } else if (applyRun.status === "pending") {
+        } else
+        if (applyRun.status === "pending") {
             await PipelineRunService.markRunning(applyRun.id);
         }
 
@@ -168,7 +169,7 @@ export namespace ApplyService {
                 );
 
                 if (!schedule) {
-                    log_apply.debug("schedule failed service=%s nodes=%d", service.name, nodes.length);
+                    logApply.debug("schedule failed service=%s nodes=%d", service.name, nodes.length);
                     throw new HTTP503Error(`No eligible node found for service "${service.name}".`, {
                         serviceName: service.name
                     });
@@ -180,6 +181,7 @@ export namespace ApplyService {
                         nodeId: schedule.node.id,
                         updatedAt: new Date().toISOString()
                     };
+
                     instanceNodes.set(scheduled.id, scheduled.nodeId);
                     await ControlPlaneService.Store.insertInstance(scheduled);
                 }
@@ -235,11 +237,13 @@ export namespace ApplyService {
             diff.operations,
             nodes
         );
+
         const operations = await enrichOperationsWithSecrets(
             resolvedOperations,
             manifest,
             context.secretProvider
         );
+
         const volumeNodes = buildVolumeNodeMap(volumes, diff);
         const plans = nodes.map((node) => {
             const nodeOperations = addPullOperations(
@@ -251,6 +255,7 @@ export namespace ApplyService {
                     nodes
                 )
             );
+
             const plan = ControlPlaneService.Orchestration.Planner.buildExecutionPlan(
                 manifest.name,
                 node.id,
@@ -274,6 +279,7 @@ export namespace ApplyService {
             ...diff.instancesToCreate.map((instance) => instance.id),
             ...diff.instancesToRedeploy.map((instance) => instance.id)
         ];
+
         const dispatchOutcome = await applyDispatchResults(watchedInstanceIds, instanceNodes, dispatch);
 
         for (const volume of diff.volumesToRemove) {
@@ -283,11 +289,12 @@ export namespace ApplyService {
                 const result = dispatch.find((entry) => entry.nodeId === nodeId);
 
                 if (result?.status !== "dispatched") {
-                    log_apply.debug("skip volume store delete name=%s nodeId=%s dispatchStatus=%s",
+                    logApply.debug("skip volume store delete name=%s nodeId=%s dispatchStatus=%s",
                         volume.name,
                         nodeId,
                         result?.status ?? "missing"
                     );
+
                     continue;
                 }
             }
@@ -325,6 +332,7 @@ export namespace ApplyService {
                 volumesToEnsure: diff.volumesToEnsure.length,
                 volumesToRemove: diff.volumesToRemove.length
             },
+
             exposurePlan,
             plans,
             dispatch
@@ -401,6 +409,7 @@ export namespace ApplyService {
             }
 
             const mountsVolume = service.volumes.some((entry) => entry.split(":")[0] === volumeName);
+
             if (mountsVolume) {
                 return serviceName;
             }
@@ -438,10 +447,11 @@ export namespace ApplyService {
                 continue;
             }
 
-            log_apply.debug("resolve secrets service=%s names=%o",
+            logApply.debug("resolve secrets service=%s names=%o",
                 operation.serviceName,
                 filter.secretNames
             );
+
             const secrets = await secretProvider.resolveForAgent(filter);
             enriched.push({
                 ...operation,
@@ -501,7 +511,7 @@ export namespace ApplyService {
         const builderNode = BuildService.resolveBuilderNode(nodes);
 
         if (!builderNode?.agentUrl) {
-            log_apply.debug("skip build context sync reason=no-builder-node");
+            logApply.debug("skip build context sync reason=no-builder-node");
             return;
         }
 
@@ -523,11 +533,12 @@ export namespace ApplyService {
                 continue;
             }
 
-            log_apply.debug("sync build context service=%s root=%s context=%s",
+            logApply.debug("sync build context service=%s root=%s context=%s",
                 serviceName,
                 buildContextRoot,
                 build.context
             );
+
             await BuildContextService.syncToAgent({
                 serviceName,
                 contextRoot: buildContextRoot,
@@ -557,6 +568,7 @@ export namespace ApplyService {
                     type: "pull",
                     image: operation.image
                 });
+
                 pulledImages.add(operation.image);
             }
 
@@ -658,6 +670,7 @@ export namespace ApplyService {
 
                 return singleNodeId === nodeId;
             }
+
             case "pull":
             case "create":
             case "start":
@@ -666,6 +679,7 @@ export namespace ApplyService {
             case "connectNetwork":
             case "disconnectNetwork": {
                 const instanceId = "instanceId" in operation ? operation.instanceId : null;
+
                 if (!instanceId) {
                     return false;
                 }
@@ -739,10 +753,12 @@ export namespace ApplyService {
 
             const controlPlaneTarget = service.function?.trigger.http ? resolveControlPlaneIngressTarget() : undefined;
             const target = controlPlaneTarget ?? resolveIngressTarget(manifest.name, serviceName, service, nodes, instanceNodes);
+
             if (!target) {
-                log_apply.debug("skip public ingress service=%s reason=no-scheduled-instance",
+                logApply.debug("skip public ingress service=%s reason=no-scheduled-instance",
                     serviceName
                 );
+
                 continue;
             }
 
@@ -760,10 +776,11 @@ export namespace ApplyService {
                 const material = await resolveIngressTlsMaterial(tls, context.secretsService);
 
                 if (material) {
-                    log_apply.debug("install custom tls host=%s", service.ingress.host);
+                    logApply.debug("install custom tls host=%s", service.ingress.host);
                     await context.gatewayProvider.installTls(service.ingress.host, material);
                 }
-            } else if (tls?.enabled && TlsConfig.supportsAutoTls()) {
+            } else
+            if (tls?.enabled && TlsConfig.supportsAutoTls()) {
                 await ControlPlaneService.Gateway.requestAutoTls(service.ingress.host);
             }
         }
@@ -791,10 +808,11 @@ export namespace ApplyService {
         const keyValues = await secretsService.resolveValues(keyRef.secretName);
 
         if (!certValues || !keyValues) {
-            log_apply.debug("tls secrets unresolved cert=%s key=%s",
+            logApply.debug("tls secrets unresolved cert=%s key=%s",
                 certRef.secretName,
                 keyRef.secretName
             );
+
             return null;
         }
 
@@ -802,10 +820,11 @@ export namespace ApplyService {
         const privateKey = keyValues[keyRef.key ?? "tls.key"] ?? keyValues.privateKey;
 
         if (!certificate || !privateKey) {
-            log_apply.debug("tls secret keys missing cert=%s key=%s",
+            logApply.debug("tls secret keys missing cert=%s key=%s",
                 certRef.secretName,
                 keyRef.secretName
             );
+
             return null;
         }
 
@@ -817,7 +836,7 @@ export namespace ApplyService {
      *
      * @param manifestName Manifest name
      * @param serviceName Service name
-     * @param service Manifest service definition
+     * @param _service Manifest service definition
      * @param nodes Registered cluster nodes
      * @param instanceNodes Instance id to node id map
      * @returns Target hostname when an instance is scheduled
@@ -884,6 +903,7 @@ export namespace ApplyService {
                 await ControlPlaneService.Store.updateInstance(instanceId, {
                     lastDispatchedAt: now
                 });
+
                 continue;
             }
 

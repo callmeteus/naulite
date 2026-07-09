@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import type {
     CreateNotificationDestinationInput,
     NotificationDestination,
@@ -6,8 +8,6 @@ import type {
     PipelineEventKind,
     UpdateNotificationDestinationInput
 } from "@naulite/sdk";
-import { computed, onMounted, ref } from "vue";
-import { useI18n } from "vue-i18n";
 
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
@@ -338,10 +338,37 @@ onMounted(() => {
 });
 </script>
 
+<style scoped>
+.destination-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.25rem 0.75rem;
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+.filter-option {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    font-size: 0.85rem;
+}
+</style>
+
 <template>
     <PageLayout title-key="pages.notifications.title" hint-key="pages.notifications.hint">
         <template #actions>
-            <button type="button" class="btn btn-outline btn-sm" :disabled="loading" @click="refreshDestinations">
+            <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                :disabled="loading"
+                @click="refreshDestinations"
+            >
                 {{ t("pages.notifications.refresh") }}
             </button>
             <button
@@ -392,11 +419,15 @@ onMounted(() => {
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
-                                <h3 class="text-lg font-semibold">{{ destination.name }}</h3>
+                                <h3 class="text-lg font-semibold">
+                                    {{ destination.name }}
+                                </h3>
                                 <span class="badge badge-outline">{{ destinationTypeLabel(destination.type) }}</span>
                                 <StatusPill :status="destination.enabled ? 'active' : 'disabled'" />
                             </div>
-                            <p class="mt-2 break-all text-sm text-base-content/70">{{ destination.url }}</p>
+                            <p class="mt-2 break-all text-sm text-base-content/70">
+                                {{ destination.url }}
+                            </p>
                             <p class="mt-1 text-xs text-base-content/60">
                                 {{ filterSummary(destination) }}
                                 <span v-if="destination.secretConfigured"> · {{ t("pages.notifications.secretConfigured") }}</span>
@@ -430,7 +461,9 @@ onMounted(() => {
 
         <div v-if="testResults.length > 0" class="card bg-base-100 shadow mt-4">
             <div class="card-body">
-                <h3 class="text-lg font-semibold">{{ t("pages.notifications.testResults") }}</h3>
+                <h3 class="text-lg font-semibold">
+                    {{ t("pages.notifications.testResults") }}
+                </h3>
                 <ul class="mt-2 space-y-2">
                     <li v-for="result in testResults" :key="result.id" class="text-sm">
                         <strong>{{ destinationNameForResult(result.id) }}</strong>:
@@ -443,12 +476,19 @@ onMounted(() => {
 
         <dialog ref="formModalRef" class="modal">
             <div class="modal-box max-w-3xl">
-                <h3 class="text-lg font-bold">{{ formTitle }}</h3>
+                <h3 class="text-lg font-bold">
+                    {{ formTitle }}
+                </h3>
 
                 <div class="mt-4 grid gap-4 md:grid-cols-2">
                     <label class="form-control md:col-span-2">
                         <span class="label-text">{{ t("pages.notifications.name") }}</span>
-                        <input v-model="formName" type="text" class="input input-bordered" required />
+                        <input
+                            v-model="formName"
+                            type="text"
+                            class="input input-bordered"
+                            required
+                        />
                     </label>
 
                     <label class="form-control">
@@ -488,7 +528,9 @@ onMounted(() => {
 
                 <div class="mt-6">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <h4 class="font-medium">{{ t("pages.notifications.filters") }}</h4>
+                        <h4 class="font-medium">
+                            {{ t("pages.notifications.filters") }}
+                        </h4>
                         <div class="flex gap-2">
                             <button type="button" class="btn btn-ghost btn-xs" @click="selectAllEventKinds">
                                 {{ t("pages.notifications.selectAllEvents") }}
@@ -498,7 +540,9 @@ onMounted(() => {
                             </button>
                         </div>
                     </div>
-                    <p class="mt-1 text-sm text-base-content/60">{{ t("pages.notifications.filtersHint") }}</p>
+                    <p class="mt-1 text-sm text-base-content/60">
+                        {{ t("pages.notifications.filtersHint") }}
+                    </p>
                     <div class="filter-grid mt-3">
                         <label
                             v-for="kind in eventKindOptions"
@@ -520,13 +564,20 @@ onMounted(() => {
                     <button type="button" class="btn" @click="closeFormModal">
                         {{ t("common.cancel") }}
                     </button>
-                    <button type="button" class="btn btn-primary" :disabled="saving" @click="saveDestination">
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        :disabled="saving"
+                        @click="saveDestination"
+                    >
                         {{ t("common.save") }}
                     </button>
                 </div>
             </div>
             <form method="dialog" class="modal-backdrop">
-                <button type="submit">{{ t("common.dismiss") }}</button>
+                <button type="submit">
+                    {{ t("common.dismiss") }}
+                </button>
             </form>
         </dialog>
 
@@ -543,25 +594,3 @@ onMounted(() => {
         </ConfirmModal>
     </PageLayout>
 </template>
-
-<style scoped>
-.destination-grid {
-    display: grid;
-    gap: 1rem;
-}
-
-.filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 0.25rem 0.75rem;
-    max-height: 16rem;
-    overflow-y: auto;
-}
-
-.filter-option {
-    display: flex;
-    gap: 0.35rem;
-    align-items: center;
-    font-size: 0.85rem;
-}
-</style>

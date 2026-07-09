@@ -32,6 +32,7 @@ export class SecretProviderRegistry {
      *
      * @param id Provider identifier
      * @returns Provider instance
+     * @throws {Error} {@link Error}
      */
     require(id: string): SharedSecretProvider {
         const provider = this.get(id);

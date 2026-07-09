@@ -19,6 +19,7 @@ export const GET = defineRoute({
             200: PaginatedListSchema(ContainerRegistryImageSchema)
         }
     },
+
     async handler(req) {
         return ControlPlaneService.ContainerRegistry.listImages(req.query);
     }

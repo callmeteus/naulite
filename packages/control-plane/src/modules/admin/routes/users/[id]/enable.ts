@@ -35,6 +35,7 @@ export const POST = defineRoute({
             404: z.object({ message: z.string() })
         }
     },
+
     async handler(req) {
         const enabled = await AdminService.enableUser(req.params.id);
 

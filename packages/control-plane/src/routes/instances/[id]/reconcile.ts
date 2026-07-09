@@ -2,10 +2,10 @@ import { z } from "zod";
 
 import { IdParamsSchema } from "@naulite/shared";
 
+import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { LeaderPreHandlers } from "../../../auth/LeaderPreHandlers";
 import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
-import { ControlPlaneService } from "../../../ControlPlaneService";
 import { HTTP404Error } from "../../../errors/TreatedError";
 import { defineRoute } from "../../../routing/DefineRoute";
 
@@ -21,6 +21,7 @@ export const POST = defineRoute({
         LeaderPreHandlers.requireLeader(),
         PermissionPreHandlers.requirePermission("workloads:write")
     ],
+
     schema: {
         summary: "Reconcile instance",
         description: "Manually re-dispatches a pending or failed workload instance to its agent.",
@@ -31,6 +32,7 @@ export const POST = defineRoute({
             200: InstanceReconcileResultSchema
         }
     },
+
     async handler(req) {
         const { id } = req.params;
         const instances = await ControlPlaneService.Store.listInstances();

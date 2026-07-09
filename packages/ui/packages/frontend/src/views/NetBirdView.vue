@@ -41,7 +41,9 @@ onMounted(() => {
         <div v-else-if="!store.error" class="grid gap-6 lg:grid-cols-2">
             <div class="card bg-base-100 shadow">
                 <div class="card-body">
-                    <h3 class="card-title text-base">{{ t("pages.netbird.topology") }}</h3>
+                    <h3 class="card-title text-base">
+                        {{ t("pages.netbird.topology") }}
+                    </h3>
                     <p>{{ t("pages.netbird.groupsCount") }}: {{ store.netBirdTopology?.groups.length ?? 0 }}</p>
                     <p>{{ t("pages.netbird.devicesCount") }}: {{ store.netBirdTopology?.devices.length ?? 0 }}</p>
                 </div>
@@ -49,7 +51,9 @@ onMounted(() => {
 
             <div class="card bg-base-100 shadow lg:col-span-2">
                 <div class="card-body overflow-x-auto p-0 sm:p-6">
-                    <h3 class="px-6 pt-6 text-lg font-semibold sm:px-0 sm:pt-0">{{ t("pages.netbird.devices") }}</h3>
+                    <h3 class="px-6 pt-6 text-lg font-semibold sm:px-0 sm:pt-0">
+                        {{ t("pages.netbird.devices") }}
+                    </h3>
                     <table class="table table-zebra mt-4">
                         <thead>
                             <tr>
@@ -71,7 +75,9 @@ onMounted(() => {
 
             <div class="card bg-base-100 shadow">
                 <div class="card-body overflow-x-auto p-0 sm:p-6">
-                    <h3 class="px-6 pt-6 text-lg font-semibold sm:px-0 sm:pt-0">{{ t("pages.netbird.groups") }}</h3>
+                    <h3 class="px-6 pt-6 text-lg font-semibold sm:px-0 sm:pt-0">
+                        {{ t("pages.netbird.groups") }}
+                    </h3>
                     <table class="table table-zebra mt-4">
                         <thead>
                             <tr>
@@ -91,7 +97,9 @@ onMounted(() => {
 
             <div class="card bg-base-100 shadow">
                 <div class="card-body overflow-x-auto p-0 sm:p-6">
-                    <h3 class="px-6 pt-6 text-lg font-semibold sm:px-0 sm:pt-0">{{ t("pages.netbird.acls") }}</h3>
+                    <h3 class="px-6 pt-6 text-lg font-semibold sm:px-0 sm:pt-0">
+                        {{ t("pages.netbird.acls") }}
+                    </h3>
                     <table class="table table-zebra mt-4">
                         <thead>
                             <tr>

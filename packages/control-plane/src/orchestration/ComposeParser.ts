@@ -1,6 +1,6 @@
-import { ManifestSchema, type Manifest, type ManifestBuild, type ManifestService, type NetworkExposure } from "@naulite/shared";
 import { parse as parseYaml } from "yaml";
 import { ZodError } from "zod";
+import { ManifestSchema, type Manifest, type ManifestBuild, type ManifestService, type NetworkExposure } from "@naulite/shared";
 
 import { InvalidManifestDocumentError } from "../errors/orchestration/compose/InvalidManifestDocumentError";
 import { ManifestValidationError } from "../errors/orchestration/compose/ManifestValidationError";
@@ -29,6 +29,9 @@ export class ComposeParser {
      * 
      * @param yamlContent Raw compose YAML content
      * @returns Validated platform manifest
+     * @throws {YamlParseError} {@link YamlParseError}
+     * @throws {InvalidManifestDocumentError} {@link InvalidManifestDocumentError}
+     * @throws {ManifestValidationError} {@link ManifestValidationError}
      */
     parse(yamlContent: string): Manifest {
         let document: RawComposeDocument | null;
@@ -138,6 +141,7 @@ export class ComposeParser {
                 provider: (buildObject.provider as ManifestBuild["provider"])
                     ?? (legacyOptions?.provider as ManifestBuild["provider"])
                     ?? "docker",
+
                 cluster: (buildObject.cluster as ManifestBuild["cluster"])
                     ?? (legacyOptions?.cluster as ManifestBuild["cluster"])
             };

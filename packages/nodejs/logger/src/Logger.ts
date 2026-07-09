@@ -3,13 +3,17 @@ import path from "node:path";
 import { format } from "node:util";
 
 import winston from "winston";
+import type winstonDailyRotateFile from "winston-daily-rotate-file";
 import type TransportStream from "winston-transport";
 
 import { formatLogLine, formatLogTimestamp, type LogLevel } from "./format";
 
 const require = createRequire(import.meta.url);
-const DailyRotateFile = require("winston-daily-rotate-file") as typeof import("winston-daily-rotate-file");
+const DailyRotateFile = require("winston-daily-rotate-file") as typeof winstonDailyRotateFile;
 
+/**
+ * Numeric priority for each supported log level.
+ */
 const LOG_LEVELS: Record<LogLevel, number> = {
     error: 0,
     warn: 1,

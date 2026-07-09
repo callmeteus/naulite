@@ -1,5 +1,3 @@
-import { NotificationProviderFilterModel } from "./NotificationProviderFilterModel";
-import { NotificationDestinationModel } from "./NotificationDestinationModel";
 import { AdminAuditLogModel } from "./AdminAuditLogModel";
 import { AdminSessionModel } from "./AdminSessionModel";
 import { AdminUserModel } from "./AdminUserModel";
@@ -14,8 +12,10 @@ import { GatewayRouteModel } from "./GatewayRouteModel";
 import { GitRevisionModel } from "./GitRevisionModel";
 import { InstanceModel } from "./InstanceModel";
 import { LogRotationRunModel } from "./LogRotationRunModel";
-import { NodeProvisionModel } from "./NodeProvisionModel";
 import { NodeModel } from "./NodeModel";
+import { NodeProvisionModel } from "./NodeProvisionModel";
+import { NotificationDestinationModel } from "./NotificationDestinationModel";
+import { NotificationProviderFilterModel } from "./NotificationProviderFilterModel";
 import { PipelineEventModel } from "./PipelineEventModel";
 import { PipelineRunModel } from "./PipelineRunModel";
 import { PipelineStepModel } from "./PipelineStepModel";

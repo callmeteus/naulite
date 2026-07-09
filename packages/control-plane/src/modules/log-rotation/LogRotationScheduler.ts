@@ -4,13 +4,12 @@ import { Op } from "sequelize";
 
 import type { Instance, Service } from "@naulite/shared";
 
+import { Logger } from "../../Logger";
 import { InstanceModel, LogRotationRunModel, NodeModel, ServiceModel } from "../../database/models/index";
 import { AgentProxyService } from "../../services/AgentProxyService";
 import { RowMapper } from "../../util/RowMapper";
 import { CronEvaluator } from "./CronEvaluator";
-import { Logger } from "../../Logger";
-const log_log_rotation = Logger.create("log-rotation");
-
+const logLogRotation = Logger.create("log-rotation");
 
 /**
  * Dispatches a JSON task payload to a node agent.
@@ -62,7 +61,7 @@ export class LogRotationScheduler {
 
         this.intervalHandle = setInterval(() => {
             void this.tick().catch((err) => {
-                log_log_rotation.debug("scheduler tick failed err=%o", err);
+                logLogRotation.debug("scheduler tick failed err=%o", err);
             });
         }, this.pollIntervalMs);
     }
@@ -86,7 +85,7 @@ export class LogRotationScheduler {
      */
     async tick(): Promise<void> {
         if (!this.isLeader()) {
-            log_log_rotation.debug("scheduler tick skipped reason=not-leader");
+            logLogRotation.debug("scheduler tick skipped reason=not-leader");
             return;
         }
 
@@ -111,7 +110,7 @@ export class LogRotationScheduler {
 
             for (const instance of serviceInstances) {
                 if (await this.hasRecentRun(instance.id, now)) {
-                    log_log_rotation.debug("skip recent run instance=%s", instance.id);
+                    logLogRotation.debug("skip recent run instance=%s", instance.id);
                     continue;
                 }
 
@@ -130,8 +129,9 @@ export class LogRotationScheduler {
      */
     private async enqueueRotationRun(service: Service, instance: Instance, now: Date): Promise<void> {
         const node = await this.resolveNode(instance.nodeId);
+
         if (!node?.agentUrl) {
-            log_log_rotation.debug("skip dispatch service=%s instance=%s reason=no-agent", service.name, instance.id);
+            logLogRotation.debug("skip dispatch service=%s instance=%s reason=no-agent", service.name, instance.id);
             return;
         }
 
@@ -171,7 +171,7 @@ export class LogRotationScheduler {
                 { where: { id: taskId } }
             );
 
-            log_log_rotation.debug("dispatched taskId=%s service=%s instance=%s node=%s",
+            logLogRotation.debug("dispatched taskId=%s service=%s instance=%s node=%s",
                 taskId,
                 service.name,
                 instance.id,
@@ -186,7 +186,8 @@ export class LogRotationScheduler {
                 },
                 { where: { id: taskId } }
             );
-            log_log_rotation.debug("dispatch failed taskId=%s service=%s err=%o",
+
+            logLogRotation.debug("dispatch failed taskId=%s service=%s err=%o",
                 taskId,
                 service.name,
                 err

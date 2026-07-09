@@ -1,5 +1,5 @@
-import type { Registry } from "../types/Registry";
 import type { ResolvedSecret } from "../types/Common";
+import type { Registry } from "../types/Registry";
 
 /**
  * Credentials resolved for a registry pull or push operation.

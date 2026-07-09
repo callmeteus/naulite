@@ -1,6 +1,6 @@
-import { MockNetBirdAdapter, NetBirdService } from "./NetBirdService";
-import { NetBirdConfig } from "./NetBirdConfig";
 import type { NetBirdCredentials } from "./NetBirdBootstrap";
+import { NetBirdConfig } from "./NetBirdConfig";
+import { MockNetBirdAdapter, NetBirdService } from "./NetBirdService";
 import { SelfHostedNetBirdAdapter } from "./SelfHostedNetBirdAdapter";
 
 /**

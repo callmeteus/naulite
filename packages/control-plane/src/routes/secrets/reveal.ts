@@ -22,6 +22,7 @@ export const GET = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req) {
         const { name } = req.query;
         const data = await ControlPlaneService.Secrets.revealValues(name);

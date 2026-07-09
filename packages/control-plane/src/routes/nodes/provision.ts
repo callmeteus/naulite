@@ -3,8 +3,8 @@ import {
     ProvisionNodeBodySchema
 } from "@naulite/shared";
 
-import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { ControlPlaneService } from "../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 
 export const POST = defineRoute({
@@ -19,6 +19,7 @@ export const POST = defineRoute({
             201: NodeProvisionSchema
         }
     },
+
     async handler(req, res) {
         const provision = await ControlPlaneService.NodeProvision.provision(req.body);
         res.code(201);

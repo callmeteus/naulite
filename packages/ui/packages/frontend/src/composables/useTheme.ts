@@ -1,5 +1,8 @@
 import { ref, watch } from "vue";
 
+/**
+ * Local storage key for persisted theme preference.
+ */
 const STORAGE_KEY = "naulite-ui-theme";
 
 export type AppTheme = "light" | "dark";

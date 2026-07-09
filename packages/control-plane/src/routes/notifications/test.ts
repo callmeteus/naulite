@@ -12,6 +12,7 @@ export const POST = defineRoute({
         LeaderPreHandlers.requireLeader(),
         PermissionPreHandlers.requirePermission("notifications:write")
     ],
+
     schema: {
         summary: "Test notification providers",
         description: "Sends a synthetic pipeline notification to every enabled notification destination.",
@@ -21,6 +22,7 @@ export const POST = defineRoute({
             200: NotificationDestinationTestResponseSchema
         }
     },
+
     async handler() {
         return {
             destinations: await RunNotificationDispatcher.testPing()

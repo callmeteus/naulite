@@ -1,9 +1,9 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import type { SecretsService } from "../services/SecretsService";
-import { ManifestMerge } from "./ManifestMerge";
-import { ManifestInterpolator } from "./ManifestInterpolator";
 import { GitSourceRepository } from "./GitSourceRepository";
+import { ManifestInterpolator } from "./ManifestInterpolator";
+import { ManifestMerge } from "./ManifestMerge";
 
 /**
  * Resolves platform-specific compose directives (`extends`, `vars`, `apps`) into
@@ -22,18 +22,22 @@ export namespace ManifestResolver {
          * Raw YAML of the manifest to resolve.
          */
         yaml: string;
+
         /**
          * Base directory used to resolve relative local paths.
          */
         baseDir: string;
+
         /**
          * Secret service used to resolve `credentials.from: secret`.
          */
         secrets: SecretsService;
+
         /**
          * Vars inherited from the catalog (app-of-apps).
          */
         inheritedVars?: Record<string, string>;
+
         /**
          * Optional cache shared across multiple resolves (e.g. app-of-apps).
          */
@@ -45,29 +49,37 @@ export namespace ManifestResolver {
          * Fully resolved YAML suitable for `ComposeParser.parse`.
          */
         resolvedYaml: string;
+
         /**
          * Working directories (git checkouts / local directories) used as build context roots.
          */
         workDirs: string[];
+
         /**
          * Normalized git/local source identifiers referenced during resolution (auditing).
          */
         extendsSources: string[];
+
         /**
          * Final merged vars (`inheritedVars` overridden by local `vars`).
          */
         vars: Record<string, string>;
+
         /**
          * Present only when this manifest is an app-of-apps catalog.
          */
         apps?: Record<string, { path: string }>;
     }
 
+    /**
+     * Manifest keys handled by the resolver instead of ComposeParser.
+     */
     const META_KEYS = ["extends", "vars", "apps"];
 
     export async function resolve(options: ResolveOptions): Promise<ResolveResult> {
         const cache = options.cache ?? GitSourceRepository.createInMemoryCache();
         const rootDoc = parseYaml(options.yaml) as unknown;
+
         if (!rootDoc || typeof rootDoc !== "object" || Array.isArray(rootDoc)) {
             throw new Error("Manifest YAML deve conter um objeto na root.");
         }
@@ -117,6 +129,7 @@ export namespace ManifestResolver {
         cache: GitSourceRepository.RepositoryCache;
     }): Promise<{ mergedRoot: Record<string, unknown>; rootWorkDirs: string[]; rootSources: string[] }> {
         const extendsValue = options.doc.extends;
+
         if (!extendsValue) {
             return { mergedRoot: options.doc, rootWorkDirs: [], rootSources: [] };
         }
@@ -137,6 +150,7 @@ export namespace ManifestResolver {
             sources.push(source.sourceId);
 
             const baseDoc = parseYaml(source.yaml) as unknown;
+
             if (!baseDoc || typeof baseDoc !== "object" || Array.isArray(baseDoc)) {
                 throw new Error(`Arquivo base inválido em extends: ${entry.file}`);
             }
@@ -155,6 +169,7 @@ export namespace ManifestResolver {
                 if (!isPlainObject(v) || typeof v.file !== "string") {
                     throw new Error("extends na root deve ser um objeto { file } ou uma lista disso.");
                 }
+
                 return { file: v.file, credentials: v.credentials as GitCredentials | undefined };
             });
         }
@@ -173,6 +188,7 @@ export namespace ManifestResolver {
         cache: GitSourceRepository.RepositoryCache;
     }): Promise<{ doc: Record<string, unknown>; workDirs: string[]; sources: string[] }> {
         const services = options.doc.services;
+
         if (!isPlainObject(services)) {
             return { doc: options.doc, workDirs: [], sources: [] };
         }
@@ -189,6 +205,7 @@ export namespace ManifestResolver {
 
             const service = rawService as Record<string, unknown>;
             const extendsSpec = service.extends;
+
             if (!extendsSpec) {
                 continue;
             }
@@ -198,17 +215,20 @@ export namespace ManifestResolver {
             sources.push(resolved.sourceId);
 
             const baseDoc = parseYaml(resolved.yaml) as unknown;
+
             if (!isPlainObject(baseDoc)) {
                 throw new Error(`Compose base inválido: ${resolved.sourceId}`);
             }
 
             const baseServices = (baseDoc as Record<string, unknown>).services;
+
             if (!isPlainObject(baseServices)) {
                 throw new Error(`Compose base não tem services: ${resolved.sourceId}`);
             }
 
             const baseServiceName = readServiceExtendsService(extendsSpec);
             const baseService = (baseServices as Record<string, unknown>)[baseServiceName];
+
             if (!isPlainObject(baseService)) {
                 throw new Error(`Service base não encontrado: ${baseServiceName} em ${resolved.sourceId}`);
             }
@@ -282,6 +302,7 @@ export namespace ManifestResolver {
             if (META_KEYS.includes(k)) {
                 continue;
             }
+
             out[k] = stripMetaKeys(v);
         }
 

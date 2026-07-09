@@ -1,6 +1,6 @@
+import { HealthReadyResponseSchema } from "@naulite/shared";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
-import { HealthReadyResponseSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
     schema: {
@@ -12,6 +12,7 @@ export const GET = defineRoute({
             200: HealthReadyResponseSchema
         }
     },
+
     async handler(_req, reply) {
         const databaseHealthy = await ControlPlaneService.Database.healthCheck();
         const migrationsReady = !(await ControlPlaneService.Database.hasPendingMigrations());

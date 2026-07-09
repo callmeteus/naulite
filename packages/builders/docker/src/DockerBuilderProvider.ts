@@ -63,6 +63,7 @@ export class DockerBuilderProvider implements BuilderProvider {
      *
      * @param options Kaniko build options
      * @returns Build result metadata
+     * @throws {Error} {@link Error}
      */
     async buildWithKaniko(options: KanikoBuildOptions): Promise<BuildResult> {
         void options;

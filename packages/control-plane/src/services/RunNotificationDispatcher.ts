@@ -1,7 +1,7 @@
 import type { NotificationProvider, PipelineEventKind, PipelineNotificationEvent } from "@naulite/shared";
 
 import { Logger } from "../Logger";
-const log_pipeline = Logger.create("pipeline");
+const logPipeline = Logger.create("pipeline");
 
 interface RegisteredNotificationProvider {
     provider: NotificationProvider;
@@ -28,7 +28,7 @@ export namespace RunNotificationDispatcher {
         allowedKinds: PipelineEventKind[] | null = null
     ): void {
         providers.set(id, { provider, allowedKinds });
-        log_pipeline.debug("notification provider registered id=%s count=%d", id, providers.size);
+        logPipeline.debug("notification provider registered id=%s count=%d", id, providers.size);
     }
 
     /**
@@ -84,20 +84,20 @@ export namespace RunNotificationDispatcher {
      */
     export async function dispatch(event: PipelineNotificationEvent): Promise<void> {
         if (providers.size === 0) {
-            log_pipeline.debug("notification skipped kind=%s providers=0", event.kind);
+            logPipeline.debug("notification skipped kind=%s providers=0", event.kind);
             return;
         }
 
         await Promise.all([...providers.entries()].map(async ([id, entry]) => {
             try {
                 if (entry.allowedKinds && !entry.allowedKinds.includes(event.kind)) {
-                    log_pipeline.debug("notification filtered id=%s kind=%s", id, event.kind);
+                    logPipeline.debug("notification filtered id=%s kind=%s", id, event.kind);
                     return;
                 }
 
                 await entry.provider.onPipelineEvent(event);
             } catch (err) {
-                log_pipeline.error("notification provider failed: %O", err);
+                logPipeline.error("notification provider failed: %O", err);
             }
         }));
     }

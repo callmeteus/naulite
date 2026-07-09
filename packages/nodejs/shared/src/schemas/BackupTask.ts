@@ -89,6 +89,7 @@ export const BackupTaskSchema = z.object({
         S3BackupDestinationSchema,
         PluginBackupDestinationSchema
     ]),
+
     resolvedSecrets: z.record(z.string(), z.string()).default({}),
     status: BackupTaskStatusSchema.default("pending"),
     startedAt: TimestampSchema.optional(),

@@ -1,6 +1,13 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
+/**
+ * AES-GCM algorithm used for secret encryption at rest.
+ */
 const ALGORITHM = "aes-256-gcm";
+
+/**
+ * Initialization vector length in bytes for AES-GCM.
+ */
 const IV_LENGTH = 12;
 
 /**

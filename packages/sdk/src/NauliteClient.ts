@@ -265,6 +265,7 @@ export class NauliteClient {
             password: input.password,
             role: input.role
         });
+
         return AdminUserMapper.toSdkUser(user);
     }
 
@@ -281,6 +282,7 @@ export class NauliteClient {
             `/admin/users/${encodeURIComponent(userId)}/disable`,
             input
         );
+
         return AdminUserMapper.toSdkUser(user);
     }
 
@@ -295,6 +297,7 @@ export class NauliteClient {
             "GET",
             `/admin/users/${encodeURIComponent(userId)}`
         );
+
         return AdminUserMapper.toSdkUser(user);
     }
 
@@ -325,6 +328,7 @@ export class NauliteClient {
             `/admin/users/${encodeURIComponent(userId)}`,
             payload
         );
+
         return AdminUserMapper.toSdkUser(user);
     }
 
@@ -339,6 +343,7 @@ export class NauliteClient {
             "POST",
             `/admin/users/${encodeURIComponent(userId)}/enable`
         );
+
         return AdminUserMapper.toSdkUser(user);
     }
 
@@ -853,6 +858,7 @@ export class NauliteClient {
      *
      * @param runId Pipeline run identifier
      * @returns Async iterator of pipeline events
+     * @throws {NauliteApiError} {@link NauliteApiError}
      */
     async *streamRunEvents(runId: string): AsyncGenerator<PipelineEvent> {
         const headers: Record<string, string> = {
@@ -1090,6 +1096,7 @@ export class NauliteClient {
     /**
      * Lists recorded GitOps revisions.
      *
+     * @param manifestName Optional manifest name filter
      * @returns Revision list wrapper
      */
     async listGitOpsRevisions(manifestName?: string): Promise<{ revisions: Array<Record<string, unknown>> }> {
@@ -1298,6 +1305,7 @@ export class NauliteClient {
      * @param name Image name
      * @param tag Image tag
      * @returns Image metadata derived from response headers
+     * @throws {NauliteApiError} {@link NauliteApiError}
      */
     async headContainerRegistryImage(name: string, tag: string): Promise<ContainerRegistryImageHead> {
         const headers: Record<string, string> = {
@@ -1381,6 +1389,7 @@ export class NauliteClient {
      * @param body Optional JSON body
      * @param allowLeaderRetry Whether a follower 503 may be retried on the leader
      * @returns Parsed JSON response
+     * @throws {unknown}
      */
     private async requestOnBaseUrl<T>(
         baseUrl: string,
@@ -1501,6 +1510,7 @@ export class NauliteClient {
     /**
      * Builds authorization headers for control plane requests.
      *
+     * @param method HTTP method for the request
      * @param hasJsonBody Whether the request includes a JSON body
      * @returns Header map
      */
@@ -1550,6 +1560,7 @@ export class NauliteClient {
      * @param method HTTP method
      * @param path API path
      * @returns Raw response body
+     * @throws {NauliteApiError} {@link NauliteApiError}
      */
     private async requestText(method: string, path: string): Promise<string> {
         const headers: Record<string, string> = {

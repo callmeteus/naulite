@@ -19,6 +19,7 @@ export const GET = defineRoute({
             200: PrometheusQueryResponseSchema
         }
     },
+
     async handler(req) {
         return PrometheusClient.proxyGet("/api/v1/query_range", {
             query: req.query.query,

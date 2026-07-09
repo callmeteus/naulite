@@ -4,10 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { AgentProxyService } from "./AgentProxyService";
 import { Logger } from "../Logger";
-const log_build_context = Logger.create("build-context");
-
+import { AgentProxyService } from "./AgentProxyService";
+const logBuildContext = Logger.create("build-context");
 
 const execFileAsync = promisify(execFile);
 
@@ -31,6 +30,7 @@ export namespace BuildContextService {
      * @param contextRoot Repository or fixture root directory on the control plane
      * @param relativeContextPath Relative context path from the manifest build block
      * @returns Absolute path to the build context directory
+     * @throws {Error} {@link Error}
      */
     export async function resolveLocalContextPath(
         contextRoot: string,
@@ -61,6 +61,7 @@ export namespace BuildContextService {
             await execFileAsync("tar", ["-czf", archivePath, "-C", contextDir, "."], {
                 windowsHide: true
             });
+
             return await readFile(archivePath);
         } finally {
             await rm(tempDir, { recursive: true, force: true });
@@ -72,6 +73,7 @@ export namespace BuildContextService {
      *
      * @param options Build context sync options
      * @returns Agent-side context path ready for docker build
+     * @throws {Error} {@link Error}
      */
     export async function syncToAgent(options: BuildContextSyncOptions): Promise<string> {
         const relativePath = options.relativeContextPath ?? ".";
@@ -79,7 +81,7 @@ export namespace BuildContextService {
         const archive = await createContextArchive(localContextPath);
         const archiveBase64 = archive.toString("base64");
 
-        log_build_context.debug("sync service=%s root=%s bytes=%d agent=%s",
+        logBuildContext.debug("sync service=%s root=%s bytes=%d agent=%s",
             options.serviceName,
             localContextPath,
             archive.byteLength,

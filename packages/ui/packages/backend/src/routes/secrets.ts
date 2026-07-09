@@ -18,6 +18,7 @@ export async function registerSecretRoutes(app: FastifyInstance): Promise<void> 
         const query = z.object({
             name: z.string().min(1)
         }).parse(request.query);
+
         return app.controlPlane.revealSecret(query.name);
     });
 
@@ -30,6 +31,7 @@ export async function registerSecretRoutes(app: FastifyInstance): Promise<void> 
         const params = z.object({
             name: z.string().min(1)
         }).parse(request.params);
+
         await app.controlPlane.deleteSecret(params.name);
         return { deleted: true, name: params.name };
     });

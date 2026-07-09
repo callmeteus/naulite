@@ -1,20 +1,21 @@
-import { GitOpsWebhookBodySchema, LooseObjectSchema } from "@naulite/shared";
 import { parse as parseYaml } from "yaml";
+import { GitOpsWebhookBodySchema, LooseObjectSchema } from "@naulite/shared";
 
+import { ControlPlaneService } from "../../ControlPlaneService";
 import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
 import { LeaderPreHandlers } from "../../auth/LeaderPreHandlers";
-import { ApplyService } from "../../services/ApplyService";
-import { AppOfAppsService } from "../../services/AppOfAppsService";
-import { ControlPlaneService } from "../../ControlPlaneService";
 import { HTTP401Error } from "../../errors/TreatedError";
 import { WebhookSignature } from "../../gitops/WebhookSignature";
 import { defineRoute } from "../../routing/DefineRoute";
+import { AppOfAppsService } from "../../services/AppOfAppsService";
+import { ApplyService } from "../../services/ApplyService";
 
 /**
  * Verifies the GitOps webhook signature when a secret is configured.
  *
  * @param request Incoming Fastify request with raw body
  * @returns Nothing.
+ * @throws {HTTP401Error} {@link HTTP401Error}
  */
 function verifyGitOpsWebhookSignature(request: {
     headers: Record<string, string | string[] | undefined>;
@@ -56,6 +57,7 @@ export const POST = defineRoute({
         },
         LeaderPreHandlers.requireLeader()
     ],
+
     schema: {
         summary: "Webhook GitOps",
         description: "Receives a repository event, checks out/merges, and applies the resulting manifest.",
@@ -66,6 +68,7 @@ export const POST = defineRoute({
             200: LooseObjectSchema
         }
     },
+
     async handler(req) {
         const body = req.body;
         const checkout = await ControlPlaneService.GitOps.checkoutAndMerge({

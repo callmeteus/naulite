@@ -1,14 +1,15 @@
-import { ApplyService } from "../services/ApplyService";
+import { ApplyManifestBodySchema, LooseObjectSchema } from "@naulite/shared";
 import { LeaderPreHandlers } from "../auth/LeaderPreHandlers";
 import { PermissionPreHandlers } from "../auth/PermissionPreHandlers";
 import { defineRoute } from "../routing/DefineRoute";
-import { ApplyManifestBodySchema, LooseObjectSchema } from "@naulite/shared";
+import { ApplyService } from "../services/ApplyService";
 
 export const POST = defineRoute({
     preHandler: [
         ...PermissionPreHandlers.authorizedWithPermission("manifests:apply"),
         LeaderPreHandlers.requireLeader()
     ],
+
     schema: {
         summary: "Apply manifest",
         description: "Applies a YAML manifest to the cluster and dispatches the plan to agents.",
@@ -19,6 +20,7 @@ export const POST = defineRoute({
             200: LooseObjectSchema
         }
     },
+
     async handler(req) {
         const body = req.body;
         const manifestYaml = body.manifestYaml ?? body.manifest ?? "";

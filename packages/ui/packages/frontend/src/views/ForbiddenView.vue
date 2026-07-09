@@ -10,7 +10,9 @@ const router = useRouter();
     <PageLayout title-key="pages.forbidden.title" hint-key="pages.forbidden.message">
         <div class="card bg-base-100 shadow">
             <div class="card-body items-center text-center">
-                <h2 class="card-title text-error">403</h2>
+                <h2 class="card-title text-error">
+                    403
+                </h2>
                 <button type="button" class="btn btn-primary" @click="router.push('/nodes')">
                     {{ $t("pages.forbidden.back") }}
                 </button>

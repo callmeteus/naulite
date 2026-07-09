@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { AuthPreHandlers } from "../../../../auth/AuthPreHandlers";
-import { defineRoute } from "../../../../routing/DefineRoute";
 import { ControlPlaneService } from "../../../../ControlPlaneService";
+import { AuthPreHandlers } from "../../../../auth/AuthPreHandlers";
 import { HTTP404Error } from "../../../../errors/TreatedError";
+import { defineRoute } from "../../../../routing/DefineRoute";
 
 const FunctionRunParamsSchema = z.object({
     name: z.string().min(1),
@@ -40,13 +40,16 @@ export const GET = defineRoute({
             200: FunctionRunResponseSchema
         }
     },
+
     async handler(req) {
         const run = await ControlPlaneService.Store.getFunctionRun(req.params.id);
+
         if (!run || run.serviceName !== req.params.name) {
             throw new HTTP404Error(`Function run ${req.params.id} not found.`, {
                 error: "not_found"
             });
         }
+
         return run;
     }
 });

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 
+import { Op } from "sequelize";
 import type {
     PipelineEvent,
     PipelineEventKind,
@@ -11,8 +12,8 @@ import type {
     PaginatedList
 } from "@naulite/shared";
 import { buildPaginatedList, paginationOffset } from "@naulite/shared";
-import { Op } from "sequelize";
 
+import { Logger } from "../Logger";
 import {
     PipelineEventModel,
     PipelineRunModel,
@@ -20,10 +21,11 @@ import {
 } from "../database/models/index";
 
 import { RunNotificationDispatcher } from "./RunNotificationDispatcher";
-import { Logger } from "../Logger";
-const log_pipeline = Logger.create("pipeline");
+const logPipeline = Logger.create("pipeline");
 
-
+/**
+ * Maximum failure log bytes retained on a pipeline run.
+ */
 const FAILURE_LOG_MAX_BYTES = 512 * 1024;
 
 /**
@@ -76,6 +78,7 @@ export namespace PipelineRunService {
      *
      * @param input Run creation payload
      * @returns Persisted pipeline run
+     * @throws {Error} {@link Error}
      */
     export async function createRun(input: CreatePipelineRunInput): Promise<PipelineRun> {
         const now = new Date().toISOString();
@@ -103,7 +106,7 @@ export namespace PipelineRunService {
             createdAt: now
         });
 
-        log_pipeline.debug("run created id=%s kind=%s service=%s",
+        logPipeline.debug("run created id=%s kind=%s service=%s",
             id,
             input.kind,
             input.serviceName ?? "-"
@@ -174,6 +177,7 @@ export namespace PipelineRunService {
             const kind: PipelineEventKind = status === "succeeded"
                 ? run.kind === "ci_build" ? "ci.build.finished" : "infra.sync.finished"
                 : "ci.pipeline.failed";
+
             await emitEvent(runId, {
                 kind,
                 message: options.errorMessage ?? (status === "succeeded" ? "Run succeeded." : "Run failed."),
@@ -307,6 +311,7 @@ export namespace PipelineRunService {
                 nodeHostname: input.nodeHostname,
                 pool: input.pool
             },
+
             createdAt
         });
 
@@ -317,7 +322,7 @@ export namespace PipelineRunService {
             await RunNotificationDispatcher.dispatch(notification);
         }
 
-        log_pipeline.debug("event runId=%s kind=%s message=%s", runId, input.kind, input.message);
+        logPipeline.debug("event runId=%s kind=%s message=%s", runId, input.kind, input.message);
 
         return event;
     }
@@ -337,7 +342,7 @@ export namespace PipelineRunService {
         }
 
         await row.update({ revisionId });
-        log_pipeline.debug("run linked runId=%s revisionId=%s", runId, revisionId);
+        logPipeline.debug("run linked runId=%s revisionId=%s", runId, revisionId);
 
         return getRun(runId);
     }

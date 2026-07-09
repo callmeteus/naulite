@@ -7,7 +7,6 @@ import { ControlPlaneService } from "../../ControlPlaneService";
 import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
 
-
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:read"),
     schema: {
@@ -21,6 +20,7 @@ export const GET = defineRoute({
             404: RouteMessageResponseSchema
         }
     },
+
     async handler(req, res) {
         const { id } = req.params;
         const node = await ControlPlaneService.Store.getNode(id);

@@ -3,6 +3,9 @@ import { createHmac } from "node:crypto";
 import type { NotificationProvider, PipelineNotificationEvent } from "@naulite/shared";
 import { PipelineNotificationPayload } from "@naulite/shared";
 
+/**
+ * HTTP header carrying the HMAC signature for webhook payloads.
+ */
 const SIGNATURE_HEADER = "x-naulite-signature";
 
 /**
@@ -33,6 +36,7 @@ export class WebhookNotificationProvider implements NotificationProvider {
      *
      * @param event Normalized pipeline notification payload
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     async onPipelineEvent(event: PipelineNotificationEvent): Promise<void> {
         if (!this.webhookUrl) {
@@ -55,6 +59,7 @@ export class WebhookNotificationProvider implements NotificationProvider {
             const digest = createHmac("sha256", this.webhookSecret)
                 .update(body)
                 .digest("hex");
+
             headers[SIGNATURE_HEADER] = `sha256=${digest}`;
         }
 
@@ -77,5 +82,6 @@ export const webhookNotificationProvider = new WebhookNotificationProvider({
     webhookUrl: process.env.NAULITE_WEBHOOK_URL
         ?? process.env.WEBHOOK_URL
         ?? "",
+
     webhookSecret: process.env.NAULITE_WEBHOOK_SECRET
 });

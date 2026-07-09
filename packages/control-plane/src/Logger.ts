@@ -1,5 +1,8 @@
 import { Logger as CoreLogger } from "@naulite/logger";
 
+/**
+ * Winston service name for control plane loggers.
+ */
 const SERVICE = "control-plane";
 
 /**

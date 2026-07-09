@@ -1,12 +1,12 @@
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { Sequelize } from "sequelize-typescript";
 import type {
     DatabaseConnectionOptions,
     DatabaseDialect,
     DatabaseMigrationResult,
     DatabaseProvider as DatabaseProviderContract
 } from "@naulite/shared";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { Sequelize } from "sequelize-typescript";
 
 import { MigrationRunner } from "./MigrationRunner";
 import { controlPlaneModels } from "./models/index";
@@ -22,6 +22,7 @@ export class DatabaseProvider implements DatabaseProviderContract {
      * Returns the active Sequelize instance.
      *
      * @returns Connected Sequelize instance
+     * @throws {Error} {@link Error}
      */
     getSequelize(): Sequelize {
         if (!this.sequelize) {
@@ -57,10 +58,12 @@ export class DatabaseProvider implements DatabaseProviderContract {
                 pool: {
                     max: options.maxConnections ?? 10
                 },
+
                 dialectOptions: options.ssl
                     ? { ssl: { rejectUnauthorized: false } }
                     : undefined
             });
+
             await this.sequelize.authenticate();
             return;
         }
@@ -78,6 +81,7 @@ export class DatabaseProvider implements DatabaseProviderContract {
             models: controlPlaneModels,
             logging: false
         });
+
         await this.sequelize.authenticate();
     }
 

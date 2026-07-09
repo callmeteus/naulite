@@ -9,6 +9,9 @@ import type { ExecutionPlan, InstanceHealth } from "@naulite/shared";
 
 import { RuntimeNotConfiguredError } from "./RuntimeNotConfiguredError";
 
+/**
+ * Runtime identifier reported by this provider stub.
+ */
 const RUNTIME_ID = "containerd";
 
 /**
@@ -21,6 +24,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * @param image Image reference to pull
      * @param options Optional registry and credential options
      * @returns Nothing.
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async pull(image: string, options?: PullImageOptions): Promise<void> {
         console.debug("[runtime-containerd] pull requested image=%s registryId=%s", image, options?.registryId ?? "-");
@@ -32,6 +36,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * 
      * @param spec Instance creation specification
      * @returns Created container identifier
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async create(spec: CreateInstanceSpec): Promise<string> {
         console.debug("[runtime-containerd] create requested instanceId=%s", spec.instanceId);
@@ -43,6 +48,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * 
      * @param instanceId Instance identifier
      * @returns Nothing.
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async start(instanceId: string): Promise<void> {
         console.debug("[runtime-containerd] start requested instanceId=%s", instanceId);
@@ -54,6 +60,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * 
      * @param instanceId Instance identifier
      * @returns Nothing.
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async stop(instanceId: string): Promise<void> {
         console.debug("[runtime-containerd] stop requested instanceId=%s", instanceId);
@@ -66,6 +73,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * @param instanceId Instance identifier
      * @param force Whether to force removal
      * @returns Nothing.
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async remove(instanceId: string, force?: boolean): Promise<void> {
         console.debug("[runtime-containerd] remove requested instanceId=%s force=%s", instanceId, force ?? false);
@@ -78,6 +86,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * @param instanceId Instance identifier
      * @param options Log stream options
      * @returns Log lines
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async getLogs(instanceId: string, options?: LogStreamOptions): Promise<string[]> {
         console.debug("[runtime-containerd] getLogs requested instanceId=%s tail=%s", instanceId, options?.tail ?? "-");
@@ -90,6 +99,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * @param instanceId Instance identifier
      * @param command Command and arguments to run
      * @returns Exec result with exit code and output
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async exec(instanceId: string, command: string[]): Promise<ExecResult> {
         console.debug("[runtime-containerd] exec requested instanceId=%s command=%o", instanceId, command);
@@ -101,6 +111,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * 
      * @param instanceId Instance identifier
      * @returns Instance health snapshot
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async getHealth(instanceId: string): Promise<InstanceHealth> {
         console.debug("[runtime-containerd] getHealth requested instanceId=%s", instanceId);
@@ -112,6 +123,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
      * 
      * @param plan Execution plan for the local node
      * @returns Nothing.
+     * @throws {RuntimeNotConfiguredError} {@link RuntimeNotConfiguredError}
      */
     async applyPlan(plan: ExecutionPlan): Promise<void> {
         console.debug(
@@ -119,6 +131,7 @@ export class ContainerdRuntimeProvider implements RuntimeProvider {
             plan.nodeId,
             plan.operations.length
         );
+
         throw new RuntimeNotConfiguredError(RUNTIME_ID);
     }
 }

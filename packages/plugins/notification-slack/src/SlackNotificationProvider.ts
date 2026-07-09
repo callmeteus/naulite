@@ -26,6 +26,7 @@ export class SlackNotificationProvider implements NotificationProvider {
      *
      * @param event Normalized pipeline notification payload
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     async onPipelineEvent(event: PipelineNotificationEvent): Promise<void> {
         if (!this.webhookUrl) {
@@ -46,6 +47,7 @@ export class SlackNotificationProvider implements NotificationProvider {
             headers: {
                 "content-type": "application/json"
             },
+
             body: JSON.stringify({
                 text
             })

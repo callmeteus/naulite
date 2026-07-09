@@ -1,19 +1,20 @@
-import { ApplyService } from "../../../services/ApplyService";
-import { ControlPlaneService } from "../../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
-import { LeaderPreHandlers } from "../../../auth/LeaderPreHandlers";
-import { defineRoute } from "../../../routing/DefineRoute";
 import {
     LooseObjectSchema,
     RevisionIdParamsSchema,
     RouteErrorResponseSchema
 } from "@naulite/shared";
+import { ControlPlaneService } from "../../../ControlPlaneService";
+import { LeaderPreHandlers } from "../../../auth/LeaderPreHandlers";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
+import { defineRoute } from "../../../routing/DefineRoute";
+import { ApplyService } from "../../../services/ApplyService";
 
 export const POST = defineRoute({
     preHandler: [
         ...PermissionPreHandlers.authorizedWithPermission("gitops:rollback"),
         LeaderPreHandlers.requireLeader()
     ],
+
     schema: {
         summary: "Rollback GitOps revision",
         description: "Reapplies a previous manifest revision in the cluster.",
@@ -25,6 +26,7 @@ export const POST = defineRoute({
             404: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { revisionId } = req.params;
         const revision = await ControlPlaneService.GitOps.getRevision(revisionId);

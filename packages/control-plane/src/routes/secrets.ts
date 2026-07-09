@@ -19,6 +19,7 @@ export const GET = defineRoute({
             200: z.array(SecretSchema)
         }
     },
+
     async handler() {
         return ControlPlaneService.Secrets.list();
     }
@@ -29,6 +30,7 @@ export const POST = defineRoute({
         ...PermissionPreHandlers.authorizedWithPermission("secrets:write"),
         LeaderPreHandlers.requireLeader()
     ],
+
     schema: {
         summary: "Create secret",
         description: "Creates a cluster secret with encrypted values at rest.",
@@ -39,6 +41,7 @@ export const POST = defineRoute({
             200: SecretSchema
         }
     },
+
     async handler(req) {
         const body = req.body;
 

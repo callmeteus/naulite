@@ -8,6 +8,9 @@ export type TlsMode =
     | "self_signed"
     | "custom";
 
+/**
+ * Supported TLS modes accepted by `NAULITE_TLS_MODE`.
+ */
 const VALID_MODES = new Set<TlsMode>([
     "acme_tls",
     "acme_dns_cloudflare",
@@ -16,6 +19,9 @@ const VALID_MODES = new Set<TlsMode>([
     "custom"
 ]);
 
+/**
+ * Default TLS mode when `NAULITE_TLS_MODE` is unset.
+ */
 const DEFAULT_MODE: TlsMode = "acme_tls";
 
 /**
@@ -26,6 +32,7 @@ export namespace TlsConfig {
      * Returns the active TLS mode from `NAULITE_TLS_MODE`.
      *
      * @returns Normalized TLS mode
+     * @throws {Error} {@link Error}
      */
     export function resolveMode(): TlsMode {
         const raw = process.env.NAULITE_TLS_MODE?.trim().toLowerCase();

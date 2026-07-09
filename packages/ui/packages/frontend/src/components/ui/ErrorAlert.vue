@@ -4,6 +4,9 @@ import { ref } from "vue";
 import type { ParsedApiError } from "../../composables/useApiAction";
 
 const props = defineProps<{
+    /**
+     * Parsed API error, plain message, or null when no error is shown.
+     */
     error: ParsedApiError | string | null;
 }>();
 

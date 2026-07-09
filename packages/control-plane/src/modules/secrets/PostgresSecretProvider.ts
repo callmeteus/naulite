@@ -1,10 +1,9 @@
 import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@naulite/shared";
 
+import { Logger } from "../../Logger";
 import type { SecretsService } from "../../services/SecretsService";
 import { SecretProvider } from "./SecretProvider";
-import { Logger } from "../../Logger";
-const log_secrets = Logger.create("secrets");
-
+const logSecrets = Logger.create("secrets");
 
 /**
  * Postgres-backed secret provider that delegates to {@link SecretsService}.
@@ -53,14 +52,16 @@ export class PostgresSecretProvider extends SecretProvider {
      *
      * @param name Secret name
      * @returns Resolved secret payload
+     * @throws {Error} {@link Error}
      */
     async resolve(name: string): Promise<ResolvedSecret> {
         const data = await this.secretsService.resolveValues(name);
+
         if (!data) {
             throw new Error(`Secret not found: ${name}`);
         }
 
-        log_secrets.debug("resolve name=%s", name);
+        logSecrets.debug("resolve name=%s", name);
         return { name, data };
     }
 
@@ -71,12 +72,13 @@ export class PostgresSecretProvider extends SecretProvider {
      * @returns Filtered secret payloads safe for agent delivery
      */
     async resolveForAgent(filter: SecretFilter): Promise<ResolvedSecret[]> {
-        log_secrets.debug("resolveForAgent names=%o", filter.secretNames);
+        logSecrets.debug("resolveForAgent names=%o", filter.secretNames);
         const resolved: ResolvedSecret[] = [];
 
         for (const secretName of filter.secretNames) {
             const secret = await this.resolve(secretName);
             const allowedKeys = filter.allowedKeys?.[secretName];
+
             if (!allowedKeys || allowedKeys.length === 0) {
                 resolved.push(secret);
                 continue;
@@ -88,6 +90,7 @@ export class PostgresSecretProvider extends SecretProvider {
                     filteredData[key] = secret.data[key];
                 }
             }
+
             resolved.push({ name: secret.name, data: filteredData });
         }
 

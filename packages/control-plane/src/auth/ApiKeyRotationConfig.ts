@@ -2,6 +2,9 @@
  * API key rotation feature flag and timing helpers.
  */
 export namespace ApiKeyRotationConfig {
+    /**
+     * Default grace period before the previous API key hash expires.
+     */
     const DEFAULT_GRACE_SECONDS = 86_400;
 
     /**

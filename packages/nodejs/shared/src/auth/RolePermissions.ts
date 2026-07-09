@@ -5,6 +5,9 @@ import type { NaulitePermission } from "./NaulitePermission";
  */
 export type AdminRole = "viewer" | "operator" | "admin";
 
+/**
+ * Permissions granted to viewer-role operators.
+ */
 const VIEWER_PERMISSIONS: NaulitePermission[] = [
     "secrets:read",
     "nodes:read",
@@ -19,6 +22,9 @@ const VIEWER_PERMISSIONS: NaulitePermission[] = [
     "admin:api-keys:read"
 ];
 
+/**
+ * Permissions granted to operator-role accounts, including viewer access.
+ */
 const OPERATOR_PERMISSIONS: NaulitePermission[] = [
     ...VIEWER_PERMISSIONS,
     "secrets:write",
@@ -36,6 +42,9 @@ const OPERATOR_PERMISSIONS: NaulitePermission[] = [
     "notifications:write"
 ];
 
+/**
+ * Permissions granted to admin-role accounts, including operator access.
+ */
 const ADMIN_PERMISSIONS: NaulitePermission[] = [
     ...OPERATOR_PERMISSIONS,
     "admin:users:write",

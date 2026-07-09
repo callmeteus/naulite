@@ -1,7 +1,7 @@
+import { LooseObjectSchema } from "@naulite/shared";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
-import { LooseObjectSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("netbird:read"),
@@ -14,6 +14,7 @@ export const GET = defineRoute({
             200: LooseObjectSchema
         }
     },
+
     async handler() {
         return await ControlPlaneService.NetBird.getTopology();
     }

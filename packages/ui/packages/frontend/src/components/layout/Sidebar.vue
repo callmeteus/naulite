@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from "vue-router";
 import { Moon, Sun } from "@lucide/vue";
 
-import { navigationSections } from "../../config/navigation";
 import { useLocale, type AppLocale } from "../../composables/useLocale";
 import { useTheme } from "../../composables/useTheme";
-import NauliteBrand from "../brand/NauliteBrand.vue";
+import { navigationSections } from "../../config/navigation";
 import { useAuthStore } from "../../stores/Auth";
+import NauliteBrand from "../brand/NauliteBrand.vue";
 
 const auth = useAuthStore();
 const route = useRoute();
@@ -96,8 +96,12 @@ function changeLocale(value: AppLocale): void {
                     :value="locale"
                     @change="changeLocale(($event.target as HTMLSelectElement).value as AppLocale)"
                 >
-                    <option value="en">{{ t("menu.localeEn") }}</option>
-                    <option value="pt-BR">{{ t("menu.localePtBr") }}</option>
+                    <option value="en">
+                        {{ t("menu.localeEn") }}
+                    </option>
+                    <option value="pt-BR">
+                        {{ t("menu.localePtBr") }}
+                    </option>
                 </select>
             </div>
             <button type="button" class="btn btn-outline btn-sm w-full" @click="logout">

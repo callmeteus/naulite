@@ -1,7 +1,7 @@
+import { LooseObjectSchema } from "@naulite/shared";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
-import { LooseObjectSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("metrics:read"),
@@ -14,6 +14,7 @@ export const GET = defineRoute({
             200: LooseObjectSchema
         }
     },
+
     async handler() {
         const [nodes, services, instances, volumes, secrets] = await Promise.all([
             ControlPlaneService.Store.listNodes(),
@@ -38,6 +39,7 @@ export const GET = defineRoute({
                 nodeCount: nodes.length,
                 serviceCount: services.length
             },
+
             leaderId: ControlPlaneService.Leader.getLeaderId(),
             isLeader: ControlPlaneService.Leader.isLeader(),
             revision: String(ControlPlaneService.Apply.getRevision()),
@@ -51,6 +53,7 @@ export const GET = defineRoute({
                 secrets: secrets.length,
                 applyRevision: ControlPlaneService.Apply.getRevision()
             },
+
             nodes,
             services,
             instances,

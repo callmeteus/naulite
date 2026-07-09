@@ -106,6 +106,7 @@ export class Scheduler {
             ...service.cluster?.labels,
             ...manifestService?.cluster?.labels
         };
+
         const requiredCapabilities = [
             ...new Set([
                 ...service.capabilities,

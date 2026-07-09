@@ -96,6 +96,7 @@ export namespace NotificationDestinationStore {
      * @param id Destination identifier
      * @param input Partial destination payload
      * @returns Updated destination summary
+     * @throws {HTTP404Error} {@link HTTP404Error}
      */
     export async function update(
         id: string,

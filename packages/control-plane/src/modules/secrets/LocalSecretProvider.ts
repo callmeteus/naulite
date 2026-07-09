@@ -3,8 +3,7 @@ import type { ResolvedSecret, Secret, SecretFilter, SecretUpsertInput } from "@n
 import { Logger } from "../../Logger";
 import { AesEncryption } from "./AesEncryption";
 import { SecretProvider } from "./SecretProvider";
-const log_secrets = Logger.create("secrets");
-
+const logSecrets = Logger.create("secrets");
 
 /**
  * Options for the local encrypted secret provider.
@@ -41,7 +40,7 @@ export class LocalSecretProvider extends SecretProvider {
      * @returns Secret metadata entries
      */
     async list(): Promise<Secret[]> {
-        log_secrets.debug("list count=%d", this.secrets.size);
+        logSecrets.debug("list count=%d", this.secrets.size);
         return [...this.secrets.values()].map((entry) => entry.metadata);
     }
 
@@ -65,7 +64,7 @@ export class LocalSecretProvider extends SecretProvider {
             updatedAt: now
         };
 
-        log_secrets.debug("upsert name=%s keys=%o scope=%s", input.name, metadata.keys, metadata.scope);
+        logSecrets.debug("upsert name=%s keys=%o scope=%s", input.name, metadata.keys, metadata.scope);
         const ciphertext = this.encryption.encrypt(JSON.stringify(input.data));
         this.secrets.set(input.name, { metadata, ciphertext });
         return metadata;
@@ -78,7 +77,7 @@ export class LocalSecretProvider extends SecretProvider {
      * @returns Nothing.
      */
     async delete(name: string): Promise<void> {
-        log_secrets.debug("delete name=%s", name);
+        logSecrets.debug("delete name=%s", name);
         this.secrets.delete(name);
     }
 
@@ -87,14 +86,16 @@ export class LocalSecretProvider extends SecretProvider {
      * 
      * @param name Secret name
      * @returns Resolved secret payload
+     * @throws {Error} {@link Error}
      */
     async resolve(name: string): Promise<ResolvedSecret> {
         const entry = this.secrets.get(name);
+
         if (!entry) {
             throw new Error(`Secret not found: ${name}`);
         }
 
-        log_secrets.debug("resolve name=%s", name);
+        logSecrets.debug("resolve name=%s", name);
         const data = JSON.parse(this.encryption.decrypt(entry.ciphertext)) as Record<string, string>;
         return { name, data };
     }
@@ -106,12 +107,13 @@ export class LocalSecretProvider extends SecretProvider {
      * @returns Filtered secret payloads safe for agent delivery
      */
     async resolveForAgent(filter: SecretFilter): Promise<ResolvedSecret[]> {
-        log_secrets.debug("resolveForAgent names=%o", filter.secretNames);
+        logSecrets.debug("resolveForAgent names=%o", filter.secretNames);
         const resolved: ResolvedSecret[] = [];
 
         for (const secretName of filter.secretNames) {
             const secret = await this.resolve(secretName);
             const allowedKeys = filter.allowedKeys?.[secretName];
+
             if (!allowedKeys || allowedKeys.length === 0) {
                 resolved.push(secret);
                 continue;
@@ -123,6 +125,7 @@ export class LocalSecretProvider extends SecretProvider {
                     filteredData[key] = secret.data[key];
                 }
             }
+
             resolved.push({ name: secret.name, data: filteredData });
         }
 

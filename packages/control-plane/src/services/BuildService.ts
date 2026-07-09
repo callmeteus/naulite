@@ -13,11 +13,10 @@ import {
 
 import type { ControlPlaneContext } from "../ControlPlaneContext";
 
+import { Logger } from "../Logger";
 import { AgentProxyError, AgentProxyService } from "./AgentProxyService";
 import { PipelineRunService } from "./PipelineRunService";
-import { Logger } from "../Logger";
-const log_build = Logger.create("build");
-
+const logBuild = Logger.create("build");
 
 /**
  * Resolved build configuration for a manifest service.
@@ -162,6 +161,7 @@ export namespace BuildService {
      * @param manifest Parsed manifest containing the service
      * @param options Optional provider and registry overrides
      * @returns Pipeline run identifiers
+     * @throws {BuildServiceError} {@link BuildServiceError}
      */
     export async function enqueueBuild(
         context: ControlPlaneContext,
@@ -221,7 +221,7 @@ export namespace BuildService {
         });
 
         void executeBuildInBackground(context, nodes, manifest, buildConfig, options, run.id).catch((err) => {
-            log_build.error("background build failed runId=%s err=%O", run.id, err);
+            logBuild.error("background build failed runId=%s err=%O", run.id, err);
         });
 
         return {
@@ -239,6 +239,7 @@ export namespace BuildService {
      * @param manifest Parsed manifest containing the service
      * @param options Optional provider and registry overrides
      * @returns Build result metadata from the agent or provider
+     * @throws {BuildServiceError} {@link BuildServiceError}
      */
     export async function buildService(
         context: ControlPlaneContext,
@@ -260,6 +261,7 @@ export namespace BuildService {
                 imageRef: manifest.services[serviceName]
                     ? resolveServiceImageRef(manifest.name, serviceName, manifest.services[serviceName])
                     : `naulite/${serviceName}:latest`,
+
                 logs: [],
                 durationMs: 0,
                 runId: enqueued.runId,
@@ -342,6 +344,7 @@ export namespace BuildService {
                 wait: true,
                 runId: workflowId
             });
+
             buildRefs.set(operation.image, result.imageRef);
         }
 
@@ -372,11 +375,12 @@ export namespace BuildService {
      *
      * @param context Control plane context with builder providers
      * @param nodes Registered cluster nodes
-     * @param manifest Parsed manifest being built
+     * @param _manifest Parsed manifest being built
      * @param buildConfig Resolved build configuration
      * @param options Build options
      * @param runId Pipeline run identifier
      * @returns Build result metadata
+     * @throws {BuildServiceError} {@link BuildServiceError}
      */
     async function executeBuildInBackground(
         context: ControlPlaneContext,
@@ -423,6 +427,7 @@ export namespace BuildService {
             await PipelineRunService.completeRun(runId, "failed", {
                 errorMessage: "No builder-capable node is available in the cluster."
             });
+
             throw new BuildServiceError(
                 "BUILDER_NOT_CONFIGURED",
                 "No builder-capable node is available in the cluster.",
@@ -470,6 +475,7 @@ export namespace BuildService {
                     errorMessage: response.error ?? `Build for ${buildConfig.serviceName} failed on the agent.`,
                     failureLog: response.logs
                 });
+
                 throw new BuildServiceError(
                     "BUILD_FAILED",
                     response.error ?? `Build for ${buildConfig.serviceName} failed on the agent.`,
@@ -482,6 +488,7 @@ export namespace BuildService {
                     errorMessage: `Build for ${buildConfig.serviceName} completed without pushing to the container registry.`,
                     failureLog: response.logs
                 });
+
                 throw new BuildServiceError(
                     "BUILD_PUSH_FAILED",
                     `Build for ${buildConfig.serviceName} completed without pushing to the container registry.`,
@@ -497,6 +504,7 @@ export namespace BuildService {
                     imageRef: response.imageRef ?? buildConfig.crRef
                 }
             });
+
             await PipelineRunService.completeRun(runId, "succeeded");
 
             return {
@@ -517,6 +525,7 @@ export namespace BuildService {
             await PipelineRunService.completeRun(runId, "failed", {
                 errorMessage: err instanceof Error ? err.message : String(err)
             });
+
             throw new BuildServiceError(
                 "BUILDER_NOT_CONFIGURED",
                 err instanceof Error ? err.message : String(err),

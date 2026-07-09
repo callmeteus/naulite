@@ -69,6 +69,7 @@ export class InfisicalApiClient {
             secretPath: this.secretPath,
             recursive: "true"
         });
+
         const response = await this.request("GET", `/api/v3/secrets/raw?${query}`);
         const payload = await this.readJson(response) as { secrets?: InfisicalRawSecret[] };
         return payload.secrets ?? [];
@@ -79,6 +80,7 @@ export class InfisicalApiClient {
      *
      * @param secretName Infisical secret key
      * @returns Raw secret payload
+     * @throws {Error} {@link Error}
      */
     async getSecret(secretName: string): Promise<InfisicalRawSecret> {
         this.assertConfigured();
@@ -87,6 +89,7 @@ export class InfisicalApiClient {
             environment: this.environment,
             secretPath: this.secretPath
         });
+
         const response = await this.request("GET", `/api/v3/secrets/raw/${encodeURIComponent(secretName)}?${query}`);
 
         if (response.status === 404) {
@@ -109,6 +112,7 @@ export class InfisicalApiClient {
      * @param secretName Infisical secret key
      * @param secretValue Secret value
      * @returns Created raw secret payload
+     * @throws {Error} {@link Error}
      */
     async createSecret(secretName: string, secretValue: string): Promise<InfisicalRawSecret> {
         this.assertConfigured();
@@ -118,6 +122,7 @@ export class InfisicalApiClient {
             secretPath: this.secretPath,
             secretValue
         });
+
         const payload = await this.readJson(response) as { secret?: InfisicalRawSecret };
         const secret = payload.secret;
 
@@ -134,6 +139,7 @@ export class InfisicalApiClient {
      * @param secretName Infisical secret key
      * @param secretValue Secret value
      * @returns Updated raw secret payload
+     * @throws {Error} {@link Error}
      */
     async updateSecret(secretName: string, secretValue: string): Promise<InfisicalRawSecret> {
         this.assertConfigured();
@@ -143,6 +149,7 @@ export class InfisicalApiClient {
             secretPath: this.secretPath,
             secretValue
         });
+
         const payload = await this.readJson(response) as { secret?: InfisicalRawSecret };
         const secret = payload.secret;
 
@@ -178,6 +185,7 @@ export class InfisicalApiClient {
      * Ensures the client is configured before making API calls.
      *
      * @returns Nothing.
+     * @throws {InfisicalNotConfiguredError} {@link InfisicalNotConfiguredError}
      */
     private assertConfigured(): void {
         if (!this.isConfigured()) {
@@ -192,6 +200,7 @@ export class InfisicalApiClient {
      * @param path API path including query string
      * @param body Optional JSON request body
      * @returns Fetch response
+     * @throws {Error} {@link Error}
      */
     private async request(method: string, path: string, body?: Record<string, unknown>): Promise<Response> {
         console.debug(
@@ -208,6 +217,7 @@ export class InfisicalApiClient {
                 Authorization: `Bearer ${this.resolveAuthToken(this.token)}`,
                 "Content-Type": "application/json"
             },
+
             body: body ? JSON.stringify(body) : undefined
         });
 

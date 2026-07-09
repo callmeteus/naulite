@@ -9,6 +9,7 @@ const NOTIFICATION_PROVIDER_ENV: Record<string, {
         urlVars: ["NAULITE_SLACK_WEBHOOK_URL", "SLACK_WEBHOOK_URL"],
         secretVars: []
     },
+
     webhook: {
         urlVars: ["NAULITE_WEBHOOK_URL", "WEBHOOK_URL"],
         secretVars: ["NAULITE_WEBHOOK_SECRET"]
@@ -66,6 +67,7 @@ export namespace NotificationProviderEnvStatus {
                     urlConfigured: isAnyEnvSet(env.urlVars),
                     secretConfigured: env.secretVars.length === 0
                         || isAnyEnvSet(env.secretVars),
+
                     env
                 };
             });

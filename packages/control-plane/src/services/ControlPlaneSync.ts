@@ -149,6 +149,7 @@ export class ControlPlaneSync {
             where: {
                 id: { [Op.gt]: this.lastEventId }
             },
+
             order: [["id", "ASC"]]
         });
 
@@ -165,6 +166,7 @@ export class ControlPlaneSync {
                 sourceInstanceId: row.sourceInstanceId,
                 createdAt: row.createdAt
             };
+
             this.lastEventId = Math.max(this.lastEventId, row.id);
             const listeners = new Set<(event: ControlPlaneSyncEvent) => void>();
 

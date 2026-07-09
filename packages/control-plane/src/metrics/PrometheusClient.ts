@@ -1,12 +1,14 @@
-import { HTTP502Error } from "../errors/TreatedError";
 import { Logger } from "../Logger";
-const log_metrics = Logger.create("metrics");
-
+import { HTTP502Error } from "../errors/TreatedError";
+const logMetrics = Logger.create("metrics");
 
 /**
  * Prometheus HTTP API client used by control plane PromQL proxy routes.
  */
 export namespace PrometheusClient {
+    /**
+     * Default Prometheus base URL when no override is configured.
+     */
     const DEFAULT_PROMETHEUS_URL = "http://naulite-prometheus:9090";
 
     /**
@@ -24,6 +26,7 @@ export namespace PrometheusClient {
      * @param apiPath Prometheus API path starting with /api/v1/
      * @param query Query string parameters
      * @returns Parsed Prometheus JSON response body
+     * @throws {HTTP502Error} {@link HTTP502Error}
      */
     export async function proxyGet(
         apiPath: string,
@@ -40,20 +43,21 @@ export namespace PrometheusClient {
                 for (const entry of value) {
                     url.searchParams.append(key, entry);
                 }
+
                 continue;
             }
 
             url.searchParams.set(key, value);
         }
 
-        log_metrics.debug("proxy path=%s url=%s", apiPath, url.toString());
+        logMetrics.debug("proxy path=%s url=%s", apiPath, url.toString());
 
         let response: Response;
 
         try {
             response = await fetch(url);
         } catch (err) {
-            log_metrics.error("proxy fetch failed: %O", err);
+            logMetrics.error("proxy fetch failed: %O", err);
             throw new HTTP502Error("Failed to reach Prometheus.", {
                 prometheusUrl: resolveBaseUrl()
             });
@@ -71,11 +75,12 @@ export namespace PrometheusClient {
         }
 
         if (!response.ok) {
-            log_metrics.error("proxy upstream status=%d path=%s body=%s",
+            logMetrics.error("proxy upstream status=%d path=%s body=%s",
                 response.status,
                 apiPath,
                 bodyText
             );
+
             throw new HTTP502Error("Prometheus query failed.", {
                 statusCode: response.status,
                 prometheusUrl: resolveBaseUrl()

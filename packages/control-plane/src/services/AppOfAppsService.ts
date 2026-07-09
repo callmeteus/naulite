@@ -34,12 +34,15 @@ export namespace AppOfAppsService {
      * - resolve each child app manifest with inherited vars
      * - apply each app sequentially (stops on first error)
      * - record a composed GitOps revision with child manifests
+     * @param options Catalog apply options
+     * @throws {Error} {@link Error}
      */
     export async function applyCatalog(options: ApplyCatalogOptions): Promise<ApplyCatalogResult> {
         const context = ControlPlaneService.requireContext();
         const secrets = context.secretsService;
 
         const catalogDoc = parseYaml(options.catalogYaml) as unknown;
+
         if (!catalogDoc || typeof catalogDoc !== "object" || Array.isArray(catalogDoc)) {
             throw new Error("Catálogo YAML deve conter um objeto na root.");
         }

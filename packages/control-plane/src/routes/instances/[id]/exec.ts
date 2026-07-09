@@ -1,13 +1,13 @@
-import { AgentProxyService } from "../../../services/AgentProxyService";
-import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
-import { ControlPlaneService } from "../../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
-import { defineRoute } from "../../../routing/DefineRoute";
 import {
     ExecInstanceBodySchema,
     IdParamsSchema,
     LooseObjectSchema
 } from "@naulite/shared";
+import { ControlPlaneService } from "../../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
+import { defineRoute } from "../../../routing/DefineRoute";
+import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
+import { AgentProxyService } from "../../../services/AgentProxyService";
 
 export const POST = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:write"),
@@ -22,6 +22,7 @@ export const POST = defineRoute({
             200: LooseObjectSchema
         }
     },
+
     async handler(req, res) {
         const { id } = req.params;
         const { command, stdin, tty } = req.body;

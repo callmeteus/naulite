@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { TimestampSchema } from "./Common";
 import { ClusterLabelsSchema } from "./ClusterLabels";
+import { TimestampSchema } from "./Common";
 
 /**
  * Operational status reported by an agent node.

@@ -14,6 +14,7 @@ export class KanikoBuilderProvider implements BuilderProvider {
      *
      * @param options Docker build options
      * @returns Build result metadata
+     * @throws {Error} {@link Error}
      */
     async buildWithDocker(options: DockerBuildOptions): Promise<BuildResult> {
         void options;
@@ -41,6 +42,7 @@ export class KanikoBuilderProvider implements BuilderProvider {
                 `[kaniko] building ${options.destination} from ${options.contextUri}`,
                 `[kaniko] stub build completed`
             ],
+
             durationMs: Date.now() - startedAt
         };
     }

@@ -36,6 +36,7 @@ export const GET = defineRoute({
             200: z.array(AdminUserPublicSchema)
         }
     },
+
     async handler() {
         return AdminService.listUsers();
     }
@@ -56,6 +57,7 @@ export const POST = defineRoute({
             200: AdminUserPublicSchema
         }
     },
+
     async handler(req) {
         const username = (req.body.email ?? req.body.username ?? "").trim().toLowerCase();
 

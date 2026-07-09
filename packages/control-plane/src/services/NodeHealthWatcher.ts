@@ -39,7 +39,8 @@ export namespace NodeHealthWatcher {
                     usageRatio
                 }
             });
-        } else if (!hasPressure && previousPressure) {
+        } else
+        if (!hasPressure && previousPressure) {
             diskPressureByNode.set(node.id, false);
             const run = await createNodeEventRun(node, pool);
             await PipelineRunService.emitEvent(run.id, {

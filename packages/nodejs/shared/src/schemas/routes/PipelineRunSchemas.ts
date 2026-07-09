@@ -1,12 +1,12 @@
 import { z } from "zod";
 
+import { PaginationQuerySchema } from "../Pagination";
 import {
     PipelineEventSchema,
     PipelineRunKindSchema,
     PipelineRunSchema,
     PipelineRunStatusSchema
 } from "../PipelineRun";
-import { PaginationQuerySchema } from "../Pagination";
 
 /**
  * Query filters for listing pipeline runs.

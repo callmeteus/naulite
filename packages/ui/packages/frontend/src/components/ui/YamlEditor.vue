@@ -1,16 +1,27 @@
 <script setup lang="ts">
-import { yaml } from "@codemirror/lang-yaml";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, basicSetup } from "codemirror";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { yaml } from "@codemirror/lang-yaml";
+import { Compartment, EditorState } from "@codemirror/state";
+import { oneDark } from "@codemirror/theme-one-dark";
 
 import { useTheme } from "../../composables/useTheme";
 
 const props = withDefaults(
     defineProps<{
+        /**
+         * YAML content bound to the editor.
+         */
         modelValue: string;
+
+        /**
+         * Whether editing is disabled.
+         */
         disabled?: boolean;
+
+        /**
+         * Minimum editor height CSS value.
+         */
         minHeight?: string;
     }>(),
     {
@@ -57,12 +68,15 @@ function buildExtensions(isDark: boolean, editable: boolean) {
                 minHeight: props.minHeight,
                 fontSize: "13px"
             },
+
             ".cm-scroller": {
                 fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
             },
+
             ".cm-content": {
                 padding: "12px 0"
             },
+
             ".cm-gutters": {
                 borderRight: "1px solid color-mix(in oklab, currentColor 12%, transparent)"
             }

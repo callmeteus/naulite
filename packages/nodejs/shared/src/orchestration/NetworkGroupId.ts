@@ -8,6 +8,7 @@ export const NetworkGroupId = {
      * @param manifestName Top-level manifest `name` field
      * @param networkKey Network key from the manifest `networks` block
      * @returns NetBird group id in the form `${manifestName}-${networkKey}`
+     * @throws {Error} {@link Error}
      */
     generate(manifestName: string, networkKey: string): string {
         const name = manifestName.trim();

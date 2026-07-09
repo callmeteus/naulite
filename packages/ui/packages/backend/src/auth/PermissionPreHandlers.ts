@@ -1,6 +1,6 @@
+import type { FastifyRequest } from "fastify";
 import type { AdminRole, NaulitePermission } from "@naulite/shared";
 import { RolePermissions } from "@naulite/shared";
-import type { FastifyRequest } from "fastify";
 
 /**
  * BFF permission checks aligned with the control plane catalog.

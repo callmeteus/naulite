@@ -1,12 +1,12 @@
-import { AgentProxyError, AgentProxyService } from "../../../../services/AgentProxyService";
-import { ControlPlaneService } from "../../../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
-import { defineRoute } from "../../../../routing/DefineRoute";
 import {
     LooseObjectSchema,
     NameParamsSchema,
     RouteErrorResponseSchema
 } from "@naulite/shared";
+import { ControlPlaneService } from "../../../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
+import { defineRoute } from "../../../../routing/DefineRoute";
+import { AgentProxyError, AgentProxyService } from "../../../../services/AgentProxyService";
 
 export const POST = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:write"),
@@ -22,6 +22,7 @@ export const POST = defineRoute({
             503: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { name } = req.params;
         const services = await ControlPlaneService.Store.listServices();

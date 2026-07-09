@@ -1,14 +1,14 @@
-import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
-import { BackupDispatchService } from "../../../services/BackupDispatchService";
-import { BackupRestoreService } from "../../../services/BackupRestoreService";
-import { ControlPlaneService } from "../../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
-import { defineRoute } from "../../../routing/DefineRoute";
 import {
     BackupIdParamsSchema,
     LooseObjectSchema,
     RouteErrorResponseSchema
 } from "@naulite/shared";
+import { ControlPlaneService } from "../../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
+import { defineRoute } from "../../../routing/DefineRoute";
+import { AgentProxyRouteHelpers } from "../../../services/AgentProxyRouteHelpers";
+import { BackupDispatchService } from "../../../services/BackupDispatchService";
+import { BackupRestoreService } from "../../../services/BackupRestoreService";
 
 export const POST = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("backups:restore"),
@@ -24,6 +24,7 @@ export const POST = defineRoute({
             503: RouteErrorResponseSchema
         }
     },
+
     async handler(req, res) {
         const { backupId } = req.params;
         const run = await ControlPlaneService.Store.getBackupRun(backupId);
@@ -39,6 +40,7 @@ export const POST = defineRoute({
             ControlPlaneService.Store.listVolumes(),
             ControlPlaneService.Store.listNodes()
         ]);
+
         const volume = volumes.find((entry) => entry.name === run.volumeName);
         const node = volume
             ? BackupDispatchService.resolveNodeForVolume(volume, nodes)

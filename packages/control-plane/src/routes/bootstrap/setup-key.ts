@@ -1,7 +1,7 @@
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
-import { ControlPlaneService } from "../../ControlPlaneService";
-import { defineRoute } from "../../routing/DefineRoute";
 import { RouteMessageResponseSchema, SetupKeyResponseSchema } from "@naulite/shared";
+import { ControlPlaneService } from "../../ControlPlaneService";
+import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { defineRoute } from "../../routing/DefineRoute";
 
 export const GET = defineRoute({
     preHandler: AuthPreHandlers.requireLocalBootstrapRequest(),
@@ -15,6 +15,7 @@ export const GET = defineRoute({
             403: RouteMessageResponseSchema
         }
     },
+
     async handler() {
         const setupKey = await ControlPlaneService.Enrollment.ensureSetupKey();
 

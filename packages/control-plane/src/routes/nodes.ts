@@ -17,6 +17,7 @@ export const GET = defineRoute({
             200: z.array(NodeSchema)
         }
     },
+
     async handler() {
         return ControlPlaneService.Store.listNodes();
     }

@@ -20,6 +20,7 @@ export const GET = defineRoute({
             404: RouteMessageResponseSchema
         }
     },
+
     async handler(req, res) {
         const run = await PipelineRunService.getRun(req.params.id);
 

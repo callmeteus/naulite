@@ -1,16 +1,16 @@
 import { z } from "zod";
 
 import {
-    resolvePublicControlPlaneUrl,
-    resolvePublicNetBirdManagementUrl
-} from "../../bootstrap/BootstrapUrls";
-import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
-import { HTTP503Error } from "../../errors/TreatedError";
-import { defineRoute } from "../../routing/DefineRoute";
-import {
     AgentBootstrapResponseSchema,
     RouteMessageResponseSchema
 } from "@naulite/shared";
+import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import {
+    resolvePublicControlPlaneUrl,
+    resolvePublicNetBirdManagementUrl
+} from "../../bootstrap/BootstrapUrls";
+import { HTTP503Error } from "../../errors/TreatedError";
+import { defineRoute } from "../../routing/DefineRoute";
 
 const AgentBootstrapHeadersSchema = z.object({
     "x-naulite-setup-key": z.string().min(1).optional()
@@ -31,6 +31,7 @@ export const GET = defineRoute({
             503: RouteMessageResponseSchema
         }
     },
+
     async handler(req) {
         const netbirdManagementUrl = resolvePublicNetBirdManagementUrl();
 

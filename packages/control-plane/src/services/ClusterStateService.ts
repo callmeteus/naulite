@@ -1,8 +1,10 @@
-import { ClusterStateModel } from "../database/models/index";
 import { Logger } from "../Logger";
-const log_cluster_state = Logger.create("cluster-state");
+import { ClusterStateModel } from "../database/models/index";
+const logClusterState = Logger.create("cluster-state");
 
-
+/**
+ * Cluster state key storing the latest apply revision counter.
+ */
 const APPLY_REVISION_KEY = "apply_revision";
 
 /**
@@ -39,6 +41,7 @@ export namespace ClusterStateService {
             value: String(revision),
             updatedAt: now
         });
-        log_cluster_state.debug("saved applyRevision=%d", revision);
+
+        logClusterState.debug("saved applyRevision=%d", revision);
     }
 }

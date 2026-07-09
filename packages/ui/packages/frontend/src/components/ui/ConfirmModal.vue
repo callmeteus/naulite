@@ -2,10 +2,29 @@
 import { ref } from "vue";
 
 defineProps<{
+    /**
+     * i18n key for the modal title.
+     */
     titleKey: string;
+
+    /**
+     * Optional i18n key for the modal message body.
+     */
     messageKey?: string;
+
+    /**
+     * Optional i18n key for the confirm button label.
+     */
     confirmLabelKey?: string;
+
+    /**
+     * Optional i18n key for the cancel button label.
+     */
     cancelLabelKey?: string;
+
+    /**
+     * Whether the confirm action uses danger styling.
+     */
     danger?: boolean;
 }>();
 
@@ -60,11 +79,17 @@ defineExpose({ open, close });
 <template>
     <dialog ref="dialogRef" class="modal">
         <div class="modal-box">
-            <h3 class="text-lg font-bold">{{ $t(titleKey) }}</h3>
-            <p v-if="messageKey" class="py-4">{{ $t(messageKey) }}</p>
+            <h3 class="text-lg font-bold">
+                {{ $t(titleKey) }}
+            </h3>
+            <p v-if="messageKey" class="py-4">
+                {{ $t(messageKey) }}
+            </p>
             <slot />
             <div class="modal-action">
-                <button type="button" class="btn" @click="cancel">{{ $t(cancelLabelKey ?? "common.cancel") }}</button>
+                <button type="button" class="btn" @click="cancel">
+                    {{ $t(cancelLabelKey ?? "common.cancel") }}
+                </button>
                 <button
                     type="button"
                     class="btn"
@@ -76,7 +101,9 @@ defineExpose({ open, close });
             </div>
         </div>
         <form method="dialog" class="modal-backdrop">
-            <button type="button" @click="cancel">close</button>
+            <button type="button" @click="cancel">
+                close
+            </button>
         </form>
     </dialog>
 </template>

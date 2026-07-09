@@ -1,7 +1,7 @@
 import type { FastifyRequest, preHandlerHookHandler } from "fastify";
 
-import { isLocalBootstrapRequest } from "../bootstrap/BootstrapUrls";
 import { ControlPlaneService } from "../ControlPlaneService";
+import { isLocalBootstrapRequest } from "../bootstrap/BootstrapUrls";
 import { HTTP401Error, HTTP403Error } from "../errors/TreatedError";
 import { AdminService } from "../modules/admin/AdminService";
 import { TenantScope } from "../modules/tenant/TenantScope";
@@ -10,6 +10,9 @@ import type { AdminRole } from "./AdminAuthTypes";
 import { adminRoleMeetsMinimum } from "./AdminAuthTypes";
 import { attachRequestAuth } from "./RequestAuth";
 
+/**
+ * HTTP header carrying the admin session token.
+ */
 const SESSION_HEADER = "x-naulite-session";
 
 /**
@@ -122,6 +125,8 @@ export namespace AuthPreHandlers {
      * @param request Incoming Fastify request
      * @param options Authorization options
      * @returns Nothing.
+     * @throws {HTTP401Error} {@link HTTP401Error}
+     * @throws {HTTP403Error} {@link HTTP403Error}
      */
     export async function enforceAuthorization(
         request: FastifyRequest,
@@ -165,6 +170,7 @@ export namespace AuthPreHandlers {
                 role: "admin",
                 tenantId: null
             });
+
             return;
         }
 

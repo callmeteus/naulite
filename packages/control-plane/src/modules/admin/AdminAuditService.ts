@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { AdminAuditLogModel } from "../../database/models/AdminAuditLogModel";
 import { Logger } from "../../Logger";
-const log_admin_audit = Logger.create("admin-audit");
-
+import { AdminAuditLogModel } from "../../database/models/AdminAuditLogModel";
+const logAdminAudit = Logger.create("admin-audit");
 
 /**
  * Persists admin security audit events.
@@ -29,7 +28,7 @@ export namespace AdminAuditService {
                 createdAt: new Date().toISOString()
             });
         } catch (err) {
-            log_admin_audit.error("record failed: %O", err);
+            logAdminAudit.error("record failed: %O", err);
         }
     }
 }

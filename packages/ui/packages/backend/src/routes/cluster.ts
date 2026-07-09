@@ -27,6 +27,7 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         const params = z.object({
             id: z.string().min(1)
         }).parse(request.params);
+
         const client = controlPlaneForRequest(app, request);
         return client.getLogs(params.id);
     });
@@ -35,6 +36,7 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         const params = z.object({
             id: z.string().min(1)
         }).parse(request.params);
+
         const client = controlPlaneForRequest(app, request);
         return client.reconcileInstance(params.id);
     });
@@ -63,6 +65,7 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         const params = z.object({
             name: z.string().min(1)
         }).parse(request.params);
+
         const client = controlPlaneForRequest(app, request);
         return client.reconcileService(params.name);
     });
@@ -71,6 +74,7 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         const params = z.object({
             revisionId: z.string().min(1)
         }).parse(request.params);
+
         return app.controlPlane.rollbackGitOps(params.revisionId);
     });
 

@@ -48,11 +48,13 @@ export function listSecretBrowserEntries(secrets: Secret[], currentPath: string[
         }
 
         const remainder = currentPath.length === 0 ? secret.name : secret.name.slice(prefix.length);
+
         if (!remainder) {
             continue;
         }
 
         const slashIndex = remainder.indexOf("/");
+
         if (slashIndex === -1) {
             leaves.push({
                 type: "secret",
@@ -61,6 +63,7 @@ export function listSecretBrowserEntries(secrets: Secret[], currentPath: string[
                 scope: secret.scope,
                 description: secret.description
             });
+
             continue;
         }
 

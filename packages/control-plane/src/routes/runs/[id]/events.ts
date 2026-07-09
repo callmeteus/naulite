@@ -31,6 +31,7 @@ export const GET = defineRoute({
             404: RouteMessageResponseSchema
         }
     },
+
     async handler(req, res) {
         const run = await PipelineRunService.getRun(req.params.id);
 
@@ -56,6 +57,7 @@ export const POST = defineRoute({
             404: RouteMessageResponseSchema
         }
     },
+
     async handler(req, res) {
         const run = await PipelineRunService.getRun(req.params.id);
 
@@ -83,7 +85,8 @@ export const POST = defineRoute({
                     },
                     stepStatus
                 );
-            } else if (body.kind.startsWith("deploy.step.")) {
+            } else
+            if (body.kind.startsWith("deploy.step.")) {
                 await ApplyService.handleAgentDeployStepEvent(
                     req.params.id,
                     {

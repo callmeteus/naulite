@@ -1,7 +1,7 @@
 import type { Readable } from "node:stream";
 
-import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, S3ContainerRegistryDestination } from "@naulite/shared";
 import { ContainerRegistryBlobProvider } from "@naulite/control-plane";
+import type { ContainerRegistryBlobHeadResult, ContainerRegistryBlobWriteInput, S3ContainerRegistryDestination } from "@naulite/shared";
 
 import { S3ObjectStore, type S3ObjectStoreOptions } from "./S3ObjectStore";
 
@@ -34,6 +34,7 @@ export class S3ContainerRegistryBlobProvider extends ContainerRegistryBlobProvid
      *
      * @param input Write input including destination configuration and request body stream
      * @returns Destination-specific location identifier
+     * @throws {Error} {@link Error}
      */
     async writeStream(
         input: ContainerRegistryBlobWriteInput
@@ -41,6 +42,7 @@ export class S3ContainerRegistryBlobProvider extends ContainerRegistryBlobProvid
         if (input.destination.provider !== "s3") {
             throw new Error(`S3ContainerRegistryBlobProvider cannot handle provider ${input.destination.provider}`);
         }
+
         const destination = input.destination as S3ContainerRegistryDestination;
         const key = this.buildObjectKey(destination, input.name, input.tag);
         await this.objectStore.putObjectStream(
@@ -115,17 +117,20 @@ export class S3ContainerRegistryBlobProvider extends ContainerRegistryBlobProvid
         if (destination.provider !== "s3") {
             return false;
         }
+
         const s3Destination = destination as S3ContainerRegistryDestination;
         const hasCredentials = Boolean(
             resolvedSecrets[s3Destination.credentialsSecret.secretName]
             ?? Object.keys(resolvedSecrets).length > 0
         );
+
         console.debug(
             "[s3-storage] validate cr bucket=%s region=%s credentials=%s",
             s3Destination.bucket,
             s3Destination.region,
             hasCredentials
         );
+
         return hasCredentials && s3Destination.bucket.length > 0;
     }
 

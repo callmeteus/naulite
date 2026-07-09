@@ -1,14 +1,21 @@
-import { readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import type { FastifyInstance } from "fastify";
 
 import { isRouteDefinition, type RouteHttpMethod } from "./DefineRoute";
 
+/**
+ * File extensions scanned when discovering route modules.
+ */
 const ROUTE_FILE_EXTENSIONS = [".ts", ".js"];
+
+/**
+ * HTTP methods registered from route module exports.
+ */
 const HTTP_METHODS: RouteHttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
 /**
@@ -65,6 +72,7 @@ export namespace RouteFileLoader {
      *
      * @param routesRoot Absolute routes root directory
      * @param routeFile Absolute route file path
+     * @param urlPrefix Optional URL prefix prepended to the route path
      * @returns Fastify route path
      */
     export function filePathToRoutePath(

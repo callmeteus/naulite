@@ -1,4 +1,3 @@
-import type { NaulitePermission } from "@naulite/sdk";
 import type { Component } from "vue";
 import {
     Activity,
@@ -20,6 +19,7 @@ import {
     Users,
     Workflow
 } from "@lucide/vue";
+import type { NaulitePermission } from "@naulite/sdk";
 
 export interface NavItem {
     path: string;

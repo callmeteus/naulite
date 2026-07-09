@@ -12,6 +12,7 @@ export async function registerBackupRoutes(app: FastifyInstance): Promise<void> 
         const params = z.object({
             volumeName: z.string().min(1)
         }).parse(request.params);
+
         return app.controlPlane.runBackup(params.volumeName);
     });
 
@@ -19,6 +20,7 @@ export async function registerBackupRoutes(app: FastifyInstance): Promise<void> 
         const params = z.object({
             backupId: z.string().min(1)
         }).parse(request.params);
+
         return app.controlPlane.restoreBackup(params.backupId);
     });
 }

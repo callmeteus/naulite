@@ -1,11 +1,10 @@
 import { randomBytes } from "node:crypto";
 
+import { Logger } from "../Logger";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 
 import { NetBirdConfig } from "./NetBirdConfig";
-import { Logger } from "../Logger";
-const log_netbird = Logger.create("netbird");
-
+const logNetbird = Logger.create("netbird");
 
 /**
  * Internal NetBird credentials managed by the control plane.
@@ -40,10 +39,29 @@ namespace Errors {
  * Bootstraps self-hosted NetBird and persists internal credentials as cluster secrets.
  */
 export namespace NetBirdBootstrap {
+    /**
+     * Email for the bootstrap NetBird superadmin account.
+     */
     const SUPERADMIN_EMAIL = "superadmin@naulite.internal";
+
+    /**
+     * Display name for the bootstrap NetBird superadmin account.
+     */
     const SUPERADMIN_NAME = "Naulite Superadmin";
+
+    /**
+     * Personal access token lifetime in days after bootstrap.
+     */
     const PAT_EXPIRE_DAYS = 365;
+
+    /**
+     * Interval between NetBird readiness polls during bootstrap.
+     */
     const POLL_INTERVAL_MS = 2000;
+
+    /**
+     * Maximum NetBird readiness polls before bootstrap fails.
+     */
     const MAX_POLL_ATTEMPTS = 60;
 
     /**
@@ -52,6 +70,7 @@ export namespace NetBirdBootstrap {
      * @param store Control plane persistence layer
      * @param options Optional API URL and fetch implementation
      * @returns NetBird credentials for API access
+     * @throws {unknown}
      */
     export async function ensureCredentials(
         store: ControlPlaneStore,
@@ -71,19 +90,20 @@ export namespace NetBirdBootstrap {
         const cached = await readStoredCredentials(store);
 
         if (cached) {
-            log_netbird.debug("using stored internal credentials secret=%s", NETBIRD_INTERNAL_SECRET_NAME);
+            logNetbird.debug("using stored internal credentials secret=%s", NETBIRD_INTERNAL_SECRET_NAME);
             return cached;
         }
 
         const envToken = process.env.NETBIRD_TOKEN?.trim();
 
         if (envToken) {
-            log_netbird.debug("importing credentials from NETBIRD_TOKEN env");
+            logNetbird.debug("importing credentials from NETBIRD_TOKEN env");
             const imported: NetBirdCredentials = {
                 apiToken: envToken,
                 superadminEmail: SUPERADMIN_EMAIL,
                 superadminPassword: ""
             };
+
             await persistCredentials(store, imported);
             return imported;
         }
@@ -94,13 +114,13 @@ export namespace NetBirdBootstrap {
         try {
             const bootstrapped = await bootstrapSelfHosted(apiUrl, fetchImpl);
             await persistCredentials(store, bootstrapped);
-            log_netbird.debug("bootstrap complete email=%s", bootstrapped.superadminEmail);
+            logNetbird.debug("bootstrap complete email=%s", bootstrapped.superadminEmail);
             return bootstrapped;
         } catch (err) {
             const raced = await readStoredCredentials(store);
 
             if (raced) {
-                log_netbird.debug("using credentials written by another control plane instance");
+                logNetbird.debug("using credentials written by another control plane instance");
                 return raced;
             }
 
@@ -157,6 +177,8 @@ export namespace NetBirdBootstrap {
      * @param apiUrl NetBird API base URL
      * @param fetchImpl Fetch implementation
      * @returns Bootstrapped credentials
+     * @throws {Error} {@link Error}
+     * @throws {Errors.missingCredentialsAfterSetup} {@link Errors.missingCredentialsAfterSetup}
      */
     async function bootstrapSelfHosted(apiUrl: string, fetchImpl: typeof fetch): Promise<NetBirdCredentials> {
         const normalizedApiUrl = apiUrl.replace(/\/+$/, "");
@@ -168,11 +190,12 @@ export namespace NetBirdBootstrap {
                 setupRequired = status.setupRequired;
                 break;
             } catch (err) {
-                log_netbird.debug("waiting for management API attempt=%d/%d err=%s",
+                logNetbird.debug("waiting for management API attempt=%d/%d err=%s",
                     attempt,
                     MAX_POLL_ATTEMPTS,
                     err instanceof Error ? err.message : String(err)
                 );
+
                 await sleep(POLL_INTERVAL_MS);
             }
         }
@@ -219,6 +242,7 @@ export namespace NetBirdBootstrap {
      * @param apiUrl NetBird API base URL
      * @param fetchImpl Fetch implementation
      * @returns Whether initial setup is still required
+     * @throws {Error} {@link Error}
      */
     async function fetchInstanceStatus(
         apiUrl: string,
@@ -245,6 +269,7 @@ export namespace NetBirdBootstrap {
      * @param fetchImpl Fetch implementation
      * @param password Generated superadmin password
      * @returns Setup response fields
+     * @throws {Error} {@link Error}
      */
     async function runSetup(
         apiUrl: string,
@@ -257,6 +282,7 @@ export namespace NetBirdBootstrap {
                 Accept: "application/json",
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify({
                 email: SUPERADMIN_EMAIL,
                 name: SUPERADMIN_NAME,

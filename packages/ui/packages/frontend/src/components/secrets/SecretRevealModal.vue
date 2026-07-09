@@ -87,8 +87,12 @@ defineExpose({ open, close });
 <template>
     <dialog ref="dialogRef" class="modal">
         <div class="modal-box max-w-2xl">
-            <h3 class="text-lg font-bold">{{ t("pages.secrets.revealTitle") }}</h3>
-            <p v-if="secretName" class="mt-1 font-mono text-sm text-base-content/70">{{ secretName }}</p>
+            <h3 class="text-lg font-bold">
+                {{ t("pages.secrets.revealTitle") }}
+            </h3>
+            <p v-if="secretName" class="mt-1 font-mono text-sm text-base-content/70">
+                {{ secretName }}
+            </p>
 
             <div v-if="loading" class="flex items-center gap-2 py-8">
                 <LoadingSpinner />
@@ -103,12 +107,16 @@ defineExpose({ open, close });
                         <tr>
                             <th>{{ t("pages.secrets.key") }}</th>
                             <th>{{ t("pages.secrets.value") }}</th>
-                            <th class="w-16">{{ t("common.actions") }}</th>
+                            <th class="w-16">
+                                {{ t("common.actions") }}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(value, key) in revealed.data" :key="key">
-                            <td class="font-mono text-sm">{{ key }}</td>
+                            <td class="font-mono text-sm">
+                                {{ key }}
+                            </td>
                             <td class="font-mono text-sm">
                                 <span v-if="isKeyVisible(key)">{{ value }}</span>
                                 <span v-else>{{ "•".repeat(Math.min(value.length, 24) || 8) }}</span>
@@ -130,11 +138,15 @@ defineExpose({ open, close });
             </div>
 
             <div class="modal-action">
-                <button type="button" class="btn" @click="close">{{ t("common.dismiss") }}</button>
+                <button type="button" class="btn" @click="close">
+                    {{ t("common.dismiss") }}
+                </button>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop">
-            <button type="button" @click="close">close</button>
+            <button type="button" @click="close">
+                close
+            </button>
         </form>
     </dialog>
 </template>

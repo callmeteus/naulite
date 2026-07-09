@@ -42,6 +42,7 @@ export namespace PermissionPreHandlers {
      * @param request Incoming Fastify request
      * @param permission Required permission
      * @returns Nothing.
+     * @throws {HTTP403Error} {@link HTTP403Error}
      */
     export function enforcePermission(request: FastifyRequest, permission: NaulitePermission): void {
         const role = request.role;
@@ -60,6 +61,7 @@ export namespace PermissionPreHandlers {
                 actorUserId: request.adminUser?.id ?? null,
                 detail: { permission }
             });
+
             throw new HTTP403Error("Forbidden.");
         }
     }

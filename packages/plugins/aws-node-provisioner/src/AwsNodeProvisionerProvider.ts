@@ -70,6 +70,7 @@ export class AwsNodeProvisionerProvider implements NodeProvisionerProvider {
             IamInstanceProfile: spec.iamInstanceProfile
                 ? { Name: spec.iamInstanceProfile }
                 : undefined,
+
             KeyName: spec.keyName,
             TagSpecifications: [{
                 ResourceType: "instance",
@@ -100,6 +101,7 @@ export class AwsNodeProvisionerProvider implements NodeProvisionerProvider {
         const response = await client.send(new DescribeInstancesCommand({
             InstanceIds: [cloudInstanceId]
         }));
+
         const instance = response.Reservations?.[0]?.Instances?.[0];
         console.debug(
             "[plugin-aws-node-provisioner] getStatus instanceId=%s state=%s",
@@ -148,6 +150,7 @@ export class AwsNodeProvisionerProvider implements NodeProvisionerProvider {
      * @param client EC2 client
      * @param imageId AMI identifier
      * @returns Nothing.
+     * @throws {Error} {@link Error}
      */
     private async validateImage(client: EC2Client, imageId: string): Promise<void> {
         const response = await client.send(new DescribeImagesCommand({

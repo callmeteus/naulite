@@ -8,6 +8,9 @@ type FastifyValidationIssue = {
     message?: string;
 };
 
+/**
+ * Generic validation messages that should not be shown to end users.
+ */
 const GENERIC_VALIDATION_MESSAGES = new Set([
     "validation failed.",
     "validation error",

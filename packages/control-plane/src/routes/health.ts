@@ -1,6 +1,6 @@
+import { HealthSummaryResponseSchema } from "@naulite/shared";
 import { ControlPlaneService } from "../ControlPlaneService";
 import { defineRoute } from "../routing/DefineRoute";
-import { HealthSummaryResponseSchema } from "@naulite/shared";
 
 export const GET = defineRoute({
     schema: {
@@ -12,6 +12,7 @@ export const GET = defineRoute({
             200: HealthSummaryResponseSchema
         }
     },
+
     async handler() {
         const databaseHealthy = await ControlPlaneService.Database.healthCheck();
         const [nodes, services] = await Promise.all([

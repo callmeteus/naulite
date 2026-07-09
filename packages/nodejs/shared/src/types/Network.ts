@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import {
+import type {
     NetworkExposureSchema,
     NetworkSchema
 } from "../schemas/Network";

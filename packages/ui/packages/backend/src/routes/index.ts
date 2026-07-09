@@ -6,13 +6,13 @@ import { registerAuthRoutes } from "./auth";
 import { registerBackupRoutes } from "./backups";
 import { registerBuildRoutes } from "./build";
 import { registerClusterRoutes } from "./cluster";
-import { registerGatewayRoutes } from "./gateway";
 import { registerContainerRegistryRoutes } from "./cr";
+import { registerGatewayRoutes } from "./gateway";
 import { registerHealthRoutes } from "./health";
 import { registerMetricsRoutes } from "./metrics";
 import { registerNetBirdRoutes } from "./netbird";
-import { registerNotificationRoutes } from "./notifications";
 import { registerNodeProvisionRoutes } from "./nodes-provision";
+import { registerNotificationRoutes } from "./notifications";
 import { registerRunsRoutes } from "./runs";
 import { registerSecretRoutes } from "./secrets";
 

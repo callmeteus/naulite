@@ -37,6 +37,7 @@ export namespace E7MessageFormatter {
                 const log = payload.failureLog ? `\n${payload.failureLog}` : "";
                 return `${header}\n${detail}${log}`;
             }
+
             case "gitops.sync.started":
                 return `${payload.timePrefix} :hourglass_flowing_sand: GitOps sync started ${payload.app} | manifests rev ${payload.commitSha ?? "-"}`;
             case "infra.sync.finished":

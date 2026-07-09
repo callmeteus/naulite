@@ -42,6 +42,7 @@ export const GET = defineRoute({
             404: z.object({ message: z.string() })
         }
     },
+
     async handler(req) {
         const user = await AdminService.getUser(req.params.id);
 
@@ -78,6 +79,7 @@ export const PATCH = defineRoute({
             404: z.object({ message: z.string() })
         }
     },
+
     async handler(req) {
         const username = (req.body.email ?? req.body.username)?.trim().toLowerCase();
 

@@ -12,6 +12,7 @@ export namespace AuthPreHandlers {
      * @param request Incoming Fastify request
      * @param adminApiKey Optional legacy service token for automation
      * @returns Nothing.
+     * @throws {createUnauthorizedError} {@link createUnauthorizedError}
      */
     export async function authenticateRequest(
         request: FastifyRequest,
@@ -26,6 +27,7 @@ export namespace AuthPreHandlers {
                 const session = await request.server.controlPlane
                     .withSession(sessionToken)
                     .getAdminMe();
+
                 request.adminUser = session.user;
                 return;
             } catch {

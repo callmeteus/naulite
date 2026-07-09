@@ -1,7 +1,10 @@
 import type { Instance } from "@naulite/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
+import { Logger } from "../Logger";
 import { PipelineRunService } from "./PipelineRunService";
+
+const logRollout = Logger.create("rollout");
 
 /**
  * Watches instance health after apply and emits rollout completion events.
@@ -30,6 +33,7 @@ export namespace RolloutWatcher {
                 kind: "rollout.finished",
                 message: "Rollout finished with no instances to watch."
             });
+
             void PipelineRunService.completeRun(runId, "succeeded");
             return;
         }
@@ -46,7 +50,7 @@ export namespace RolloutWatcher {
 
         const handle = setInterval(() => {
             void poll(runId, instanceIds, startedAt, timeoutMs, handle).catch((err) => {
-                console.error("[rollout] watch failed runId=%s err=%O", runId, err);
+                logRollout.error("watch failed runId=%s err=%O", runId, err);
             });
         }, intervalMs);
 
@@ -94,6 +98,7 @@ export namespace RolloutWatcher {
             await PipelineRunService.completeRun(runId, "failed", {
                 errorMessage: "Rollout failed because one or more instances entered failed status."
             });
+
             return;
         }
 
@@ -107,6 +112,7 @@ export namespace RolloutWatcher {
                 kind: "rollout.finished",
                 message: "Rollout finished with healthy instances."
             });
+
             await PipelineRunService.completeRun(runId, "succeeded");
             return;
         }

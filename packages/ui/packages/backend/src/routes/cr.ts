@@ -33,6 +33,7 @@ export async function registerContainerRegistryRoutes(app: FastifyInstance): Pro
             name: z.string().min(1),
             tag: z.string().min(1)
         }).parse(request.params);
+
         return controlPlaneForRequest(app, request).deleteContainerRegistryImage(params.name, params.tag);
     });
 }
