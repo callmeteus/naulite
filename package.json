@@ -13,6 +13,7 @@
     "scripts": {
         "build": "turbo run build",
         "lint": "turbo run lint",
+        "lint:fix": "turbo run lint:fix",
         "test": "yarn test:unit:all && yarn test:e2e",
         "test:unit": "vitest run --config vitest.config.ts",
         "test:unit:docker": "vitest run --config vitest.docker.config.ts",

@@ -6,7 +6,8 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "build": "tsc -p tsconfig.json && node ../../../scripts/fix-esm-imports.mjs dist",
-        "lint": "eslint src/ --max-warnings=0"
+        "lint": "eslint src/ --max-warnings=0",
+        "lint:fix": "eslint src/ --fix"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.726.1",

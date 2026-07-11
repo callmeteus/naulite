@@ -7,6 +7,7 @@
     "scripts": {
         "build": "tsc -p tsconfig.json && node ../../../../scripts/fix-esm-imports.mjs dist",
         "lint": "eslint src/ --max-warnings=0",
+        "lint:fix": "eslint src/ --fix",
         "start": "node dist/Server.js",
         "dev": "tsc -p tsconfig.json && node ../../../../scripts/fix-esm-imports.mjs dist && node dist/Server.js"
     },
