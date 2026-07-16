@@ -2,35 +2,31 @@
 
 Naulite observability stack: Prometheus configuration and Docker Compose fragment.
 
-## Environment contract
+## Overview
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PROMETHEUS_URL` | Base URL for PromQL proxy requests from the control plane and UI BFF | `http://naulite-prometheus:9090` |
-| `NAULITE_PROMETHEUS_FILE_SD_DIR` | Writable directory where the leader control plane writes file-based scrape targets | `/var/lib/naulite/prometheus/file_sd` |
-| `NAULITE_METRICS_SYNC_ENABLED` | Enables leader-only scrape target sync | `true` |
-| `NAULITE_PROMETHEUS_HOST_PORT` | Optional host port mapping for dogfood/local installs | `19090` |
+Provides Prometheus scrape config, file-based service discovery sync from the control plane leader, and a compose include for dogfood/production stacks. The UI and control plane proxy PromQL queries through authenticated routes.
 
-## Deployment
+## Environment
 
-Production installs start this stack via `bootstrap/control-plane-install.sh`.
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `PROMETHEUS_URL` | `http://naulite-prometheus:9090` | Base URL for PromQL proxy |
+| `NAULITE_PROMETHEUS_FILE_SD_DIR` | `/var/lib/naulite/prometheus/file_sd` | Leader-written scrape targets |
+| `NAULITE_METRICS_SYNC_ENABLED` | `true` | Enable leader-only target sync |
+| `NAULITE_PROMETHEUS_HOST_PORT` | `19090` | Host port for local/dogfood |
 
-Dogfood and other compose stacks should `include:` this file instead of duplicating Prometheus YAML:
+## Run
+
+Production: started via `bootstrap/control-plane-install.sh`.
+
+Dogfood compose includes:
 
 ```yaml
 include:
     - path: ../packages/metrics/compose/metrics-stack.yml
 ```
 
-## Leader sync
-
-Only the elected control plane leader writes `${NAULITE_PROMETHEUS_FILE_SD_DIR}/naulite_targets.json`.
-Mount the `naulite-prometheus-file-sd` volume (or an equivalent host path) into control plane containers at
-`NAULITE_PROMETHEUS_FILE_SD_DIR` so Prometheus and the leader share the same directory.
-
-## PromQL proxy
-
-The control plane exposes authenticated proxy routes:
+## PromQL proxy routes
 
 - `GET /metrics/query`
 - `GET /metrics/query_range`
@@ -38,3 +34,7 @@ The control plane exposes authenticated proxy routes:
 - `GET /metrics/label/:name/values`
 
 `GET /metrics` remains the Prometheus text exposition endpoint for control plane self-scrape.
+
+Only the elected control plane leader writes `${NAULITE_PROMETHEUS_FILE_SD_DIR}/naulite_targets.json`.
+
+See [../../README.md](../../README.md) for monorepo setup.

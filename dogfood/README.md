@@ -1,54 +1,90 @@
+<div align="center">
+
 # Naulite dogfood stack
 
-Local full-stack environment for Naulite development: HA control plane, Postgres, MinIO, UI, NetBird, agent, and optional Prometheus metrics.
+> Local full-stack environment for Naulite development
 
-## Quick start
+**HA control plane, Postgres, MinIO, UI, NetBird, agent, and optional Prometheus metrics.**
 
-From the naulite monorepo root:
+[![Docker](https://img.shields.io/badge/Runtime-Docker-blue.svg)](#)
+[![TypeScript](https://img.shields.io/badge/Control%20Plane-TypeScript-blue.svg)](#)
+
+[Get Started](#get-started) • [Layout](#layout) • [Endpoints](#endpoints-default) • [Environment](#environment-variables)
+
+</div>
+
+---
+
+## What Is dogfood?
+
+The dogfood stack is the local integration environment for [Naulite](../README.md). It boots the control plane, admin UI, object storage, NetBird mesh, and a sample agent in Docker Compose for day-to-day development.
+
+Thin wrappers at the monorepo root delegate here: `bin/dev.sh` and `bin/dev.ps1`.
+
+---
+
+## Get Started
+
+From the Naulite monorepo root:
 
 ```bash
 yarn dev:docker
 ```
 
-Or run the scripts directly:
+Or run scripts directly:
 
 ```bash
 ./dogfood/bin/dev.sh      # Linux / macOS / Git Bash
 ./dogfood/bin/dev.ps1     # Windows PowerShell
 ```
 
-Thin wrappers at `bin/dev.sh` and `bin/dev.ps1` delegate here.
+On first run:
 
-## What it does
+1. Creates `dogfood/.env` from `.env.example` when missing.
+2. Derives `NETBIRD_PUBLIC_MANAGEMENT_URL` from NetBird env vars when unset.
+3. Bootstraps NetBird config under `infra/netbird/` when `config.yaml` is absent.
+4. Runs `docker compose up -d --build`.
+5. Creates `ADMIN_API_KEY` and `NETBIRD_SETUP_KEY` via control plane loopback when empty.
 
-1. Creates `dogfood/.env` from `dogfood/.env.example` when missing
-2. Derives `NETBIRD_PUBLIC_MANAGEMENT_URL` from `NETBIRD_DOMAIN`, `NETBIRD_HTTP_PROTOCOL`, and `NETBIRD_SERVER_PORT` when unset
-3. Bootstraps NetBird config under `dogfood/infra/netbird/` when `config.yaml` is absent
-4. Runs `docker compose up -d --build` from this directory
-5. Creates `ADMIN_API_KEY` and `NETBIRD_SETUP_KEY` via control plane loopback when empty
+---
 
 ## Layout
 
 | Path | Purpose |
-|------|---------|
-| `docker-compose.yml` | Main stack (build contexts point at `../packages/`) |
+| ---- | ------- |
+| `docker-compose.yml` | Main stack (build contexts under `../packages/`) |
 | `.env.example` | Environment template |
-| `bin/dev.sh`, `bin/dev.ps1` | Bootstrap and start scripts |
+| `bin/dev.sh`, `bin/dev.ps1` | Bootstrap and start |
 | `infra/netbird/` | Self-hosted NetBird server + dashboard |
 | `infra/traefik/` | Traefik v3 gateway (`--profile traefik`) |
 | `scripts/init-netbird-config.sh` | Generates NetBird `config.yaml` and `dashboard.env` |
 
+---
+
+## Endpoints (default)
+
+| Service | URL |
+| ------- | --- |
+| UI | http://localhost:13000 (login: `admin@naulite.local` / `naulite-dev`) |
+| Control plane | http://localhost:8080 |
+| Control plane (peer) | http://localhost:8081 |
+| Agent | http://localhost:9470/health |
+| NetBird management (host) | `http://netbird.local:9081` (derived) |
+| Prometheus | http://localhost:19090 |
+
+---
+
 ## Agent (Docker Desktop / Windows)
 
-On Windows, Docker Desktop mounts `docker.sock` as `root:root`. The dogfood stack handles this in three ways:
+Docker Desktop mounts `docker.sock` as `root:root`. Mitigations:
 
 | Mechanism | Purpose |
-|-----------|---------|
-| `NAULITE_AGENT_USER=0:0` | Agent runs as root so it can use the socket (set automatically by `bin/dev.ps1`) |
-| `tmpfs` at `/var/lib/naulite` | Writable agent config without named-volume ownership conflicts |
-| `extra_hosts: netbird.local:host-gateway` | NetBird signal/STUN uses `netbird.local`; resolves to the host port published by `netbird-server` |
+| --------- | ------- |
+| `NAULITE_AGENT_USER=0:0` | Agent runs as root on Windows (set by `bin/dev.ps1`) |
+| `tmpfs` at `/var/lib/naulite` | Writable config without volume ownership conflicts |
+| `extra_hosts: netbird.local:host-gateway` | Signal/STUN reach host-published NetBird port |
 
-After changing agent user or volumes, recreate the container (and remove the old `naulite_agent-data-1` volume if it still exists):
+Recreate agent after user/volume changes:
 
 ```bash
 cd dogfood
@@ -58,18 +94,9 @@ docker volume rm naulite_agent-data-1 2>/dev/null || true
 docker compose up -d --build agent-1
 ```
 
-On Linux with a `root:docker` socket, keep `NAULITE_AGENT_USER=1000:1000` and set `DOCKER_SOCKET_GID` to the host docker group id.
+On Linux with `root:docker` socket, keep `NAULITE_AGENT_USER=1000:1000` and set `DOCKER_SOCKET_GID` to the host docker group id.
 
-## NetBird (dogfood `agent-1`)
-
-The **agent** starts the NetBird daemon, enrolls with `NETBIRD_SETUP_KEY`, and reports `netbirdDeviceId` to the control plane. Dogfood only supplies test infra:
-
-- `NETBIRD_MANAGEMENT_URL` / `NETBIRD_SETUP_KEY` in `.env`
-- `extra_hosts: netbird.local:host-gateway` so signal/STUN reach the host-published `${NETBIRD_SERVER_PORT}` port
-
-NetBird host dependencies (`coreutils` for `uname`) and the full `PATH` are baked into the agent image (`packages/agent/Dockerfile`), so every deployment - dogfood, test cluster, and bare metal - gets them by default.
-
-Verify:
+Verify NetBird:
 
 ```bash
 docker compose logs agent-1 | grep netbird
@@ -77,12 +104,12 @@ docker compose exec agent-1 netbird status
 curl -s http://localhost:9470/status
 ```
 
-Expect `[netbird] enrollment complete` in agent logs and `Management: Connected` from `netbird status`.
+---
 
 ## Environment variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| -------- | ------- | ----------- |
 | `NETBIRD_DOMAIN` | `netbird.local` | NetBird management hostname |
 | `NETBIRD_HTTP_PROTOCOL` | `http` | `http` or `https` |
 | `NETBIRD_SERVER_PORT` | `9081` | Host port for NetBird management API |
@@ -92,26 +119,15 @@ Expect `[netbird] enrollment complete` in agent logs and `Management: Connected`
 | `NETBIRD_SETUP_KEY` | *(auto)* | Setup key for dogfood `agent-1` |
 | `NAULITE_PUBLIC_URL` | *(empty)* | Public control plane URL for remote agents |
 | `ADMIN_API_KEY` | *(auto)* | UI backend API key |
-| `NAULITE_BOOTSTRAP_ADMIN_USERNAME` | `admin@naulite.local` | First UI login email (seeded when no users exist) |
+| `NAULITE_BOOTSTRAP_ADMIN_USERNAME` | `admin@naulite.local` | First UI login email |
 | `NAULITE_BOOTSTRAP_ADMIN_PASSWORD` | `naulite-dev` | First UI login password |
-| `NAULITE_UI_HOST_PORT` | `13000` | Host port for the admin UI (avoids clashes with local apps on 3000) |
-| `NAULITE_AGENT_USER` | `1000:1000` (Linux) / `0:0` (Windows) | Container user; root on Windows when Docker Desktop mounts `docker.sock` as `root:root` |
-| `DOCKER_SOCKET_GID` | `999` | Supplementary group for the agent when the socket uses the `docker` group |
-| Agent data | `tmpfs` at `/var/lib/naulite` | Avoids Docker Desktop volume permission issues; config is rebuilt from env on restart |
-| Agent `extra_hosts` | `netbird.local:host-gateway` | Required for in-compose NetBird signal/STUN (see below) |
+| `NAULITE_UI_HOST_PORT` | `13000` | Host port for admin UI |
+| `NAULITE_AGENT_USER` | `1000:1000` / `0:0` | Container user (root on Windows Docker Desktop) |
+| `DOCKER_SOCKET_GID` | `999` | Supplementary group for docker socket |
 | `POSTGRES_PASSWORD` | `naulite` | Postgres password |
-| `NAULITE_PROMETHEUS_HOST_PORT` | `19090` | Host port for included metrics stack |
+| `NAULITE_PROMETHEUS_HOST_PORT` | `19090` | Host port for metrics stack |
 
-## Endpoints (default)
-
-| Service | URL |
-|---------|-----|
-| UI | http://localhost:13000 (login: `admin@naulite.local` / `naulite-dev`) |
-| Control plane | http://localhost:8080 |
-| Control plane (peer) | http://localhost:8081 |
-| Agent | http://localhost:9470/health |
-| NetBird management (host) | `http://netbird.local:9081` (derived) |
-| Prometheus | http://localhost:19090 |
+---
 
 ## Compose profiles
 
@@ -120,9 +136,9 @@ cd dogfood
 docker compose --profile traefik up -d --build
 ```
 
-## Remote agent bootstrap
+---
 
-After the stack is healthy:
+## Remote agent bootstrap
 
 ```bash
 curl -fsSL <repo>/bootstrap/control-plane-install.sh | bash -s -- \
@@ -133,11 +149,9 @@ curl -fsSL <repo>/bootstrap/agent-install.sh | sudo bash -s -- \
   --setup-key <key>
 ```
 
-`agent-install.sh` accepts `--netbird-management-url`, `--management-url`, or `--url` for the NetBird management endpoint.
+`agent-install.sh` accepts `--netbird-management-url`, `--management-url`, or `--url`.
 
-## Metrics stack
-
-`docker-compose.yml` includes `../packages/metrics/compose/metrics-stack.yml`. Prometheus starts with the main stack when that file is present.
+---
 
 ## Useful commands
 
@@ -148,8 +162,16 @@ docker compose down
 docker compose ps
 ```
 
-## Production bootstrap
+---
 
-Use `bootstrap/control-plane-install.sh` for a guided install that writes `dogfood/.env`, initializes NetBird, and prints the agent setup key.
+## Documentation
 
-See `dogfood/infra/netbird/README.md` for NetBird-specific details.
+- [infra/netbird/README.md](infra/netbird/README.md) - NetBird-specific details.
+- [../README.md](../README.md) - Naulite monorepo overview.
+- [AGENTS.md](../../../AGENTS.md) - workspace coding standards.
+
+---
+
+## License
+
+Part of the Naulite platform.

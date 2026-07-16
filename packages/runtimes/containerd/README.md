@@ -1,17 +1,17 @@
 # @naulite/runtime-containerd
 
-containerd `RuntimeProvider` stub that returns `RuntimeNotConfiguredError` until a nerdctl-backed implementation is added.
+containerd `RuntimeProvider` stub pending nerdctl integration.
+
+## Overview
+
+Registered in the control plane `RuntimeLoader` but not yet operational. Every method throws `RuntimeNotConfiguredError` with runtime id `containerd` until a nerdctl-backed implementation ships.
 
 ## Status
 
-- Registered in the control plane `RuntimeLoader` alongside Docker and Podman.
-- Every method throws `RuntimeNotConfiguredError` with runtime id `containerd`.
-- Full containerd support requires wiring [nerdctl](https://github.com/containerd/nerdctl) (or containerd CRI shims) for pull, create, start, stop, logs, exec, and plan application.
+- Stub registered alongside Docker and Podman providers.
+- Full support requires [nerdctl](https://github.com/containerd/nerdctl) or containerd gRPC client wiring for pull, create, start, stop, logs, exec, and plan apply.
+- Follow-up: expose runtime selection on agents by node capability; document socket paths for rootless containerd nodes.
 
-## Follow-up
+See [CONTEXT.md](../../CONTEXT.md) for architecture.
 
-- Add nerdctl CLI or containerd gRPC client integration mirroring `DockerRuntimeProvider`.
-- Expose runtime selection on agents by node capability (`containerd` vs `docker` vs `podman`).
-- Document socket paths and bootstrap requirements on rootless/containerd nodes.
-
-See [platform context](../../CONTEXT.md) for architecture and integration details.
+See [../../README.md](../../README.md) for monorepo setup.

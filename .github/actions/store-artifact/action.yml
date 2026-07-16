@@ -1,0 +1,18 @@
+name: Store self-hosted artifact
+description: Persists CI outputs under /artifacts/<package> and keeps only the 3 newest runs per package.
+
+inputs:
+    package:
+        description: Package name (directory under /artifacts).
+        required: true
+    paths:
+        description: Newline-separated files or directories to copy.
+        required: true
+    if-no-files-found:
+        description: warn, error, or ignore when a path is missing.
+        required: false
+        default: warn
+
+runs:
+    using: node20
+    main: store-artifact.mjs

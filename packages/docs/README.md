@@ -1,10 +1,14 @@
 # @naulite/docs
 
-English-only Naulite documentation site built with [Astro](https://astro.build) and [Starlight](https://starlight.astro.build).
+English-only Naulite documentation site (Astro + Starlight).
 
-## Commands
+## Overview
 
-From the `naulite/` repository root:
+Static docs package for platform architecture, dogfood guides, and operator runbooks. Legacy `platform/docs/*.md` files redirect here.
+
+## Run
+
+From the Naulite repository root:
 
 ```bash
 yarn workspace @naulite/docs dev
@@ -12,12 +16,18 @@ yarn workspace @naulite/docs build
 yarn workspace @naulite/docs preview
 ```
 
-Dev server defaults to `http://localhost:4321`.
+Dev server: http://localhost:4321
 
 ## Content
 
-Edit markdown under `src/content/docs/`. Legacy `platform/docs/*.md` files are one-line redirects to this package.
+Edit markdown under `src/content/docs/`.
 
-## Build output
+## Scripts
 
-Static site is emitted to `dist/` (included in Turborepo `build` outputs).
+| Command | Action |
+| ------- | ------ |
+| `yarn workspace @naulite/docs dev` | Astro dev server |
+| `yarn workspace @naulite/docs build` | Static site to `dist/` |
+| `yarn workspace @naulite/docs preview` | Preview production build |
+
+See [../../README.md](../../README.md) for monorepo setup.

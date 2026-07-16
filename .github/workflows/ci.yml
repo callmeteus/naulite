@@ -9,10 +9,11 @@ env:
     # Keep in sync with infra/zig-toolchain.env and packages/agent/Dockerfile ARG ZIG_VERSION
     ZIG_VERSION: "0.16.0"
     REQUIRE_DOCKER: "true"
+    ARTIFACTS_ROOT: /artifacts
 
 jobs:
     verify:
-        runs-on: ubuntu-latest
+        runs-on: self-hosted
         timeout-minutes: 60
 
         steps:
@@ -64,7 +65,7 @@ jobs:
               run: yarn build
 
     docker-smoke:
-        runs-on: ubuntu-latest
+        runs-on: self-hosted
         timeout-minutes: 30
 
         steps:
@@ -85,7 +86,7 @@ jobs:
 
     image-scan:
         needs: docker-smoke
-        runs-on: ubuntu-latest
+        runs-on: self-hosted
         timeout-minutes: 45
 
         strategy:
@@ -125,9 +126,9 @@ jobs:
                   format: cyclonedx
                   output: sbom-${{ matrix.image }}.cyclonedx.json
 
-            - name: Upload SBOM artifact
-              uses: actions/upload-artifact@v4
+            - name: Store SBOM artifact
+              uses: ./.github/actions/store-artifact
               with:
-                  name: sbom-${{ matrix.image }}
-                  path: sbom-${{ matrix.image }}.cyclonedx.json
-                  retention-days: 90
+                  package: naulite-sbom-${{ matrix.image }}
+                  paths: |
+                      sbom-${{ matrix.image }}.cyclonedx.json

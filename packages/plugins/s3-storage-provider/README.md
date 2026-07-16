@@ -2,14 +2,18 @@
 
 S3-compatible object storage plugin for platform backups and the private container registry.
 
-## Roles
+## Overview
 
-- `BackupDestinationProvider` - volume backup archives under configurable prefix
-- `ContainerRegistryBlobProvider` - docker save tarballs under `cr/{name}/{tag}.tar`
+| Role | Description |
+| ---- | ----------- |
+| `BackupDestinationProvider` | Volume backup archives under configurable prefix |
+| `ContainerRegistryBlobProvider` | Docker save tarballs under `cr/{name}/{tag}.tar` |
+
+Both adapters share `S3ObjectStore` for put/get/head/delete against S3-compatible APIs (MinIO in dev).
 
 ## Manifest
 
-The manifest provider id remains `s3`:
+Provider id remains `s3`:
 
 ```yaml
 destination:
@@ -21,6 +25,6 @@ destination:
     secretName: s3-creds
 ```
 
-## Core
+See [CONTEXT.md](../../CONTEXT.md) for architecture.
 
-Both adapters share {@link S3ObjectStore} for put/get/head/delete operations against S3-compatible APIs (MinIO in dev).
+See [../../README.md](../../README.md) for monorepo setup.

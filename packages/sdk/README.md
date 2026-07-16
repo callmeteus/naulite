@@ -2,7 +2,17 @@
 
 Typed HTTP client for the Naulite control plane REST API.
 
-See [CONTEXT.md](../../CONTEXT.md) for architecture and [CHANGELOG.md](../../CHANGELOG.md) for current development status.
+## Overview
+
+`NauliteClient` wraps cluster operations: nodes, services, manifests, logs, exec, builds, GitOps, NetBird topology, and metrics endpoints.
+
+## Run
+
+Use from TypeScript services or scripts after building the workspace:
+
+```bash
+yarn workspace @naulite/sdk build
+```
 
 ## Usage
 
@@ -16,10 +26,14 @@ const nodes = await client.listNodes();
 
 ## API coverage
 
-- Cluster status and resource listing (nodes, services, instances, volumes, secrets, backups)
+- Cluster status and resources (nodes, services, instances, volumes, secrets, backups)
 - Manifest apply and resource delete
 - Logs, exec, build, registry, ingress
-- Backup and log rotation operations
-- GitOps revisions, rollback, and webhook
-- NetBird topology, devices, groups, and ACLs
+- Backup and log rotation
+- GitOps revisions, rollback, webhook
+- NetBird topology, devices, groups, ACLs
 - Prometheus metrics endpoint
+
+See [CONTEXT.md](../../CONTEXT.md) and [CHANGELOG.md](../../CHANGELOG.md) for architecture and release status.
+
+See [../../README.md](../../README.md) for monorepo setup.
