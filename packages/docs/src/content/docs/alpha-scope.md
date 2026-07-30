@@ -17,6 +17,7 @@ Naulite V1 is a **working scaffold** for local development, integration testing,
 | CLI and Vue dashboard | Implemented |
 | GitOps apply and rollback | Implemented |
 | Backups, log rotation, self-hosted NetBird | Implemented |
+| Linux host inventory and remote package/system updates | Implemented |
 | Docker Compose dogfood stack | Implemented |
 | CI (`verify` + `docker-smoke` jobs) | Implemented |
 | Consolidated docs (`@naulite/docs`, this site) | Implemented |

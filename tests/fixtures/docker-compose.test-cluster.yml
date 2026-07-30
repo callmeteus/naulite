@@ -166,6 +166,7 @@ services:
             NAULITE_NODE_LABELS: "{\"role\":\"builder\"}"
             NAULITE_CAPABILITIES: "docker,builder"
             NAULITE_API_KEY: naulite-test-agent-key
+            NAULITE_HOST_PM_STUB: "1"
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:
@@ -188,6 +189,7 @@ services:
             NAULITE_NODE_LABELS: "{\"role\":\"worker\"}"
             NAULITE_CAPABILITIES: "docker"
             NAULITE_API_KEY: naulite-test-agent-key
+            NAULITE_HOST_PM_STUB: "1"
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         ports:

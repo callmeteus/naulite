@@ -19,6 +19,68 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return app.controlPlane.listNodes();
     });
 
+    app.get("/nodes/:id", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.getNode(params.id);
+    });
+
+    app.get("/nodes/:id/host/inventory", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+        const query = z.object({
+            refresh: z.enum(["true", "false"]).optional()
+        }).parse(request.query);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.getNodeHostInventory(params.id, {
+            refresh: query.refresh === "true"
+        });
+    });
+
+    app.post("/nodes/:id/host/inventory/refresh", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.refreshNodeHostInventory(params.id);
+    });
+
+    app.post("/nodes/:id/host/packages/update", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+        const body = z.object({
+            packages: z.array(z.string().min(1)).optional()
+        }).parse(request.body ?? {});
+
+        const client = controlPlaneForRequest(app, request);
+        return client.updateNodePackages(params.id, body.packages);
+    });
+
+    app.post("/nodes/:id/host/system/update", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.updateNodeSystem(params.id);
+    });
+
+    app.get("/nodes/:id/host/updates", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.listNodeHostUpdates(params.id);
+    });
+
     app.get("/instances", async () => {
         return app.controlPlane.listInstances();
     });

@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import { z } from "zod";
-import { ClusterLabelsSchema, NodeResourcesSchema, NodeSchema } from "@naulite/shared";
+
+import { ClusterLabelsSchema, NodeOsFamilySchema, NodeResourcesSchema, NodeSchema } from "@naulite/shared";
 
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
@@ -15,6 +16,9 @@ const RegisterNodeBodySchema = z.object({
     capabilities: z.array(z.string()).default([]),
     resources: NodeResourcesSchema,
     netbirdDeviceId: z.string().min(1).optional(),
+    osFamily: NodeOsFamilySchema.optional(),
+    osVersion: z.string().min(1).optional(),
+    arch: z.string().min(1).optional(),
     provisionId: z.string().min(1).optional()
 });
 
@@ -48,6 +52,9 @@ export const POST = defineRoute({
             agentVersion: body.agentVersion,
             agentUrl: body.agentUrl,
             netbirdDeviceId: body.netbirdDeviceId,
+            osFamily: body.osFamily ?? existing?.osFamily,
+            osVersion: body.osVersion ?? existing?.osVersion,
+            arch: body.arch ?? existing?.arch,
             lastHeartbeatAt: now,
             createdAt: existing?.createdAt ?? now,
             updatedAt: now

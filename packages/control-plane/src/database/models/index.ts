@@ -10,6 +10,8 @@ import { ControlPlaneLeaderModel } from "./ControlPlaneLeaderModel";
 import { FunctionRunModel } from "./FunctionRunModel";
 import { GatewayRouteModel } from "./GatewayRouteModel";
 import { GitRevisionModel } from "./GitRevisionModel";
+import { HostInventoryModel } from "./HostInventoryModel";
+import { HostUpdateRunModel } from "./HostUpdateRunModel";
 import { InstanceModel } from "./InstanceModel";
 import { LogRotationRunModel } from "./LogRotationRunModel";
 import { NodeModel } from "./NodeModel";
@@ -38,6 +40,8 @@ export {
     FunctionRunModel,
     GatewayRouteModel,
     GitRevisionModel,
+    HostInventoryModel,
+    HostUpdateRunModel,
     InstanceModel,
     LogRotationRunModel,
     PipelineRunModel,
@@ -64,6 +68,8 @@ export const controlPlaneModels = [
     TenantModel,
     NodeModel,
     NodeProvisionModel,
+    HostInventoryModel,
+    HostUpdateRunModel,
     ServiceModel,
     InstanceModel,
     VolumeModel,

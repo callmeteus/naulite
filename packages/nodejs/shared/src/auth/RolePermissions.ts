@@ -30,6 +30,7 @@ const OPERATOR_PERMISSIONS: NaulitePermission[] = [
     "secrets:write",
     "nodes:provision",
     "nodes:terminate",
+    "nodes:host-update",
     "manifests:apply",
     "workloads:write",
     "runs:write",

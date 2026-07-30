@@ -17,6 +17,7 @@ import LoginView from "../views/LoginView.vue";
 import MetricsView from "../views/MetricsView.vue";
 import NetBirdView from "../views/NetBirdView.vue";
 import NodesView from "../views/NodesView.vue";
+import NodeDetailView from "../views/NodeDetailView.vue";
 import NotificationsView from "../views/NotificationsView.vue";
 import ProvisionView from "../views/ProvisionView.vue";
 import RunsView from "../views/RunsView.vue";
@@ -34,6 +35,7 @@ const router = createRouter({
         { path: "/403", component: ForbiddenView },
         { path: "/", redirect: "/nodes" },
         { path: "/nodes", component: NodesView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
+        { path: "/nodes/:id", component: NodeDetailView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
         { path: "/services", component: ServicesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
         { path: "/instances", component: InstancesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
         { path: "/volumes", component: VolumesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },

@@ -233,6 +233,20 @@ fn dispatch(
     if (matchesAction(argv, "nodes", "get")) {
         return try runVoid(commands.getNodes(allocator, client));
     }
+    if (argv.len >= 5 and std.mem.eql(u8, argv[1], "nodes") and std.mem.eql(u8, argv[2], "inventory") and std.mem.eql(u8, argv[3], "get")) {
+        const refresh = hasFlag(argv[5..], "--refresh");
+        return try runVoid(commands.getNodeInventory(allocator, client, argv[4], refresh));
+    }
+    if (argv.len >= 5 and std.mem.eql(u8, argv[1], "nodes") and std.mem.eql(u8, argv[2], "packages") and std.mem.eql(u8, argv[3], "update")) {
+        const packages_csv = readOptionalFlagValue(argv[5..], "--packages");
+        return try runVoid(commands.updateNodePackages(allocator, client, argv[4], packages_csv));
+    }
+    if (argv.len >= 5 and std.mem.eql(u8, argv[1], "nodes") and std.mem.eql(u8, argv[2], "system") and std.mem.eql(u8, argv[3], "update")) {
+        return try runVoid(commands.updateNodeSystem(allocator, client, argv[4]));
+    }
+    if (argv.len >= 5 and std.mem.eql(u8, argv[1], "nodes") and std.mem.eql(u8, argv[2], "updates") and std.mem.eql(u8, argv[3], "get")) {
+        return try runVoid(commands.getNodeUpdates(allocator, client, argv[4]));
+    }
     if (matchesAction(argv, "services", "get")) {
         return try runVoid(commands.getServices(allocator, client));
     }
@@ -386,6 +400,15 @@ fn readOptionalFlagValue(argv: []const []const u8, flag: []const u8) ?[]const u8
     return readFlagValue(argv, flag, flag);
 }
 
+fn hasFlag(argv: []const []const u8, flag: []const u8) bool {
+    for (argv) |arg| {
+        if (std.mem.eql(u8, arg, flag)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 fn readTailFlag(argv: []const []const u8) !u32 {
     const tail_value = readFlagValue(argv, "--tail", "--tail") orelse return 200;
     return try std.fmt.parseInt(u32, tail_value, 10);
@@ -398,6 +421,10 @@ fn printUsage(writer: anytype) !void {
         \\Usage:
         \\  naulite login --cp <netbird-ip> --key <secret> [--port <port>] [--tenant <slug>]
         \\  naulite [--url <url>] [--cp <host>] [--port <port>] cluster nodes get
+        \\  naulite cluster nodes inventory get <nodeId> [--refresh]
+        \\  naulite cluster nodes packages update <nodeId> [--packages a,b,c]
+        \\  naulite cluster nodes system update <nodeId>
+        \\  naulite cluster nodes updates get <nodeId>
         \\  naulite cluster services get|delete <name>|rotate-logs <name>
         \\  naulite cluster instances get|logs <id>
         \\  naulite exec [-i] [-t] <target> [--] <command...>

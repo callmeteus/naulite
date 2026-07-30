@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useI18n } from "vue-i18n";
+import { RouterLink } from "vue-router";
 
 import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
@@ -41,6 +42,7 @@ onMounted(() => {
                         <tr>
                             <th>{{ t("common.id") }}</th>
                             <th>{{ t("common.tableColumns.hostname") }}</th>
+                            <th>{{ t("pages.nodeDetail.os") }}</th>
                             <th>{{ t("common.status") }}</th>
                             <th>{{ t("pages.metrics.nodeCpu") }}</th>
                             <th>{{ t("pages.metrics.nodeMemory") }}</th>
@@ -49,7 +51,12 @@ onMounted(() => {
                     <tbody>
                         <tr v-for="node in store.nodes" :key="node.id">
                             <td>{{ node.id }}</td>
-                            <td>{{ node.hostname }}</td>
+                            <td>
+                                <RouterLink :to="`/nodes/${node.id}`" class="link link-primary">
+                                    {{ node.hostname }}
+                                </RouterLink>
+                            </td>
+                            <td>{{ node.osFamily ?? "-" }} {{ node.osVersion ?? "" }}</td>
                             <td><StatusPill :status="node.status" /></td>
                             <td>{{ node.resources.cpuMillisUsed }}</td>
                             <td>{{ node.resources.memoryMbUsed }} MB</td>

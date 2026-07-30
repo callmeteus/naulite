@@ -36,6 +36,15 @@ export class NodeModel extends Model {
     @Column({ type: DataType.STRING, field: "netbird_device_id" })
     declare netbirdDeviceId: string | null;
 
+    @Column({ type: DataType.STRING, field: "os_family" })
+    declare osFamily: string | null;
+
+    @Column({ type: DataType.STRING, field: "os_version" })
+    declare osVersion: string | null;
+
+    @Column(DataType.STRING)
+    declare arch: string | null;
+
     @Column({ type: DataType.STRING, field: "last_heartbeat_at" })
     declare lastHeartbeatAt: string;
 

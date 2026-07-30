@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
     IdParamsSchema,
+    NodeOsFamilySchema,
     NodeResourcesSchema,
     NodeSchema,
     NodeStatusSchema,
@@ -14,7 +15,10 @@ import { NodeHealthWatcher } from "../../../services/NodeHealthWatcher";
 
 const NodeHeartbeatBodySchema = z.object({
     status: NodeStatusSchema.exclude(["registering"]).default("online"),
-    resources: NodeResourcesSchema.optional()
+    resources: NodeResourcesSchema.optional(),
+    osFamily: NodeOsFamilySchema.optional(),
+    osVersion: z.string().min(1).optional(),
+    arch: z.string().min(1).optional()
 });
 
 export const POST = defineRoute({
@@ -37,7 +41,10 @@ export const POST = defineRoute({
         const body = req.body;
         const updated = await ControlPlaneService.Store.updateNodeHeartbeat(id, {
             status: body.status ?? "online",
-            resources: body.resources
+            resources: body.resources,
+            osFamily: body.osFamily,
+            osVersion: body.osVersion,
+            arch: body.arch
         });
 
         if (!updated) {

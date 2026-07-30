@@ -55,6 +55,7 @@ export default defineConfig({
                         { label: "Server functions", slug: "guides/server-functions" },
                         { label: "Bootstrap", slug: "bootstrap" },
                         { label: "Backups", slug: "backups" },
+                        { label: "Host inventory and updates", slug: "host-inventory-updates" },
                         { label: "Log rotation", slug: "log-rotation" },
                         { label: "Admin authentication", slug: "admin-auth" },
                         { label: "Continuous integration", slug: "ci" },

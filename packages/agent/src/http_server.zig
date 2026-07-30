@@ -10,6 +10,8 @@ const build_executor = @import("build_executor.zig");
 const exec_stream = @import("exec_stream.zig");
 const execution_plan = @import("execution_plan.zig");
 const function_executor = @import("function_executor.zig");
+const host_inventory_executor = @import("host_inventory_executor.zig");
+const host_update_executor = @import("host_update_executor.zig");
 const log_rotation_executor = @import("log_rotation_executor.zig");
 const docker = @import("runtime/docker/docker.zig");
 const metrics_exporter = @import("runtime/docker/metrics_exporter.zig");
@@ -146,6 +148,18 @@ pub fn handleRequestWithSocket(
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/function")) {
         return try handleFunctionTask(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/host-inventory")) {
+        return try handleHostInventoryTask(&ctx);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/package-update")) {
+        return try handlePackageUpdateTask(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/system-update")) {
+        return try handleSystemUpdateTask(&ctx);
     }
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/backups/receive")) {
@@ -532,6 +546,48 @@ fn handleBackupRestore(ctx: *const RouteContext, body: []const u8) !HttpResponse
         .status = if (result.error_message != null) 500 else 200,
         .content_type = "application/json",
         .body = response_body,
+    };
+}
+
+fn handleHostInventoryTask(ctx: *const RouteContext) !HttpResponse {
+    const result = try host_inventory_executor.executeHostInventoryTask(ctx.allocator);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = if (result.error_message != null) 500 else 200,
+        .content_type = "application/json",
+        .body = result.body,
+    };
+}
+
+fn handlePackageUpdateTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try host_update_executor.executePackageUpdateTask(ctx.allocator, body);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = if (result.error_message != null) 500 else 200,
+        .content_type = "application/json",
+        .body = result.body,
+    };
+}
+
+fn handleSystemUpdateTask(ctx: *const RouteContext) !HttpResponse {
+    const result = try host_update_executor.executeSystemUpdateTask(ctx.allocator);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = if (result.error_message != null) 500 else 200,
+        .content_type = "application/json",
+        .body = result.body,
     };
 }
 

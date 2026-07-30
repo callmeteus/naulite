@@ -1,5 +1,5 @@
 import { reactive } from "vue";
-import type { ApplyResponse, BackupRun, BuildRequest, BuildResponse, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, Instance, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, Node, NodeProvision, PipelineEvent, PipelineRun, ProvisionNodeInput, Secret, Service, Volume } from "@naulite/sdk";
+import type { ApplyResponse, BackupRun, BuildRequest, BuildResponse, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, HostInventory, HostUpdateRun, Instance, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, Node, NodeProvision, PipelineEvent, PipelineRun, ProvisionNodeInput, Secret, Service, Volume } from "@naulite/sdk";
 
 import { nauliteClient } from "../api/Client";
 import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
@@ -465,6 +465,79 @@ export const clusterStore = reactive({
      */
     async getNodeProvision(provisionId: string): Promise<NodeProvision> {
         return nauliteClient.getNodeProvision(provisionId);
+    },
+
+    /**
+     * Loads host package inventory for a node.
+     *
+     * @param nodeId Node identifier
+     * @param refresh When true, collects a fresh snapshot from the agent
+     * @returns Host inventory snapshot
+     */
+    async getNodeHostInventory(nodeId: string, refresh = false): Promise<HostInventory> {
+        this.loading = true;
+        this.error = null;
+
+        try {
+            return await nauliteClient.getNodeHostInventory(nodeId, { refresh });
+        } catch (err) {
+            this.setError(err);
+            throw err;
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Updates host packages on a node.
+     *
+     * @param nodeId Node identifier
+     * @param packages Optional package names to update
+     * @returns Host update run record
+     */
+    async updateNodePackages(nodeId: string, packages?: string[]): Promise<HostUpdateRun> {
+        this.loading = true;
+        this.error = null;
+
+        try {
+            return await nauliteClient.updateNodePackages(nodeId, packages);
+        } catch (err) {
+            this.setError(err);
+            throw err;
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Performs a full host system update on a node.
+     *
+     * @param nodeId Node identifier
+     * @returns Host update run record
+     */
+    async updateNodeSystem(nodeId: string): Promise<HostUpdateRun> {
+        this.loading = true;
+        this.error = null;
+
+        try {
+            return await nauliteClient.updateNodeSystem(nodeId);
+        } catch (err) {
+            this.setError(err);
+            throw err;
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Lists historical host update runs for a node.
+     *
+     * @param nodeId Node identifier
+     * @returns Host update runs
+     */
+    async listNodeHostUpdates(nodeId: string): Promise<HostUpdateRun[]> {
+        const response = await nauliteClient.listNodeHostUpdates(nodeId);
+        return response.items;
     },
 
     /**

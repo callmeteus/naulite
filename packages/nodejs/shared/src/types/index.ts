@@ -17,8 +17,20 @@ export type {
 export type {
     Node,
     NodeStatus,
-    NodeResources
+    NodeResources,
+    NodeOsFamily
 } from "./Node";
+
+export type {
+    HostPackageManager,
+    HostPackageStatus,
+    HostPackage,
+    HostInventory,
+    HostUpdateRequest,
+    HostUpdateKind,
+    HostUpdateRunStatus,
+    HostUpdateRun
+} from "./HostInventory";
 
 export type {
     NodeProvision,

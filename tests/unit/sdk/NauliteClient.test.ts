@@ -248,4 +248,54 @@ describe("NauliteClient", () => {
             vi.unstubAllGlobals();
         }
     });
+
+    it("calls host inventory and update endpoints", async () => {
+        const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+            const method = init?.method ?? "GET";
+
+            if (method === "GET" && String(_url).includes("/host/inventory")) {
+                return new Response(JSON.stringify({
+                    nodeId: "node-1",
+                    packageManager: "apt",
+                    packages: [],
+                    summary: { total: 0, outdated: 0 },
+                    collectedAt: "2026-07-30T00:00:00.000Z"
+                }), { status: 200 });
+            }
+
+            if (method === "POST" && String(_url).includes("/host/packages/update")) {
+                return new Response(JSON.stringify({
+                    id: "run-1",
+                    nodeId: "node-1",
+                    kind: "packages",
+                    status: "succeeded",
+                    packages: ["openssl"],
+                    rebootRequired: false,
+                    createdAt: "2026-07-30T00:00:00.000Z"
+                }), { status: 200 });
+            }
+
+            return new Response("{}", { status: 404 });
+        });
+
+        const client = new NauliteClient({
+            baseUrl: "http://localhost:8080",
+            fetchImpl
+        });
+
+        const inventory = await client.getNodeHostInventory("node-1", { refresh: true });
+        expect(inventory.nodeId).toBe("node-1");
+
+        const run = await client.updateNodePackages("node-1", ["openssl"]);
+        expect(run.kind).toBe("packages");
+
+        expect(fetchImpl).toHaveBeenCalledWith(
+            "http://localhost:8080/nodes/node-1/host/inventory?refresh=true",
+            expect.objectContaining({ method: "GET" })
+        );
+        expect(fetchImpl).toHaveBeenCalledWith(
+            "http://localhost:8080/nodes/node-1/host/packages/update",
+            expect.objectContaining({ method: "POST" })
+        );
+    });
 });

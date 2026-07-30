@@ -4,6 +4,7 @@ const log_agent_config = logger.Logger.create("agent-config");
 const log_cp = logger.Logger.create("cp");
 
 const std = @import("std");
+const builtin = @import("builtin");
 
 const agent_config = @import("agent_config.zig");
 const blocking_io = @import("blocking_io.zig");
@@ -84,8 +85,20 @@ fn registerNode(
     const resources_json = try formatResourcesJson(allocator, resources);
     defer allocator.free(resources_json);
 
+    const os_family = bootstrap.detectOsFamily();
+    const os_version = bootstrap.detectOsVersion(allocator) catch try allocator.dupe(u8, @tagName(os_family));
+    defer allocator.free(os_version);
+    const arch = @tagName(builtin.cpu.arch);
+
+    const os_json = try std.fmt.allocPrint(
+        allocator,
+        ",\"osFamily\":\"{s}\",\"osVersion\":\"{s}\",\"arch\":\"{s}\"",
+        .{ @tagName(os_family), os_version, arch },
+    );
+    defer allocator.free(os_json);
+
     const register_fmt =
-        \\{{"id":"{s}","hostname":"{s}","agentVersion":"{s}","agentUrl":"{s}","labels":{s},"capabilities":{s},"resources":{s}{s}}}
+        \\{{"id":"{s}","hostname":"{s}","agentVersion":"{s}","agentUrl":"{s}","labels":{s},"capabilities":{s},"resources":{s}{s}{s}}}
     ;
     const body = try std.fmt.allocPrint(
         allocator,
@@ -99,6 +112,7 @@ fn registerNode(
             capabilities_json,
             resources_json,
             netbird_device_json,
+            os_json,
         },
     );
     defer allocator.free(body);
@@ -127,13 +141,18 @@ fn sendHeartbeat(
     const resources_json = try formatResourcesJson(allocator, resources);
     defer allocator.free(resources_json);
 
+    const os_family = bootstrap.detectOsFamily();
+    const os_version = bootstrap.detectOsVersion(allocator) catch try allocator.dupe(u8, @tagName(os_family));
+    defer allocator.free(os_version);
+    const arch = @tagName(builtin.cpu.arch);
+
     const heartbeat_fmt =
-        \\{{"status":"online","resources":{s}}}
+        \\{{"status":"online","resources":{s},"osFamily":"{s}","osVersion":"{s}","arch":"{s}"}}
     ;
     const body = try std.fmt.allocPrint(
         allocator,
         heartbeat_fmt,
-        .{resources_json},
+        .{ resources_json, @tagName(os_family), os_version, arch },
     );
     defer allocator.free(body);
 
@@ -377,7 +396,8 @@ fn reportRunEventIo(
     if (postJson(allocator, io, path, body, api_key)) |response| {
         defer allocator.free(response);
     } else |err| {
-        log_cp.warn("run event report failed runId={s} kind={s} err={}",
+        log_cp.warn(
+            "run event report failed runId={s} kind={s} err={}",
             .{ run_id, kind, err },
         );
     }

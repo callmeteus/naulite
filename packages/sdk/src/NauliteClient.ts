@@ -34,6 +34,8 @@ import type {
     LogRotationTask,
     FunctionRun,
     FunctionRunSummary,
+    HostInventory,
+    HostUpdateRun,
     PaginatedResponse,
     PaginationQuery,
     PipelineEvent,
@@ -373,6 +375,81 @@ export class NauliteClient {
      */
     async getNode(nodeId: string): Promise<Node> {
         return this.request<Node>("GET", `/nodes/${encodeURIComponent(nodeId)}`);
+    }
+
+    /**
+     * Returns the cached host package inventory for a node.
+     *
+     * @param nodeId Node identifier
+     * @param options Optional refresh flag
+     * @returns Host inventory snapshot
+     */
+    async getNodeHostInventory(
+        nodeId: string,
+        options?: { refresh?: boolean }
+    ): Promise<HostInventory> {
+        const query = options?.refresh ? "?refresh=true" : "";
+        return this.request<HostInventory>(
+            "GET",
+            `/nodes/${encodeURIComponent(nodeId)}/host/inventory${query}`
+        );
+    }
+
+    /**
+     * Collects a fresh host package inventory snapshot from the node agent.
+     *
+     * @param nodeId Node identifier
+     * @returns Host inventory snapshot
+     */
+    async refreshNodeHostInventory(nodeId: string): Promise<HostInventory> {
+        return this.request<HostInventory>(
+            "POST",
+            `/nodes/${encodeURIComponent(nodeId)}/host/inventory/refresh`
+        );
+    }
+
+    /**
+     * Updates host packages on a node.
+     *
+     * @param nodeId Node identifier
+     * @param packages Optional package names to update
+     * @returns Host update run record
+     */
+    async updateNodePackages(
+        nodeId: string,
+        packages?: string[]
+    ): Promise<HostUpdateRun> {
+        return this.request<HostUpdateRun>(
+            "POST",
+            `/nodes/${encodeURIComponent(nodeId)}/host/packages/update`,
+            { packages }
+        );
+    }
+
+    /**
+     * Performs a full host system update on a node.
+     *
+     * @param nodeId Node identifier
+     * @returns Host update run record
+     */
+    async updateNodeSystem(nodeId: string): Promise<HostUpdateRun> {
+        return this.request<HostUpdateRun>(
+            "POST",
+            `/nodes/${encodeURIComponent(nodeId)}/host/system/update`
+        );
+    }
+
+    /**
+     * Lists historical host update runs for a node.
+     *
+     * @param nodeId Node identifier
+     * @returns Host update runs
+     */
+    async listNodeHostUpdates(nodeId: string): Promise<{ items: HostUpdateRun[] }> {
+        return this.request<{ items: HostUpdateRun[] }>(
+            "GET",
+            `/nodes/${encodeURIComponent(nodeId)}/host/updates`
+        );
     }
 
     /**

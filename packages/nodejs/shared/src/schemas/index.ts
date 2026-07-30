@@ -27,8 +27,21 @@ export {
 export {
     NodeSchema,
     NodeStatusSchema,
-    NodeResourcesSchema
+    NodeResourcesSchema,
+    NodeOsFamilySchema
 } from "./Node";
+
+export {
+    HostPackageManagerSchema,
+    HostPackageStatusSchema,
+    HostPackageSchema,
+    HostInventorySummarySchema,
+    HostInventorySchema,
+    HostUpdateRequestSchema,
+    HostUpdateKindSchema,
+    HostUpdateRunStatusSchema,
+    HostUpdateRunSchema
+} from "./HostInventory";
 
 export {
     NodeProvisionSchema,

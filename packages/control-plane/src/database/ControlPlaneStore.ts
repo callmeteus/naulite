@@ -1,17 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Op } from "sequelize";
-import type {
-    ApiKey,
-    CreatedApiKey,
-    Instance,
-    Node,
-    NodeProvision,
-    PaginatedList,
-    PaginationQuery,
-    Secret,
-    Service,
-    Volume
-} from "@naulite/shared";
+import type { ApiKey, CreatedApiKey, HostInventory, HostUpdateRun, Instance, Node, NodeProvision, PaginatedList, PaginationQuery, Secret, Service, Volume } from "@naulite/shared";
 import { buildPaginatedList, paginationOffset } from "@naulite/shared";
 
 import { ApiKeyCrypto } from "../auth/ApiKeyCrypto";
@@ -22,6 +11,8 @@ import {
     ApiKeyModel,
     BackupRunModel,
     FunctionRunModel,
+    HostInventoryModel,
+    HostUpdateRunModel,
     InstanceModel,
     NodeModel,
     NodeProvisionModel,
@@ -83,6 +74,9 @@ export class ControlPlaneStore {
             agentVersion: node.agentVersion,
             agentUrl: node.agentUrl ?? null,
             netbirdDeviceId: node.netbirdDeviceId ?? null,
+            osFamily: node.osFamily ?? null,
+            osVersion: node.osVersion ?? null,
+            arch: node.arch ?? null,
             lastHeartbeatAt: node.lastHeartbeatAt,
             createdAt: node.createdAt,
             updatedAt: node.updatedAt
@@ -101,6 +95,9 @@ export class ControlPlaneStore {
         patch: {
             status?: Node["status"];
             resources?: Node["resources"];
+            osFamily?: Node["osFamily"];
+            osVersion?: string;
+            arch?: string;
         }
     ): Promise<Node | null> {
         const row = await NodeModel.findByPk(nodeId);
@@ -121,6 +118,18 @@ export class ControlPlaneStore {
 
         if (patch.resources) {
             updates.resources = patch.resources;
+        }
+
+        if (patch.osFamily) {
+            updates.osFamily = patch.osFamily;
+        }
+
+        if (patch.osVersion) {
+            updates.osVersion = patch.osVersion;
+        }
+
+        if (patch.arch) {
+            updates.arch = patch.arch;
         }
 
         await row.update(updates);
@@ -954,6 +963,84 @@ export class ControlPlaneStore {
             error: provision.error ?? null,
             createdAt: provision.createdAt,
             updatedAt: provision.updatedAt
+        });
+    }
+
+    /**
+     * Returns the persisted host inventory snapshot for a node.
+     *
+     * @param nodeId Node identifier
+     * @returns Host inventory when found
+     */
+    async getHostInventory(nodeId: string): Promise<HostInventory | null> {
+        const row = await HostInventoryModel.findByPk(nodeId);
+        return row ? RowMapper.hostInventory(nodeId, row.get({ plain: true })) : null;
+    }
+
+    /**
+     * Persists a host inventory snapshot for a node.
+     *
+     * @param inventory Host inventory snapshot
+     * @returns Nothing.
+     */
+    async saveHostInventory(inventory: HostInventory): Promise<void> {
+        const now = new Date().toISOString();
+
+        await HostInventoryModel.upsert({
+            nodeId: inventory.nodeId,
+            packageManager: inventory.packageManager,
+            packages: inventory.packages,
+            collectedAt: inventory.collectedAt,
+            updatedAt: now
+        });
+    }
+
+    /**
+     * Lists host update runs for a node.
+     *
+     * @param nodeId Node identifier
+     * @returns Host update runs ordered by creation time
+     */
+    async listHostUpdateRuns(nodeId: string): Promise<HostUpdateRun[]> {
+        const rows = await HostUpdateRunModel.findAll({
+            where: { nodeId },
+            order: [["createdAt", "DESC"]]
+        });
+
+        return rows.map((row) => RowMapper.hostUpdateRun(row.get({ plain: true })));
+    }
+
+    /**
+     * Returns a host update run by id.
+     *
+     * @param runId Host update run identifier
+     * @returns Host update run when found
+     */
+    async getHostUpdateRun(runId: string): Promise<HostUpdateRun | null> {
+        const row = await HostUpdateRunModel.findByPk(runId);
+        return row ? RowMapper.hostUpdateRun(row.get({ plain: true })) : null;
+    }
+
+    /**
+     * Persists a host update run.
+     *
+     * @param run Host update run payload
+     * @returns Nothing.
+     */
+    async saveHostUpdateRun(run: HostUpdateRun): Promise<void> {
+        await HostUpdateRunModel.upsert({
+            id: run.id,
+            nodeId: run.nodeId,
+            kind: run.kind,
+            status: run.status,
+            packages: run.packages,
+            rebootRequired: run.rebootRequired,
+            stdout: run.stdout ?? null,
+            stderr: run.stderr ?? null,
+            errorMessage: run.errorMessage ?? null,
+            startedAt: run.startedAt ?? null,
+            completedAt: run.completedAt ?? null,
+            createdAt: run.createdAt
         });
     }
 }

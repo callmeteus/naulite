@@ -7,6 +7,7 @@ export type NaulitePermission =
     | "nodes:read"
     | "nodes:provision"
     | "nodes:terminate"
+    | "nodes:host-update"
     | "manifests:apply"
     | "metrics:read"
     | "workloads:read"
@@ -43,6 +44,7 @@ export namespace PermissionCatalog {
             "nodes:read",
             "nodes:provision",
             "nodes:terminate",
+            "nodes:host-update",
             "manifests:apply",
             "metrics:read",
             "workloads:read",

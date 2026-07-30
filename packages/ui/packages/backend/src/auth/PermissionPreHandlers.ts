@@ -73,6 +73,14 @@ export function resolveBffRoutePermissions(path: string, method: string): Naulit
         return ["metrics:read"];
     }
 
+    if (path.includes("/host/")) {
+        if (path.includes("/packages/update") || path.includes("/system/update")) {
+            return ["nodes:host-update"];
+        }
+
+        return ["nodes:read"];
+    }
+
     if (
         path.startsWith("/services") ||
         path.startsWith("/instances") ||

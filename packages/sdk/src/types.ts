@@ -7,6 +7,8 @@ import type {
     LogRotationTask,
     Node,
     NodeProvision,
+    HostInventory,
+    HostUpdateRun,
     PipelineEvent,
     PipelineRun,
     PipelineRunKind,
@@ -29,6 +31,7 @@ export interface NauliteDiscovery {
 }
 
 export type { AdminLoginInput, AdminLoginResponse, AdminRole, AdminSession, AdminUser, BffLoginResponse, BffSessionResponse, CreateAdminUserInput, DisableAdminUserInput, UpdateAdminUserInput } from "./auth-types";
+export type { HostInventory, HostUpdateRun } from "@naulite/shared";
 export type { PaginatedResponse, PaginationQuery } from "./pagination-types";
 export type { PromQLInstantResponse, PromQLRangeResponse, PromQLSample, PromQLSeries } from "./metrics-types";
 

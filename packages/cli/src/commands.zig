@@ -25,6 +25,91 @@ pub fn getNodes(
     try printJson(stdout, response.body);
 }
 
+/// Returns host package inventory for a node.
+pub fn getNodeInventory(
+    allocator: std.mem.Allocator,
+    client: *Client,
+    node_id: []const u8,
+    refresh: bool,
+) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = if (refresh)
+        try std.fmt.allocPrint(allocator, "/nodes/{s}/host/inventory?refresh=true", .{node_id})
+    else
+        try std.fmt.allocPrint(allocator, "/nodes/{s}/host/inventory", .{node_id});
+    defer allocator.free(path);
+
+    const response = try client.get(path);
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Updates host packages on a node.
+pub fn updateNodePackages(
+    allocator: std.mem.Allocator,
+    client: *Client,
+    node_id: []const u8,
+    packages_csv: ?[]const u8,
+) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/nodes/{s}/host/packages/update", .{node_id});
+    defer allocator.free(path);
+
+    const body = if (packages_csv) |csv| blk: {
+        var json = std.ArrayListUnmanaged(u8).empty;
+        defer json.deinit(allocator);
+        try json.appendSlice(allocator, "{\"packages\":[");
+        var parts = std.mem.splitScalar(u8, csv, ',');
+        var first = true;
+        while (parts.next()) |part| {
+            const trimmed = std.mem.trim(u8, part, " \t\r\n");
+            if (trimmed.len == 0) continue;
+            if (!first) try json.append(allocator, ',');
+            try json.append(allocator, '"');
+            try json.appendSlice(allocator, trimmed);
+            try json.append(allocator, '"');
+            first = false;
+        }
+        try json.appendSlice(allocator, "]}");
+        break :blk try json.toOwnedSlice(allocator);
+    } else try allocator.dupe(u8, "{}");
+    defer allocator.free(body);
+
+    const response = try client.postJson(path, body);
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Performs a full host system update on a node.
+pub fn updateNodeSystem(
+    allocator: std.mem.Allocator,
+    client: *Client,
+    node_id: []const u8,
+) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/nodes/{s}/host/system/update", .{node_id});
+    defer allocator.free(path);
+
+    const response = try client.postJson(path, "{}");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Lists host update runs for a node.
+pub fn getNodeUpdates(
+    allocator: std.mem.Allocator,
+    client: *Client,
+    node_id: []const u8,
+) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/nodes/{s}/host/updates", .{node_id});
+    defer allocator.free(path);
+
+    const response = try client.get(path);
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
 /// Lists cluster services.
 pub fn getServices(allocator: std.mem.Allocator, client: *Client) !void {
     const stdout = io_output.stdoutWriter();
@@ -253,11 +338,9 @@ pub fn deleteResource(allocator: std.mem.Allocator, client: *Client, kind: []con
 fn resourcePath(kind: []const u8) []const u8 {
     if (std.mem.eql(u8, kind, "service")) {
         return "services";
-    } else
-    if (std.mem.eql(u8, kind, "volume")) {
+    } else if (std.mem.eql(u8, kind, "volume")) {
         return "volumes";
-    } else
-    if (std.mem.eql(u8, kind, "secret")) {
+    } else if (std.mem.eql(u8, kind, "secret")) {
         return "secrets";
     } else {
         return kind;

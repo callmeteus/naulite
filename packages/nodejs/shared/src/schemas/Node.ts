@@ -27,6 +27,16 @@ export const NodeResourcesSchema = z.object({
 });
 
 /**
+ * Host operating system family reported by an agent.
+ */
+export const NodeOsFamilySchema = z.enum([
+    "linux",
+    "windows",
+    "macos",
+    "unknown"
+]);
+
+/**
  * Cluster node registered by an agent.
  */
 export const NodeSchema = z.object({
@@ -39,6 +49,9 @@ export const NodeSchema = z.object({
     agentVersion: z.string().min(1),
     agentUrl: z.string().url().optional(),
     netbirdDeviceId: z.string().min(1).optional(),
+    osFamily: NodeOsFamilySchema.optional(),
+    osVersion: z.string().min(1).optional(),
+    arch: z.string().min(1).optional(),
     lastHeartbeatAt: TimestampSchema,
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema

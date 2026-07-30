@@ -1,4 +1,4 @@
-import type { ApiKey, Instance, Node, NodeProvision, Secret, Service, Volume } from "@naulite/shared";
+import type { ApiKey, HostInventory, HostUpdateRun, Instance, Node, NodeProvision, Secret, Service, Volume } from "@naulite/shared";
 
 /**
  * JSON field helpers for sqlite text columns.
@@ -54,6 +54,9 @@ export namespace RowMapper {
         agentVersion: string;
         agentUrl: string | null;
         netbirdDeviceId: string | null;
+        osFamily?: string | null;
+        osVersion?: string | null;
+        arch?: string | null;
         lastHeartbeatAt: string;
         createdAt: string;
         updatedAt: string;
@@ -68,6 +71,9 @@ export namespace RowMapper {
             agentVersion: row.agentVersion,
             agentUrl: row.agentUrl ?? undefined,
             netbirdDeviceId: row.netbirdDeviceId ?? undefined,
+            osFamily: row.osFamily ? row.osFamily as Node["osFamily"] : undefined,
+            osVersion: row.osVersion ?? undefined,
+            arch: row.arch ?? undefined,
             lastHeartbeatAt: row.lastHeartbeatAt,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt
@@ -281,6 +287,68 @@ export namespace RowMapper {
             error: row.error ?? undefined,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt
+        };
+    }
+
+    /**
+     * Maps a host inventory database row into a HostInventory model.
+     *
+     * @param nodeId Node identifier
+     * @param row Database row
+     * @returns Host inventory model
+     */
+    export function hostInventory(nodeId: string, row: {
+        packageManager: string;
+        packages: unknown;
+        collectedAt: string;
+    }): HostInventory {
+        const packages = JsonField.parse<HostInventory["packages"]>(row.packages);
+
+        return {
+            nodeId,
+            packageManager: row.packageManager as HostInventory["packageManager"],
+            packages,
+            summary: {
+                total: packages.length,
+                outdated: packages.filter((entry) => entry.status === "outdated").length
+            },
+            collectedAt: row.collectedAt
+        };
+    }
+
+    /**
+     * Maps a host update run database row into a HostUpdateRun model.
+     *
+     * @param row Database row
+     * @returns Host update run model
+     */
+    export function hostUpdateRun(row: {
+        id: string;
+        nodeId: string;
+        kind: string;
+        status: string;
+        packages: unknown;
+        rebootRequired: boolean;
+        stdout: string | null;
+        stderr: string | null;
+        errorMessage: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        createdAt: string;
+    }): HostUpdateRun {
+        return {
+            id: row.id,
+            nodeId: row.nodeId,
+            kind: row.kind as HostUpdateRun["kind"],
+            status: row.status as HostUpdateRun["status"],
+            packages: JsonField.parse<string[]>(row.packages),
+            rebootRequired: row.rebootRequired,
+            stdout: row.stdout ?? undefined,
+            stderr: row.stderr ?? undefined,
+            errorMessage: row.errorMessage ?? undefined,
+            startedAt: row.startedAt ?? undefined,
+            completedAt: row.completedAt ?? undefined,
+            createdAt: row.createdAt
         };
     }
 }
