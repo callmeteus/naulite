@@ -1,9 +1,11 @@
 import type { FastifyInstance } from "fastify";
+import { NauliteApiError } from "@naulite/sdk";
 import { z } from "zod";
 
 import { CsrfProtection, NAULITE_CSRF_COOKIE } from "../auth/CsrfProtection";
 import { RolePreHandlers } from "../auth/RolePreHandlers";
 import { buildClearSessionCookie, buildSessionCookie, parseCookies, resolveSecureCookies } from "../auth/SessionCookie";
+import { resolveConfigFromEnv } from "../Config";
 
 const LoginBodySchema = z.object({
     email: z.string().email(),
@@ -19,7 +21,26 @@ const LoginBodySchema = z.object({
 export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     app.post("/auth/login", async (request, reply) => {
         const body = LoginBodySchema.parse(request.body);
-        const login = await app.controlPlane.adminLogin(body);
+
+        let login;
+
+        try {
+            login = await app.controlPlane.adminLogin(body);
+        } catch (error) {
+            if (error instanceof NauliteApiError) {
+                throw Object.assign(new Error(error.message), { statusCode: error.status });
+            }
+
+            const controlPlaneUrl = resolveConfigFromEnv().controlPlaneInstances[0] ?? "http://localhost:18080";
+            const message = error instanceof Error && error.message.toLowerCase().includes("fetch failed")
+                ? `Não foi possível contactar o control plane em ${controlPlaneUrl}. Inicie com "yarn workspace @naulite/control-plane dev".`
+                : error instanceof Error
+                    ? error.message
+                    : "Falha ao autenticar no control plane.";
+
+            throw Object.assign(new Error(message), { statusCode: 503 });
+        }
+
         const csrfToken = CsrfProtection.generateToken();
         const secureCookies = resolveSecureCookies();
 

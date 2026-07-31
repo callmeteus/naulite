@@ -18,7 +18,7 @@ export interface AdminApiConfig {
  */
 export function parseControlPlaneInstances(raw: string | undefined): string[] {
     if (!raw?.trim()) {
-        return ["http://localhost:8080"];
+        return ["http://localhost:18080"];
     }
 
     const instances = raw
@@ -26,7 +26,7 @@ export function parseControlPlaneInstances(raw: string | undefined): string[] {
         .map((part) => part.trim().replace(/\/$/, ""))
         .filter((part) => part.length > 0);
 
-    return instances.length > 0 ? instances : ["http://localhost:8080"];
+    return instances.length > 0 ? instances : ["http://localhost:18080"];
 }
 
 /**

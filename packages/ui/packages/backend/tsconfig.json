@@ -2,7 +2,13 @@
     "extends": "../../../../tsconfig.base.json",
     "compilerOptions": {
         "outDir": "./dist",
-        "rootDir": "./src"
+        "rootDir": "./src",
+        "baseUrl": ".",
+        "paths": {
+            "@naulite/logger": ["../../../../nodejs/logger/src/index.ts"],
+            "@naulite/sdk": ["../../../../sdk/src/index.ts"],
+            "@naulite/shared": ["../../../../nodejs/shared/src/index.ts"]
+        }
     },
     "include": ["src/**/*"]
 }

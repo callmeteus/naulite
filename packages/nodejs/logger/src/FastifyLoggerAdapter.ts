@@ -1,11 +1,16 @@
 import { format } from "node:util";
-import type { FastifyBaseLogger, FastifyServerOptions } from "fastify";
+import type { FastifyBaseLogger } from "fastify";
 
 import type winston from "winston";
 
 import type { LogLevel } from "./format";
 
-type FastifyLoggerBootstrapOptions = Pick<FastifyServerOptions, "logger" | "loggerInstance">;
+/**
+ * Fastify bootstrap options for wiring a custom Winston logger.
+ */
+export type FastifyLoggerBootstrapOptions =
+    | { readonly logger: false }
+    | { readonly loggerInstance: FastifyBaseLogger };
 
 /**
  * Adapts a Winston logger to the Fastify logger interface.
@@ -26,9 +31,17 @@ export function toFastifyLogger(logger: winston.Logger): FastifyBaseLogger {
                 return;
             }
 
-            if (typeof args[0] === "object" && args[0] !== null) {
-                const record = args[0] as Record<string, unknown>;
-                const err = record.err ?? record.error;
+        if (typeof args[0] === "object" && args[0] !== null) {
+            const record = args[0] as Record<string, unknown>;
+            const responseTime = record.responseTime;
+            const res = record.res as { statusCode?: number } | undefined;
+
+            if (res && typeof responseTime === "number") {
+                logger.log(level, "request completed status=%d responseTime=%d", res.statusCode ?? 0, responseTime);
+                return;
+            }
+
+            const err = record.err ?? record.error;
 
                 if (err !== undefined) {
                     logger.log(level, format("%O", err));

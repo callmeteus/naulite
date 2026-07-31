@@ -22,6 +22,6 @@ describe("parseControlPlaneInstances", () => {
     });
 
     it("falls back to localhost when unset", () => {
-        expect(parseControlPlaneInstances(undefined)).toEqual(["http://localhost:8080"]);
+        expect(parseControlPlaneInstances(undefined)).toEqual(["http://localhost:18080"]);
     });
 });

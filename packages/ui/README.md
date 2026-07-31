@@ -16,17 +16,23 @@ The browser talks only to `/api` on the UI host. nginx proxies to `ui-backend`, 
 From the Naulite repo root:
 
 ```bash
-# Terminal 1 - control plane
-yarn workspace @naulite/control-plane start
-
-# Terminal 2 - admin API
-yarn workspace @naulite/ui-backend dev
-
-# Terminal 3 - frontend
-yarn workspace @naulite/ui-frontend dev
+yarn dev
 ```
 
-Vite proxies `/api` to `http://localhost:3001`. Local dev against loopback control plane does not require `ADMIN_API_KEY`.
+`yarn dev` starts the control plane (port **18080**), a local **traefik-mock** (port **18099**, for gateway hydration), admin API (**3001**), frontend (**5173**), and docs.
+
+Default bootstrap user when the control plane database is empty:
+
+| Field | Value |
+| ----- | ----- |
+| Email | `admin@local.dev` |
+| Password | `naulite-dev` |
+
+The username stored in the control plane is the normalized email (`admin@local.dev`).
+
+Vite proxies `/api` to `http://localhost:3001` and strips the `/api` prefix. Local dev does not require `ADMIN_API_KEY`.
+
+If port **8080** is already used by another project, keep the control plane on **18080** (default for `yarn dev`) or set `CONTROL_PLANE_INSTANCES` on the ui-backend.
 
 ## Docker
 

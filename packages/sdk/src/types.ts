@@ -7,8 +7,6 @@ import type {
     LogRotationTask,
     Node,
     NodeProvision,
-    HostInventory,
-    HostUpdateRun,
     PipelineEvent,
     PipelineRun,
     PipelineRunKind,

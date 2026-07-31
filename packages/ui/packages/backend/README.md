@@ -28,7 +28,7 @@ yarn workspace @naulite/ui dev
 | -------- | ------- | ------- |
 | `HOST` | `0.0.0.0` | Listen address |
 | `PORT` | `3001` | Listen port |
-| `CONTROL_PLANE_INSTANCES` | `http://localhost:8080` | Comma-separated control plane base URLs (first is primary) |
+| `CONTROL_PLANE_INSTANCES` | `http://localhost:18080` | Comma-separated control plane base URLs (first is primary) |
 | `ADMIN_API_KEY` | (unset) | Bearer token for control plane calls |
 
 ## Scripts

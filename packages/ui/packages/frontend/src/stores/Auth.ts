@@ -15,7 +15,7 @@ function formatAuthError(err: unknown): string {
         return String(err);
     }
 
-    if (err.message.includes("Illegal invocation") || err.message.includes("Failed to fetch")) {
+    if (err.message.includes("Illegal invocation") || /failed to fetch/i.test(err.message)) {
         return "Could not reach the admin API. Check that ui-backend is running and reload the page.";
     }
 

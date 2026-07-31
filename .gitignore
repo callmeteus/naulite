@@ -6,3 +6,9 @@ packages/cli/native/
 **/.zig-cache/
 logs/
 *.log
+
+# Control plane local SQLite (dev default: data/control-plane.db)
+data/
+**/control-plane.db
+*.db-wal
+*.db-shm

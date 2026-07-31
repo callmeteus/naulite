@@ -195,6 +195,50 @@ export namespace ControlPlaneService {
         }
 
         /**
+         * @param nodeId Node identifier
+         * @returns Cached host inventory when present
+         */
+        export function getHostInventory(nodeId: string): ReturnType<ControlPlaneStore["getHostInventory"]> {
+            return backing().getHostInventory(nodeId);
+        }
+
+        /**
+         * @param inventory Host inventory snapshot
+         * @returns Nothing.
+         */
+        export function saveHostInventory(
+            inventory: Parameters<ControlPlaneStore["saveHostInventory"]>[0]
+        ): ReturnType<ControlPlaneStore["saveHostInventory"]> {
+            return backing().saveHostInventory(inventory);
+        }
+
+        /**
+         * @param nodeId Node identifier
+         * @returns Host update runs for the node
+         */
+        export function listHostUpdateRuns(nodeId: string): ReturnType<ControlPlaneStore["listHostUpdateRuns"]> {
+            return backing().listHostUpdateRuns(nodeId);
+        }
+
+        /**
+         * @param runId Host update run identifier
+         * @returns Host update run when found
+         */
+        export function getHostUpdateRun(runId: string): ReturnType<ControlPlaneStore["getHostUpdateRun"]> {
+            return backing().getHostUpdateRun(runId);
+        }
+
+        /**
+         * @param run Host update run payload
+         * @returns Nothing.
+         */
+        export function saveHostUpdateRun(
+            run: Parameters<ControlPlaneStore["saveHostUpdateRun"]>[0]
+        ): ReturnType<ControlPlaneStore["saveHostUpdateRun"]> {
+            return backing().saveHostUpdateRun(run);
+        }
+
+        /**
          * @returns Cluster services
          */
         export function listServices(): ReturnType<ControlPlaneStore["listServices"]> {

@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 import { createApp } from "./App";
 import { resolveConfigFromEnv } from "./Config";
 import { Logger } from "./Logger";
@@ -46,7 +48,12 @@ async function main(): Promise<void> {
     log.info("Admin API listening on http://%s:%d", server.host, server.port);
 }
 
-main().catch((err) => {
-    log.error("Admin API failed to start: %O", err);
-    process.exit(1);
-});
+const isMainModule = process.argv[1] !== undefined
+    && fileURLToPath(import.meta.url) === process.argv[1];
+
+if (isMainModule) {
+    main().catch((err) => {
+        log.error("Admin API failed to start: %O", err);
+        process.exit(1);
+    });
+}

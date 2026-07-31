@@ -33,7 +33,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     const envConfig = resolveConfigFromEnv();
     const controlPlaneInstances = options.controlPlaneInstances ?? envConfig.controlPlaneInstances;
     const controlPlane = new NauliteClient({
-        baseUrl: controlPlaneInstances[0] ?? "http://localhost:8080",
+        baseUrl: controlPlaneInstances[0] ?? "http://localhost:18080",
         controlPlaneInstances,
         token: options.adminApiKey ?? envConfig.adminApiKey
     });
@@ -96,7 +96,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
         }
     });
 
-    app.setErrorHandler((error, _request, reply) => {
+    app.setErrorHandler((error: unknown, _request, reply) => {
         if (error instanceof NauliteApiError) {
             const details = error.details;
             reply.code(error.status);
