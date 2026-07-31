@@ -265,6 +265,14 @@ export namespace ControlPlaneService {
         }
 
         /**
+         * @param id Instance identifier
+         * @returns Instance when found
+         */
+        export function getInstance(id: string): ReturnType<ControlPlaneStore["getInstance"]> {
+            return backing().getInstance(id);
+        }
+
+        /**
          * @returns Cluster volumes
          */
         export function listVolumes(): ReturnType<ControlPlaneStore["listVolumes"]> {

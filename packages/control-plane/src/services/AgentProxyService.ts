@@ -4,6 +4,77 @@ import { Logger } from "../Logger";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 const logAgentProxy = Logger.create("agent-proxy");
 
+const DEFAULT_AGENT_FETCH_TIMEOUT_MS = 15_000;
+
+/**
+ * Resolves the timeout used for outbound agent HTTP requests.
+ *
+ * @returns Timeout in milliseconds
+ */
+function resolveAgentFetchTimeoutMs(): number {
+    const configured = Number(process.env.NAULITE_AGENT_FETCH_TIMEOUT_MS ?? DEFAULT_AGENT_FETCH_TIMEOUT_MS);
+
+    if (!Number.isFinite(configured) || configured <= 0) {
+        return DEFAULT_AGENT_FETCH_TIMEOUT_MS;
+    }
+
+    return configured;
+}
+
+/**
+ * Performs a fetch against a node agent with a bounded wait time.
+ *
+ * @param url Absolute agent URL
+ * @param init Optional fetch init options
+ * @returns Agent HTTP response
+ * @throws {AgentProxyError} {@link AgentProxyError}
+ */
+async function fetchAgent(url: string, init?: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutMs = resolveAgentFetchTimeoutMs();
+    const timer = setTimeout(() => {
+        controller.abort();
+    }, timeoutMs);
+
+    if (init?.signal) {
+        init.signal.addEventListener("abort", () => {
+            controller.abort();
+        }, { once: true });
+    }
+
+    try {
+        return await fetch(url, {
+            ...init,
+            signal: controller.signal
+        });
+    } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+            throw new AgentProxyError(
+                "AGENT_REQUEST_TIMEOUT",
+                `Agent request timed out after ${timeoutMs}ms.`,
+                504,
+                {
+                    i18n: "errors.agentRequestTimedOut",
+                    i18nParams: { timeoutSeconds: String(Math.round(timeoutMs / 1000)) }
+                }
+            );
+        }
+
+        const message = err instanceof Error ? err.message : "Agent request failed.";
+
+        throw new AgentProxyError(
+            "AGENT_REQUEST_FAILED",
+            message,
+            503,
+            {
+                i18n: "errors.agentForwardFailed"
+            }
+        );
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 /**
  * Proxies instance-scoped requests from the control plane to node agents.
  */
@@ -28,7 +99,15 @@ export namespace AgentProxyService {
         const instance = instances.find((entry) => entry.id === instanceId);
 
         if (!instance) {
-            throw new AgentProxyError("INSTANCE_NOT_FOUND", `Instância ${instanceId} não encontrada.`, 404);
+            throw new AgentProxyError(
+                "INSTANCE_NOT_FOUND",
+                `Instance ${instanceId} was not found.`,
+                404,
+                {
+                    i18n: "errors.instanceNotFound",
+                    i18nParams: { instanceId }
+                }
+            );
         }
 
         const node = nodes.find((entry) => entry.id === instance.nodeId);
@@ -36,8 +115,12 @@ export namespace AgentProxyService {
         if (!node?.agentUrl) {
             throw new AgentProxyError(
                 "AGENT_UNAVAILABLE",
-                `Nó ${instance.nodeId} não possui URL de agente registrada.`,
-                503
+                `Node ${instance.nodeId} has no registered agent URL.`,
+                503,
+                {
+                    i18n: "errors.agentUnavailable",
+                    i18nParams: { nodeId: instance.nodeId }
+                }
             );
         }
 
@@ -61,13 +144,17 @@ export namespace AgentProxyService {
         instanceId: string
     ): Promise<{ instanceId: string; logs: string }> {
         const { agentUrl } = await resolveAgentForInstance(store, instanceId);
-        const response = await fetch(`${agentUrl}/containers/${encodeURIComponent(instanceId)}/logs`);
+        const response = await fetchAgent(`${agentUrl}/containers/${encodeURIComponent(instanceId)}/logs`);
 
         if (!response.ok) {
             throw new AgentProxyError(
                 "AGENT_REQUEST_FAILED",
-                `Falha ao buscar logs do agente: HTTP ${response.status}.`,
-                response.status
+                `Agent request failed with HTTP ${response.status}.`,
+                response.status,
+                {
+                    i18n: "errors.agentRequestFailed",
+                    i18nParams: { status: String(response.status) }
+                }
             );
         }
 
@@ -98,7 +185,7 @@ export namespace AgentProxyService {
         stderr: string;
     }> {
         const { agentUrl } = await resolveAgentForInstance(store, instanceId);
-        const response = await fetch(`${agentUrl}/containers/${encodeURIComponent(instanceId)}/exec`, {
+        const response = await fetchAgent(`${agentUrl}/containers/${encodeURIComponent(instanceId)}/exec`, {
             method: "POST",
             headers: {
                 Accept: "application/json",
@@ -111,8 +198,12 @@ export namespace AgentProxyService {
         if (!response.ok) {
             throw new AgentProxyError(
                 "AGENT_REQUEST_FAILED",
-                `Falha ao executar comando no agente: HTTP ${response.status}.`,
-                response.status
+                `Agent request failed with HTTP ${response.status}.`,
+                response.status,
+                {
+                    i18n: "errors.agentRequestFailed",
+                    i18nParams: { status: String(response.status) }
+                }
             );
         }
 
@@ -144,7 +235,7 @@ export namespace AgentProxyService {
         path: string,
         payload: unknown
     ): Promise<unknown> {
-        const response = await fetch(`${agentUrl}${path}`, {
+        const response = await fetchAgent(`${agentUrl}${path}`, {
             method: "POST",
             headers: {
                 Accept: "application/json",
@@ -157,8 +248,12 @@ export namespace AgentProxyService {
         if (!response.ok) {
             throw new AgentProxyError(
                 "AGENT_REQUEST_FAILED",
-                `Falha ao despachar tarefa ao agente: HTTP ${response.status}.`,
-                response.status
+                `Agent request failed with HTTP ${response.status}.`,
+                response.status,
+                {
+                    i18n: "errors.agentRequestFailed",
+                    i18nParams: { status: String(response.status) }
+                }
             );
         }
 
@@ -176,13 +271,17 @@ export namespace AgentProxyService {
     export async function fetchBackupArchive(agentUrl: string, archivePath: string): Promise<Buffer> {
         const url = `${agentUrl}/backups/archive?archivePath=${encodeURIComponent(archivePath)}`;
         logAgentProxy.debug("fetch backup archive path=%s", archivePath);
-        const response = await fetch(url);
+        const response = await fetchAgent(url);
 
         if (!response.ok) {
             throw new AgentProxyError(
                 "AGENT_REQUEST_FAILED",
-                `Falha ao buscar arquivo de backup no agente: HTTP ${response.status}.`,
-                response.status
+                `Agent request failed with HTTP ${response.status}.`,
+                response.status,
+                {
+                    i18n: "errors.agentRequestFailed",
+                    i18nParams: { status: String(response.status) }
+                }
             );
         }
 
@@ -206,7 +305,7 @@ export namespace AgentProxyService {
         contentType = "application/octet-stream"
     ): Promise<unknown> {
         logAgentProxy.debug("post binary path=%s bytes=%d", path, body.length);
-        const response = await fetch(`${agentUrl}${path}`, {
+        const response = await fetchAgent(`${agentUrl}${path}`, {
             method: "POST",
             headers: {
                 Accept: "application/json",
@@ -219,8 +318,12 @@ export namespace AgentProxyService {
         if (!response.ok) {
             throw new AgentProxyError(
                 "AGENT_REQUEST_FAILED",
-                `Falha ao enviar arquivo ao agente: HTTP ${response.status}.`,
-                response.status
+                `Agent request failed with HTTP ${response.status}.`,
+                response.status,
+                {
+                    i18n: "errors.agentRequestFailed",
+                    i18nParams: { status: String(response.status) }
+                }
             );
         }
 
@@ -238,11 +341,16 @@ export class AgentProxyError extends Error {
      * @param code Stable error code
      * @param message Human-readable message
      * @param statusCode HTTP status to return
+     * @param options Optional i18n key and params for UI localization
      */
     constructor(
         public readonly code: string,
         message: string,
-        public readonly statusCode: number
+        public readonly statusCode: number,
+        public readonly options?: {
+            i18n?: string;
+            i18nParams?: Record<string, string>;
+        }
     ) {
         super(message);
     }

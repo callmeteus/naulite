@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { NauliteApiError } from "@naulite/sdk";
 import { z } from "zod";
 
 import { CsrfProtection, NAULITE_CSRF_COOKIE } from "../auth/CsrfProtection";
@@ -82,7 +83,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true };
     });
 
-    app.get("/auth/me", async (request) => {
+    app.get("/auth/me", async (request, reply) => {
         const sessionToken = RolePreHandlers.readSessionToken(request);
 
         if (sessionToken) {
@@ -92,11 +93,19 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
                     .getAdminMe();
 
                 const cookies = parseCookies(request.headers.cookie);
-                const csrfToken = cookies[NAULITE_CSRF_COOKIE];
+                let csrfToken = cookies[NAULITE_CSRF_COOKIE];
+
+                if (!csrfToken) {
+                    csrfToken = CsrfProtection.generateToken();
+                    reply.header(
+                        "Set-Cookie",
+                        CsrfProtection.buildCsrfCookie(csrfToken, resolveSecureCookies())
+                    );
+                }
 
                 return {
                     user: session.user,
-                    csrfToken: csrfToken || undefined
+                    csrfToken
                 };
             } catch {
                 return { user: null };

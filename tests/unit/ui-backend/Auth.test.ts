@@ -191,6 +191,23 @@ describe("ui-backend auth routes", () => {
         expect(meResponse.json().user.role).toBe("admin");
         expect(meResponse.json().csrfToken).toBe(csrfToken);
 
+        const meWithoutCsrfResponse = await app.inject({
+            method: "GET",
+            url: "/auth/me",
+            headers: {
+                cookie: buildSessionCookie("session-abc")
+            }
+        });
+
+        expect(meWithoutCsrfResponse.statusCode).toBe(200);
+        expect(meWithoutCsrfResponse.json().user.email).toBe("admin@example.com");
+        expect(meWithoutCsrfResponse.json().csrfToken).toBeTruthy();
+        const meWithoutCsrfCookies = meWithoutCsrfResponse.headers["set-cookie"];
+        const meWithoutCsrfCookieHeader = Array.isArray(meWithoutCsrfCookies)
+            ? meWithoutCsrfCookies.join(";")
+            : String(meWithoutCsrfCookies ?? "");
+        expect(meWithoutCsrfCookieHeader).toContain(`${NAULITE_CSRF_COOKIE}=`);
+
         const logoutResponse = await app.inject({
             method: "POST",
             url: "/auth/logout",

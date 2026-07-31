@@ -10,7 +10,7 @@ import { ControlPlaneService } from "../../../../ControlPlaneService";
 import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../../routing/DefineRoute";
 import { AgentProxyRouteHelpers } from "../../../../services/AgentProxyRouteHelpers";
-import { HostPackageError, HostPackageService } from "../../../../services/HostPackageService";
+import { HostPackageService } from "../../../../services/HostPackageService";
 
 const HostInventoryQuerySchema = z.object({
     refresh: z.enum(["true", "false"]).optional()
@@ -60,13 +60,6 @@ export const GET = defineRoute({
 
             return inventory;
         } catch (err) {
-            if (err instanceof HostPackageError) {
-                return res.status(err.status).send({
-                    error: err.code,
-                    message: err.message
-                });
-            }
-
             return AgentProxyRouteHelpers.respond(res, err);
         }
     }

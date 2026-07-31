@@ -66,7 +66,7 @@ async function redispatchService(serviceName: string): Promise<void> {
             };
         }
 
-        await store.refreshOverview();
+        await store.refreshOverview({ silent: true });
     } catch (err) {
         actionError.value = parseApiError(err);
     } finally {
@@ -79,11 +79,31 @@ async function redispatchService(serviceName: string): Promise<void> {
     <PageLayout title-key="pages.services.title" hint-key="pages.services.hint">
         <ErrorAlert :error="store.error || actionError" />
 
+        <div
+            v-if="redispatchingService"
+            class="alert border border-info/30 bg-info/10"
+            role="status"
+        >
+            <LoadingSpinner />
+            <div>
+                <p class="font-semibold">
+                    {{ t("pages.services.redispatching") }}
+                </p>
+                <p class="mt-1 text-sm text-base-content/80">
+                    {{
+                        t("pages.services.redispatchProgress", {
+                            serviceName: redispatchingService
+                        })
+                    }}
+                </p>
+            </div>
+        </div>
+
         <p v-if="actionMessage" class="alert alert-success">
             {{ actionMessage }}
         </p>
 
-        <div v-if="store.loading" class="flex items-center gap-2">
+        <div v-if="store.loading && !redispatchingService" class="flex items-center gap-2">
             <LoadingSpinner />
             <span>{{ t("common.loading") }}</span>
         </div>
@@ -124,9 +144,13 @@ async function redispatchService(serviceName: string): Promise<void> {
                                     v-if="canRedispatchService(service.status)"
                                     type="button"
                                     class="btn btn-outline btn-sm"
-                                    :disabled="redispatchingService === service.name"
+                                    :disabled="Boolean(redispatchingService)"
                                     @click="redispatchService(service.name)"
                                 >
+                                    <span
+                                        v-if="redispatchingService === service.name"
+                                        class="loading loading-spinner loading-sm"
+                                    />
                                     {{
                                         redispatchingService === service.name
                                             ? t("pages.services.redispatching")

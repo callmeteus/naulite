@@ -370,6 +370,17 @@ export class ControlPlaneStore {
     }
 
     /**
+     * Returns a single instance by id.
+     *
+     * @param id Instance identifier
+     * @returns Instance when found
+     */
+    async getInstance(id: string): Promise<Instance | null> {
+        const row = await InstanceModel.findByPk(id);
+        return row ? RowMapper.instance(row.get({ plain: true })) : null;
+    }
+
+    /**
      * Lists all volumes.
      *
      * @returns Volume records

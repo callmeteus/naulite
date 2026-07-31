@@ -1,8 +1,10 @@
 import { reactive } from "vue";
 import type { ApplyResponse, BackupRun, BuildRequest, BuildResponse, ClusterStatus, ContainerRegistryImage, GatewayRouteSummary, HostInventory, HostUpdateRun, Instance, ListPipelineRunsQuery, NetBirdAcl, NetBirdDevice, NetBirdGroup, NetBirdTopology, Node, NodeProvision, PipelineEvent, PipelineRun, ProvisionNodeInput, Secret, Service, Volume } from "@naulite/sdk";
+import { NauliteApiError } from "@naulite/sdk";
 
 import { nauliteClient } from "../api/Client";
 import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
+import { authStore } from "./Auth";
 
 interface GitOpsRevision {
     id: string;
@@ -10,6 +12,25 @@ interface GitOpsRevision {
     branch: string;
     commitSha: string;
     appliedAt: string;
+}
+
+/**
+ * Applies a manifest and retries once after refreshing the CSRF token.
+ *
+ * @param manifestYaml Raw manifest YAML
+ * @returns Apply response from the control plane
+ */
+async function applyManifestWithCsrfRetry(manifestYaml: string): Promise<ApplyResponse> {
+    try {
+        return await nauliteClient.applyManifest(manifestYaml);
+    } catch (err) {
+        if (err instanceof NauliteApiError && err.status === 403 && err.i18n === "errors.csrfInvalid") {
+            await authStore.ensureSession();
+            return nauliteClient.applyManifest(manifestYaml);
+        }
+
+        throw err;
+    }
 }
 
 /**
@@ -31,7 +52,6 @@ export const clusterStore = reactive({
     containerRegistryImages: [] as ContainerRegistryImage[],
     gatewayRoutes: [] as GatewayRouteSummary[],
     runs: [] as PipelineRun[],
-    lastApplyResult: null as ApplyResponse | null,
     loading: false,
     error: null as ParsedApiError | null,
 
@@ -47,10 +67,14 @@ export const clusterStore = reactive({
     /**
      * Loads nodes and services from the admin API.
      *
+     * @param options Optional refresh behavior
      * @returns Nothing.
      */
-    async refreshOverview(): Promise<void> {
-        this.loading = true;
+    async refreshOverview(options?: { silent?: boolean }): Promise<void> {
+        if (!options?.silent) {
+            this.loading = true;
+        }
+
         this.error = null;
 
         try {
@@ -64,7 +88,9 @@ export const clusterStore = reactive({
         } catch (err) {
             this.setError(err);
         } finally {
-            this.loading = false;
+            if (!options?.silent) {
+                this.loading = false;
+            }
         }
     },
 
@@ -562,18 +588,21 @@ export const clusterStore = reactive({
      * Applies a manifest YAML payload.
      *
      * @param manifestYaml Raw manifest YAML
-     * @returns Apply revision summary
+     * @returns Apply summary including the pipeline run id when available
      * @throws {unknown}
      */
-    async applyManifest(manifestYaml: string): Promise<string> {
+    async applyManifest(manifestYaml: string): Promise<ApplyResponse> {
         this.loading = true;
         this.error = null;
 
         try {
-            const result = await nauliteClient.applyManifest(manifestYaml);
-            this.lastApplyResult = result;
+            if (!authStore.csrfToken) {
+                await authStore.ensureSession();
+            }
+
+            const result = await applyManifestWithCsrfRetry(manifestYaml);
             await this.refreshOverview();
-            return String(result.revision);
+            return result;
         } catch (err) {
             this.setError(err);
             throw err;

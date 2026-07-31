@@ -58,7 +58,13 @@ export const authStore = reactive({
      */
     async ensureSession(): Promise<AdminUser | null> {
         if (this.checked && !this.loading) {
-            return this.user;
+            if (!this.user) {
+                return null;
+            }
+
+            if (this.csrfToken) {
+                return this.user;
+            }
         }
 
         this.loading = true;

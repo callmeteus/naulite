@@ -2,7 +2,7 @@ import { ref } from "vue";
 import { NauliteApiError } from "@naulite/sdk";
 
 import { i18n } from "../i18n";
-import { resolveApiErrorMessage } from "../utils/ApiErrorMessage";
+import { resolveApiErrorMessage, extractSchedulingServiceName, isNoEligibleNodeError } from "../utils/ApiErrorMessage";
 import { useToast } from "../stores/Toast";
 
 export interface ParsedApiError {
@@ -23,14 +23,19 @@ export interface ParsedApiError {
 export function parseApiError(err: unknown): ParsedApiError {
     if (err instanceof NauliteApiError) {
         const details = err.details;
+        const schedulingServiceName = isNoEligibleNodeError(err)
+            ? extractSchedulingServiceName(err)
+            : undefined;
 
         return {
             message: resolveApiErrorMessage(err, i18n.global.t, i18n.global.te),
             status: err.status,
             code: err.code,
             details,
-            i18n: err.i18n,
-            i18nParams: err.i18nParams
+            i18n: schedulingServiceName ? "errors.noEligibleNode" : err.i18n,
+            i18nParams: schedulingServiceName
+                ? { serviceName: schedulingServiceName }
+                : err.i18nParams
         };
     }
 

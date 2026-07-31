@@ -85,6 +85,15 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return app.controlPlane.listInstances();
     });
 
+    app.get("/instances/:id", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.getInstance(params.id);
+    });
+
     app.get("/instances/:id/logs", async (request) => {
         const params = z.object({
             id: z.string().min(1)

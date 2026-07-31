@@ -102,6 +102,29 @@ function normalizeControlPlaneInstances(options: NauliteClientOptions): string[]
 }
 
 /**
+ * Normalizes apply responses from either the control plane or the admin BFF.
+ *
+ * @param payload Raw or already-normalized apply response
+ * @returns Apply summary for UI and CLI consumers
+ */
+function normalizeApplyResponse(payload: ApplyResultPayload | ApplyResponse): ApplyResponse {
+    if ("servicesCreated" in payload) {
+        return payload;
+    }
+
+    return {
+        revision: payload.revision,
+        manifestName: payload.manifestName,
+        servicesCreated: payload.diff?.servicesToCreate ?? 0,
+        servicesUpdated: payload.diff?.servicesToUpdate ?? 0,
+        servicesDeleted: payload.diff?.servicesToRemove ?? 0,
+        instancesToCreate: payload.diff?.instancesToCreate,
+        runId: payload.runId,
+        dispatch: payload.dispatch
+    };
+}
+
+/**
  * Typed HTTP client for all control plane REST routes.
  */
 export class NauliteClient {
@@ -481,6 +504,16 @@ export class NauliteClient {
     }
 
     /**
+     * Returns a single instance by id.
+     *
+     * @param instanceId Instance identifier
+     * @returns Instance record
+     */
+    async getInstance(instanceId: string): Promise<Instance> {
+        return this.request<Instance>("GET", `/instances/${encodeURIComponent(instanceId)}`);
+    }
+
+    /**
      * Lists cluster volumes.
      * 
      * @returns Volume records
@@ -670,18 +703,9 @@ export class NauliteClient {
      * @returns Apply summary
      */
     async applyManifest(manifestYaml: string): Promise<ApplyResponse> {
-        const payload = await this.request<ApplyResultPayload>("POST", "/apply", { manifest: manifestYaml });
+        const payload = await this.request<ApplyResultPayload | ApplyResponse>("POST", "/apply", { manifest: manifestYaml });
 
-        return {
-            revision: payload.revision,
-            manifestName: payload.manifestName,
-            servicesCreated: payload.diff.servicesToCreate,
-            servicesUpdated: payload.diff.servicesToUpdate,
-            servicesDeleted: payload.diff.servicesToRemove,
-            instancesToCreate: payload.diff.instancesToCreate,
-            runId: payload.runId,
-            dispatch: payload.dispatch
-        };
+        return normalizeApplyResponse(payload);
     }
 
     /**
@@ -1157,17 +1181,9 @@ export class NauliteClient {
      * @returns Apply summary when a deploy is triggered
      */
     async gitOpsWebhook(payload: GitOpsWebhookPayload): Promise<ApplyResponse> {
-        const result = await this.request<ApplyResultPayload>("POST", "/gitops/webhook", payload);
+        const result = await this.request<ApplyResultPayload | ApplyResponse>("POST", "/gitops/webhook", payload);
 
-        return {
-            revision: result.revision,
-            manifestName: result.manifestName,
-            servicesCreated: result.diff.servicesToCreate,
-            servicesUpdated: result.diff.servicesToUpdate,
-            servicesDeleted: result.diff.servicesToRemove,
-            instancesToCreate: result.diff.instancesToCreate,
-            dispatch: result.dispatch
-        };
+        return normalizeApplyResponse(result);
     }
 
     /**
@@ -1188,20 +1204,12 @@ export class NauliteClient {
      * @returns Apply summary
      */
     async rollbackGitOps(revisionId: string): Promise<ApplyResponse> {
-        const result = await this.request<ApplyResultPayload>(
+        const result = await this.request<ApplyResultPayload | ApplyResponse>(
             "POST",
             `/gitops/rollback/${encodeURIComponent(revisionId)}`
         );
 
-        return {
-            revision: result.revision,
-            manifestName: result.manifestName,
-            servicesCreated: result.diff.servicesToCreate,
-            servicesUpdated: result.diff.servicesToUpdate,
-            servicesDeleted: result.diff.servicesToRemove,
-            instancesToCreate: result.diff.instancesToCreate,
-            dispatch: result.dispatch
-        };
+        return normalizeApplyResponse(result);
     }
 
     /**

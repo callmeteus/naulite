@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
 import { createFastifyLoggerOptions } from "@naulite/logger";
 import { NauliteApiError, NauliteClient } from "@naulite/sdk";
-import { enrichApiErrorMessage, formatValidationDetails } from "@naulite/shared";
+import { enrichApiErrorMessage, formatValidationDetails, resolveKnownApiErrorI18n } from "@naulite/shared";
 
 import { createBffError, isBffError, toBffErrorResponse } from "./errors/BffError";
 import { resolveConfigFromEnv } from "./Config";
@@ -108,6 +108,20 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
                 return toBffErrorResponse(createBffError(statusCode, error.i18n, {
                     code: error.code,
                     i18nParams: error.i18nParams
+                }));
+            }
+
+            const mapped = resolveKnownApiErrorI18n({
+                code: error.code,
+                message: error.message,
+                body: error.body
+            });
+
+            if (mapped) {
+                reply.code(statusCode);
+                return toBffErrorResponse(createBffError(statusCode, mapped.i18n, {
+                    code: error.code,
+                    i18nParams: mapped.i18nParams
                 }));
             }
 

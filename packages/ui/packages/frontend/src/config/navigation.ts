@@ -4,7 +4,6 @@ import {
     Archive,
     Bell,
     Box,
-    Cloud,
     Container,
     GitBranch,
     Hammer,
@@ -44,8 +43,7 @@ export const navigationSections: NavSection[] = [
         items: [
             { path: "/nodes", labelKey: "menu.infrastructure.nodes", permission: "nodes:read", icon: Server },
             { path: "/cluster", labelKey: "menu.infrastructure.cluster", permission: "metrics:read", icon: LayoutDashboard },
-            { path: "/metrics", labelKey: "menu.infrastructure.metrics", permission: "metrics:read", icon: Activity },
-            { path: "/provision", labelKey: "menu.infrastructure.provision", permission: "nodes:provision", icon: Cloud }
+            { path: "/metrics", labelKey: "menu.infrastructure.metrics", permission: "metrics:read", icon: Activity }
         ]
     },
     {

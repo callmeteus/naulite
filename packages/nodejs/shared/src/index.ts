@@ -34,5 +34,10 @@ export {
     enrichApiErrorMessage,
     formatValidationDetails
 } from "./util/formatValidationDetails";
+export {
+    resolveKnownApiErrorI18n,
+    type KnownApiErrorInput,
+    type ResolvedApiErrorI18n
+} from "./util/resolveKnownApiErrorI18n";
 
 export { DurationUtils } from "./util/DurationUtils";

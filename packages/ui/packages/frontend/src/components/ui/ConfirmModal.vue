@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-defineProps<{
+const props = defineProps<{
     /**
      * i18n key for the modal title.
      */
@@ -26,6 +26,11 @@ defineProps<{
      * Whether the confirm action uses danger styling.
      */
     danger?: boolean;
+
+    /**
+     * Optional async handler invoked before the modal closes.
+     */
+    handler?: () => void | Promise<void>;
 }>();
 
 const emit = defineEmits<{
@@ -34,6 +39,7 @@ const emit = defineEmits<{
 }>();
 
 const dialogRef = ref<HTMLDialogElement | null>(null);
+const confirming = ref(false);
 
 /**
  * Opens the confirmation dialog.
@@ -54,13 +60,30 @@ function close(): void {
 }
 
 /**
- * Confirms the action and closes the dialog.
+ * Confirms the action and closes the dialog after async work completes.
  *
  * @returns Nothing.
  */
-function confirm(): void {
-    emit("confirm");
-    close();
+async function confirm(): Promise<void> {
+    if (confirming.value) {
+        return;
+    }
+
+    confirming.value = true;
+
+    try {
+        if (props.handler) {
+            await props.handler();
+        } else {
+            emit("confirm");
+        }
+
+        close();
+    } catch {
+        close();
+    } finally {
+        confirming.value = false;
+    }
 }
 
 /**
@@ -87,16 +110,22 @@ defineExpose({ open, close });
             </p>
             <slot />
             <div class="modal-action">
-                <button type="button" class="btn" @click="cancel">
+                <button type="button" class="btn" :disabled="confirming" @click="cancel">
                     {{ $t(cancelLabelKey ?? "common.cancel") }}
                 </button>
                 <button
                     type="button"
                     class="btn"
                     :class="danger ? 'btn-error' : 'btn-primary'"
+                    :disabled="confirming"
                     @click="confirm"
                 >
-                    {{ $t(confirmLabelKey ?? "common.confirm") }}
+                    <span v-if="confirming" class="loading loading-spinner loading-sm" />
+                    {{
+                        confirming
+                            ? $t("common.working")
+                            : $t(confirmLabelKey ?? "common.confirm")
+                    }}
                 </button>
             </div>
         </div>

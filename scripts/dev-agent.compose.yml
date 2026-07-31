@@ -1,0 +1,20 @@
+services:
+    dev-agent:
+        build:
+            context: ..
+            dockerfile: packages/agent/Dockerfile
+        container_name: naulite-dev-agent
+        restart: unless-stopped
+        environment:
+            NAULITE_CP_URL: ${NAULITE_CP_URL:-http://host.docker.internal:18080}
+            NODE_ID: ${NAULITE_DEV_AGENT_ID:-dev-local}
+            HOSTNAME: ${NAULITE_DEV_AGENT_HOSTNAME:-dev-local}
+            AGENT_URL: http://127.0.0.1:${NAULITE_AGENT_PORT:-9470}
+            AGENT_PORT: ${NAULITE_AGENT_PORT:-9470}
+            NETBIRD_SETUP_KEY: ${NETBIRD_SETUP_KEY:-}
+        ports:
+            - "${NAULITE_AGENT_PORT:-9470}:9470"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        extra_hosts:
+            - "host.docker.internal:host-gateway"

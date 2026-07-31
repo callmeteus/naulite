@@ -53,11 +53,17 @@ export namespace HostPackageService {
         const node = await getNode(nodeId);
 
         if (!node) {
-            throw new HostPackageError("not_found", `Node ${nodeId} not found.`, 404);
+            throw new HostPackageError("not_found", `Node ${nodeId} not found.`, 404, {
+                i18n: "errors.nodeNotFound",
+                i18nParams: { nodeId }
+            });
         }
 
         if (!node.agentUrl) {
-            throw new HostPackageError("agent_unavailable", "Node does not expose an agent URL.", 503);
+            throw new HostPackageError("agent_unavailable", "Node does not expose an agent URL.", 503, {
+                i18n: "errors.agentUrlMissing",
+                i18nParams: { nodeId }
+            });
         }
 
         return node;
@@ -75,7 +81,10 @@ export namespace HostPackageService {
         saveInventory: (inventory: HostInventory) => Promise<void>
     ): Promise<HostInventory> {
         if (!node.agentUrl) {
-            throw new HostPackageError("agent_unavailable", "Node does not expose an agent URL.", 503);
+            throw new HostPackageError("agent_unavailable", "Node does not expose an agent URL.", 503, {
+                i18n: "errors.agentUrlMissing",
+                i18nParams: { nodeId: node.id }
+            });
         }
 
         const response = await AgentProxyService.postTask(
@@ -88,7 +97,10 @@ export namespace HostPackageService {
             throw new HostPackageError(
                 "unsupported_os",
                 "Host package inventory is only supported on Linux nodes.",
-                400
+                400,
+                {
+                    i18n: "errors.hostInventoryUnsupportedOs"
+                }
             );
         }
 
@@ -152,7 +164,10 @@ export namespace HostPackageService {
         saveInventory: (inventory: HostInventory) => Promise<void>
     ): Promise<HostUpdateRun> {
         if (!node.agentUrl) {
-            throw new HostPackageError("agent_unavailable", "Node does not expose an agent URL.", 503);
+            throw new HostPackageError("agent_unavailable", "Node does not expose an agent URL.", 503, {
+                i18n: "errors.agentUrlMissing",
+                i18nParams: { nodeId: node.id }
+            });
         }
 
         const now = new Date().toISOString();
@@ -179,7 +194,10 @@ export namespace HostPackageService {
                 throw new HostPackageError(
                     "unsupported_os",
                     "Host updates are only supported on Linux nodes.",
-                    400
+                    400,
+                    {
+                        i18n: "errors.hostUpdatesUnsupportedOs"
+                    }
                 );
             }
 
@@ -230,7 +248,11 @@ export class HostPackageError extends Error {
     constructor(
         public readonly code: string,
         message: string,
-        public readonly status: number
+        public readonly status: number,
+        public readonly options?: {
+            i18n?: string;
+            i18nParams?: Record<string, string>;
+        }
     ) {
         super(message);
         this.name = "HostPackageError";

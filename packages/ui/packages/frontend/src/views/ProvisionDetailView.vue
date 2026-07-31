@@ -133,10 +133,10 @@ async function terminateProvision(): Promise<void> {
 <template>
     <PageLayout title-key="pages.provision.detailTitle" hint-key="pages.provision.detailHint">
         <template #actions>
-            <RouterLink to="/provision" class="btn btn-ghost btn-sm">
+            <RouterLink to="/nodes" class="btn btn-ghost btn-sm">
                 {{ t("pages.provision.backToList") }}
             </RouterLink>
-            <RouterLink to="/provision/new" class="btn btn-primary btn-sm">
+            <RouterLink to="/nodes/new" class="btn btn-primary btn-sm">
                 {{ t("pages.provision.newAction") }}
             </RouterLink>
         </template>

@@ -4,7 +4,7 @@
  * Defaults to 18080 so it does not collide with other Fastify apps on 8080.
  * Reuses traefik-mock and an existing control plane when their health checks pass.
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,25 @@ import { isDockerAvailable } from "./dev-docker.mjs";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const traefikMockPort = process.env.NAULITE_TRAEFIK_MOCK_PORT ?? "18099";
 const prometheusPort = process.env.NAULITE_PROMETHEUS_HOST_PORT ?? "19090";
+
+/**
+ * Runs a command and exits the process when it fails.
+ *
+ * @param command Executable name
+ * @param args Command arguments
+ */
+function run(command, args) {
+    const result = spawnSync(command, args, {
+        cwd: repoRoot,
+        stdio: "inherit",
+        env: process.env,
+        shell: true
+    });
+
+    if (result.status !== 0) {
+        process.exit(result.status ?? 1);
+    }
+}
 
 process.env.PORT = process.env.NAULITE_CP_PORT ?? "18080";
 process.env.HOST = process.env.NAULITE_CP_HOST ?? "127.0.0.1";
@@ -139,7 +158,7 @@ function waitForShutdownSignal() {
  * @param timeoutMs Maximum wait time in milliseconds
  * @returns `true` when Prometheus is healthy
  */
-async function waitForPrometheus(timeoutMs = 45_000) {
+async function waitForPrometheus(timeoutMs = 120_000) {
     if (!await isDockerAvailable()) {
         return false;
     }
@@ -179,11 +198,15 @@ let ownsControlPlane = false;
 
 if (await isHealthy(controlPlaneHealthUrl)) {
     console.log(`[dev] reusing control plane at http://${controlPlaneHost}:${controlPlanePort}`);
+    console.warn("[dev] Reused control plane may miss new routes until you stop the process on this port and restart yarn dev.");
 
     if (!prometheusReady) {
         console.warn("[dev] Reused control plane may still proxy metrics to Prometheus. Restart yarn dev after Docker is up.");
     }
 } else {
+    run("yarn", ["workspace", "@naulite/shared", "build"]);
+    run("yarn", ["workspace", "@naulite/control-plane", "build"]);
+
     const { startServer } = await import(new URL("../packages/control-plane/dist/Server.js", import.meta.url).href);
 
     server = await startServer();

@@ -298,4 +298,25 @@ describe("NauliteClient", () => {
             expect.objectContaining({ method: "POST" })
         );
     });
+
+    it("accepts already-normalized apply responses from the admin BFF", async () => {
+        const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+            revision: 2,
+            manifestName: "minimal",
+            servicesCreated: 1,
+            servicesUpdated: 0,
+            servicesDeleted: 0,
+            runId: "minimal-apply-e5a96"
+        }), { status: 200 }));
+
+        const client = new NauliteClient({
+            baseUrl: "http://localhost:3001",
+            fetchImpl
+        });
+
+        const result = await client.applyManifest("name: minimal\nservices:\n  web:\n    image: nginx");
+
+        expect(result.servicesCreated).toBe(1);
+        expect(result.runId).toBe("minimal-apply-e5a96");
+    });
 });

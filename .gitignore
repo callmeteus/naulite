@@ -4,6 +4,7 @@ dist/
 **/zig-out/
 packages/cli/native/
 **/.zig-cache/
+.cache/
 logs/
 *.log
 

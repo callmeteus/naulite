@@ -8,7 +8,7 @@ import { ControlPlaneService } from "../../../../../ControlPlaneService";
 import { PermissionPreHandlers } from "../../../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../../../routing/DefineRoute";
 import { AgentProxyRouteHelpers } from "../../../../../services/AgentProxyRouteHelpers";
-import { HostPackageError, HostPackageService } from "../../../../../services/HostPackageService";
+import { HostPackageService } from "../../../../../services/HostPackageService";
 
 export const POST = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:read"),
@@ -39,13 +39,6 @@ export const POST = defineRoute({
                 (inventory) => ControlPlaneService.Store.saveHostInventory(inventory)
             );
         } catch (err) {
-            if (err instanceof HostPackageError) {
-                return res.status(err.status).send({
-                    error: err.code,
-                    message: err.message
-                });
-            }
-
             return AgentProxyRouteHelpers.respond(res, err);
         }
     }

@@ -10,12 +10,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ensureDockerReady } from "./dev-docker.mjs";
+import { isHostPrometheusSupported, startHostPrometheus } from "./dev-prometheus-host.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const prometheusPort = process.env.NAULITE_PROMETHEUS_HOST_PORT ?? "19090";
+const controlPlanePort = process.env.NAULITE_CP_PORT ?? "18080";
 const composeFile = path.join(repoRoot, "packages/metrics/compose/metrics-dev.yml");
 const fileSdDir = path.join(repoRoot, "data", "prometheus", "file_sd");
 const healthUrl = `http://127.0.0.1:${prometheusPort}/-/healthy`;
+
+/** @type {import("node:child_process").ChildProcess | null} */
+let hostPrometheusProcess = null;
 
 /**
  * Returns whether an HTTP health endpoint responds successfully.
@@ -96,16 +101,16 @@ function waitForShutdownSignal() {
 }
 
 /**
- * Attempts to start or reuse the dev Prometheus container.
+ * Attempts to start Prometheus via Docker Compose.
  *
  * @returns `true` when Prometheus is healthy
  */
-async function ensurePrometheusRunning() {
+async function ensureDockerPrometheusRunning() {
     if (await isHealthy(healthUrl)) {
         return true;
     }
 
-    if (!await ensureDockerReady()) {
+    if (!await ensureDockerReady({ quiet: false, timeout: 120_000 })) {
         return false;
     }
 
@@ -116,11 +121,64 @@ async function ensurePrometheusRunning() {
     return exitCode === 0 && await waitForHealthy(healthUrl);
 }
 
+/**
+ * Attempts to start Prometheus as a host process.
+ *
+ * @returns `true` when Prometheus is healthy
+ */
+async function ensureHostPrometheusRunning() {
+    if (await isHealthy(healthUrl)) {
+        return true;
+    }
+
+    if (!isHostPrometheusSupported()) {
+        return false;
+    }
+
+    if (hostPrometheusProcess && hostPrometheusProcess.exitCode === null) {
+        return await waitForHealthy(healthUrl, 15_000);
+    }
+
+    try {
+        hostPrometheusProcess = await startHostPrometheus({
+            repoRoot,
+            prometheusPort,
+            controlPlanePort
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`[dev-prometheus] host Prometheus failed to start: ${message}`);
+
+        return false;
+    }
+
+    return await waitForHealthy(healthUrl, 60_000);
+}
+
+/**
+ * Attempts to start or reuse dev Prometheus (Docker first, then host binary).
+ *
+ * @returns `true` when Prometheus is healthy
+ */
+async function ensurePrometheusRunning() {
+    if (await isHealthy(healthUrl)) {
+        return true;
+    }
+
+    if (await ensureDockerPrometheusRunning()) {
+        return true;
+    }
+
+    console.warn("[dev-prometheus] Docker Prometheus unavailable, trying host binary...");
+
+    return ensureHostPrometheusRunning();
+}
+
 if (await ensurePrometheusRunning()) {
     console.log(`[dev] Prometheus listening on http://127.0.0.1:${prometheusPort}`);
 } else {
-    console.warn("[dev] Docker is not available. Skipping Prometheus (port 19090).");
-    console.warn("[dev] Start Docker Desktop - Prometheus will be retried automatically.");
+    console.warn("[dev] Prometheus is not ready yet on port 19090.");
+    console.warn("[dev] Metrics charts stay empty until Prometheus starts. Retrying in the background...");
 
     setInterval(() => {
         void ensurePrometheusRunning().then((ready) => {
@@ -132,3 +190,7 @@ if (await ensurePrometheusRunning()) {
 }
 
 await waitForShutdownSignal();
+
+if (hostPrometheusProcess && hostPrometheusProcess.exitCode === null) {
+    hostPrometheusProcess.kill();
+}
