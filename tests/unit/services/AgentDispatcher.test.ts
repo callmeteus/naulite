@@ -69,4 +69,28 @@ describe("AgentDispatcher", () => {
         expect(results[0]?.status).toBe("failed");
         expect(results[0]?.httpStatus).toBe(500);
     });
+
+    it("fails when the agent request times out", async () => {
+        vi.useFakeTimers();
+
+        const fetchImpl = vi.fn((_url: string, init?: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+                init?.signal?.addEventListener("abort", () => {
+                    const error = new Error("Aborted");
+                    error.name = "AbortError";
+                    reject(error);
+                });
+            })
+        );
+
+        const dispatchPromise = AgentDispatcher.dispatchPlans([basePlan], [baseNode], fetchImpl);
+        await vi.advanceTimersByTimeAsync(20_000);
+
+        const results = await dispatchPromise;
+
+        expect(results[0]?.status).toBe("failed");
+        expect(results[0]?.message).toContain("timed out");
+
+        vi.useRealTimers();
+    });
 });

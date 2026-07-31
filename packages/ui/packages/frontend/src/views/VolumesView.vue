@@ -31,7 +31,7 @@ onMounted(() => {
             title-key="pages.volumes.emptyTitle"
             description-key="pages.volumes.emptyDescription"
             action-label-key="pages.volumes.emptyAction"
-            action-to="/deploy"
+            action-to="/runs?deploy=open"
         />
 
         <div v-else-if="!store.error" class="card bg-base-100 shadow">

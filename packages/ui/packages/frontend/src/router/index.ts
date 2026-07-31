@@ -5,10 +5,8 @@ import { useAuthStore } from "../stores/Auth";
 import AdminUsersView from "../views/AdminUsersView.vue";
 import ApiKeysView from "../views/ApiKeysView.vue";
 import BackupsView from "../views/BackupsView.vue";
-import BuildView from "../views/BuildView.vue";
 import ClusterView from "../views/ClusterView.vue";
 import ContainerRegistryView from "../views/ContainerRegistryView.vue";
-import DeployView from "../views/DeployView.vue";
 import ForbiddenView from "../views/ForbiddenView.vue";
 import GatewayRoutesView from "../views/GatewayRoutesView.vue";
 import GitOpsView from "../views/GitOpsView.vue";
@@ -49,8 +47,8 @@ const router = createRouter({
         { path: "/cluster", component: ClusterView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/metrics", component: MetricsView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/gitops", component: GitOpsView, meta: { permissions: ["gitops:read"] satisfies NaulitePermission[] } },
-        { path: "/deploy", component: DeployView, meta: { permissions: ["manifests:apply"] satisfies NaulitePermission[] } },
-        { path: "/build", component: BuildView, meta: { permissions: ["runs:write"] satisfies NaulitePermission[] } },
+        { path: "/deploy", redirect: { path: "/runs", query: { deploy: "open" } } },
+        { path: "/build", redirect: { path: "/runs", query: { build: "open" } } },
         { path: "/provision", redirect: "/nodes" },
         { path: "/provision/new", redirect: "/nodes/new" },
         { path: "/provision/:id", redirect: (to) => `/nodes/provisions/${String(to.params.id ?? "")}` },

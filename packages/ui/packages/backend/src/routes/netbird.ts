@@ -25,4 +25,8 @@ export async function registerNetBirdRoutes(app: FastifyInstance): Promise<void>
         const acls = await app.controlPlane.listNetBirdAcls();
         return { acls };
     });
+
+    app.get("/netbird/enrollment", async () => {
+        return app.controlPlane.getNetBirdEnrollment();
+    });
 }

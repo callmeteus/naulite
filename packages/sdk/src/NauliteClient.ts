@@ -9,6 +9,7 @@ import type {
     BffLoginResponse,
     BffSessionResponse,
     ApiKey,
+    ApplyAcceptedPayload,
     ApplyResponse,
     ApplyResultPayload,
     BackupRun,
@@ -52,6 +53,7 @@ import type {
     NetBirdAcl,
     NodeProvision,
     NetBirdDevice,
+    NetBirdEnrollment,
     NetBirdGroup,
     NetBirdTopology,
     NauliteClientOptions,
@@ -107,20 +109,35 @@ function normalizeControlPlaneInstances(options: NauliteClientOptions): string[]
  * @param payload Raw or already-normalized apply response
  * @returns Apply summary for UI and CLI consumers
  */
-function normalizeApplyResponse(payload: ApplyResultPayload | ApplyResponse): ApplyResponse {
+function normalizeApplyResponse(
+    payload: ApplyResultPayload | ApplyResponse | ApplyAcceptedPayload
+): ApplyResponse {
+    if ("accepted" in payload && payload.accepted) {
+        return {
+            revision: 0,
+            manifestName: payload.manifestName,
+            servicesCreated: 0,
+            servicesUpdated: 0,
+            servicesDeleted: 0,
+            runId: payload.runId
+        };
+    }
+
     if ("servicesCreated" in payload) {
         return payload;
     }
 
+    const fullPayload = payload as ApplyResultPayload;
+
     return {
-        revision: payload.revision,
-        manifestName: payload.manifestName,
-        servicesCreated: payload.diff?.servicesToCreate ?? 0,
-        servicesUpdated: payload.diff?.servicesToUpdate ?? 0,
-        servicesDeleted: payload.diff?.servicesToRemove ?? 0,
-        instancesToCreate: payload.diff?.instancesToCreate,
-        runId: payload.runId,
-        dispatch: payload.dispatch
+        revision: fullPayload.revision,
+        manifestName: fullPayload.manifestName,
+        servicesCreated: fullPayload.diff?.servicesToCreate ?? 0,
+        servicesUpdated: fullPayload.diff?.servicesToUpdate ?? 0,
+        servicesDeleted: fullPayload.diff?.servicesToRemove ?? 0,
+        instancesToCreate: fullPayload.diff?.instancesToCreate,
+        runId: fullPayload.runId,
+        dispatch: fullPayload.dispatch
     };
 }
 
@@ -702,8 +719,16 @@ export class NauliteClient {
      * @param manifestYaml Raw compose manifest YAML
      * @returns Apply summary
      */
-    async applyManifest(manifestYaml: string): Promise<ApplyResponse> {
-        const payload = await this.request<ApplyResultPayload | ApplyResponse>("POST", "/apply", { manifest: manifestYaml });
+    async applyManifest(manifestYaml: string, options?: { async?: boolean }): Promise<ApplyResponse> {
+        const params = new URLSearchParams();
+
+        if (options?.async) {
+            params.set("async", "true");
+        }
+
+        const query = params.toString();
+        const path = query.length > 0 ? `/apply?${query}` : "/apply";
+        const payload = await this.request<ApplyResultPayload | ApplyResponse | ApplyAcceptedPayload>("POST", path, { manifest: manifestYaml });
 
         return normalizeApplyResponse(payload);
     }
@@ -1260,6 +1285,15 @@ export class NauliteClient {
     async listNetBirdAcls(): Promise<NetBirdAcl[]> {
         const response = await this.request<{ acls: NetBirdAcl[] }>("GET", "/netbird/acls");
         return response.acls;
+    }
+
+    /**
+     * Returns NetBird enrollment details for infrastructure nodes and team devices.
+     *
+     * @returns Setup key and public enrollment URLs
+     */
+    async getNetBirdEnrollment(): Promise<NetBirdEnrollment> {
+        return this.request<NetBirdEnrollment>("GET", "/netbird/enrollment");
     }
 
     /**

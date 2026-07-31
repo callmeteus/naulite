@@ -104,6 +104,15 @@ export interface ApplyResponse {
 }
 
 /**
+ * Async apply acknowledgement returned before background execution completes.
+ */
+export interface ApplyAcceptedPayload {
+    runId: string;
+    manifestName: string;
+    accepted: true;
+}
+
+/**
  * Full apply payload returned directly by the control plane.
  */
 export interface ApplyResultPayload {
@@ -315,6 +324,15 @@ export interface NetBirdTopology {
     groups: NetBirdGroup[];
     devices: NetBirdDevice[];
     acls: NetBirdAcl[];
+}
+
+/**
+ * NetBird enrollment details for infrastructure nodes and team devices.
+ */
+export interface NetBirdEnrollment {
+    setupKey: string;
+    cpUrl: string;
+    netbirdManagementUrl: string;
 }
 
 /**

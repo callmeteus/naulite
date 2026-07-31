@@ -25,6 +25,7 @@ export * from "./NameParamsSchema";
 export * from "./NauliteMetadataResponseSchema";
 export * from "./NetBirdAclsListResponseSchema";
 export * from "./NetBirdDevicesListResponseSchema";
+export * from "./NetBirdEnrollmentResponseSchema";
 export * from "./NetBirdGroupResponseSchema";
 export * from "./NetBirdGroupsListResponseSchema";
 export * from "./PipelineRunSchemas";

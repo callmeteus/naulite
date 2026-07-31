@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { Network, Router as RouterIcon, Server } from "@lucide/vue";
-import { computed, onMounted, ref } from "vue";
+import { Link2, Network, Router as RouterIcon, Server } from "@lucide/vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { RouterLink } from "vue-router";
 
-import type { NetBirdAcl, NetBirdDevice, NetBirdGroup, Node } from "@naulite/sdk";
+import type { NetBirdAcl, NetBirdDevice, NetBirdEnrollment, NetBirdGroup, Node } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import PlatformTerminalTabs, { type TerminalPlatform } from "../components/ui/PlatformTerminalTabs.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
 import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
+import {
+    buildInfrastructureInstallCommand,
+    buildTeamCliConnectCommand
+} from "../utils/netbirdConnectPresentation";
 import {
     countOnlineNetBirdDevices,
     findLinkedNode,
@@ -26,7 +31,13 @@ enum NetBirdTab {
     OVERVIEW = "overview",
     DEVICES = "devices",
     GROUPS = "groups",
-    ACCESS_RULES = "access-rules"
+    ACCESS_RULES = "access-rules",
+    CONNECT = "connect"
+}
+
+enum ConnectAudience {
+    INFRASTRUCTURE = "infrastructure",
+    TEAM = "team"
 }
 
 const { t, locale } = useI18n();
@@ -34,6 +45,11 @@ const { t, locale } = useI18n();
 const loading = ref(true);
 const error = ref<ParsedApiError | null>(null);
 const activeTab = ref<NetBirdTab>(NetBirdTab.OVERVIEW);
+const connectAudience = ref<ConnectAudience>(ConnectAudience.INFRASTRUCTURE);
+const terminalPlatform = ref<TerminalPlatform>("windows");
+const enrollment = ref<NetBirdEnrollment | null>(null);
+const enrollmentLoading = ref(false);
+const enrollmentError = ref<ParsedApiError | null>(null);
 const devices = ref<NetBirdDevice[]>([]);
 const groups = ref<NetBirdGroup[]>([]);
 const acls = ref<NetBirdAcl[]>([]);
@@ -98,8 +114,31 @@ const tabs = computed(() => [
     { id: NetBirdTab.OVERVIEW, labelKey: "pages.netbird.tabOverview" },
     { id: NetBirdTab.DEVICES, labelKey: "pages.netbird.tabDevices", count: devices.value.length },
     { id: NetBirdTab.GROUPS, labelKey: "pages.netbird.tabGroups", count: groups.value.length },
-    { id: NetBirdTab.ACCESS_RULES, labelKey: "pages.netbird.tabAccessRules", count: acls.value.length }
+    { id: NetBirdTab.ACCESS_RULES, labelKey: "pages.netbird.tabAccessRules", count: acls.value.length },
+    { id: NetBirdTab.CONNECT, labelKey: "pages.netbird.tabConnect" }
 ]);
+
+const infrastructureInstallCommand = computed(() => {
+    if (!enrollment.value) {
+        return "";
+    }
+
+    return buildInfrastructureInstallCommand(enrollment.value, terminalPlatform.value);
+});
+
+const teamCliConnectCommand = computed(() => {
+    if (!enrollment.value) {
+        return "";
+    }
+
+    return buildTeamCliConnectCommand(enrollment.value, terminalPlatform.value);
+});
+
+watch(activeTab, (tab) => {
+    if (tab === NetBirdTab.CONNECT && !enrollment.value && !enrollmentLoading.value) {
+        void loadEnrollment();
+    }
+});
 
 onMounted(() => {
     void refresh();
@@ -166,6 +205,34 @@ function formatDeviceGroups(device: NetBirdDevice): string {
 function linkedNodeForDevice(deviceId: string): Node | undefined {
     return findLinkedNode(deviceId, nodes.value);
 }
+
+/**
+ * Opens the connect tab for enrollment instructions.
+ *
+ * @returns Nothing.
+ */
+function openConnectTab(): void {
+    activeTab.value = NetBirdTab.CONNECT;
+}
+
+/**
+ * Loads NetBird enrollment details for connect instructions.
+ *
+ * @returns Nothing.
+ */
+async function loadEnrollment(): Promise<void> {
+    enrollmentLoading.value = true;
+    enrollmentError.value = null;
+
+    try {
+        enrollment.value = await nauliteClient.getNetBirdEnrollment();
+    } catch (err) {
+        enrollment.value = null;
+        enrollmentError.value = parseApiError(err);
+    } finally {
+        enrollmentLoading.value = false;
+    }
+}
 </script>
 
 <template>
@@ -205,13 +272,23 @@ function linkedNodeForDevice(deviceId: string): Node | undefined {
             <div class="alert text-sm" :class="meshStatusTone">
                 <div class="flex w-full flex-wrap items-center justify-between gap-3">
                     <span>{{ t(meshStatusKey, { count: unlinkedNodes.length }) }}</span>
-                    <RouterLink
-                        v-if="unlinkedNodes.length > 0"
-                        to="/nodes"
-                        class="btn btn-ghost btn-sm"
-                    >
-                        {{ t("pages.netbird.viewNodes") }}
-                    </RouterLink>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-if="devices.length === 0"
+                            type="button"
+                            class="btn btn-primary btn-sm"
+                            @click="openConnectTab"
+                        >
+                            {{ t("pages.netbird.connectOpenTab") }}
+                        </button>
+                        <RouterLink
+                            v-if="unlinkedNodes.length > 0"
+                            to="/nodes"
+                            class="btn btn-ghost btn-sm"
+                        >
+                            {{ t("pages.netbird.viewNodes") }}
+                        </RouterLink>
+                    </div>
                 </div>
             </div>
 
@@ -279,9 +356,9 @@ function linkedNodeForDevice(deviceId: string): Node | undefined {
                     v-if="devices.length === 0"
                     title-key="pages.netbird.devicesEmptyTitle"
                     description-key="pages.netbird.devicesEmptyDescription"
-                    action-label-key="pages.netbird.viewNodes"
-                    action-to="/nodes"
+                    action-label-key="pages.netbird.devicesEmptyAction"
                     :icon="RouterIcon"
+                    @action="openConnectTab"
                 />
 
                 <div v-else class="card bg-base-100 shadow">
@@ -425,6 +502,181 @@ function linkedNodeForDevice(deviceId: string): Node | undefined {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <div v-else-if="activeTab === NetBirdTab.CONNECT" class="space-y-6">
+                <div class="alert border border-info/20 bg-info/10 text-sm">
+                    <span>{{ t("pages.netbird.connectIntro") }}</span>
+                </div>
+
+                <ErrorAlert :error="enrollmentError" />
+
+                <div class="tabs tabs-boxed w-fit">
+                    <button
+                        type="button"
+                        class="tab"
+                        :class="{ 'tab-active': connectAudience === ConnectAudience.INFRASTRUCTURE }"
+                        @click="connectAudience = ConnectAudience.INFRASTRUCTURE"
+                    >
+                        {{ t("pages.netbird.connectAudienceInfrastructure") }}
+                    </button>
+                    <button
+                        type="button"
+                        class="tab"
+                        :class="{ 'tab-active': connectAudience === ConnectAudience.TEAM }"
+                        @click="connectAudience = ConnectAudience.TEAM"
+                    >
+                        {{ t("pages.netbird.connectAudienceTeam") }}
+                    </button>
+                </div>
+
+                <div v-if="enrollmentLoading" class="flex items-center gap-2">
+                    <LoadingSpinner />
+                    <span>{{ t("common.loading") }}</span>
+                </div>
+
+                <div
+                    v-else-if="!enrollmentError"
+                    class="card bg-base-100 shadow"
+                >
+                    <div class="card-body gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold">
+                                {{ t("pages.netbird.connectEnrollmentTitle") }}
+                            </h2>
+                            <p class="text-sm text-base-content/70">
+                                {{ t("pages.netbird.connectEnrollmentHint") }}
+                            </p>
+                        </div>
+
+                        <div v-if="enrollment" class="grid gap-4 lg:grid-cols-2">
+                            <label class="form-control w-full">
+                                <span class="label-text">{{ t("pages.netbird.connectManagementUrl") }}</span>
+                                <input
+                                    :value="enrollment.netbirdManagementUrl"
+                                    type="text"
+                                    class="input input-bordered w-full font-mono text-sm"
+                                    readonly
+                                />
+                            </label>
+
+                            <label class="form-control w-full">
+                                <span class="label-text">{{ t("pages.netbird.connectSetupKey") }}</span>
+                                <input
+                                    :value="enrollment.setupKey"
+                                    type="text"
+                                    class="input input-bordered w-full font-mono text-sm"
+                                    readonly
+                                />
+                            </label>
+                        </div>
+
+                        <p v-else class="text-sm text-base-content/70">
+                            {{ t("pages.netbird.connectEnrollmentUnavailable") }}
+                        </p>
+
+                        <p v-if="enrollment" class="text-xs text-warning">
+                            {{ t("pages.netbird.connectSetupKeyWarning") }}
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    v-if="connectAudience === ConnectAudience.INFRASTRUCTURE"
+                    class="card bg-base-100 shadow"
+                >
+                    <div class="card-body gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold">
+                                {{ t("pages.netbird.connectInfrastructureTitle") }}
+                            </h2>
+                            <p class="text-sm text-base-content/70">
+                                {{ t("pages.netbird.connectInfrastructureHint") }}
+                            </p>
+                        </div>
+
+                        <ol class="list-decimal space-y-2 pl-5 text-sm text-base-content/80">
+                            <li>{{ t("pages.netbird.connectInfrastructureStep1") }}</li>
+                            <li>{{ t("pages.netbird.connectInfrastructureStep2") }}</li>
+                            <li>{{ t("pages.netbird.connectInfrastructureStep3") }}</li>
+                        </ol>
+
+                        <PlatformTerminalTabs v-model="terminalPlatform" />
+
+                        <div class="space-y-2">
+                            <p class="text-sm font-medium">
+                                {{ t("pages.netbird.connectInstallCommand") }}
+                            </p>
+                            <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
+                                infrastructureInstallCommand || t("pages.netbird.connectEnrollmentUnavailable")
+                            }}</code></pre>
+                        </div>
+
+                        <div class="rounded-lg border border-base-300 bg-base-200/40 p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-medium">
+                                        {{ t("pages.netbird.connectInfrastructureCloudTitle") }}
+                                    </p>
+                                    <p class="mt-1 text-sm text-base-content/70">
+                                        {{ t("pages.netbird.connectInfrastructureCloudHint") }}
+                                    </p>
+                                </div>
+                                <RouterLink to="/nodes/new" class="btn btn-outline btn-sm">
+                                    {{ t("pages.netbird.connectInfrastructureCloudAction") }}
+                                </RouterLink>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    v-else
+                    class="card bg-base-100 shadow"
+                >
+                    <div class="card-body gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold">
+                                {{ t("pages.netbird.connectTeamTitle") }}
+                            </h2>
+                            <p class="text-sm text-base-content/70">
+                                {{ t("pages.netbird.connectTeamHint") }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-lg border border-base-300 bg-base-200/40 p-4">
+                            <p class="font-medium">
+                                {{ t("pages.netbird.connectTeamAppTitle") }}
+                            </p>
+                            <ol class="mt-2 list-decimal space-y-2 pl-5 text-sm text-base-content/80">
+                                <li>{{ t("pages.netbird.connectTeamAppStep1") }}</li>
+                                <li>{{ t("pages.netbird.connectTeamAppStep2") }}</li>
+                                <li>{{ t("pages.netbird.connectTeamAppStep3") }}</li>
+                            </ol>
+                        </div>
+
+                        <PlatformTerminalTabs v-model="terminalPlatform" />
+
+                        <div class="space-y-2">
+                            <p class="text-sm font-medium">
+                                {{ t("pages.netbird.connectTeamCliTitle") }}
+                            </p>
+                            <p class="text-xs text-base-content/60">
+                                {{ t("pages.netbird.connectTeamCliHint") }}
+                            </p>
+                            <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
+                                teamCliConnectCommand || t("pages.netbird.connectEnrollmentUnavailable")
+                            }}</code></pre>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-sm text-base-content/70">
+                            <Link2 class="size-4 shrink-0" />
+                            <RouterLink to="/api-keys" class="link link-primary">
+                                {{ t("menu.administration.apiKeys") }}
+                            </RouterLink>
+                        </div>
                     </div>
                 </div>
             </div>

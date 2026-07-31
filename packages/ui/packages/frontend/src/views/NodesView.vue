@@ -101,7 +101,7 @@ async function refreshAll(): Promise<void> {
                 title-key="pages.nodes.emptyTitle"
                 description-key="pages.nodes.emptyDescription"
                 :action-label-key="canProvision ? 'pages.provision.newAction' : 'pages.nodes.emptyAction'"
-                :action-to="canProvision ? '/nodes/new' : '/deploy'"
+                :action-to="canProvision ? '/nodes/new' : '/runs?deploy=open'"
             />
 
             <div v-else-if="!store.error" class="card bg-base-100 shadow">

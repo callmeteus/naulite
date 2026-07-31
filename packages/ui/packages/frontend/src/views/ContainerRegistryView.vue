@@ -76,7 +76,7 @@ function formatSize(sizeBytes: number): string {
             title-key="pages.containerRegistry.emptyTitle"
             description-key="pages.containerRegistry.emptyDescription"
             action-label-key="pages.containerRegistry.emptyAction"
-            action-to="/build"
+            action-to="/runs?build=open"
         />
 
         <div v-else-if="!store.error && !error" class="card bg-base-100 shadow">

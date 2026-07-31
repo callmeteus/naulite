@@ -20,13 +20,16 @@ interface GitOpsRevision {
  * @param manifestYaml Raw manifest YAML
  * @returns Apply response from the control plane
  */
-async function applyManifestWithCsrfRetry(manifestYaml: string): Promise<ApplyResponse> {
+async function applyManifestWithCsrfRetry(
+    manifestYaml: string,
+    options?: { async?: boolean }
+): Promise<ApplyResponse> {
     try {
-        return await nauliteClient.applyManifest(manifestYaml);
+        return await nauliteClient.applyManifest(manifestYaml, options);
     } catch (err) {
         if (err instanceof NauliteApiError && err.status === 403 && err.i18n === "errors.csrfInvalid") {
             await authStore.ensureSession();
-            return nauliteClient.applyManifest(manifestYaml);
+            return nauliteClient.applyManifest(manifestYaml, options);
         }
 
         throw err;
@@ -591,7 +594,7 @@ export const clusterStore = reactive({
      * @returns Apply summary including the pipeline run id when available
      * @throws {unknown}
      */
-    async applyManifest(manifestYaml: string): Promise<ApplyResponse> {
+    async applyManifest(manifestYaml: string, options?: { async?: boolean }): Promise<ApplyResponse> {
         this.loading = true;
         this.error = null;
 
@@ -600,7 +603,7 @@ export const clusterStore = reactive({
                 await authStore.ensureSession();
             }
 
-            const result = await applyManifestWithCsrfRetry(manifestYaml);
+            const result = await applyManifestWithCsrfRetry(manifestYaml, options);
             await this.refreshOverview();
             return result;
         } catch (err) {

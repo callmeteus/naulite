@@ -81,7 +81,7 @@ const quickLinks = computed(() => {
             permission: "workloads:read" as const
         },
         {
-            to: "/deploy",
+            to: "/runs?deploy=open",
             labelKey: "pages.cluster.linkDeploy",
             hintKey: "pages.cluster.linkDeployHint",
             icon: Upload,

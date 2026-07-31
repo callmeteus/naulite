@@ -6,7 +6,6 @@ import {
     Box,
     Container,
     GitBranch,
-    Hammer,
     HardDrive,
     Key,
     LayoutDashboard,
@@ -14,7 +13,6 @@ import {
     Route,
     Server,
     Shield,
-    Upload,
     Users,
     Workflow
 } from "@lucide/vue";
@@ -60,9 +58,7 @@ export const navigationSections: NavSection[] = [
         id: "delivery",
         labelKey: "menu.sections.delivery",
         items: [
-            { path: "/deploy", labelKey: "menu.delivery.deploy", permission: "manifests:apply", icon: Upload },
             { path: "/gitops", labelKey: "menu.delivery.gitops", permission: "gitops:read", icon: GitBranch },
-            { path: "/build", labelKey: "menu.delivery.build", permission: "runs:write", icon: Hammer },
             { path: "/runs", labelKey: "menu.delivery.runs", permission: "runs:read", icon: Workflow }
         ]
     },

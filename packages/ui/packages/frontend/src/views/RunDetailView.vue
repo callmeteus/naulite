@@ -11,6 +11,11 @@ import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
 import { useClusterStore } from "../stores/Cluster";
+import {
+    collectRunNodeIds,
+    isAgentDependentRunKind,
+    shouldShowRunAgentUnreachableBanner
+} from "../utils/runDetailPresentation";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -24,6 +29,7 @@ const loading = ref(true);
 const loadError = ref("");
 const streamActive = ref(false);
 const redeployModalRef = ref<InstanceType<typeof ConfirmModal> | null>(null);
+const agentMetricsReachable = ref<boolean | null>(null);
 
 let streamAbort = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -48,6 +54,45 @@ const sortedEvents = computed(() =>
         String(right.createdAt).localeCompare(String(left.createdAt))
     )
 );
+
+const showAgentUnreachableBanner = computed(() => {
+    if (!run.value) {
+        return false;
+    }
+
+    return shouldShowRunAgentUnreachableBanner(
+        run.value,
+        store.nodes,
+        runEvents.value,
+        { agentMetricsReachable: agentMetricsReachable.value }
+    );
+});
+
+const nodesPageLink = computed(() => {
+    const nodeIds = run.value ? collectRunNodeIds(run.value) : [];
+
+    if (nodeIds.length === 1) {
+        return `/nodes/${nodeIds[0]}`;
+    }
+
+    return "/nodes";
+});
+
+const isRunActive = computed(() =>
+    Boolean(run.value && isActiveStatus(run.value.status))
+);
+
+const liveUpdateLabel = computed(() => {
+    if (!isRunActive.value) {
+        return "";
+    }
+
+    if (streamActive.value) {
+        return t("pages.runs.streaming");
+    }
+
+    return t("pages.runs.polling");
+});
 
 onMounted(() => {
     void loadRun();
@@ -122,13 +167,16 @@ async function loadRun(): Promise<void> {
     stopLiveUpdates();
 
     try {
+        await store.refreshOverview({ silent: true });
         run.value = await store.getRun(runId.value);
         runEvents.value = await store.getRunEvents(runId.value);
         selectedStepId.value = run.value.steps?.[0]?.id ?? null;
+        await refreshAgentReachability();
     } catch (err) {
         loadError.value = err instanceof Error ? err.message : String(err);
         run.value = null;
         runEvents.value = [];
+        agentMetricsReachable.value = null;
     } finally {
         loading.value = false;
     }
@@ -146,12 +194,32 @@ async function refreshRun(): Promise<void> {
 
     run.value = await store.getRun(runId.value);
     runEvents.value = await store.getRunEvents(runId.value);
+    await refreshAgentReachability();
 
     if (
         selectedStepId.value &&
         !run.value.steps?.some((step) => step.id === selectedStepId.value)
     ) {
         selectedStepId.value = run.value.steps?.[0]?.id ?? null;
+    }
+}
+
+/**
+ * Probes whether Prometheus can scrape at least one node agent.
+ *
+ * @returns Nothing.
+ */
+async function refreshAgentReachability(): Promise<void> {
+    if (!run.value || !isAgentDependentRunKind(run.value.kind) || store.nodes.length === 0) {
+        agentMetricsReachable.value = null;
+        return;
+    }
+
+    try {
+        const agentUp = await nauliteClient.queryMetrics("naulite_agent_up");
+        agentMetricsReachable.value = (agentUp.data?.result?.length ?? 0) > 0;
+    } catch {
+        agentMetricsReachable.value = null;
     }
 }
 
@@ -269,8 +337,14 @@ async function rerunBuild(): Promise<void> {
         return;
     }
 
-    await store.triggerBuild({ serviceName: run.value.serviceName });
-    await router.push("/build");
+    const result = await store.triggerBuild({ serviceName: run.value.serviceName });
+
+    if (result.runId) {
+        await router.push(`/runs/${result.runId}`);
+        return;
+    }
+
+    await router.push("/runs?build=open");
 }
 
 /**
@@ -288,7 +362,7 @@ function requestRedeploy(): void {
  * @returns Nothing.
  */
 async function confirmRedeploy(): Promise<void> {
-    await router.push("/deploy");
+    await router.push("/runs?deploy=open");
 }
 </script>
 
@@ -316,7 +390,41 @@ async function confirmRedeploy(): Promise<void> {
         <ErrorAlert v-else-if="loadError" :error="loadError" />
 
         <template v-else-if="run">
+            <div
+                v-if="showAgentUnreachableBanner"
+                class="alert border-warning/30 bg-warning/10 text-sm"
+            >
+                <div class="flex w-full flex-wrap items-center justify-between gap-3">
+                    <span>{{ t("pages.runs.agentUnreachableDescription") }}</span>
+                    <RouterLink :to="nodesPageLink" class="btn btn-ghost btn-sm">
+                        {{ t("pages.runs.viewNodes") }}
+                    </RouterLink>
+                </div>
+            </div>
+
+            <div
+                v-if="isRunActive"
+                class="alert border-primary/30 bg-primary/10 text-sm"
+            >
+                <span class="loading loading-spinner loading-sm shrink-0 text-primary" />
+                <div class="flex min-w-0 flex-1 flex-col gap-1">
+                    <p class="font-medium">
+                        {{ t("pages.runs.inProgressTitle") }}
+                    </p>
+                    <p class="text-base-content/70">
+                        {{ t("pages.runs.inProgressHint") }}
+                    </p>
+                    <p v-if="liveUpdateLabel" class="text-xs text-base-content/60">
+                        {{ liveUpdateLabel }}
+                    </p>
+                </div>
+            </div>
+
             <div class="card bg-base-100 shadow">
+                <progress
+                    v-if="isRunActive"
+                    class="progress progress-primary h-1 w-full rounded-none"
+                />
                 <div class="card-body gap-4">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -324,21 +432,14 @@ async function confirmRedeploy(): Promise<void> {
                                 {{ run.id }}
                             </p>
                             <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <span
+                                    v-if="isRunActive"
+                                    class="loading loading-spinner loading-sm text-primary"
+                                    aria-hidden="true"
+                                />
                                 <StatusPill :status="run.status" size="md" />
                                 <span class="badge badge-outline">
                                     {{ kindLabel(run.kind) }}
-                                </span>
-                                <span
-                                    v-if="streamActive"
-                                    class="text-xs text-base-content/60"
-                                >
-                                    {{ t("pages.runs.streaming") }}
-                                </span>
-                                <span
-                                    v-else-if="isActiveStatus(run.status)"
-                                    class="text-xs text-base-content/60"
-                                >
-                                    {{ t("pages.runs.polling") }}
                                 </span>
                             </div>
                         </div>

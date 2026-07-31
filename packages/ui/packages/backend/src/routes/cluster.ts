@@ -168,6 +168,10 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
 
     app.post("/apply", async (request) => {
         const body = ApplyBodySchema.parse(request.body);
-        return app.controlPlane.applyManifest(body.manifest);
+        const query = request.query as { async?: string };
+
+        return app.controlPlane.applyManifest(body.manifest, {
+            async: query.async === "true"
+        });
     });
 }

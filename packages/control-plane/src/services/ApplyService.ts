@@ -11,6 +11,7 @@ import { NetworkGroupId } from "../orchestration/NetworkGroupId";
 import type { PlannerDiff } from "../orchestration/Planner";
 
 import { AgentDispatcher, type AgentDispatchResult } from "./AgentDispatcher";
+import { formatRolloutDispatchFailureMessage } from "./ApplyDispatchFailureMessage";
 import { BuildContextService } from "./BuildContextService";
 import { BuildService } from "./BuildService";
 import { PipelineRunService } from "./PipelineRunService";
@@ -53,6 +54,15 @@ export interface ApplyExecuteOptions {
 }
 
 /**
+ * Accepted async apply response returned before background execution finishes.
+ */
+export interface ApplyAcceptedResult {
+    runId: string;
+    manifestName: string;
+    accepted: true;
+}
+
+/**
  * Orchestrates manifest parse, diff, persistence, exposure, and agent dispatch.
  */
 export namespace ApplyService {
@@ -87,6 +97,51 @@ export namespace ApplyService {
             message: event.message ?? event.kind,
             eventKind: event.kind
         });
+    }
+
+    /**
+     * Creates a pipeline run and applies a manifest in the background.
+     *
+     * @param manifestYaml Manifest document body
+     * @param options Optional apply options
+     * @returns Accepted apply summary with the pipeline run id
+     */
+    export async function enqueue(
+        manifestYaml: string,
+        options: ApplyExecuteOptions = {}
+    ): Promise<ApplyAcceptedResult> {
+        const manifest = ControlPlaneService.Orchestration.ComposeParser.parse(manifestYaml);
+        const applyRun = await PipelineRunService.createRun({
+            kind: "apply",
+            manifestName: manifest.name,
+            workflowId: `${manifest.name}-${PipelineRunService.createWorkflowId("apply")}`
+        });
+
+        await PipelineRunService.markRunning(applyRun.id);
+        await PipelineRunService.emitEvent(applyRun.id, {
+            kind: "apply.started",
+            message: `Deploy started for ${manifest.name}`
+        });
+
+        void execute(manifestYaml, {
+            ...options,
+            runId: applyRun.id,
+            repositoryUrl: "inline://apply"
+        }).catch(async (err) => {
+            logApply.error("async apply failed runId=%s err=%O", applyRun.id, err);
+
+            const errorMessage = err instanceof Error ? err.message : "Apply failed.";
+
+            await PipelineRunService.completeRun(applyRun.id, "failed", {
+                errorMessage
+            });
+        });
+
+        return {
+            runId: applyRun.id,
+            manifestName: manifest.name,
+            accepted: true
+        };
     }
 
     /**
@@ -303,8 +358,29 @@ export namespace ApplyService {
         }
 
         if (dispatchOutcome.allFailed) {
+            const relevantNodeIds = [
+                ...new Set(
+                    watchedInstanceIds
+                        .map((instanceId) => instanceNodes.get(instanceId))
+                        .filter((nodeId): nodeId is string => Boolean(nodeId))
+                )
+            ];
+            const errorMessage = formatRolloutDispatchFailureMessage(dispatch, relevantNodeIds);
+
+            logApply.debug("rollout dispatch failed runId=%s nodes=%o dispatch=%o",
+                applyRun.id,
+                relevantNodeIds,
+                dispatch
+            );
+
+            await PipelineRunService.emitEvent(applyRun.id, {
+                kind: "deploy.step.failed",
+                level: "error",
+                message: errorMessage
+            });
+
             await PipelineRunService.completeRun(applyRun.id, "failed", {
-                errorMessage: "Rollout failed because agent dispatch did not succeed for any instance."
+                errorMessage
             });
         } else {
             RolloutWatcher.watch(applyRun.id, watchedInstanceIds);

@@ -80,7 +80,7 @@ async function confirm(): Promise<void> {
 
         close();
     } catch {
-        close();
+        // Keep the dialog open so the caller can show the error inline.
     } finally {
         confirming.value = false;
     }

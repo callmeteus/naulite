@@ -1,5 +1,57 @@
 import type { ExecutionPlan, Node } from "@naulite/shared";
 
+const DEFAULT_AGENT_FETCH_TIMEOUT_MS = 15_000;
+
+/**
+ * Resolves the timeout used for outbound agent HTTP requests.
+ *
+ * @returns Timeout in milliseconds
+ */
+function resolveAgentFetchTimeoutMs(): number {
+    const configured = Number(process.env.NAULITE_AGENT_FETCH_TIMEOUT_MS ?? DEFAULT_AGENT_FETCH_TIMEOUT_MS);
+
+    if (!Number.isFinite(configured) || configured <= 0) {
+        return DEFAULT_AGENT_FETCH_TIMEOUT_MS;
+    }
+
+    return configured;
+}
+
+/**
+ * Performs a bounded fetch against a node agent.
+ *
+ * @param url Absolute agent URL
+ * @param init Fetch init options
+ * @param fetchImpl Fetch implementation
+ * @returns Agent HTTP response
+ */
+async function fetchAgentBounded(
+    url: string,
+    init: RequestInit,
+    fetchImpl: typeof fetch
+): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutMs = resolveAgentFetchTimeoutMs();
+    const timer = setTimeout(() => {
+        controller.abort();
+    }, timeoutMs);
+
+    try {
+        return await fetchImpl(url, {
+            ...init,
+            signal: controller.signal
+        });
+    } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+            throw new Error(`Agent request timed out after ${timeoutMs}ms.`);
+        }
+
+        throw err;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 /**
  * Result of dispatching an execution plan to a node agent.
  */
@@ -63,7 +115,7 @@ export namespace AgentDispatcher {
             }
 
             try {
-                const response = await fetchImpl(`${agentUrl}/execution/apply`, {
+                const response = await fetchAgentBounded(`${agentUrl}/execution/apply`, {
                     method: "POST",
                     headers: {
                         Accept: "application/json",
@@ -72,7 +124,7 @@ export namespace AgentDispatcher {
                     },
 
                     body: requestBody
-                });
+                }, fetchImpl);
 
                 if (!response.ok) {
                     const text = await response.text();

@@ -113,7 +113,7 @@ async function redispatchService(serviceName: string): Promise<void> {
             title-key="pages.services.emptyTitle"
             description-key="pages.services.emptyDescription"
             action-label-key="pages.services.emptyAction"
-            action-to="/deploy"
+            action-to="/runs?deploy=open"
         />
 
         <div v-else-if="!store.error" class="card bg-base-100 shadow">
