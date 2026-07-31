@@ -1489,12 +1489,17 @@ export class NauliteClient {
 
         if (!response.ok) {
             const message =
-                typeof parsed === "object" &&
-                parsed !== null &&
-                "message" in parsed &&
-                typeof parsed.message === "string"
+                typeof parsed === "object"
+                && parsed !== null
+                && "message" in parsed
+                && typeof parsed.message === "string"
                     ? parsed.message
-                    : `Request failed with status ${response.status}`;
+                    : typeof parsed === "object"
+                    && parsed !== null
+                    && "i18n" in parsed
+                    && typeof parsed.i18n === "string"
+                        ? parsed.i18n
+                        : `Request failed with status ${response.status}`;
 
             const error = new NauliteApiError(response.status, message, parsed);
 

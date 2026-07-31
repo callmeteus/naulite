@@ -2,24 +2,24 @@ import { reactive } from "vue";
 import { NauliteClient, NauliteApiError } from "@naulite/sdk";
 import type { AdminRole, AdminUser, NaulitePermission } from "@naulite/sdk";
 import { RolePermissions } from "@naulite/shared";
+
+import { i18n } from "../i18n";
+import { resolveApiErrorMessage } from "../utils/ApiErrorMessage";
+
 const baseUrl = import.meta.env.VITE_ADMIN_API_URL ?? "/api";
 
 /**
- * Maps low-level browser errors to operator-friendly login messages.
+ * Maps API errors to operator-friendly login messages in the active locale.
  *
  * @param err Thrown error
  * @returns Message safe to show in the UI
  */
 function formatAuthError(err: unknown): string {
-    if (!(err instanceof Error)) {
-        return String(err);
-    }
-
-    if (err.message.includes("Illegal invocation") || /failed to fetch/i.test(err.message)) {
-        return "Could not reach the admin API. Check that ui-backend is running and reload the page.";
-    }
-
-    return err.message;
+    return resolveApiErrorMessage(
+        err,
+        i18n.global.t,
+        i18n.global.te
+    );
 }
 
 /**
@@ -135,7 +135,7 @@ export const authStore = reactive({
         try {
             await nauliteClient.logout();
         } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+            this.error = formatAuthError(err);
         } finally {
             this.user = null;
             this.csrfToken = undefined;

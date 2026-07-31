@@ -5,6 +5,7 @@ import {
     formatLogLine,
     LOG_LINE_PATTERN,
     Logger,
+    summarizeFastifyLogRecord,
     toFastifyLogger
 } from "@naulite/logger";
 
@@ -74,5 +75,29 @@ describe("@naulite/logger", () => {
         expect(typeof fastifyLogger.warn).toBe("function");
         expect(typeof fastifyLogger.child).toBe("function");
         expect(fastifyLogger.child({})).toBe(fastifyLogger);
+    });
+
+    it("summarizeFastifyLogRecord compacts request completion logs", () => {
+        const summary = summarizeFastifyLogRecord({
+            req: {
+                method: "POST",
+                url: "/auth/login",
+                socket: { _handle: { fd: 1 } }
+            },
+            res: { statusCode: 503 },
+            responseTime: 3.13
+        });
+
+        expect(summary).toBe("POST /auth/login status=503 responseTime=3.13ms");
+        expect(summary).not.toContain("socket");
+    });
+
+    it("summarizeFastifyLogRecord compacts error logs", () => {
+        const summary = summarizeFastifyLogRecord({
+            req: { method: "GET", url: "/metrics/query_range" },
+            err: new Error("Failed to reach Prometheus.")
+        });
+
+        expect(summary).toBe("GET /metrics/query_range Failed to reach Prometheus.");
     });
 });

@@ -1,5 +1,6 @@
 import type { FastifyRequest } from "fastify";
 
+import { createBffError } from "../errors/BffError";
 import { RolePreHandlers, SERVICE_ADMIN_USER } from "./RolePreHandlers";
 
 /**
@@ -12,7 +13,7 @@ export namespace AuthPreHandlers {
      * @param request Incoming Fastify request
      * @param adminApiKey Optional legacy service token for automation
      * @returns Nothing.
-     * @throws {createUnauthorizedError} {@link createUnauthorizedError}
+     * @throws {createBffError} {@link createBffError}
      */
     export async function authenticateRequest(
         request: FastifyRequest,
@@ -31,7 +32,7 @@ export namespace AuthPreHandlers {
                 request.adminUser = session.user;
                 return;
             } catch {
-                throw createUnauthorizedError("Sessão expirada ou inválida.");
+                throw createBffError(401, "errors.sessionExpired");
             }
         }
 
@@ -48,7 +49,7 @@ export namespace AuthPreHandlers {
             }
         }
 
-        throw createUnauthorizedError("Não autorizado.");
+        throw createBffError(401, "errors.unauthorized");
     }
 
     /**
@@ -75,16 +76,4 @@ export namespace AuthPreHandlers {
 
         return false;
     }
-}
-
-/**
- * Creates a Fastify-compatible 401 error.
- *
- * @param message Error message
- * @returns Error with statusCode 401
- */
-function createUnauthorizedError(message: string): Error & { statusCode: number } {
-    const error = new Error(message) as Error & { statusCode: number };
-    error.statusCode = 401;
-    return error;
 }

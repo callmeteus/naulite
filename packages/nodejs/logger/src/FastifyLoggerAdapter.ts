@@ -4,6 +4,7 @@ import type { FastifyBaseLogger } from "fastify";
 import type winston from "winston";
 
 import type { LogLevel } from "./format";
+import { summarizeFastifyLogRecord } from "./FastifyLogRecord";
 
 /**
  * Fastify bootstrap options for wiring a custom Winston logger.
@@ -31,24 +32,13 @@ export function toFastifyLogger(logger: winston.Logger): FastifyBaseLogger {
                 return;
             }
 
-        if (typeof args[0] === "object" && args[0] !== null) {
-            const record = args[0] as Record<string, unknown>;
-            const responseTime = record.responseTime;
-            const res = record.res as { statusCode?: number } | undefined;
-
-            if (res && typeof responseTime === "number") {
-                logger.log(level, "request completed status=%d responseTime=%d", res.statusCode ?? 0, responseTime);
+            if (args[0] instanceof Error) {
+                logger.log(level, "%s", args[0].stack ?? args[0].message);
                 return;
             }
 
-            const err = record.err ?? record.error;
-
-                if (err !== undefined) {
-                    logger.log(level, format("%O", err));
-                    return;
-                }
-
-                logger.log(level, format("%o", record));
+            if (typeof args[0] === "object" && args[0] !== null) {
+                logger.log(level, summarizeFastifyLogRecord(args[0] as Record<string, unknown>));
                 return;
             }
 
@@ -57,11 +47,8 @@ export function toFastifyLogger(logger: winston.Logger): FastifyBaseLogger {
         }
 
         if (typeof args[0] === "object" && args[0] !== null && typeof args[1] === "string") {
-            const record = args[0] as Record<string, unknown>;
-            const err = record.err ?? record.error;
-            const suffix = err !== undefined ? format(" %O", err) : format(" %o", record);
-
-            logger.log(level, `${args[1]}${suffix}`);
+            const summary = summarizeFastifyLogRecord(args[0] as Record<string, unknown>);
+            logger.log(level, "%s %s", args[1], summary);
             return;
         }
 

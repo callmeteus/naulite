@@ -1,6 +1,7 @@
 import type { FastifyRequest, preHandlerHookHandler } from "fastify";
 import type { AdminRole, AdminUser } from "@naulite/sdk";
 
+import { createBffError } from "../errors/BffError";
 import { NAULITE_SESSION_COOKIE, parseCookies } from "./SessionCookie";
 
 /**
@@ -18,11 +19,11 @@ export namespace RolePreHandlers {
             const user = request.adminUser;
 
             if (!user) {
-                throw createForbiddenError("Sessão inválida.");
+                throw createBffError(403, "errors.invalidSession");
             }
 
             if (!roles.includes(user.role)) {
-                throw createForbiddenError("Permissão insuficiente.");
+                throw createBffError(403, "errors.insufficientPermission");
             }
         };
     }
@@ -97,15 +98,3 @@ export const SERVICE_ADMIN_USER: AdminUser = {
     tenantId: null,
     createdAt: new Date(0).toISOString()
 };
-
-/**
- * Creates a Fastify-compatible 403 error.
- *
- * @param message Error message
- * @returns Error with statusCode 403
- */
-function createForbiddenError(message: string): Error & { statusCode: number } {
-    const error = new Error(message) as Error & { statusCode: number };
-    error.statusCode = 403;
-    return error;
-}

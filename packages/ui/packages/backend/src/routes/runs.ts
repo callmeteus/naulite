@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { PipelineRunKindSchema, PipelineRunListQuerySchema, PipelineRunStatusSchema } from "@naulite/shared";
 
+import { createBffError, toBffErrorResponse } from "../errors/BffError";
 import { controlPlaneForRequest } from "../util/controlPlaneForRequest";
 import { paginateArray } from "../util/paginateArray";
 
@@ -84,9 +85,7 @@ export async function registerRunsRoutes(app: FastifyInstance): Promise<void> {
 
         if (!response.ok || !response.body) {
             reply.code(response.status);
-            return {
-                message: "Pipeline run stream failed."
-            };
+            return toBffErrorResponse(createBffError(response.status || 502, "errors.pipelineStreamFailed"));
         }
 
         reply.hijack();

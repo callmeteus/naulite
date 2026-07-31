@@ -1,7 +1,8 @@
 import { ref } from "vue";
 import { NauliteApiError } from "@naulite/sdk";
-import { enrichApiErrorMessage } from "@naulite/shared";
 
+import { i18n } from "../i18n";
+import { resolveApiErrorMessage } from "../utils/ApiErrorMessage";
 import { useToast } from "../stores/Toast";
 
 export interface ParsedApiError {
@@ -9,6 +10,8 @@ export interface ParsedApiError {
     code?: string;
     details?: unknown;
     status?: number;
+    i18n?: string;
+    i18nParams?: Record<string, string>;
 }
 
 /**
@@ -22,18 +25,24 @@ export function parseApiError(err: unknown): ParsedApiError {
         const details = err.details;
 
         return {
-            message: enrichApiErrorMessage(err.message, details),
+            message: resolveApiErrorMessage(err, i18n.global.t, i18n.global.te),
             status: err.status,
             code: err.code,
-            details
+            details,
+            i18n: err.i18n,
+            i18nParams: err.i18nParams
         };
     }
 
     if (err instanceof Error) {
-        return { message: err.message };
+        return {
+            message: resolveApiErrorMessage(err, i18n.global.t, i18n.global.te)
+        };
     }
 
-    return { message: String(err) };
+    return {
+        message: resolveApiErrorMessage(err, i18n.global.t, i18n.global.te)
+    };
 }
 
 /**

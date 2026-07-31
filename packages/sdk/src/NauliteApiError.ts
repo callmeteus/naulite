@@ -19,6 +19,49 @@ export class NauliteApiError extends Error {
     }
 
     /**
+     * Returns the Vue i18n key when the API returned one.
+     *
+     * @returns i18n key or undefined
+     */
+    get i18n(): string | undefined {
+        if (typeof this.body !== "object" || this.body === null) {
+            return undefined;
+        }
+
+        const record = this.body as Record<string, unknown>;
+
+        return typeof record.i18n === "string" ? record.i18n : undefined;
+    }
+
+    /**
+     * Returns interpolation params for the Vue i18n key when present.
+     *
+     * @returns Params object or undefined
+     */
+    get i18nParams(): Record<string, string> | undefined {
+        if (typeof this.body !== "object" || this.body === null) {
+            return undefined;
+        }
+
+        const record = this.body as Record<string, unknown>;
+        const params = record.i18nParams;
+
+        if (typeof params !== "object" || params === null) {
+            return undefined;
+        }
+
+        const normalized: Record<string, string> = {};
+
+        for (const [key, value] of Object.entries(params)) {
+            if (typeof value === "string") {
+                normalized[key] = value;
+            }
+        }
+
+        return Object.keys(normalized).length > 0 ? normalized : undefined;
+    }
+
+    /**
      * Returns the machine-readable error code when present in the response body.
      *
      * @returns Error code or undefined

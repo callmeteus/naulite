@@ -4,6 +4,7 @@ import { createFastifyLoggerOptions } from "@naulite/logger";
 import { NauliteApiError, NauliteClient } from "@naulite/sdk";
 import { enrichApiErrorMessage, formatValidationDetails } from "@naulite/shared";
 
+import { createBffError, isBffError, toBffErrorResponse } from "./errors/BffError";
 import { resolveConfigFromEnv } from "./Config";
 import { Logger } from "./Logger";
 import { AuthPreHandlers } from "./auth/AuthPreHandlers";
@@ -60,9 +61,11 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
                 ? Number((error as Error & { statusCode: number }).statusCode)
                 : 401;
 
-            return reply.code(statusCode).send({
-                message: error instanceof Error ? error.message : "Não autorizado."
-            });
+            return reply.code(statusCode).send(
+                isBffError(error)
+                    ? toBffErrorResponse(error)
+                    : toBffErrorResponse(createBffError(statusCode, "errors.unauthorized"))
+            );
         }
     });
 
@@ -72,9 +75,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
         }
 
         if (CsrfProtection.requiresValidation(request) && !CsrfProtection.isValid(request)) {
-            return reply.code(403).send({
-                message: "Token CSRF inválido ou ausente."
-            });
+            return reply.code(403).send(toBffErrorResponse(createBffError(403, "errors.csrfInvalid")));
         }
 
         const path = request.url.split("?")[0] ?? request.url;
@@ -83,20 +84,27 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
 
         try {
             if (!PermissionPreHandlers.hasEveryPermission(request, requiredPermissions)) {
-                throw Object.assign(new Error("Permissão insuficiente."), { statusCode: 403 });
+                throw createBffError(403, "errors.insufficientPermission");
             }
         } catch (error) {
             const statusCode = error instanceof Error && "statusCode" in error
                 ? Number((error as Error & { statusCode: number }).statusCode)
                 : 403;
 
-            return reply.code(statusCode).send({
-                message: error instanceof Error ? error.message : "Permissão insuficiente."
-            });
+            return reply.code(statusCode).send(
+                isBffError(error)
+                    ? toBffErrorResponse(error)
+                    : toBffErrorResponse(createBffError(statusCode, "errors.insufficientPermission"))
+            );
         }
     });
 
     app.setErrorHandler((error: unknown, _request, reply) => {
+        if (isBffError(error)) {
+            reply.code(error.statusCode);
+            return toBffErrorResponse(error);
+        }
+
         if (error instanceof NauliteApiError) {
             const details = error.details;
             reply.code(error.status);
@@ -131,16 +139,17 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
         if (error instanceof Error && "statusCode" in error) {
             const statusCode = Number((error as Error & { statusCode: number }).statusCode);
             reply.code(statusCode);
-            return {
-                message: error.message
-            };
+
+            if (isBffError(error)) {
+                return toBffErrorResponse(error);
+            }
+
+            return toBffErrorResponse(createBffError(statusCode, "errors.generic"));
         }
 
         httpLog.error("request failed: %O", error);
         reply.code(500);
-        return {
-            message: error instanceof Error ? error.message : "Internal server error."
-        };
+        return toBffErrorResponse(createBffError(500, "errors.internal"));
     });
 
     await registerRoutes(app);

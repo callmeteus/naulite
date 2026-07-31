@@ -106,7 +106,16 @@
         "networkError": "Could not reach the admin API. Check that the BFF is running.",
         "generic": "Something went wrong. Please try again.",
         "notLeader": "The control plane leader is unavailable. Retry in a moment.",
-        "detailsToggle": "Show details"
+        "detailsToggle": "Show details",
+        "unauthorized": "You are not signed in.",
+        "sessionExpired": "Your session expired. Sign in again.",
+        "csrfInvalid": "Invalid or missing security token. Reload the page and try again.",
+        "insufficientPermission": "You do not have permission to perform this action.",
+        "invalidSession": "Your session is no longer valid.",
+        "controlPlaneUnreachable": "Could not reach the control plane at {url}. Start the dev stack with yarn dev.",
+        "authFailed": "Sign-in failed. Check your email and password, or make sure the control plane is running.",
+        "pipelineStreamFailed": "Pipeline run stream failed.",
+        "internal": "Internal server error."
     },
     "status": {
         "unknown": "Unknown",
