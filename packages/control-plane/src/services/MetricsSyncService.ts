@@ -226,11 +226,35 @@ export class MetricsSyncService {
     static toScrapeTarget(baseUrl: string): string | null {
         try {
             const parsed = new URL(baseUrl);
+            let hostname = parsed.hostname;
+
+            if (MetricsSyncService.isLoopbackHost(hostname)) {
+                const rewriteHost = process.env.NAULITE_PROMETHEUS_SCRAPE_HOST?.trim();
+
+                if (rewriteHost) {
+                    hostname = rewriteHost;
+                }
+            }
+
             const port = parsed.port || (parsed.protocol === "https:" ? "443" : "80");
-            return `${parsed.hostname}:${port}`;
+            return `${hostname}:${port}`;
         } catch {
             return null;
         }
+    }
+
+    /**
+     * Returns whether a hostname points to the local machine.
+     *
+     * @param hostname URL hostname
+     * @returns True for loopback hosts
+     */
+    static isLoopbackHost(hostname: string): boolean {
+        const normalized = hostname.trim().toLowerCase();
+
+        return normalized === "127.0.0.1"
+            || normalized === "localhost"
+            || normalized === "::1";
     }
 
     /**

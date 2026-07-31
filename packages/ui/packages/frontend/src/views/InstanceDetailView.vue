@@ -13,6 +13,11 @@ import { parseApiError, type ParsedApiError } from "../composables/useApiAction"
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 import { formatInstanceReconcileError } from "../utils/formatReconcileResults";
+import {
+    isAgentRelatedApiError,
+    resolveInstanceIssueKey,
+    shouldFetchInstanceLogs
+} from "../utils/instanceDetailPresentation";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -28,12 +33,52 @@ const logsError = ref<ParsedApiError | null>(null);
 const actionMessage = ref("");
 const actionError = ref<ParsedApiError | null>(null);
 const redispatching = ref(false);
+const showTechnicalDetails = ref(false);
 
 const instanceId = computed(() => String(route.params.id ?? ""));
 const canWrite = computed(() => auth.hasPermission("workloads:write"));
 
 const canRedispatch = computed(() =>
     instance.value?.status === "pending" || instance.value?.status === "failed"
+);
+
+const statusNoticeKey = computed(() => {
+    if (!instance.value) {
+        return undefined;
+    }
+
+    return resolveInstanceIssueKey(instance.value);
+});
+
+const visibleActionError = computed(() => {
+    if (!actionError.value || isAgentRelatedApiError(actionError.value)) {
+        return null;
+    }
+
+    return actionError.value;
+});
+
+const logsNotice = computed(() => {
+    if (!instance.value || logsLoading.value) {
+        return "";
+    }
+
+    if (!shouldFetchInstanceLogs(instance.value) || isAgentRelatedApiError(logsError.value)) {
+        return t("pages.instanceDetail.logsUnavailable");
+    }
+
+    if (logsError.value) {
+        return logsError.value.message;
+    }
+
+    return logsContent.value;
+});
+
+const showLogsPre = computed(() =>
+    Boolean(logsContent.value)
+    && !logsLoading.value
+    && !logsError.value
+    && shouldFetchInstanceLogs(instance.value!)
 );
 
 onMounted(() => {
@@ -83,7 +128,7 @@ function formatLogs(response: LogsResponse & { logs?: string }): string {
 }
 
 /**
- * Loads instance detail and logs.
+ * Loads instance detail and optionally fetches logs.
  *
  * @returns Nothing.
  */
@@ -92,6 +137,7 @@ async function loadInstance(): Promise<void> {
     loadError.value = null;
     actionMessage.value = "";
     actionError.value = null;
+    showTechnicalDetails.value = false;
     instance.value = null;
     logsContent.value = "";
     logsError.value = null;
@@ -104,7 +150,7 @@ async function loadInstance(): Promise<void> {
         loading.value = false;
     }
 
-    if (instance.value) {
+    if (instance.value && shouldFetchInstanceLogs(instance.value)) {
         void loadLogs();
     }
 }
@@ -115,6 +161,14 @@ async function loadInstance(): Promise<void> {
  * @returns Nothing.
  */
 async function loadLogs(): Promise<void> {
+    if (!instance.value || !shouldFetchInstanceLogs(instance.value)) {
+        logsContent.value = "";
+        logsError.value = null;
+        logsLoading.value = false;
+
+        return;
+    }
+
     logsLoading.value = true;
     logsError.value = null;
     logsContent.value = "";
@@ -155,6 +209,10 @@ async function redispatchInstance(): Promise<void> {
         }
 
         instance.value = await nauliteClient.getInstance(instanceId.value);
+
+        if (instance.value && shouldFetchInstanceLogs(instance.value)) {
+            void loadLogs();
+        }
     } catch (err) {
         actionError.value = parseApiError(err);
     } finally {
@@ -171,7 +229,7 @@ async function redispatchInstance(): Promise<void> {
             </RouterLink>
         </template>
 
-        <ErrorAlert :error="loadError || actionError" />
+        <ErrorAlert :error="loadError || visibleActionError" />
 
         <p v-if="actionMessage" class="alert alert-success">
             {{ actionMessage }}
@@ -187,6 +245,10 @@ async function redispatchInstance(): Promise<void> {
         </p>
 
         <div v-else-if="instance" class="space-y-6">
+            <p v-if="statusNoticeKey" class="alert alert-warning text-sm">
+                {{ t(statusNoticeKey) }}
+            </p>
+
             <div class="card bg-base-100 shadow">
                 <div class="card-body gap-4">
                     <div class="flex flex-wrap items-start justify-between gap-3">
@@ -198,10 +260,6 @@ async function redispatchInstance(): Promise<void> {
                     </div>
 
                     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        <p>
-                            <span class="font-medium">{{ t("pages.instanceDetail.service") }}:</span>
-                            {{ instance.serviceName }}
-                        </p>
                         <p>
                             <span class="font-medium">{{ t("pages.instanceDetail.node") }}:</span>
                             <RouterLink :to="`/nodes/${instance.nodeId}`" class="link link-primary">
@@ -216,39 +274,37 @@ async function redispatchInstance(): Promise<void> {
                             <span class="font-medium">{{ t("pages.instanceDetail.containerId") }}:</span>
                             {{ instance.containerId ?? "-" }}
                         </p>
-                        <p>
+                        <p v-if="instance.dispatchAttempts">
                             <span class="font-medium">{{ t("pages.instanceDetail.dispatchAttempts") }}:</span>
-                            {{ instance.dispatchAttempts ?? 0 }}
+                            {{ instance.dispatchAttempts }}
                         </p>
-                        <p>
-                            <span class="font-medium">{{ t("pages.instanceDetail.lastDispatchedAt") }}:</span>
-                            {{ formatTimestamp(instance.lastDispatchedAt) }}
-                        </p>
-                        <p>
-                            <span class="font-medium">{{ t("pages.instanceDetail.createdAt") }}:</span>
-                            {{ formatTimestamp(instance.createdAt) }}
-                        </p>
-                        <p>
-                            <span class="font-medium">{{ t("pages.instanceDetail.updatedAt") }}:</span>
-                            {{ formatTimestamp(instance.updatedAt) }}
-                        </p>
-                        <p v-if="instance.health">
+                        <p v-if="instance.health && instance.containerId">
                             <span class="font-medium">{{ t("pages.instanceDetail.health") }}:</span>
                             {{
                                 instance.health.healthy
                                     ? t("pages.instanceDetail.healthy")
                                     : t("pages.instanceDetail.unhealthy")
                             }}
-                            <span v-if="instance.health.message" class="text-base-content/70">
-                                - {{ instance.health.message }}
-                            </span>
+                        </p>
+                        <p class="text-sm text-base-content/70 md:col-span-2 xl:col-span-3">
+                            {{ t("pages.instanceDetail.createdAt") }} {{ formatTimestamp(instance.createdAt) }}
+                            ·
+                            {{ t("pages.instanceDetail.updatedAt") }} {{ formatTimestamp(instance.updatedAt) }}
                         </p>
                     </div>
 
-                    <p v-if="instance.lastError" class="rounded-box bg-error/10 p-3 text-sm text-error">
-                        <span class="font-medium">{{ t("pages.instanceDetail.lastError") }}:</span>
-                        {{ instance.lastError }}
-                    </p>
+                    <div v-if="instance.lastError" class="text-sm">
+                        <button
+                            type="button"
+                            class="btn btn-ghost btn-xs px-0"
+                            @click="showTechnicalDetails = !showTechnicalDetails"
+                        >
+                            {{ t("pages.instanceDetail.showTechnicalDetails") }}
+                        </button>
+                        <p v-if="showTechnicalDetails" class="mt-1 rounded-box bg-base-300 p-2 font-mono text-xs">
+                            {{ instance.lastError }}
+                        </p>
+                    </div>
 
                     <div class="flex flex-wrap gap-2">
                         <button type="button" class="btn btn-outline btn-sm" @click="loadInstance">
@@ -276,6 +332,7 @@ async function redispatchInstance(): Promise<void> {
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <h3 class="text-lg font-semibold">{{ t("pages.instanceDetail.logs") }}</h3>
                         <button
+                            v-if="instance && shouldFetchInstanceLogs(instance)"
                             type="button"
                             class="btn btn-ghost btn-sm"
                             :disabled="logsLoading"
@@ -290,12 +347,14 @@ async function redispatchInstance(): Promise<void> {
                         <span>{{ t("pages.instanceDetail.logsLoading") }}</span>
                     </div>
 
-                    <ErrorAlert v-else-if="logsError" :error="logsError" />
-
                     <pre
-                        v-else
+                        v-else-if="showLogsPre"
                         class="max-h-[32rem] overflow-auto rounded-box bg-base-300 p-4 text-xs"
                     >{{ logsContent }}</pre>
+
+                    <p v-else class="text-sm text-base-content/70">
+                        {{ logsNotice }}
+                    </p>
                 </div>
             </div>
         </div>

@@ -3,11 +3,14 @@ import uPlot from "uplot";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
+import { RouterLink } from "vue-router";
+
 import type { PromQLSeries } from "@naulite/sdk";
 import "uplot/dist/uPlot.min.css";
 
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
+import ChartEmptyState from "../components/ui/ChartEmptyState.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
@@ -28,6 +31,7 @@ const clusterCpuChart = ref<HTMLElement | null>(null);
 const clusterMemChart = ref<HTMLElement | null>(null);
 const nodeCpuChart = ref<HTMLElement | null>(null);
 const nodeMemChart = ref<HTMLElement | null>(null);
+const agentMetricsReachable = ref<boolean | null>(null);
 const instanceRows = ref<Array<{ instanceId: string; serviceName: string; cpu: string; memory: string }>>([]);
 
 let clusterCpuPlot: uPlot | null = null;
@@ -48,6 +52,13 @@ const metricsAvailable = computed(() =>
     || nodeCpuHasData.value
     || nodeMemHasData.value
     || instanceRows.value.length > 0
+);
+
+const showAgentUnreachableBanner = computed(() =>
+    !loading.value
+    && !error.value
+    && onlineNodeCount.value > 0
+    && agentMetricsReachable.value === false
 );
 
 const lastUpdatedLabel = computed(() => {
@@ -236,13 +247,14 @@ async function refreshMetrics(): Promise<void> {
             nodeCpuHasData.value = false;
             nodeMemHasData.value = false;
             instanceRows.value = [];
+            agentMetricsReachable.value = null;
             lastRefreshedAt.value = new Date();
             return;
         }
 
         const range = lastHourRange();
 
-        const [clusterCpu, clusterMem, nodeCpu, nodeMem, instanceCpu, instanceMem] = await Promise.all([
+        const [clusterCpu, clusterMem, nodeCpu, nodeMem, instanceCpu, instanceMem, agentUp] = await Promise.all([
             nauliteClient.queryMetricsRange(
                 "sum(naulite_node_cpu_millis_used)",
                 range.start,
@@ -264,13 +276,23 @@ async function refreshMetrics(): Promise<void> {
                 range.end
             ),
             nauliteClient.queryMetrics("naulite_instance_cpu_percent"),
-            nauliteClient.queryMetrics("naulite_instance_memory_bytes")
+            nauliteClient.queryMetrics("naulite_instance_memory_bytes"),
+            nauliteClient.queryMetrics("naulite_agent_up")
         ]);
 
-        const clusterCpuData = toPlotData(pickSeries(clusterCpu.data?.result));
-        clusterCpuHasData.value = hasPlotData(clusterCpuData);
+        agentMetricsReachable.value = (agentUp.data?.result?.length ?? 0) > 0;
 
-        if (clusterCpuHasData.value) {
+        const clusterCpuData = toPlotData(pickSeries(clusterCpu.data?.result));
+        const nextClusterCpuHasData = hasPlotData(clusterCpuData);
+
+        if (!nextClusterCpuHasData) {
+            clusterCpuPlot?.destroy();
+            clusterCpuPlot = null;
+        }
+
+        clusterCpuHasData.value = nextClusterCpuHasData;
+
+        if (nextClusterCpuHasData) {
             await nextTick();
             clusterCpuPlot = renderPlot(
                 clusterCpuChart.value,
@@ -279,15 +301,19 @@ async function refreshMetrics(): Promise<void> {
                 "#7cc4ff",
                 clusterCpuPlot
             );
-        } else {
-            clusterCpuPlot?.destroy();
-            clusterCpuPlot = null;
         }
 
         const clusterMemData = toPlotData(pickSeries(clusterMem.data?.result));
-        clusterMemHasData.value = hasPlotData(clusterMemData);
+        const nextClusterMemHasData = hasPlotData(clusterMemData);
 
-        if (clusterMemHasData.value) {
+        if (!nextClusterMemHasData) {
+            clusterMemPlot?.destroy();
+            clusterMemPlot = null;
+        }
+
+        clusterMemHasData.value = nextClusterMemHasData;
+
+        if (nextClusterMemHasData) {
             await nextTick();
             clusterMemPlot = renderPlot(
                 clusterMemChart.value,
@@ -296,16 +322,20 @@ async function refreshMetrics(): Promise<void> {
                 "#3fb950",
                 clusterMemPlot
             );
-        } else {
-            clusterMemPlot?.destroy();
-            clusterMemPlot = null;
         }
 
         if (selectedNodeId.value) {
             const nodeCpuData = toPlotData(pickSeries(nodeCpu.data?.result, selectedNodeId.value));
-            nodeCpuHasData.value = hasPlotData(nodeCpuData);
+            const nextNodeCpuHasData = hasPlotData(nodeCpuData);
 
-            if (nodeCpuHasData.value) {
+            if (!nextNodeCpuHasData) {
+                nodeCpuPlot?.destroy();
+                nodeCpuPlot = null;
+            }
+
+            nodeCpuHasData.value = nextNodeCpuHasData;
+
+            if (nextNodeCpuHasData) {
                 await nextTick();
                 nodeCpuPlot = renderPlot(
                     nodeCpuChart.value,
@@ -314,15 +344,19 @@ async function refreshMetrics(): Promise<void> {
                     "#d2a8ff",
                     nodeCpuPlot
                 );
-            } else {
-                nodeCpuPlot?.destroy();
-                nodeCpuPlot = null;
             }
 
             const nodeMemData = toPlotData(pickSeries(nodeMem.data?.result, selectedNodeId.value));
-            nodeMemHasData.value = hasPlotData(nodeMemData);
+            const nextNodeMemHasData = hasPlotData(nodeMemData);
 
-            if (nodeMemHasData.value) {
+            if (!nextNodeMemHasData) {
+                nodeMemPlot?.destroy();
+                nodeMemPlot = null;
+            }
+
+            nodeMemHasData.value = nextNodeMemHasData;
+
+            if (nextNodeMemHasData) {
                 await nextTick();
                 nodeMemPlot = renderPlot(
                     nodeMemChart.value,
@@ -331,9 +365,6 @@ async function refreshMetrics(): Promise<void> {
                     "#ffa657",
                     nodeMemPlot
                 );
-            } else {
-                nodeMemPlot?.destroy();
-                nodeMemPlot = null;
             }
         } else {
             nodeCpuHasData.value = false;
@@ -446,7 +477,19 @@ async function refreshMetrics(): Promise<void> {
             </div>
 
             <div
-                v-if="!loading && !error && !metricsAvailable"
+                v-if="showAgentUnreachableBanner"
+                class="alert border-warning/30 bg-warning/10 text-sm"
+            >
+                <div class="flex w-full flex-wrap items-center justify-between gap-3">
+                    <span>{{ t("pages.metrics.agentUnreachableDescription") }}</span>
+                    <RouterLink to="/nodes" class="btn btn-ghost btn-sm">
+                        {{ t("pages.metrics.viewNodes") }}
+                    </RouterLink>
+                </div>
+            </div>
+
+            <div
+                v-else-if="!loading && !error && !metricsAvailable"
                 class="alert border-info/30 bg-info/10 text-sm"
             >
                 <span>{{ t("pages.metrics.pendingDescription") }}</span>
@@ -458,17 +501,11 @@ async function refreshMetrics(): Promise<void> {
                         <h2 class="card-title text-base">
                             {{ t("pages.metrics.clusterCpu") }}
                         </h2>
-                        <div
+                        <ChartEmptyState
                             v-if="!clusterCpuHasData"
-                            class="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-base-300 bg-base-200/30 px-4 text-center"
-                        >
-                            <p class="text-sm font-medium">
-                                {{ t("pages.metrics.chartsEmptyTitle") }}
-                            </p>
-                            <p class="text-xs text-base-content/60">
-                                {{ t("pages.metrics.chartsEmptyDescription") }}
-                            </p>
-                        </div>
+                            title-key="pages.metrics.chartsEmptyTitle"
+                            description-key="pages.metrics.chartsEmptyDescription"
+                        />
                         <div v-else ref="clusterCpuChart" class="min-h-[220px] w-full" />
                     </div>
                 </div>
@@ -478,17 +515,11 @@ async function refreshMetrics(): Promise<void> {
                         <h2 class="card-title text-base">
                             {{ t("pages.metrics.clusterMemory") }}
                         </h2>
-                        <div
+                        <ChartEmptyState
                             v-if="!clusterMemHasData"
-                            class="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-base-300 bg-base-200/30 px-4 text-center"
-                        >
-                            <p class="text-sm font-medium">
-                                {{ t("pages.metrics.chartsEmptyTitle") }}
-                            </p>
-                            <p class="text-xs text-base-content/60">
-                                {{ t("pages.metrics.chartsEmptyDescription") }}
-                            </p>
-                        </div>
+                            title-key="pages.metrics.chartsEmptyTitle"
+                            description-key="pages.metrics.chartsEmptyDescription"
+                        />
                         <div v-else ref="clusterMemChart" class="min-h-[220px] w-full" />
                     </div>
                 </div>
@@ -524,14 +555,11 @@ async function refreshMetrics(): Promise<void> {
                             <h3 class="mb-3 text-sm font-semibold">
                                 {{ t("pages.metrics.nodeCpu") }}
                             </h3>
-                            <div
+                            <ChartEmptyState
                                 v-if="!nodeCpuHasData"
-                                class="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-base-300 bg-base-200/30 px-4 text-center"
-                            >
-                                <p class="text-xs text-base-content/60">
-                                    {{ t("pages.metrics.chartsEmptyDescription") }}
-                                </p>
-                            </div>
+                                compact
+                                title-key="pages.metrics.chartsEmptyTitle"
+                            />
                             <div v-else ref="nodeCpuChart" class="min-h-[220px] w-full" />
                         </div>
 
@@ -539,14 +567,11 @@ async function refreshMetrics(): Promise<void> {
                             <h3 class="mb-3 text-sm font-semibold">
                                 {{ t("pages.metrics.nodeMemory") }}
                             </h3>
-                            <div
+                            <ChartEmptyState
                                 v-if="!nodeMemHasData"
-                                class="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-base-300 bg-base-200/30 px-4 text-center"
-                            >
-                                <p class="text-xs text-base-content/60">
-                                    {{ t("pages.metrics.chartsEmptyDescription") }}
-                                </p>
-                            </div>
+                                compact
+                                title-key="pages.metrics.chartsEmptyTitle"
+                            />
                             <div v-else ref="nodeMemChart" class="min-h-[220px] w-full" />
                         </div>
                     </div>

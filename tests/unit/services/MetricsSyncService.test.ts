@@ -59,6 +59,24 @@ describe("MetricsSyncService", () => {
         expect(targets[1]?.targets).toEqual(["control-plane-1:8080"]);
     });
 
+    it("rewrites loopback scrape targets when configured", () => {
+        const previous = process.env.NAULITE_PROMETHEUS_SCRAPE_HOST;
+        process.env.NAULITE_PROMETHEUS_SCRAPE_HOST = "host.docker.internal";
+
+        try {
+            expect(MetricsSyncService.toScrapeTarget("http://127.0.0.1:9470"))
+                .toBe("host.docker.internal:9470");
+            expect(MetricsSyncService.toScrapeTarget("http://agent-1:9100"))
+                .toBe("agent-1:9100");
+        } finally {
+            if (previous === undefined) {
+                delete process.env.NAULITE_PROMETHEUS_SCRAPE_HOST;
+            } else {
+                process.env.NAULITE_PROMETHEUS_SCRAPE_HOST = previous;
+            }
+        }
+    });
+
     it("writes naulite_targets.json only when leader", async () => {
         tempDir = await mkdtemp(path.join(os.tmpdir(), "naulite-metrics-sync-"));
 

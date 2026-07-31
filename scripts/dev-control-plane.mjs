@@ -186,6 +186,11 @@ const prometheusReady = await waitForPrometheus();
 
 if (prometheusReady) {
     process.env.PROMETHEUS_URL ??= `http://127.0.0.1:${prometheusPort}`;
+
+    if (await isDockerAvailable()) {
+        process.env.NAULITE_PROMETHEUS_SCRAPE_HOST ??= "host.docker.internal";
+    }
+
     console.log(`[dev] Prometheus ready at http://127.0.0.1:${prometheusPort}`);
 } else {
     delete process.env.PROMETHEUS_URL;

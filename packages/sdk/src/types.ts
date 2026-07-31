@@ -312,8 +312,9 @@ export interface GitOpsWebhookPayload {
  * NetBird topology summary.
  */
 export interface NetBirdTopology {
-    groups: string[];
-    devices: string[];
+    groups: NetBirdGroup[];
+    devices: NetBirdDevice[];
+    acls: NetBirdAcl[];
 }
 
 /**
@@ -323,6 +324,8 @@ export interface NetBirdDevice {
     id: string;
     name: string;
     hostname?: string;
+    groups?: string[];
+    online?: boolean;
     connected?: boolean;
     [key: string]: unknown;
 }
@@ -333,6 +336,7 @@ export interface NetBirdDevice {
 export interface NetBirdGroup {
     id: string;
     name: string;
+    peers?: string[];
     [key: string]: unknown;
 }
 
@@ -342,6 +346,10 @@ export interface NetBirdGroup {
 export interface NetBirdAcl {
     id: string;
     name?: string;
+    sourceGroups?: string[];
+    destinationGroups?: string[];
+    ports?: number[];
+    protocol?: "tcp" | "udp" | "all" | string;
     [key: string]: unknown;
 }
 

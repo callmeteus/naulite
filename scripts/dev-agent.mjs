@@ -268,62 +268,115 @@ function waitForShutdownSignal() {
     });
 }
 
+/**
+ * Ensures a local agent is listening on the dev port.
+ *
+ * @param setupKey Optional NetBird setup key
+ * @returns Running child process metadata
+ */
+async function ensureLocalAgent(setupKey) {
+    if (await isHealthy(agentHealthUrl)) {
+        console.log(`[dev-agent] agent already healthy at ${agentHealthUrl}`);
+        return {
+            hostChild: null,
+            ownsDockerAgent: false
+        };
+    }
+
+    let hostChild = null;
+    let ownsDockerAgent = false;
+
+    if (await ensureHostBinary()) {
+        hostChild = await startHostAgent(setupKey);
+
+        try {
+            await waitForHealthy(agentHealthUrl, 45_000);
+            console.log(`[dev-agent] host agent ready at ${agentHealthUrl}`);
+        } catch (error) {
+            console.error("[dev-agent] host agent failed to become healthy: %s", error.message);
+
+            if (!hostChild.killed) {
+                hostChild.kill();
+            }
+
+            hostChild = null;
+        }
+    }
+
+    if (!hostChild) {
+        ownsDockerAgent = await startDockerAgent(setupKey);
+
+        if (!ownsDockerAgent) {
+            return {
+                hostChild: null,
+                ownsDockerAgent: false
+            };
+        }
+
+        await waitForHealthy(agentHealthUrl, 120_000);
+        console.log(`[dev-agent] Docker agent ready at ${agentHealthUrl}`);
+    }
+
+    return {
+        hostChild,
+        ownsDockerAgent
+    };
+}
+
+/**
+ * Stops an owned local agent process.
+ *
+ * @param state Agent ownership state
+ * @returns Nothing.
+ */
+function stopOwnedAgent(state) {
+    if (state.hostChild && !state.hostChild.killed) {
+        state.hostChild.kill();
+    }
+
+    if (state.ownsDockerAgent) {
+        stopDockerAgent();
+    }
+}
+
 console.log(`[dev-agent] waiting for control plane at ${controlPlaneUrl}/health ...`);
 await waitForHealthy(`${controlPlaneUrl}/health`);
 
-if (await isHealthy(agentHealthUrl)) {
-    console.log(`[dev-agent] reusing healthy agent at ${agentHealthUrl}`);
+const setupKey = await fetchSetupKey();
+let ownedAgent = await ensureLocalAgent(setupKey);
+
+if (!await isHealthy(agentHealthUrl)) {
+    console.warn(
+        "[dev-agent] could not start a local agent. Install Zig or Docker, then restart yarn dev."
+    );
+    console.warn("[dev-agent] You can still connect a node manually from Nodes > Add node.");
     await waitForShutdownSignal();
     process.exit(0);
 }
 
-const setupKey = await fetchSetupKey();
-let hostChild = null;
-let ownsDockerAgent = false;
+console.log(`[dev-agent] registered against ${controlPlaneUrl}`);
 
-if (await ensureHostBinary()) {
-    hostChild = await startHostAgent(setupKey);
-
-    try {
-        await waitForHealthy(agentHealthUrl, 45_000);
-        console.log(`[dev-agent] host agent ready at ${agentHealthUrl}`);
-    } catch (error) {
-        console.error("[dev-agent] host agent failed to become healthy: %s", error.message);
-
-        if (!hostChild.killed) {
-            hostChild.kill();
+const watchdog = setInterval(() => {
+    void (async () => {
+        if (await isHealthy(agentHealthUrl)) {
+            return;
         }
 
-        hostChild = null;
-    }
-}
+        console.warn("[dev-agent] agent is not healthy, attempting restart...");
+        stopOwnedAgent(ownedAgent);
+        ownedAgent = await ensureLocalAgent(setupKey);
 
-if (!hostChild) {
-    ownsDockerAgent = await startDockerAgent(setupKey);
-
-    if (!ownsDockerAgent) {
-        console.warn(
-            "[dev-agent] could not start a local agent. Install Zig or Docker, then restart yarn dev."
-        );
-        console.warn("[dev-agent] You can still connect a node manually from Provisionamento > Adicionar nó.");
-        await waitForShutdownSignal();
-        process.exit(0);
-    }
-
-    await waitForHealthy(agentHealthUrl, 120_000);
-    console.log(`[dev-agent] Docker agent ready at ${agentHealthUrl}`);
-}
-
-console.log(`[dev-agent] registered against ${controlPlaneUrl}`);
+        if (await isHealthy(agentHealthUrl)) {
+            console.log(`[dev-agent] agent recovered at ${agentHealthUrl}`);
+        } else {
+            console.error("[dev-agent] agent restart failed");
+        }
+    })();
+}, 15_000);
 
 await waitForShutdownSignal();
 
-if (hostChild && !hostChild.killed) {
-    hostChild.kill();
-}
-
-if (ownsDockerAgent) {
-    stopDockerAgent();
-}
+clearInterval(watchdog);
+stopOwnedAgent(ownedAgent);
 
 process.exit(0);
