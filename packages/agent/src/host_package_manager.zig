@@ -208,15 +208,9 @@ fn stubInventory(allocator: std.mem.Allocator) !Inventory {
 }
 
 fn stubPackageUpdate(allocator: std.mem.Allocator, packages: []const []const u8) !UpdateResult {
-    const updated = if (packages.len > 0)
-        try duplicateStringSlice(allocator, packages)
-    else
-        try allocator.alloc([]const u8, 2);
-
-    if (packages.len == 0) {
-        updated[0] = try allocator.dupe(u8, "openssl");
-        updated[1] = try allocator.dupe(u8, "zlib1g");
-    }
+    const default_packages = [_][]const u8{ "openssl", "zlib1g" };
+    const source = if (packages.len > 0) packages else default_packages[0..];
+    const updated = try duplicateStringSlice(allocator, source);
 
     return .{
         .status = try allocator.dupe(u8, "succeeded"),
@@ -266,12 +260,7 @@ fn collectAptInventory(allocator: std.mem.Allocator) !Inventory {
 
 fn collectDnfInventory(allocator: std.mem.Allocator, command: []const u8) !Inventory {
     const check_argv = [_][]const u8{ command, "check-update", "-q" };
-    const check_output = process_cmd.runCapture(allocator, &check_argv) catch |err| switch (err) {
-        error.CommandFailed => blk: {
-            break :blk try process_cmd.runCapture(allocator, &check_argv);
-        },
-        else => return err,
-    };
+    const check_output = try process_cmd.runCapture(allocator, &check_argv);
     defer allocator.free(check_output.stdout);
     defer allocator.free(check_output.stderr);
 
@@ -816,10 +805,15 @@ pub fn inventoryToJson(allocator: std.mem.Allocator, inventory: Inventory) ![]u8
         }
         try json.appendSlice(allocator, "}");
     }
-    try json.writer(allocator).print(
+
+    const summary_suffix = try std.fmt.allocPrint(
+        allocator,
         "],\"summary\":{{\"total\":{d},\"outdated\":{d}}}}}",
         .{ inventory.summary.total, inventory.summary.outdated },
     );
+    defer allocator.free(summary_suffix);
+    try json.appendSlice(allocator, summary_suffix);
+
     return try json.toOwnedSlice(allocator);
 }
 
@@ -839,10 +833,12 @@ pub fn updateResultToJson(allocator: std.mem.Allocator, result: UpdateResult) ![
         try appendJsonEscaped(allocator, &json, pkg);
         try json.append(allocator, '"');
     }
-    try json.writer(allocator).print(
-        "],\"rebootRequired\":{}",
-        .{result.reboot_required},
-    );
+
+    if (result.reboot_required) {
+        try json.appendSlice(allocator, "],\"rebootRequired\":true");
+    } else {
+        try json.appendSlice(allocator, "],\"rebootRequired\":false");
+    }
 
     if (result.stdout) |stdout| {
         try json.appendSlice(allocator, ",\"stdout\":\"");

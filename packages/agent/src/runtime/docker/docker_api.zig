@@ -12,8 +12,9 @@ fn streamRead(
     stream: *const std.Io.net.Stream,
     dest: []u8,
 ) !usize {
-    var slices = [_][]u8{dest};
-    return io.vtable.netRead(io.userdata, stream.socket.handle, &slices);
+    var read_buffer: [4096]u8 = undefined;
+    var net_reader = stream.reader(io, &read_buffer);
+    return try std.Io.Reader.readSliceShort(&net_reader.interface, dest);
 }
 
 /// Minimum Docker Engine API version supported by current daemons.
@@ -535,7 +536,8 @@ pub const DockerApi = struct {
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
-            log_docker.err("connectNetwork failed status={d} network={s} container={s} body={s}",
+            log_docker.err(
+                "connectNetwork failed status={d} network={s} container={s} body={s}",
                 .{ response.status, network_name, container_ref, response.body },
             );
             return error.DockerNetworkConnectFailed;
@@ -566,7 +568,8 @@ pub const DockerApi = struct {
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
-            log_docker.err("disconnectNetwork failed status={d} network={s} container={s} body={s}",
+            log_docker.err(
+                "disconnectNetwork failed status={d} network={s} container={s} body={s}",
                 .{ response.status, network_name, container_ref, response.body },
             );
             return error.DockerNetworkDisconnectFailed;

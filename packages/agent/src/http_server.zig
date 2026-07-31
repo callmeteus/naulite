@@ -227,8 +227,9 @@ fn streamRead(
     stream: *const std.Io.net.Stream,
     dest: []u8,
 ) !usize {
-    var slices = [_][]u8{dest};
-    return io.vtable.netRead(io.userdata, stream.socket.handle, &slices);
+    var read_buffer: [4096]u8 = undefined;
+    var net_reader = stream.reader(io, &read_buffer);
+    return try std.Io.Reader.readSliceShort(&net_reader.interface, dest);
 }
 
 fn handleConnection(

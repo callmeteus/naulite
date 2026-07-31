@@ -6,9 +6,9 @@ import {
     RouteErrorResponseSchema
 } from "@naulite/shared";
 
-import { ControlPlaneService } from "../../../../../ControlPlaneService";
-import { PermissionPreHandlers } from "../../../../../auth/PermissionPreHandlers";
-import { defineRoute } from "../../../../../routing/DefineRoute";
+import { ControlPlaneService } from "../../../../ControlPlaneService";
+import { PermissionPreHandlers } from "../../../../auth/PermissionPreHandlers";
+import { defineRoute } from "../../../../routing/DefineRoute";
 
 const HostUpdateRunsResponseSchema = z.object({
     items: z.array(HostUpdateRunSchema)
