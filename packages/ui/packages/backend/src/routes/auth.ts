@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { NauliteApiError } from "@naulite/sdk";
 import { z } from "zod";
 
 import { CsrfProtection, NAULITE_CSRF_COOKIE } from "../auth/CsrfProtection";

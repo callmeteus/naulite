@@ -47,7 +47,7 @@ export function createBffError(
  */
 export function isBffError(error: unknown): error is BffError {
     return error instanceof Error
-        && "i18n" in error
+        && typeof (error as BffError).statusCode === "number"
         && typeof (error as BffError).i18n === "string";
 }
 

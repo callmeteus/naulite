@@ -25,6 +25,7 @@
     "devDependencies": {
         "@lemon/linting": "git+https://github.com/even7hq/lemon-linting.git",
         "@types/node": "^22.10.5",
+        "ensure-running": "^1.0.0",
         "eslint": "^9",
         "turbo": "^2.3.3",
         "typescript": "^5.7.2",

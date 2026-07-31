@@ -15,7 +15,7 @@ restoreLocale();
 
 <template>
     <ToastHost />
-    <div v-if="!auth.checked && auth.loading" class="flex min-h-screen items-center justify-center">
+    <div v-if="auth.loading && !auth.checked" class="flex min-h-screen items-center justify-center">
         <span class="loading loading-spinner loading-lg text-primary" />
         <span class="sr-only">{{ t("common.loading") }}</span>
     </div>

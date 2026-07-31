@@ -32,6 +32,10 @@ export function resolveApiErrorMessage(
             return t("errors.notLeader");
         }
 
+        if (err.status === 503 && err.code === "prometheus_unavailable") {
+            return t("errors.prometheusUnavailable");
+        }
+
         if (err.message) {
             return enrichApiErrorMessage(err.message, err.details);
         }

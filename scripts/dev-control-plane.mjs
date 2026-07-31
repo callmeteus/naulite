@@ -5,11 +5,15 @@
  * Reuses traefik-mock and an existing control plane when their health checks pass.
  */
 import { spawn } from "node:child_process";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isDockerAvailable } from "./dev-docker.mjs";
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const traefikMockPort = process.env.NAULITE_TRAEFIK_MOCK_PORT ?? "18099";
+const prometheusPort = process.env.NAULITE_PROMETHEUS_HOST_PORT ?? "19090";
 
 process.env.PORT = process.env.NAULITE_CP_PORT ?? "18080";
 process.env.HOST = process.env.NAULITE_CP_HOST ?? "127.0.0.1";
@@ -20,6 +24,8 @@ process.env.NAULITE_BOOTSTRAP_ADMIN_USERNAME ??= "admin@local.dev";
 process.env.NAULITE_BOOTSTRAP_ADMIN_PASSWORD ??= "naulite-dev";
 process.env.NAULITE_NETBIRD_MOCK ??= "1";
 process.env.TRAEFIK_DYNAMIC_CONFIG_URL ??= `http://127.0.0.1:${traefikMockPort}/naulite/dynamic-config`;
+process.env.NAULITE_PROMETHEUS_FILE_SD_DIR ??= path.join(repoRoot, "data", "prometheus", "file_sd");
+const prometheusHealthUrl = `http://127.0.0.1:${prometheusPort}/-/healthy`;
 process.env.DATABASE_PATH ??= path.join(repoRoot, "data", "control-plane.db");
 
 /**
@@ -127,7 +133,45 @@ function waitForShutdownSignal() {
     });
 }
 
+/**
+ * Waits until Prometheus responds on the dev health endpoint.
+ *
+ * @param timeoutMs Maximum wait time in milliseconds
+ * @returns `true` when Prometheus is healthy
+ */
+async function waitForPrometheus(timeoutMs = 45_000) {
+    if (!await isDockerAvailable()) {
+        return false;
+    }
+
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+        if (await isHealthy(prometheusHealthUrl)) {
+            return true;
+        }
+
+        await new Promise((resolve) => {
+            setTimeout(resolve, 500);
+        });
+    }
+
+    return false;
+}
+
 const traefikMock = await ensureTraefikMock();
+
+await mkdir(process.env.NAULITE_PROMETHEUS_FILE_SD_DIR, { recursive: true });
+
+const prometheusReady = await waitForPrometheus();
+
+if (prometheusReady) {
+    process.env.PROMETHEUS_URL ??= `http://127.0.0.1:${prometheusPort}`;
+    console.log(`[dev] Prometheus ready at http://127.0.0.1:${prometheusPort}`);
+} else {
+    delete process.env.PROMETHEUS_URL;
+    console.warn(`[dev] Prometheus not available on port ${prometheusPort}; metrics queries return 503 until Docker is running.`);
+}
 
 const controlPlaneHealthUrl = `http://127.0.0.1:${controlPlanePort}/health`;
 let server = null;
@@ -135,6 +179,10 @@ let ownsControlPlane = false;
 
 if (await isHealthy(controlPlaneHealthUrl)) {
     console.log(`[dev] reusing control plane at http://${controlPlaneHost}:${controlPlanePort}`);
+
+    if (!prometheusReady) {
+        console.warn("[dev] Reused control plane may still proxy metrics to Prometheus. Restart yarn dev after Docker is up.");
+    }
 } else {
     const { startServer } = await import(new URL("../packages/control-plane/dist/Server.js", import.meta.url).href);
 
@@ -145,6 +193,7 @@ if (await isHealthy(controlPlaneHealthUrl)) {
 }
 
 console.log(`[dev] traefik-mock at http://127.0.0.1:${traefikMockPort}`);
+console.log(`[dev] Prometheus URL for CP: ${process.env.PROMETHEUS_URL ?? "(disabled)"}`);
 console.log("[dev] Bootstrap login: admin@local.dev / naulite-dev");
 
 const shutdown = async () => {

@@ -95,9 +95,9 @@ describe("@naulite/logger", () => {
     it("summarizeFastifyLogRecord compacts error logs", () => {
         const summary = summarizeFastifyLogRecord({
             req: { method: "GET", url: "/metrics/query_range" },
-            err: new Error("Failed to reach Prometheus.")
+            err: new Error("Prometheus is not available.")
         });
 
-        expect(summary).toBe("GET /metrics/query_range Failed to reach Prometheus.");
+        expect(summary).toBe("GET /metrics/query_range Prometheus is not available.");
     });
 });

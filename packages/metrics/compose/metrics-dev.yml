@@ -1,0 +1,22 @@
+name: naulite-metrics-dev
+
+services:
+    naulite-prometheus:
+        image: prom/prometheus:v3.12.0
+        container_name: naulite-prometheus-dev
+        command:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.enable-lifecycle
+        volumes:
+            - ../prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml:ro
+            - ../../../data/prometheus/file_sd:/etc/prometheus/file_sd
+        ports:
+            - "${NAULITE_PROMETHEUS_HOST_PORT:-19090}:9090"
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        healthcheck:
+            test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+            interval: 5s
+            timeout: 3s
+            retries: 12

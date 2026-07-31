@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import uPlot from "uplot";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { PromQLSeries } from "@naulite/sdk";
@@ -12,12 +12,18 @@ import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import { useClusterStore } from "../stores/Cluster";
+import { resolveApiErrorMessage } from "../utils/ApiErrorMessage";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const store = useClusterStore();
 const selectedNodeId = ref("");
 const loading = ref(false);
 const error = ref("");
+const lastRefreshedAt = ref<Date | null>(null);
+const clusterCpuHasData = ref(false);
+const clusterMemHasData = ref(false);
+const nodeCpuHasData = ref(false);
+const nodeMemHasData = ref(false);
 const clusterCpuChart = ref<HTMLElement | null>(null);
 const clusterMemChart = ref<HTMLElement | null>(null);
 const nodeCpuChart = ref<HTMLElement | null>(null);
@@ -32,6 +38,30 @@ let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 const selectedNode = computed(() => store.nodes.find((node) => node.id === selectedNodeId.value) ?? null);
 
+const onlineNodeCount = computed(() =>
+    store.nodes.filter((node) => node.status === "online").length
+);
+
+const metricsAvailable = computed(() =>
+    clusterCpuHasData.value
+    || clusterMemHasData.value
+    || nodeCpuHasData.value
+    || nodeMemHasData.value
+    || instanceRows.value.length > 0
+);
+
+const lastUpdatedLabel = computed(() => {
+    if (!lastRefreshedAt.value) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat(locale.value, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+    }).format(lastRefreshedAt.value);
+});
+
 onMounted(async () => {
     await store.refreshOverview();
     selectedNodeId.value = store.nodes[0]?.id ?? "";
@@ -43,6 +73,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     destroyPlots();
+
     if (refreshTimer) {
         clearInterval(refreshTimer);
     }
@@ -72,6 +103,7 @@ function destroyPlots(): void {
 function lastHourRange(): { start: string; end: string } {
     const end = Math.floor(Date.now() / 1000);
     const start = end - 3600;
+
     return { start: String(start), end: String(end) };
 }
 
@@ -98,10 +130,20 @@ function toPlotData(series: PromQLSeries | undefined): [number[], number[]] {
 }
 
 /**
+ * Returns whether a plot has at least one point.
+ *
+ * @param data uPlot data tuple
+ * @returns `true` when the series has values
+ */
+function hasPlotData(data: [number[], number[]]): boolean {
+    return data[0].length > 0;
+}
+
+/**
  * Renders or updates a uPlot chart in the given container.
  *
  * @param container Target element
- * @param title Chart title
+ * @param label Series label for the legend
  * @param data uPlot data tuple
  * @param color Line color
  * @param existing Existing plot instance
@@ -109,7 +151,7 @@ function toPlotData(series: PromQLSeries | undefined): [number[], number[]] {
  */
 function renderPlot(
     container: HTMLElement | null,
-    title: string,
+    label: string,
     data: [number[], number[]],
     color: string,
     existing: uPlot | null
@@ -122,16 +164,36 @@ function renderPlot(
 
     return new uPlot(
         {
-            title,
             width: container.clientWidth || 640,
             height: 220,
             series: [
                 {},
                 {
-                    label: title,
-                    stroke: color
+                    label,
+                    stroke: color,
+                    width: 2
                 }
-            ]
+            ],
+            axes: [
+                {
+                    stroke: "rgba(255, 255, 255, 0.35)",
+                    grid: {
+                        stroke: "rgba(255, 255, 255, 0.08)"
+                    }
+                },
+                {
+                    stroke: "rgba(255, 255, 255, 0.35)",
+                    grid: {
+                        stroke: "rgba(255, 255, 255, 0.08)"
+                    }
+                }
+            ],
+            legend: {
+                show: true
+            },
+            cursor: {
+                show: true
+            }
         },
         data,
         container
@@ -167,6 +229,17 @@ async function refreshMetrics(): Promise<void> {
     error.value = "";
 
     try {
+        if (store.nodes.length === 0) {
+            destroyPlots();
+            clusterCpuHasData.value = false;
+            clusterMemHasData.value = false;
+            nodeCpuHasData.value = false;
+            nodeMemHasData.value = false;
+            instanceRows.value = [];
+            lastRefreshedAt.value = new Date();
+            return;
+        }
+
         const range = lastHourRange();
 
         const [clusterCpu, clusterMem, nodeCpu, nodeMem, instanceCpu, instanceMem] = await Promise.all([
@@ -194,36 +267,81 @@ async function refreshMetrics(): Promise<void> {
             nauliteClient.queryMetrics("naulite_instance_memory_bytes")
         ]);
 
-        clusterCpuPlot = renderPlot(
-            clusterCpuChart.value,
-            t("pages.metrics.clusterCpu"),
-            toPlotData(pickSeries(clusterCpu.data?.result)),
-            "#7cc4ff",
-            clusterCpuPlot
-        );
-        clusterMemPlot = renderPlot(
-            clusterMemChart.value,
-            t("pages.metrics.clusterMemory"),
-            toPlotData(pickSeries(clusterMem.data?.result)),
-            "#3fb950",
-            clusterMemPlot
-        );
+        const clusterCpuData = toPlotData(pickSeries(clusterCpu.data?.result));
+        clusterCpuHasData.value = hasPlotData(clusterCpuData);
+
+        if (clusterCpuHasData.value) {
+            await nextTick();
+            clusterCpuPlot = renderPlot(
+                clusterCpuChart.value,
+                t("pages.metrics.clusterCpu"),
+                clusterCpuData,
+                "#7cc4ff",
+                clusterCpuPlot
+            );
+        } else {
+            clusterCpuPlot?.destroy();
+            clusterCpuPlot = null;
+        }
+
+        const clusterMemData = toPlotData(pickSeries(clusterMem.data?.result));
+        clusterMemHasData.value = hasPlotData(clusterMemData);
+
+        if (clusterMemHasData.value) {
+            await nextTick();
+            clusterMemPlot = renderPlot(
+                clusterMemChart.value,
+                t("pages.metrics.clusterMemory"),
+                clusterMemData,
+                "#3fb950",
+                clusterMemPlot
+            );
+        } else {
+            clusterMemPlot?.destroy();
+            clusterMemPlot = null;
+        }
 
         if (selectedNodeId.value) {
-            nodeCpuPlot = renderPlot(
-                nodeCpuChart.value,
-                t("pages.metrics.nodeCpu"),
-                toPlotData(pickSeries(nodeCpu.data?.result, selectedNodeId.value)),
-                "#d2a8ff",
-                nodeCpuPlot
-            );
-            nodeMemPlot = renderPlot(
-                nodeMemChart.value,
-                t("pages.metrics.nodeMemory"),
-                toPlotData(pickSeries(nodeMem.data?.result, selectedNodeId.value)),
-                "#ffa657",
-                nodeMemPlot
-            );
+            const nodeCpuData = toPlotData(pickSeries(nodeCpu.data?.result, selectedNodeId.value));
+            nodeCpuHasData.value = hasPlotData(nodeCpuData);
+
+            if (nodeCpuHasData.value) {
+                await nextTick();
+                nodeCpuPlot = renderPlot(
+                    nodeCpuChart.value,
+                    t("pages.metrics.nodeCpu"),
+                    nodeCpuData,
+                    "#d2a8ff",
+                    nodeCpuPlot
+                );
+            } else {
+                nodeCpuPlot?.destroy();
+                nodeCpuPlot = null;
+            }
+
+            const nodeMemData = toPlotData(pickSeries(nodeMem.data?.result, selectedNodeId.value));
+            nodeMemHasData.value = hasPlotData(nodeMemData);
+
+            if (nodeMemHasData.value) {
+                await nextTick();
+                nodeMemPlot = renderPlot(
+                    nodeMemChart.value,
+                    t("pages.metrics.nodeMemory"),
+                    nodeMemData,
+                    "#ffa657",
+                    nodeMemPlot
+                );
+            } else {
+                nodeMemPlot?.destroy();
+                nodeMemPlot = null;
+            }
+        } else {
+            nodeCpuHasData.value = false;
+            nodeMemHasData.value = false;
+            nodeCpuPlot?.destroy();
+            nodeMemPlot?.destroy();
+            nodeCpuPlot = null;
+            nodeMemPlot = null;
         }
 
         const cpuByInstance = new Map<string, string>();
@@ -249,8 +367,9 @@ async function refreshMetrics(): Promise<void> {
             cpu: cpuByInstance.get(instanceId) ?? "-",
             memory: memByInstance.get(instanceId) ?? "-"
         }));
+        lastRefreshedAt.value = new Date();
     } catch (err) {
-        error.value = err instanceof Error ? err.message : String(err);
+        error.value = resolveApiErrorMessage(err, t, (key) => key.startsWith("errors."));
     } finally {
         loading.value = false;
     }
@@ -259,77 +378,218 @@ async function refreshMetrics(): Promise<void> {
 
 <template>
     <PageLayout title-key="pages.metrics.title" hint-key="pages.metrics.hint">
+        <template #actions>
+            <span v-if="lastUpdatedLabel" class="self-center text-xs text-base-content/60">
+                {{ t("pages.metrics.lastUpdated", { time: lastUpdatedLabel }) }}
+            </span>
+            <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                :class="{ loading }"
+                :disabled="loading || store.nodes.length === 0"
+                @click="refreshMetrics"
+            >
+                <span>{{ t("pages.metrics.refresh") }}</span>
+            </button>
+        </template>
+
         <ErrorAlert :error="error" />
 
-        <div v-if="loading && instanceRows.length === 0" class="flex items-center gap-2">
+        <div v-if="loading && store.nodes.length === 0" class="flex items-center gap-2">
             <LoadingSpinner />
             <span>{{ t("common.loading") }}</span>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-2">
+        <EmptyState
+            v-else-if="!error && store.nodes.length === 0"
+            title-key="pages.metrics.noNodesTitle"
+            description-key="pages.metrics.noNodesDescription"
+            action-label-key="pages.metrics.noNodesAction"
+            action-to="/nodes"
+        />
+
+        <div v-else class="flex flex-col gap-6">
+            <div class="stats w-full bg-base-100 shadow lg:stats-horizontal">
+                <div class="stat">
+                    <div class="stat-title">
+                        {{ t("pages.metrics.statNodes") }}
+                    </div>
+                    <div class="stat-value text-2xl">
+                        {{ store.nodes.length }}
+                    </div>
+                    <div class="stat-desc">
+                        {{ t("pages.metrics.statNodesOnline", { count: onlineNodeCount }) }}
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">
+                        {{ t("pages.metrics.statInstances") }}
+                    </div>
+                    <div class="stat-value text-2xl">
+                        {{ instanceRows.length }}
+                    </div>
+                    <div class="stat-desc">
+                        {{ t("pages.metrics.statInstancesHint") }}
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">
+                        {{ t("pages.metrics.statWindow") }}
+                    </div>
+                    <div class="stat-value text-2xl">
+                        {{ t("pages.metrics.statWindowValue") }}
+                    </div>
+                    <div class="stat-desc">
+                        {{ t("pages.metrics.statWindowHint") }}
+                    </div>
+                </div>
+            </div>
+
+            <div
+                v-if="!loading && !error && !metricsAvailable"
+                class="alert border-info/30 bg-info/10 text-sm"
+            >
+                <span>{{ t("pages.metrics.pendingDescription") }}</span>
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-2">
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body gap-3">
+                        <h2 class="card-title text-base">
+                            {{ t("pages.metrics.clusterCpu") }}
+                        </h2>
+                        <div
+                            v-if="!clusterCpuHasData"
+                            class="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-base-300 bg-base-200/30 px-4 text-center"
+                        >
+                            <p class="text-sm font-medium">
+                                {{ t("pages.metrics.chartsEmptyTitle") }}
+                            </p>
+                            <p class="text-xs text-base-content/60">
+                                {{ t("pages.metrics.chartsEmptyDescription") }}
+                            </p>
+                        </div>
+                        <div v-else ref="clusterCpuChart" class="min-h-[220px] w-full" />
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body gap-3">
+                        <h2 class="card-title text-base">
+                            {{ t("pages.metrics.clusterMemory") }}
+                        </h2>
+                        <div
+                            v-if="!clusterMemHasData"
+                            class="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-base-300 bg-base-200/30 px-4 text-center"
+                        >
+                            <p class="text-sm font-medium">
+                                {{ t("pages.metrics.chartsEmptyTitle") }}
+                            </p>
+                            <p class="text-xs text-base-content/60">
+                                {{ t("pages.metrics.chartsEmptyDescription") }}
+                            </p>
+                        </div>
+                        <div v-else ref="clusterMemChart" class="min-h-[220px] w-full" />
+                    </div>
+                </div>
+            </div>
+
             <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div ref="clusterCpuChart" class="chart-panel min-h-[220px] w-full" />
+                <div class="card-body gap-4">
+                    <div class="flex flex-wrap items-end justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold">
+                                {{ t("pages.metrics.nodeSectionTitle") }}
+                            </h2>
+                            <p class="text-sm text-base-content/70">
+                                {{ t("pages.metrics.nodeSectionHint") }}
+                            </p>
+                        </div>
+                        <label class="form-control w-full max-w-md">
+                            <span class="label-text">{{ t("pages.metrics.selectNode") }}</span>
+                            <select v-model="selectedNodeId" class="select select-bordered select-sm w-full" @change="refreshMetrics">
+                                <option v-for="node in store.nodes" :key="node.id" :value="node.id">
+                                    {{ node.hostname }} ({{ node.id }})
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <p v-if="selectedNode" class="text-sm text-base-content/70">
+                        {{ t("pages.metrics.nodeDetail") }}: {{ selectedNode.hostname }}
+                    </p>
+
+                    <div class="grid gap-4 lg:grid-cols-2">
+                        <div class="rounded-lg border border-base-300/60 p-4">
+                            <h3 class="mb-3 text-sm font-semibold">
+                                {{ t("pages.metrics.nodeCpu") }}
+                            </h3>
+                            <div
+                                v-if="!nodeCpuHasData"
+                                class="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-base-300 bg-base-200/30 px-4 text-center"
+                            >
+                                <p class="text-xs text-base-content/60">
+                                    {{ t("pages.metrics.chartsEmptyDescription") }}
+                                </p>
+                            </div>
+                            <div v-else ref="nodeCpuChart" class="min-h-[220px] w-full" />
+                        </div>
+
+                        <div class="rounded-lg border border-base-300/60 p-4">
+                            <h3 class="mb-3 text-sm font-semibold">
+                                {{ t("pages.metrics.nodeMemory") }}
+                            </h3>
+                            <div
+                                v-if="!nodeMemHasData"
+                                class="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-base-300 bg-base-200/30 px-4 text-center"
+                            >
+                                <p class="text-xs text-base-content/60">
+                                    {{ t("pages.metrics.chartsEmptyDescription") }}
+                                </p>
+                            </div>
+                            <div v-else ref="nodeMemChart" class="min-h-[220px] w-full" />
+                        </div>
+                    </div>
                 </div>
             </div>
+
             <div class="card bg-base-100 shadow">
-                <div class="card-body">
-                    <div ref="clusterMemChart" class="chart-panel min-h-[220px] w-full" />
-                </div>
-            </div>
-        </div>
+                <div class="card-body gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold">
+                            {{ t("pages.metrics.instances") }}
+                        </h2>
+                        <p class="text-sm text-base-content/70">
+                            {{ t("pages.metrics.instancesHint") }}
+                        </p>
+                    </div>
 
-        <div class="card bg-base-100 shadow">
-            <div class="card-body gap-4">
-                <label class="form-control w-full max-w-md">
-                    <span class="label-text">{{ t("pages.metrics.selectNode") }}</span>
-                    <select v-model="selectedNodeId" class="select select-bordered" @change="refreshMetrics">
-                        <option v-for="node in store.nodes" :key="node.id" :value="node.id">
-                            {{ node.hostname }} ({{ node.id }})
-                        </option>
-                    </select>
-                </label>
-                <p v-if="selectedNode" class="text-sm text-base-content/70">
-                    {{ t("pages.metrics.nodeDetail") }}: {{ selectedNode.hostname }}
-                </p>
-                <div class="grid gap-6 lg:grid-cols-2">
-                    <div ref="nodeCpuChart" class="chart-panel min-h-[220px] w-full" />
-                    <div ref="nodeMemChart" class="chart-panel min-h-[220px] w-full" />
-                </div>
-            </div>
-        </div>
+                    <EmptyState
+                        v-if="instanceRows.length === 0 && !loading"
+                        title-key="pages.metrics.instancesEmptyTitle"
+                        description-key="pages.metrics.instancesEmptyDescription"
+                    />
 
-        <div class="card bg-base-100 shadow">
-            <div class="card-body gap-4">
-                <h3 class="text-lg font-semibold">
-                    {{ t("pages.metrics.instances") }}
-                </h3>
-
-                <EmptyState
-                    v-if="instanceRows.length === 0"
-                    title-key="pages.metrics.instancesEmpty"
-                    description-key="pages.metrics.instancesEmpty"
-                />
-
-                <div v-else class="overflow-x-auto">
-                    <table class="table table-zebra">
-                        <thead>
-                            <tr>
-                                <th>{{ t("pages.metrics.instanceId") }}</th>
-                                <th>{{ t("pages.metrics.serviceName") }}</th>
-                                <th>{{ t("pages.metrics.instanceCpu") }}</th>
-                                <th>{{ t("pages.metrics.instanceMemory") }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="row in instanceRows" :key="row.instanceId">
-                                <td>{{ row.instanceId }}</td>
-                                <td>{{ row.serviceName }}</td>
-                                <td>{{ row.cpu }}</td>
-                                <td>{{ row.memory }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div v-else-if="instanceRows.length > 0" class="overflow-x-auto">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>{{ t("pages.metrics.instanceId") }}</th>
+                                    <th>{{ t("pages.metrics.serviceName") }}</th>
+                                    <th>{{ t("pages.metrics.instanceCpu") }}</th>
+                                    <th>{{ t("pages.metrics.instanceMemory") }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in instanceRows" :key="row.instanceId">
+                                    <td>{{ row.instanceId }}</td>
+                                    <td>{{ row.serviceName }}</td>
+                                    <td>{{ row.cpu }}</td>
+                                    <td>{{ row.memory }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

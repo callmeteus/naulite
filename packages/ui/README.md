@@ -19,7 +19,9 @@ From the Naulite repo root:
 yarn dev
 ```
 
-`yarn dev` starts the control plane (port **18080**), a local **traefik-mock** (port **18099**, for gateway hydration), admin API (**3001**), frontend (**5173**), and docs.
+`yarn dev` starts the control plane (port **18080**), **Prometheus** (**19090**, Docker), a local **traefik-mock** (port **18099**), admin API (**3001**), frontend (**5173**), and docs.
+
+Docker Desktop must be running for Prometheus. The control plane proxies PromQL queries to `http://127.0.0.1:19090`.
 
 Default bootstrap user when the control plane database is empty:
 

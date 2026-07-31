@@ -4232,6 +4232,13 @@ enhanced-resolve@5.21.6:
     graceful-fs "^4.2.4"
     tapable "^2.3.3"
 
+ensure-running@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/ensure-running/-/ensure-running-1.0.0.tgz#16b9521727e2933b1415fdea09f4e749772c36ac"
+  integrity sha512-6kuR/vOM/ye7KCNbB4bpdUSoombWp24Gn8zLdmEMs7SyA9bAqbZo5V6GY5nhyw8zAjX+EqXQXKjQRg9WFQEikg==
+  dependencies:
+    jiti "^2.4.2"
+
 entities@^4.2.0:
   version "4.5.0"
   resolved "https://registry.yarnpkg.com/entities/-/entities-4.5.0.tgz#5d268ea5e7113ec74c4d033b79ea5a35a488fb48"
@@ -5559,7 +5566,7 @@ isexe@^2.0.0:
   resolved "https://registry.yarnpkg.com/isexe/-/isexe-2.0.0.tgz#e8fbf374dc556ff8947a10dcb0572d633f2cfa10"
   integrity sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==
 
-jiti@^2.7.0:
+jiti@^2.4.2, jiti@^2.7.0:
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/jiti/-/jiti-2.7.0.tgz#974228f2f4ca2bc21885a1797b45fea68e950c64"
   integrity sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==

@@ -20,6 +20,8 @@ import NodesView from "../views/NodesView.vue";
 import NodeDetailView from "../views/NodeDetailView.vue";
 import NotificationsView from "../views/NotificationsView.vue";
 import ProvisionView from "../views/ProvisionView.vue";
+import ProvisionNewView from "../views/ProvisionNewView.vue";
+import ProvisionDetailView from "../views/ProvisionDetailView.vue";
 import RunsView from "../views/RunsView.vue";
 import SecretsView from "../views/SecretsView.vue";
 import ServicesView from "../views/ServicesView.vue";
@@ -46,6 +48,8 @@ const router = createRouter({
         { path: "/deploy", component: DeployView, meta: { permissions: ["manifests:apply"] satisfies NaulitePermission[] } },
         { path: "/build", component: BuildView, meta: { permissions: ["runs:write"] satisfies NaulitePermission[] } },
         { path: "/provision", component: ProvisionView, meta: { permissions: ["nodes:provision"] satisfies NaulitePermission[] } },
+        { path: "/provision/new", component: ProvisionNewView, meta: { permissions: ["nodes:provision"] satisfies NaulitePermission[] } },
+        { path: "/provision/:id", component: ProvisionDetailView, meta: { permissions: ["nodes:provision"] satisfies NaulitePermission[] } },
         { path: "/runs", component: RunsView, meta: { permissions: ["runs:read"] satisfies NaulitePermission[] } },
         { path: "/gateway-routes", component: GatewayRoutesView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },
         { path: "/container-registry", component: ContainerRegistryView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },

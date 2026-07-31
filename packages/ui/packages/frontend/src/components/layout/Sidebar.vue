@@ -48,7 +48,7 @@ function changeLocale(value: AppLocale): void {
 </script>
 
 <template>
-    <aside class="flex h-full min-h-screen w-64 flex-col border-r border-base-300 bg-base-200">
+    <aside class="relative z-50 flex h-full min-h-screen w-64 flex-col border-r border-base-300 bg-base-200">
         <div class="border-b border-base-300 p-4">
             <NauliteBrand size="sm" />
             <p v-if="auth.user" class="mt-2 break-all text-xs text-base-content/70">
@@ -56,7 +56,7 @@ function changeLocale(value: AppLocale): void {
             </p>
         </div>
 
-        <nav class="flex-1 overflow-y-auto px-3 py-4">
+        <nav class="min-h-0 flex-1 overflow-y-auto px-3 py-4">
             <div v-for="section in visibleSections" :key="section.id" class="mb-5">
                 <p class="menu-title mb-2 px-3 text-xs uppercase tracking-wide opacity-70">
                     {{ t(section.labelKey) }}

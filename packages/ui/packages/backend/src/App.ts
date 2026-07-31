@@ -100,19 +100,29 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     });
 
     app.setErrorHandler((error: unknown, _request, reply) => {
-        if (isBffError(error)) {
-            reply.code(error.statusCode);
-            return toBffErrorResponse(error);
-        }
-
         if (error instanceof NauliteApiError) {
+            const statusCode = error.status;
+
+            if (error.i18n) {
+                reply.code(statusCode);
+                return toBffErrorResponse(createBffError(statusCode, error.i18n, {
+                    code: error.code,
+                    i18nParams: error.i18nParams
+                }));
+            }
+
             const details = error.details;
-            reply.code(error.status);
+            reply.code(statusCode);
             return {
                 message: enrichApiErrorMessage(error.message, details),
                 code: error.code,
                 details
             };
+        }
+
+        if (isBffError(error)) {
+            reply.code(error.statusCode);
+            return toBffErrorResponse(error);
         }
 
         if (error instanceof z.ZodError) {
