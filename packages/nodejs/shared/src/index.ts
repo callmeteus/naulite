@@ -41,3 +41,7 @@ export {
 } from "./util/resolveKnownApiErrorI18n";
 
 export { DurationUtils } from "./util/DurationUtils";
+export {
+    formatAgentHttpFailureMessage,
+    normalizeAgentDispatchMessage
+} from "./util/normalizeAgentDispatchMessage";

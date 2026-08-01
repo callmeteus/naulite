@@ -1,5 +1,7 @@
 import type { ExecutionPlan, Node } from "@naulite/shared";
 
+import { formatAgentHttpFailureMessage } from "@naulite/shared";
+
 const DEFAULT_AGENT_FETCH_TIMEOUT_MS = 15_000;
 
 /**
@@ -134,10 +136,33 @@ export namespace AgentDispatcher {
                         agentUrl,
                         status: "failed",
                         httpStatus: response.status,
-                        message: text || `Agent returned HTTP ${response.status}.`
+                        message: formatAgentHttpFailureMessage(response.status, text)
                     });
 
                     continue;
+                }
+
+                const responseText = await response.text();
+
+                if (responseText.trim()) {
+                    try {
+                        const parsed = JSON.parse(responseText) as { accepted?: boolean };
+
+                        if (parsed.accepted === false) {
+                            results.push({
+                                nodeId: plan.nodeId,
+                                planId: plan.planId,
+                                agentUrl,
+                                status: "failed",
+                                httpStatus: response.status,
+                                message: formatAgentHttpFailureMessage(response.status, responseText)
+                            });
+
+                            continue;
+                        }
+                    } catch {
+                        // Non-JSON success bodies are ignored.
+                    }
                 }
 
                 results.push({

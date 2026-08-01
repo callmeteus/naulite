@@ -433,14 +433,12 @@ let ownedAgent = await ensureLocalAgent(setupKey);
 
 if (!await isHealthy(agentHealthUrl)) {
     console.warn(
-        "[dev-agent] could not start a local agent. Install Zig or Docker, then restart the dev stack."
+        "[dev-agent] could not start a local agent on the first attempt. The watchdog will keep retrying."
     );
-    console.warn("[dev-agent] You can still connect a node manually from Nodes > Add node.");
-    await waitForShutdownSignalLegacy();
-    process.exit(0);
+    console.warn("[dev-agent] You can also add a node manually from Nodes > Add node.");
+} else {
+    console.log(`[dev-agent] registered against ${controlPlaneUrl}`);
 }
-
-console.log(`[dev-agent] registered against ${controlPlaneUrl}`);
 
 const agentWatchPaths = [
     path.join(repoRoot, "packages", "agent", "src"),

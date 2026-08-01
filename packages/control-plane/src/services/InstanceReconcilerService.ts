@@ -5,6 +5,7 @@ import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import type { ComposeParser } from "../orchestration/ComposeParser";
 import { Planner } from "../orchestration/Planner";
 import { AgentDispatcher } from "./AgentDispatcher";
+import { explainDispatchFailure } from "./ApplyDispatchFailureMessage";
 import { ApplyService } from "./ApplyService";
 import { GitOpsService } from "./GitOpsService";
 import type { LeaderElection } from "./LeaderElection";
@@ -309,11 +310,15 @@ export class InstanceReconcilerService {
             };
         }
 
+        const failureMessage = result
+            ? explainDispatchFailure(result)
+            : "Reconcile dispatch failed.";
+
         await this.store.updateInstance(instanceId, {
             status: "failed",
             dispatchAttempts: attempts,
             lastDispatchedAt: timestamp,
-            lastError: result?.message ?? "Reconcile dispatch failed."
+            lastError: failureMessage
         });
 
         console.debug(
@@ -322,13 +327,13 @@ export class InstanceReconcilerService {
             node.id,
             attempts,
             maxRetries,
-            result?.message ?? "unknown"
+            failureMessage
         );
 
         return {
             instanceId,
             status: "failed",
-            message: result?.message ?? "Reconcile dispatch failed."
+            message: failureMessage
         };
     }
 

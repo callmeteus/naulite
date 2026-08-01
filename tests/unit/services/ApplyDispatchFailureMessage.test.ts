@@ -17,6 +17,15 @@ function buildDispatch(overrides: Partial<AgentDispatchResult> = {}): AgentDispa
 }
 
 describe("ApplyDispatchFailureMessage", () => {
+    it("explains JSON apply failures in plain language", () => {
+        const message = explainDispatchFailure(buildDispatch({
+            httpStatus: 500,
+            message: "{\"accepted\":false,\"planId\":\"plan-1\",\"message\":\"apply failed\"}"
+        }));
+
+        expect(message).toBe("The node agent could not start or update the container.");
+    });
+
     it("explains agent timeouts with the agent URL", () => {
         const message = explainDispatchFailure(buildDispatch({
             message: "Agent request timed out after 15000ms."
@@ -33,7 +42,7 @@ describe("ApplyDispatchFailureMessage", () => {
             message: "Node has no agentUrl."
         }));
 
-        expect(message).toBe("this node has no registered agent URL");
+        expect(message).toBe("This node has no registered agent URL.");
     });
 
     it("formats a single-node rollout failure", () => {
@@ -44,7 +53,7 @@ describe("ApplyDispatchFailureMessage", () => {
         ], ["dev-local"]);
 
         expect(message).toBe(
-            "Rollout failed on node dev-local: the control plane could not connect to the agent at http://127.0.0.1:9470."
+            "Rollout failed on node dev-local: The control plane could not connect to the agent at http://127.0.0.1:9470."
         );
     });
 

@@ -1,4 +1,5 @@
 import type { AgentDispatchResult } from "./AgentDispatcher";
+import { normalizeAgentDispatchMessage } from "@naulite/shared";
 
 /**
  * Collects non-success dispatch results, optionally scoped to specific nodes.
@@ -33,42 +34,47 @@ function collectDispatchFailures(
  * @returns Plain-language reason without repeating the node id
  */
 export function explainDispatchFailure(entry: AgentDispatchResult): string {
-    const message = entry.message?.trim() ?? "";
+    const rawMessage = entry.message?.trim() ?? "";
+    const message = normalizeAgentDispatchMessage(rawMessage) ?? "";
     const agentUrl = entry.agentUrl?.trim() ?? "";
 
-    if (entry.status === "skipped" && /no agenturl/i.test(message)) {
-        return "this node has no registered agent URL";
+    if (entry.status === "skipped" && /no agenturl/i.test(rawMessage)) {
+        return "This node has no registered agent URL.";
     }
 
     if (/timed out/i.test(message)) {
         return agentUrl
-            ? `the agent at ${agentUrl} did not respond in time`
-            : "the agent did not respond in time";
+            ? `The agent at ${agentUrl} did not respond in time`
+            : "The agent did not respond in time";
     }
 
     if (/no operations/i.test(message)) {
-        return "the execution plan had no operations for this node";
+        return "The deployment plan had no operations for this node";
     }
 
-    if (entry.httpStatus) {
+    if (entry.httpStatus && message) {
+        if (/could not start or update the container|docker operation failed:/i.test(message)) {
+            return message;
+        }
+
         const detail = message || `HTTP ${entry.httpStatus}`;
 
         return agentUrl
-            ? `the agent at ${agentUrl} rejected the request (${detail})`
-            : `the agent rejected the request (${detail})`;
+            ? `The agent at ${agentUrl} rejected the request (${detail})`
+            : `The agent rejected the request (${detail})`;
     }
 
     if (/fetch failed|econnrefused|enotfound|network/i.test(message)) {
         return agentUrl
-            ? `the control plane could not connect to the agent at ${agentUrl}`
-            : "the control plane could not connect to the agent";
+            ? `The control plane could not connect to the agent at ${agentUrl}`
+            : "The control plane could not connect to the agent";
     }
 
     if (message) {
         return agentUrl ? `${message} (${agentUrl})` : message;
     }
 
-    return entry.status === "skipped" ? "dispatch was skipped" : "dispatch failed";
+    return entry.status === "skipped" ? "Dispatch was skipped" : "Dispatch failed";
 }
 
 /**

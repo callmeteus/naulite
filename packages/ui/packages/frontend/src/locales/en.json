@@ -782,6 +782,15 @@
             "emptyTitle": "No volumes found",
             "emptyDescription": "Volumes are created when services declare persistent storage in manifests.",
             "emptyAction": "Go to deploy"
+        },
+        "dispatchErrors": {
+            "unknown": "The deployment could not be sent to the node.",
+            "containerStartFailed": "The node could not start or update the container.",
+            "agentUrlMissing": "This node has no registered agent address.",
+            "agentTimedOut": "The node agent did not respond in time.",
+            "agentUnreachable": "The control plane could not reach the node agent.",
+            "agentRejected": "The node agent rejected the deployment: {detail}",
+            "instanceLabel": "{serviceName} replica {replica}"
         }
     }
 }

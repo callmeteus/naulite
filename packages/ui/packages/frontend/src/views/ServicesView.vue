@@ -61,7 +61,8 @@ async function redispatchService(serviceName: string): Promise<void> {
                 message: formatServiceReconcileError(
                     result,
                     t("pages.services.redispatchFailed"),
-                    t("pages.services.redispatchNoTargets")
+                    t("pages.services.redispatchNoTargets"),
+                    t
                 ) ?? t("pages.services.redispatchFailed")
             };
         }

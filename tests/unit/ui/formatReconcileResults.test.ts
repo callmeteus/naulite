@@ -16,7 +16,22 @@ describe("formatReconcileResults", () => {
                     message: "Scheduled node is offline."
                 }
             ]
-        }, "fallback", "no targets")).toBe("minimal:web-1: Scheduled node is offline.");
+        }, "fallback", "no targets")).toBe("Scheduled node is offline.");
+    });
+
+    it("humanizes fetch failed for a single instance", () => {
+        const t = (key: string) => key;
+
+        expect(formatServiceReconcileError({
+            serviceName: "web",
+            results: [
+                {
+                    instanceId: "minimal:web-1",
+                    status: "failed",
+                    message: "fetch failed"
+                }
+            ]
+        }, "fallback", "no targets", t)).toBe("pages.dispatchErrors.agentUnreachable");
     });
 
     it("returns a no-targets message when no instances were eligible", () => {

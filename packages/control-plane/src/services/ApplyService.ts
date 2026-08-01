@@ -11,7 +11,7 @@ import { NetworkGroupId } from "../orchestration/NetworkGroupId";
 import type { PlannerDiff } from "../orchestration/Planner";
 
 import { AgentDispatcher, type AgentDispatchResult } from "./AgentDispatcher";
-import { formatRolloutDispatchFailureMessage } from "./ApplyDispatchFailureMessage";
+import { formatRolloutDispatchFailureMessage, explainDispatchFailure } from "./ApplyDispatchFailureMessage";
 import { BuildContextService } from "./BuildContextService";
 import { BuildService } from "./BuildService";
 import { PipelineRunService } from "./PipelineRunService";
@@ -986,7 +986,9 @@ export namespace ApplyService {
             await ControlPlaneService.Store.updateInstance(instanceId, {
                 status: "failed",
                 lastDispatchedAt: now,
-                lastError: result?.message ?? "Agent dispatch failed or was skipped."
+                lastError: result
+                    ? explainDispatchFailure(result)
+                    : "Agent dispatch failed or was skipped."
             });
         }
 

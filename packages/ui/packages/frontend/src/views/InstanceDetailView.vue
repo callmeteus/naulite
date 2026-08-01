@@ -204,7 +204,11 @@ async function redispatchInstance(): Promise<void> {
             actionMessage.value = t("pages.instanceDetail.redispatchSuccess");
         } else {
             actionError.value = {
-                message: formatInstanceReconcileError(result, t("pages.instanceDetail.redispatchFailed"))
+                message: formatInstanceReconcileError(
+                    result,
+                    t("pages.instanceDetail.redispatchFailed"),
+                    t
+                )
             };
         }
 

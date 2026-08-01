@@ -782,6 +782,15 @@
             "emptyTitle": "Nenhum volume encontrado",
             "emptyDescription": "Os volumes são criados quando serviços declaram armazenamento persistente nos manifestos.",
             "emptyAction": "Ir para deploy"
+        },
+        "dispatchErrors": {
+            "unknown": "Não foi possível enviar a implantação para o nó.",
+            "containerStartFailed": "O nó não conseguiu iniciar ou atualizar o contêiner.",
+            "agentUrlMissing": "Este nó não tem um endereço de agente registrado.",
+            "agentTimedOut": "O agente do nó não respondeu a tempo.",
+            "agentUnreachable": "O plano de controle não conseguiu alcançar o agente do nó.",
+            "agentRejected": "O agente do nó rejeitou a implantação: {detail}",
+            "instanceLabel": "{serviceName} réplica {replica}"
         }
     }
 }

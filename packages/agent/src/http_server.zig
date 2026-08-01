@@ -439,10 +439,14 @@ fn handleExecutionApply(ctx: *const RouteContext, body: []const u8) !HttpRespons
 
     ctx.docker_client.applyPlan(plan) catch |err| {
         log_http.err("execution apply failed: {}", .{err});
+        const failure_message = try formatApplyFailureMessage(ctx.allocator, err);
+        defer ctx.allocator.free(failure_message);
+        const escaped_message = try escapeJsonString(ctx.allocator, failure_message);
+        defer ctx.allocator.free(escaped_message);
         const response_body = try std.fmt.allocPrint(
             ctx.allocator,
-            "{{\"accepted\":false,\"planId\":\"{s}\",\"message\":\"apply failed\"}}",
-            .{plan.plan_id},
+            "{{\"accepted\":false,\"planId\":\"{s}\",\"message\":\"{s}\"}}",
+            .{ plan.plan_id, escaped_message },
         );
         return .{
             .status = 500,
@@ -856,6 +860,28 @@ fn parseContentLength(header_section: []const u8) !usize {
     }
 
     return 0;
+}
+
+fn formatApplyFailureMessage(allocator: std.mem.Allocator, err: anyerror) ![]u8 {
+    return std.fmt.allocPrint(allocator, "Docker operation failed: {}", .{err});
+}
+
+fn escapeJsonString(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
+    var output: std.ArrayList(u8) = .empty;
+    defer output.deinit(allocator);
+
+    for (value) |char| {
+        switch (char) {
+            '"' => try output.appendSlice(allocator, "\\\""),
+            '\\' => try output.appendSlice(allocator, "\\\\"),
+            '\n' => try output.appendSlice(allocator, "\\n"),
+            '\r' => try output.appendSlice(allocator, "\\r"),
+            '\t' => try output.appendSlice(allocator, "\\t"),
+            else => try output.append(allocator, char),
+        }
+    }
+
+    return try output.toOwnedSlice(allocator);
 }
 
 fn writeRawResponse(
