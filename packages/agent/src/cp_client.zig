@@ -11,6 +11,7 @@ const blocking_io = @import("blocking_io.zig");
 const bootstrap = @import("bootstrap.zig");
 const docker = @import("runtime/docker/docker.zig");
 const env_util = @import("env_util.zig");
+const url_util = @import("url_util.zig");
 
 /// Control plane client configuration (persisted agent identity and connectivity).
 pub const Config = agent_config.AgentConfig;
@@ -266,27 +267,39 @@ fn reportInstanceStatus(
     config: Config,
     instance_id: []const u8,
     status: []const u8,
+    container_id: ?[]const u8,
 ) void {
     const io = blocking_io.io();
+    const encoded_instance_id = url_util.encodePathSegment(allocator, instance_id) catch {
+        return;
+    };
+    defer allocator.free(encoded_instance_id);
+
     const path = std.fmt.allocPrint(
         allocator,
         "{s}/instances/{s}/status",
-        .{ config.cp_url, instance_id },
+        .{ config.cp_url, encoded_instance_id },
     ) catch {
         return;
     };
     defer allocator.free(path);
 
-    const status_fmt =
-        \\{{"status":"{s}"}}
-    ;
-    const body = std.fmt.allocPrint(
-        allocator,
-        status_fmt,
-        .{status},
-    ) catch {
-        return;
-    };
+    const body = if (container_id) |docker_id|
+        std.fmt.allocPrint(
+            allocator,
+            "{{\"status\":\"{s}\",\"containerId\":\"{s}\"}}",
+            .{ status, docker_id },
+        ) catch {
+            return;
+        }
+    else
+        std.fmt.allocPrint(
+            allocator,
+            "{{\"status\":\"{s}\"}}",
+            .{status},
+        ) catch {
+            return;
+        };
     defer allocator.free(body);
 
     if (postJson(allocator, io, path, body, config.api_key)) |response| {
@@ -302,8 +315,10 @@ pub fn reportInstanceRunning(
     config: Config,
     // Instance identifier to report.
     instance_id: []const u8,
+    // Docker container identifier when available.
+    container_id: ?[]const u8,
 ) void {
-    reportInstanceStatus(allocator, config, instance_id, "running");
+    reportInstanceStatus(allocator, config, instance_id, "running", container_id);
 }
 
 pub fn reportInstanceStopped(
@@ -313,7 +328,7 @@ pub fn reportInstanceStopped(
     // Instance identifier to report.
     instance_id: []const u8,
 ) void {
-    reportInstanceStatus(allocator, config, instance_id, "stopped");
+    reportInstanceStatus(allocator, config, instance_id, "stopped", null);
 }
 
 pub fn reportInstanceFailed(
@@ -323,7 +338,7 @@ pub fn reportInstanceFailed(
     // Instance identifier to report.
     instance_id: []const u8,
 ) void {
-    reportInstanceStatus(allocator, config, instance_id, "failed");
+    reportInstanceStatus(allocator, config, instance_id, "failed", null);
 }
 
 /// Reports a pipeline run event to the control plane.

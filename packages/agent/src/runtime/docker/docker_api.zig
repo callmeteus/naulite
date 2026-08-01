@@ -3,19 +3,10 @@ const logger = @import("logger");
 const log_docker = logger.Logger.create("docker");
 
 const std = @import("std");
+const builtin = @import("builtin");
 
 const blocking_io = @import("../../blocking_io.zig");
-
-/// Reads up to `dest.len` bytes from a connected stream.
-fn streamRead(
-    io: std.Io,
-    stream: *const std.Io.net.Stream,
-    dest: []u8,
-) !usize {
-    var read_buffer: [4096]u8 = undefined;
-    var net_reader = stream.reader(io, &read_buffer);
-    return try std.Io.Reader.readSliceShort(&net_reader.interface, dest);
-}
+const docker_transport = @import("docker_transport.zig");
 
 /// Minimum Docker Engine API version supported by current daemons.
 const docker_api_version = "v1.44";
@@ -82,35 +73,31 @@ pub const DockerApi = struct {
     ) !DockerResponse {
         const io = blocking_io.io();
 
-        const unix_address = try std.Io.net.UnixAddress.init(self.socket_path);
-        var stream = try unix_address.connect(io);
-        defer stream.close(io);
+        var connection = try docker_transport.connect(self.allocator, self.socket_path);
+        defer connection.close(io);
 
-        var write_buffer: [8192]u8 = undefined;
-        var net_writer = stream.writer(io, &write_buffer);
-
-        if (body) |payload| {
-            try std.Io.Writer.print(
-                &net_writer.interface,
+        const request_payload = if (body) |payload|
+            try std.fmt.allocPrint(
+                self.allocator,
                 "{s} {s} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n{s}",
                 .{ method, path, payload.len, payload },
-            );
-        } else {
-            try std.Io.Writer.print(
-                &net_writer.interface,
+            )
+        else
+            try std.fmt.allocPrint(
+                self.allocator,
                 "{s} {s} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
                 .{ method, path },
             );
-        }
+        defer self.allocator.free(request_payload);
 
-        try std.Io.Writer.flush(&net_writer.interface);
+        try connection.writeAll(io, request_payload);
 
         var response_buffer: std.ArrayList(u8) = .empty;
         defer response_buffer.deinit(self.allocator);
 
         var read_buffer: [4096]u8 = undefined;
         while (true) {
-            const read_count = streamRead(io, &stream, &read_buffer) catch |err| {
+            const read_count = connection.read(io, &read_buffer) catch |err| {
                 if (response_buffer.items.len > 0) {
                     break;
                 }
@@ -230,6 +217,31 @@ pub const DockerApi = struct {
             });
             return err;
         };
+    }
+
+    /// Returns the Docker container id for a container name or id reference.
+    pub fn getContainerId(
+        self: *const DockerApi,
+        // The name or id of the container.
+        container_ref: []const u8,
+    ) ![]u8 {
+        const path = try std.fmt.allocPrint(
+            self.allocator,
+            "/v1.44/containers/{s}/json",
+            .{container_ref},
+        );
+        defer self.allocator.free(path);
+
+        var response = try self.request("GET", path, null);
+        defer response.deinit(self.allocator);
+
+        if (response.status < 200 or response.status >= 300) {
+            return error.DockerInspectFailed;
+        }
+
+        const json_body = extractJsonPayload(response.body) orelse response.body;
+
+        return try parseJsonStringField(self.allocator, json_body, "Id");
     }
 
     /// Starts a container by name or id.
@@ -711,13 +723,22 @@ pub const DockerApi = struct {
         // Whether the exec session uses a TTY.
         allocate_tty: bool,
     ) !std.Io.net.Stream {
+        if (builtin.os.tag == .windows) {
+            return error.DockerExecUnsupported;
+        }
+
         const io = blocking_io.io();
 
-        const unix_address = try std.Io.net.UnixAddress.init(self.socket_path);
-        var stream = try unix_address.connect(io);
+        var connection = try docker_transport.connect(self.allocator, self.socket_path);
+        var stream_released = false;
+        defer if (!stream_released) {
+            connection.close(io);
+        };
 
-        var write_buffer: [8192]u8 = undefined;
-        var net_writer = stream.writer(io, &write_buffer);
+        const unix_stream = switch (connection) {
+            .unix => |stream| stream,
+            .windows_pipe => return error.DockerExecUnsupported,
+        };
 
         const start_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/start", .{exec_id});
         defer self.allocator.free(start_path);
@@ -727,23 +748,28 @@ pub const DockerApi = struct {
         else
             "{\"Detach\":false,\"Tty\":false}";
 
-        try std.Io.Writer.print(
-            &net_writer.interface,
+        const request_payload = try std.fmt.allocPrint(
+            self.allocator,
             "POST {s} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nConnection: Upgrade\r\nUpgrade: tcp\r\nContent-Length: {d}\r\n\r\n{s}",
             .{ start_path, start_body.len, start_body },
         );
-        try std.Io.Writer.flush(&net_writer.interface);
+        defer self.allocator.free(request_payload);
+
+        try connection.writeAll(io, request_payload);
 
         var response_buffer: std.ArrayList(u8) = .empty;
         defer response_buffer.deinit(self.allocator);
 
         var read_buffer: [4096]u8 = undefined;
         while (true) {
-            const read_count = streamRead(io, &stream, &read_buffer) catch break;
+            const read_count = connection.read(io, &read_buffer) catch break;
+
             if (read_count == 0) {
                 break;
             }
+
             try response_buffer.appendSlice(self.allocator, read_buffer[0..read_count]);
+
             if (std.mem.indexOf(u8, response_buffer.items, "\r\n\r\n") != null) {
                 break;
             }
@@ -751,11 +777,11 @@ pub const DockerApi = struct {
 
         if (!std.mem.startsWith(u8, response_buffer.items, "HTTP/1.1 101")) {
             log_docker.err("exec hijack failed body={s}", .{response_buffer.items});
-            stream.close(io);
             return error.DockerExecFailed;
         }
 
-        return stream;
+        stream_released = true;
+        return unix_stream;
     }
 
     /// Reads the exit code for a finished exec instance.

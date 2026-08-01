@@ -6,7 +6,9 @@ import {
     isAgentRelatedApiError,
     isAgentRelatedText,
     resolveInstanceIssueKey,
-    shouldFetchInstanceLogs
+    shouldFetchInstanceLogs,
+    shouldFollowInstanceLogs,
+    shouldWatchInstanceState
 } from "../../../packages/ui/packages/frontend/src/utils/instanceDetailPresentation";
 
 function buildInstance(overrides: Partial<Instance> = {}): Instance {
@@ -48,7 +50,19 @@ describe("instanceDetailPresentation", () => {
         });
 
         expect(shouldFetchInstanceLogs(instance)).toBe(true);
+        expect(shouldWatchInstanceState(instance)).toBe(false);
+        expect(shouldFollowInstanceLogs(instance)).toBe(true);
         expect(resolveInstanceIssueKey(instance)).toBeUndefined();
+    });
+
+    it("keeps polling while pending rollout state is unresolved", () => {
+        const instance = buildInstance({
+            status: "pending",
+            containerId: undefined
+        });
+
+        expect(shouldWatchInstanceState(instance)).toBe(true);
+        expect(shouldFollowInstanceLogs(instance)).toBe(false);
     });
 
     it("maps parsed agent API errors", () => {

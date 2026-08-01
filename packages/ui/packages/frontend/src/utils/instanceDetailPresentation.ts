@@ -66,6 +66,30 @@ export function shouldFetchInstanceLogs(instance: Instance): boolean {
 }
 
 /**
+ * Returns whether the instance detail page should keep polling for state updates.
+ *
+ * @param instance Instance record
+ * @returns True while rollout state may still be changing on the node
+ */
+export function shouldWatchInstanceState(instance: Instance): boolean {
+    if (instance.status === "pending" || instance.status === "failed") {
+        return true;
+    }
+
+    return instance.status === "running" && !instance.containerId;
+}
+
+/**
+ * Returns whether instance logs should be refreshed periodically.
+ *
+ * @param instance Instance record
+ * @returns True when the container is running and logs may change
+ */
+export function shouldFollowInstanceLogs(instance: Instance): boolean {
+    return instance.status === "running" && Boolean(instance.containerId);
+}
+
+/**
  * Resolves the primary operator-facing issue key for an instance detail page.
  *
  * @param instance Instance record

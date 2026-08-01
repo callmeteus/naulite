@@ -491,6 +491,30 @@ export class ControlPlaneStore {
     }
 
     /**
+     * Updates only the aggregate status of a service.
+     *
+     * @param serviceId Service identifier
+     * @param status Derived service status
+     * @returns Updated service when found
+     */
+    async updateServiceStatus(serviceId: string, status: Service["status"]): Promise<Service | null> {
+        const row = await ServiceModel.findByPk(serviceId);
+
+        if (!row) {
+            return null;
+        }
+
+        const updatedAt = new Date().toISOString();
+
+        await row.update({
+            status,
+            updatedAt
+        });
+
+        return RowMapper.service(row.get({ plain: true }));
+    }
+
+    /**
      * Inserts an instance record.
      *
      * @param instance Instance to persist

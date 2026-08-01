@@ -316,6 +316,18 @@ export namespace ControlPlaneService {
         }
 
         /**
+         * @param serviceId Service identifier
+         * @param status Derived service status
+         * @returns Updated service when found
+         */
+        export function updateServiceStatus(
+            serviceId: string,
+            status: Service["status"]
+        ): ReturnType<ControlPlaneStore["updateServiceStatus"]> {
+            return backing().updateServiceStatus(serviceId, status);
+        }
+
+        /**
          * @param instance Instance payload
          * @returns Nothing.
          */

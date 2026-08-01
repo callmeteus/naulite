@@ -7,6 +7,7 @@ import {
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { AuthPreHandlers } from "../../../auth/AuthPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
+import { ServiceStatusService } from "../../../services/ServiceStatusService";
 
 export const POST = defineRoute({
     preHandler: AuthPreHandlers.authorizedLocalOrApiKey,
@@ -38,6 +39,8 @@ export const POST = defineRoute({
                 message: `Instance ${id} not found.`
             });
         }
+
+        await ServiceStatusService.syncFromInstances(updated.serviceId);
 
         return updated;
     }

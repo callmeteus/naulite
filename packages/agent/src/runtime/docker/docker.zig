@@ -306,8 +306,12 @@ pub const DockerClient = struct {
 
         try api.startContainer(container_name);
         log_docker.info("started container name={s}", .{container_name});
+
+        const container_id = api.getContainerId(container_name) catch null;
+        defer if (container_id) |owned| self.allocator.free(owned);
+
         if (self.cp_config) |config| {
-            cp_client.reportInstanceRunning(self.allocator, config, instance_id);
+            cp_client.reportInstanceRunning(self.allocator, config, instance_id, container_id);
         }
     }
 

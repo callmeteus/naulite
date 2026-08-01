@@ -9,6 +9,7 @@ import { explainDispatchFailure } from "./ApplyDispatchFailureMessage";
 import { ApplyService } from "./ApplyService";
 import { GitOpsService } from "./GitOpsService";
 import type { LeaderElection } from "./LeaderElection";
+import { ServiceStatusService } from "./ServiceStatusService";
 
 const logInstanceReconcile = Logger.create("instance-reconcile");
 
@@ -109,6 +110,8 @@ export class InstanceReconcilerService {
      * @returns Nothing.
      */
     async reconcileAll(): Promise<void> {
+        await ServiceStatusService.syncAll();
+
         const [instances, nodes] = await Promise.all([
             this.store.listInstances(),
             this.store.listNodes()
@@ -298,6 +301,8 @@ export class InstanceReconcilerService {
                 lastError: null
             });
 
+            await ServiceStatusService.syncFromInstances(instance.serviceId);
+
             console.debug("[instance-reconcile] dispatched instanceId=%s nodeId=%s attempt=%d",
                 instanceId,
                 node.id,
@@ -320,6 +325,8 @@ export class InstanceReconcilerService {
             lastDispatchedAt: timestamp,
             lastError: failureMessage
         });
+
+        await ServiceStatusService.syncFromInstances(instance.serviceId);
 
         console.debug(
             "[instance-reconcile] dispatch failed instanceId=%s nodeId=%s attempt=%d maxRetries=%d err=%s",

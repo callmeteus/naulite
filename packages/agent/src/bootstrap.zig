@@ -8,6 +8,7 @@ const builtin = @import("builtin");
 const netbird = @import("netbird.zig");
 const process_cmd = @import("process_cmd.zig");
 const blocking_io = @import("blocking_io.zig");
+const docker_transport = @import("runtime/docker/docker_transport.zig");
 
 /// Host operating system family detected at runtime.
 pub const OsFamily = enum {
@@ -94,18 +95,13 @@ pub fn collectStatus(
 
 /// Probes whether the Docker socket is reachable.
 pub fn probeDockerSocket() bool {
-    const io = blocking_io.io();
-
     const socket_path = switch (detectOsFamily()) {
         .linux, .macos => "/var/run/docker.sock",
         .windows => "//./pipe/docker_engine",
         .unknown => return false,
     };
 
-    const unix_address = std.Io.net.UnixAddress.init(socket_path) catch return false;
-    const stream = unix_address.connect(io) catch return false;
-    stream.close(io);
-    return true;
+    return docker_transport.probeSocket(std.heap.smp_allocator, socket_path);
 }
 
 /// Detects a human-readable Linux OS version string.

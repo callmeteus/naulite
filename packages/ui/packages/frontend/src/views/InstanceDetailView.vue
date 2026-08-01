@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { RouterLink, useRoute } from "vue-router";
 
@@ -16,8 +16,16 @@ import { formatInstanceReconcileError } from "../utils/formatReconcileResults";
 import {
     isAgentRelatedApiError,
     resolveInstanceIssueKey,
-    shouldFetchInstanceLogs
+    shouldFetchInstanceLogs,
+    shouldFollowInstanceLogs,
+    shouldWatchInstanceState
 } from "../utils/instanceDetailPresentation";
+
+const INSTANCE_POLL_MS = 3_000;
+const LOG_FOLLOW_MS = 5_000;
+
+let statePollTimer: ReturnType<typeof setInterval> | null = null;
+let logFollowTimer: ReturnType<typeof setInterval> | null = null;
 
 const { t } = useI18n();
 const route = useRoute();
@@ -81,13 +89,45 @@ const showLogsPre = computed(() =>
     && shouldFetchInstanceLogs(instance.value!)
 );
 
+const liveUpdateLabel = computed(() => {
+    if (!instance.value) {
+        return "";
+    }
+
+    if (shouldWatchInstanceState(instance.value)) {
+        return t("pages.runs.polling");
+    }
+
+    if (shouldFollowInstanceLogs(instance.value)) {
+        return t("pages.runs.polling");
+    }
+
+    return "";
+});
+
 onMounted(() => {
     void loadInstance();
+});
+
+onBeforeUnmount(() => {
+    stopLiveUpdates();
 });
 
 watch(instanceId, () => {
     void loadInstance();
 });
+
+watch(
+    () => (instance.value ? [instance.value.status, instance.value.containerId ?? ""] : null),
+    (key) => {
+        if (!key) {
+            stopLiveUpdates();
+            return;
+        }
+
+        syncLiveUpdates();
+    }
+);
 
 /**
  * Formats an ISO timestamp for display.
@@ -128,11 +168,75 @@ function formatLogs(response: LogsResponse & { logs?: string }): string {
 }
 
 /**
+ * Stops background polling timers for instance state and logs.
+ *
+ * @returns Nothing.
+ */
+function stopLiveUpdates(): void {
+    if (statePollTimer) {
+        clearInterval(statePollTimer);
+        statePollTimer = null;
+    }
+
+    if (logFollowTimer) {
+        clearInterval(logFollowTimer);
+        logFollowTimer = null;
+    }
+}
+
+/**
+ * Starts or stops live updates based on the current instance state.
+ *
+ * @returns Nothing.
+ */
+function syncLiveUpdates(): void {
+    stopLiveUpdates();
+
+    if (!instance.value) {
+        return;
+    }
+
+    if (shouldWatchInstanceState(instance.value)) {
+        statePollTimer = setInterval(() => {
+            void refreshInstance();
+        }, INSTANCE_POLL_MS);
+    }
+
+    if (shouldFollowInstanceLogs(instance.value)) {
+        logFollowTimer = setInterval(() => {
+            void loadLogs(true);
+        }, LOG_FOLLOW_MS);
+    }
+}
+
+/**
+ * Refreshes instance state without resetting page-level action feedback.
+ *
+ * @returns Nothing.
+ */
+async function refreshInstance(): Promise<void> {
+    if (!instanceId.value) {
+        return;
+    }
+
+    try {
+        instance.value = await nauliteClient.getInstance(instanceId.value);
+
+        if (instance.value && shouldFetchInstanceLogs(instance.value)) {
+            void loadLogs();
+        }
+    } catch {
+        // Keep the last known instance snapshot while polling.
+    }
+}
+
+/**
  * Loads instance detail and optionally fetches logs.
  *
  * @returns Nothing.
  */
 async function loadInstance(): Promise<void> {
+    stopLiveUpdates();
     loading.value = true;
     loadError.value = null;
     actionMessage.value = "";
@@ -153,14 +257,17 @@ async function loadInstance(): Promise<void> {
     if (instance.value && shouldFetchInstanceLogs(instance.value)) {
         void loadLogs();
     }
+
+    syncLiveUpdates();
 }
 
 /**
  * Fetches instance logs from the agent.
  *
+ * @param preserveContent Keeps the current log text visible while refreshing
  * @returns Nothing.
  */
-async function loadLogs(): Promise<void> {
+async function loadLogs(preserveContent = false): Promise<void> {
     if (!instance.value || !shouldFetchInstanceLogs(instance.value)) {
         logsContent.value = "";
         logsError.value = null;
@@ -169,9 +276,12 @@ async function loadLogs(): Promise<void> {
         return;
     }
 
-    logsLoading.value = true;
+    logsLoading.value = !preserveContent;
     logsError.value = null;
-    logsContent.value = "";
+
+    if (!preserveContent) {
+        logsContent.value = "";
+    }
 
     try {
         const response = await nauliteClient.getLogs(instanceId.value);
@@ -217,6 +327,8 @@ async function redispatchInstance(): Promise<void> {
         if (instance.value && shouldFetchInstanceLogs(instance.value)) {
             void loadLogs();
         }
+
+        syncLiveUpdates();
     } catch (err) {
         actionError.value = parseApiError(err);
     } finally {
@@ -334,7 +446,15 @@ async function redispatchInstance(): Promise<void> {
             <div class="card bg-base-100 shadow">
                 <div class="card-body gap-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <h3 class="text-lg font-semibold">{{ t("pages.instanceDetail.logs") }}</h3>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="text-lg font-semibold">{{ t("pages.instanceDetail.logs") }}</h3>
+                            <span
+                                v-if="liveUpdateLabel"
+                                class="badge badge-ghost badge-sm"
+                            >
+                                {{ liveUpdateLabel }}
+                            </span>
+                        </div>
                         <button
                             v-if="instance && shouldFetchInstanceLogs(instance)"
                             type="button"
