@@ -14,6 +14,7 @@ import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { ControlPlaneSyncSubscribers } from "./services/ControlPlaneSyncSubscribers";
 import { LeaderElection } from "./services/LeaderElection";
 import { NetBirdBootstrap } from "./services/NetBirdBootstrap";
+import { NetBirdDevBootstrap } from "./services/NetBirdDevBootstrap";
 import { NotificationDestinationRuntime } from "./services/NotificationDestinationRuntime";
 const logMigrations = Logger.create("migrations");
 
@@ -128,6 +129,8 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
         applyRevision,
         instanceId
     });
+
+    await NetBirdDevBootstrap.bootstrapIfNeeded(context);
 
     await context.pluginLoader.load(context.pluginRegistry);
     PluginRegistryWiring.wire(context);

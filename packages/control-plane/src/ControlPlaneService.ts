@@ -5,6 +5,7 @@ import type { ControlPlaneStore } from "./database/ControlPlaneStore";
 import { ClusterStateService } from "./services/ClusterStateService";
 import { ControlPlaneSync } from "./services/ControlPlaneSync";
 import { GitOpsService } from "./services/GitOpsService";
+import { InstanceLifecycleService } from "./services/InstanceLifecycleService";
 
 /**
  * Control plane application service with PascalCase domain namespaces.
@@ -243,6 +244,14 @@ export namespace ControlPlaneService {
          */
         export function listServices(): ReturnType<ControlPlaneStore["listServices"]> {
             return backing().listServices();
+        }
+
+        /**
+         * @param name Service name
+         * @returns Service record when found
+         */
+        export function getServiceByName(name: string): ReturnType<ControlPlaneStore["getServiceByName"]> {
+            return backing().getServiceByName(name);
         }
 
         export function listFunctionRuns(
@@ -833,6 +842,71 @@ export namespace ControlPlaneService {
             return ControlPlaneService.requireContext().instanceReconcilerService.reconcileService(
                 serviceName,
                 options
+            );
+        }
+    }
+
+    /**
+     * Workload instance lifecycle operations dispatched to agents.
+     */
+    export namespace InstanceLifecycle {
+        /**
+         * @param instanceId Instance identifier
+         * @returns Lifecycle dispatch outcome
+         */
+        export function stopInstance(instanceId: string): ReturnType<typeof InstanceLifecycleService.stopInstance> {
+            const context = ControlPlaneService.requireContext();
+
+            return InstanceLifecycleService.stopInstance(
+                context.store,
+                context.planner,
+                () => context.applyRevision,
+                instanceId
+            );
+        }
+
+        /**
+         * @param instanceId Instance identifier
+         * @returns Lifecycle dispatch outcome
+         */
+        export function startInstance(instanceId: string): ReturnType<typeof InstanceLifecycleService.startInstance> {
+            const context = ControlPlaneService.requireContext();
+
+            return InstanceLifecycleService.startInstance(
+                context.store,
+                context.planner,
+                () => context.applyRevision,
+                instanceId
+            );
+        }
+
+        /**
+         * @param instanceId Instance identifier
+         * @returns Lifecycle dispatch outcome
+         */
+        export function restartInstance(instanceId: string): ReturnType<typeof InstanceLifecycleService.restartInstance> {
+            const context = ControlPlaneService.requireContext();
+
+            return InstanceLifecycleService.restartInstance(
+                context.store,
+                context.planner,
+                () => context.applyRevision,
+                instanceId
+            );
+        }
+
+        /**
+         * @param instanceId Instance identifier
+         * @returns Lifecycle dispatch outcome
+         */
+        export function removeInstance(instanceId: string): ReturnType<typeof InstanceLifecycleService.removeInstance> {
+            const context = ControlPlaneService.requireContext();
+
+            return InstanceLifecycleService.removeInstance(
+                context.store,
+                context.planner,
+                () => context.applyRevision,
+                instanceId
             );
         }
     }

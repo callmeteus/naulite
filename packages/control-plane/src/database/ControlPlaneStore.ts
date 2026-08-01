@@ -244,6 +244,22 @@ export class ControlPlaneStore {
         return rows.map((row) => RowMapper.service(row.get({ plain: true })));
     }
 
+    /**
+     * Returns a service by name.
+     *
+     * @param name Service name
+     * @returns Service record when found
+     */
+    async getServiceByName(name: string): Promise<Service | null> {
+        const row = await ServiceModel.findOne({ where: { name } });
+
+        if (!row) {
+            return null;
+        }
+
+        return RowMapper.service(row.get({ plain: true }));
+    }
+
     async listFunctionRuns(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<{
         id: string;
         serviceName: string;

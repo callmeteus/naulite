@@ -8,6 +8,8 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import MetadataGrid from "../components/ui/MetadataGrid.vue";
+import MetadataGridItem from "../components/ui/MetadataGridItem.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
@@ -81,7 +83,7 @@ const quickLinks = computed(() => {
             permission: "workloads:read" as const
         },
         {
-            to: "/runs?deploy=open",
+            to: "/runs/deploy",
             labelKey: "pages.cluster.linkDeploy",
             hintKey: "pages.cluster.linkDeployHint",
             icon: Upload,
@@ -230,42 +232,32 @@ async function refreshStatus(): Promise<void> {
                             </h2>
                         </div>
 
-                        <dl class="grid gap-3 text-sm">
-                            <div>
-                                <dt class="text-xs text-base-content/60">
-                                    {{ t("pages.cluster.controlPlaneId") }}
-                                </dt>
-                                <dd class="font-mono">
-                                    {{ status.health.controlPlaneId ?? "-" }}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt class="text-xs text-base-content/60">
-                                    {{ t("pages.cluster.leaderId") }}
-                                </dt>
-                                <dd class="font-mono">
-                                    {{ status.leaderId ?? "-" }}
-                                </dd>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <dt class="text-xs text-base-content/60">
-                                        {{ t("pages.cluster.workloadVolumes") }}
-                                    </dt>
-                                    <dd class="text-lg font-semibold">
-                                        {{ summary?.volumes ?? 0 }}
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt class="text-xs text-base-content/60">
-                                        {{ t("pages.cluster.workloadSecrets") }}
-                                    </dt>
-                                    <dd class="text-lg font-semibold">
-                                        {{ summary?.secrets ?? 0 }}
-                                    </dd>
-                                </div>
-                            </div>
-                        </dl>
+                        <MetadataGrid density="compact">
+                            <MetadataGridItem
+                                :label="t('pages.cluster.controlPlaneId')"
+                                :value="status.health.controlPlaneId"
+                            >
+                                <span class="font-mono">{{ status.health.controlPlaneId ?? "-" }}</span>
+                            </MetadataGridItem>
+                            <MetadataGridItem
+                                :label="t('pages.cluster.leaderId')"
+                                :value="status.leaderId"
+                            >
+                                <span class="font-mono">{{ status.leaderId ?? "-" }}</span>
+                            </MetadataGridItem>
+                            <MetadataGridItem
+                                :label="t('pages.cluster.workloadVolumes')"
+                                :value="summary?.volumes ?? 0"
+                            >
+                                <span class="text-lg font-semibold">{{ summary?.volumes ?? 0 }}</span>
+                            </MetadataGridItem>
+                            <MetadataGridItem
+                                :label="t('pages.cluster.workloadSecrets')"
+                                :value="summary?.secrets ?? 0"
+                            >
+                                <span class="text-lg font-semibold">{{ summary?.secrets ?? 0 }}</span>
+                            </MetadataGridItem>
+                        </MetadataGrid>
                     </div>
                 </div>
 

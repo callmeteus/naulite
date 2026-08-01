@@ -154,6 +154,25 @@ export const clusterStore = reactive({
     },
 
     /**
+     * Deletes a cluster service by name.
+     *
+     * @param name Service name
+     * @returns Nothing.
+     * @throws {unknown}
+     */
+    async deleteService(name: string): Promise<void> {
+        this.error = null;
+
+        try {
+            await nauliteClient.deleteService(name);
+            await this.refreshOverview({ silent: true });
+        } catch (err) {
+            this.setError(err);
+            throw err;
+        }
+    },
+
+    /**
      * Loads volumes from the admin API.
      *
      * @returns Nothing.

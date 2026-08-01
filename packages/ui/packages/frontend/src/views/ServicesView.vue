@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { RouterLink, useRouter } from "vue-router";
 import type { Service } from "@naulite/sdk";
 
 import PageLayout from "../components/layout/PageLayout.vue";
@@ -14,6 +15,7 @@ import { useClusterStore } from "../stores/Cluster";
 import { formatServiceReconcileError } from "../utils/formatReconcileResults";
 
 const { t } = useI18n();
+const router = useRouter();
 const auth = useAuthStore();
 const store = useClusterStore();
 const actionMessage = ref("");
@@ -114,7 +116,7 @@ async function redispatchService(serviceName: string): Promise<void> {
             title-key="pages.services.emptyTitle"
             description-key="pages.services.emptyDescription"
             action-label-key="pages.services.emptyAction"
-            action-to="/runs?deploy=open"
+            action-to="/runs/deploy"
         />
 
         <div v-else-if="!store.error" class="card bg-base-100 shadow">
@@ -132,8 +134,21 @@ async function redispatchService(serviceName: string): Promise<void> {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="service in store.services" :key="service.name">
-                            <td>{{ service.name }}</td>
+                        <tr
+                            v-for="service in store.services"
+                            :key="service.name"
+                            class="cursor-pointer hover:bg-base-200/60"
+                            @click="router.push(`/services/${service.name}`)"
+                        >
+                            <td>
+                                <RouterLink
+                                    :to="`/services/${service.name}`"
+                                    class="link link-hover font-medium"
+                                    @click.stop
+                                >
+                                    {{ service.name }}
+                                </RouterLink>
+                            </td>
                             <td><StatusPill :status="service.status" /></td>
                             <td>{{ service.desiredReplicas }}</td>
                             <td>

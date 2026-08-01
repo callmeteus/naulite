@@ -9,6 +9,8 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import MetadataGrid from "../components/ui/MetadataGrid.vue";
+import MetadataGridItem from "../components/ui/MetadataGridItem.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
 import {
     NodeProvisionProviderRelation
@@ -185,50 +187,34 @@ async function terminateProvision(): Promise<void> {
                         {{ t("pages.provision.detailSummary") }}
                     </h2>
 
-                    <dl class="grid gap-3 sm:grid-cols-2">
-                        <div>
-                            <dt class="text-xs text-base-content/60">
-                                {{ t("pages.provision.provider") }}
-                            </dt>
-                            <dd class="font-medium">
-                                {{ getRelationLabel(NodeProvisionProviderRelation, provision.provider, t) }}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs text-base-content/60">
-                                {{ t("pages.provision.instanceType") }}
-                            </dt>
-                            <dd class="font-mono text-sm">
-                                {{ provision.instanceType }}
-                            </dd>
-                        </div>
-                        <div v-if="provision.region">
-                            <dt class="text-xs text-base-content/60">
-                                {{ t("pages.provision.region") }}
-                            </dt>
-                            <dd class="font-mono text-sm">
-                                {{ provision.region }}
-                            </dd>
-                        </div>
-                        <div v-if="provision.cloudInstanceId">
-                            <dt class="text-xs text-base-content/60">
-                                {{ t("pages.provision.cloudInstance") }}
-                            </dt>
-                            <dd class="font-mono text-sm">
-                                {{ provision.cloudInstanceId }}
-                            </dd>
-                        </div>
-                        <div v-if="provision.nodeId">
-                            <dt class="text-xs text-base-content/60">
-                                {{ t("pages.provision.nodeId") }}
-                            </dt>
-                            <dd>
-                                <RouterLink :to="`/nodes/${provision.nodeId}`" class="link link-primary font-mono text-sm">
-                                    {{ provision.nodeId }}
-                                </RouterLink>
-                            </dd>
-                        </div>
-                    </dl>
+                    <MetadataGrid :columns="2" density="compact">
+                        <MetadataGridItem :label="t('pages.provision.provider')">
+                            {{ getRelationLabel(NodeProvisionProviderRelation, provision.provider, t) }}
+                        </MetadataGridItem>
+                        <MetadataGridItem :label="t('pages.provision.instanceType')">
+                            <span class="font-mono text-sm">{{ provision.instanceType }}</span>
+                        </MetadataGridItem>
+                        <MetadataGridItem
+                            v-if="provision.region"
+                            :label="t('pages.provision.region')"
+                        >
+                            <span class="font-mono text-sm">{{ provision.region }}</span>
+                        </MetadataGridItem>
+                        <MetadataGridItem
+                            v-if="provision.cloudInstanceId"
+                            :label="t('pages.provision.cloudInstance')"
+                        >
+                            <span class="font-mono text-sm">{{ provision.cloudInstanceId }}</span>
+                        </MetadataGridItem>
+                        <MetadataGridItem
+                            v-if="provision.nodeId"
+                            :label="t('pages.provision.nodeId')"
+                        >
+                            <RouterLink :to="`/nodes/${provision.nodeId}`" class="link link-primary font-mono text-sm">
+                                {{ provision.nodeId }}
+                            </RouterLink>
+                        </MetadataGridItem>
+                    </MetadataGrid>
 
                     <ErrorAlert :error="provision.error ?? null" />
 

@@ -35,4 +35,22 @@ describe("NetBirdService", () => {
         expect(group.name).toBe("naulite-nodes");
         expect(group.peers).toEqual([]);
     });
+
+    it("bootstraps a default dev mesh with groups, devices, and ACLs", async () => {
+        const adapter = new MockNetBirdAdapter();
+
+        await adapter.bootstrapDevMesh([{
+            deviceId: "mock-peer-dev-local",
+            hostname: "dev-local"
+        }]);
+
+        const groups = await adapter.listGroups();
+        const devices = await adapter.listDevices();
+        const acls = await adapter.listAcls();
+
+        expect(groups).toHaveLength(1);
+        expect(devices).toHaveLength(1);
+        expect(acls).toHaveLength(1);
+        expect(devices[0]?.online).toBe(true);
+    });
 });

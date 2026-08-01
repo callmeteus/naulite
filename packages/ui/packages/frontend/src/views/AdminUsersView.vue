@@ -111,7 +111,7 @@ async function createUser(): Promise<void> {
  */
 function openEditModal(user: AdminUser): void {
     editUser.value = user;
-    editEmail.value = user.email;
+    editEmail.value = user.email ?? "";
     editRole.value = user.role;
     editPassword.value = "";
     editModalRef.value?.showModal();
@@ -137,7 +137,7 @@ async function saveEditUser(): Promise<void> {
         return;
     }
 
-    const trimmedEmail = editEmail.value.trim();
+    const trimmedEmail = (editEmail.value ?? "").trim();
 
     if (!trimmedEmail) {
         return;
@@ -381,7 +381,7 @@ async function confirmDisableUser(): Promise<void> {
                         <button type="button" class="btn" @click="closeEditModal">
                             {{ t("common.cancel") }}
                         </button>
-                        <button type="submit" class="btn btn-primary" :disabled="loading || !editEmail.trim()">
+                        <button type="submit" class="btn btn-primary" :disabled="loading || !(editEmail ?? '').trim()">
                             {{ t("common.save") }}
                         </button>
                     </div>

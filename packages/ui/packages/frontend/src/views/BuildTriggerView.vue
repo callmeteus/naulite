@@ -3,21 +3,20 @@ import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { RouterLink, useRouter } from "vue-router";
 
-import ErrorAlert from "../ui/ErrorAlert.vue";
-import { useAuthStore } from "../../stores/Auth";
-import { useClusterStore } from "../../stores/Cluster";
+import PageLayout from "../components/layout/PageLayout.vue";
+import ErrorAlert from "../components/ui/ErrorAlert.vue";
+import { useAuthStore } from "../stores/Auth";
+import { useClusterStore } from "../stores/Cluster";
 
 const { t } = useI18n();
 const router = useRouter();
 const auth = useAuthStore();
 const store = useClusterStore();
 
-const dialogRef = ref<HTMLDialogElement | null>(null);
 const serviceName = ref("");
 const provider = ref("");
 const registry = ref("");
 const submitting = ref(false);
-const submitMessage = ref("");
 
 const canBuild = computed(() => auth.hasPermission("runs:write"));
 const hasServices = computed(() => store.services.length > 0);
@@ -35,25 +34,6 @@ onMounted(() => {
 });
 
 /**
- * Opens the build dialog.
- *
- * @returns Nothing.
- */
-function open(): void {
-    submitMessage.value = "";
-    dialogRef.value?.showModal();
-}
-
-/**
- * Closes the build dialog.
- *
- * @returns Nothing.
- */
-function close(): void {
-    dialogRef.value?.close();
-}
-
-/**
  * Triggers a service image build and opens the resulting pipeline run.
  *
  * @returns Nothing.
@@ -66,7 +46,6 @@ async function triggerBuild(): Promise<void> {
     }
 
     submitting.value = true;
-    submitMessage.value = "";
 
     try {
         const result = await store.triggerBuild({
@@ -75,68 +54,59 @@ async function triggerBuild(): Promise<void> {
             registry: registry.value.trim() || undefined
         });
 
-        close();
-
         if (result.runId) {
             await router.push(`/runs/${result.runId}`);
             return;
         }
 
-        submitMessage.value = t("pages.runs.buildQueued");
         await router.push("/runs?kind=ci_build");
     } finally {
         submitting.value = false;
     }
 }
-
-defineExpose({
-    open,
-    close
-});
 </script>
 
 <template>
-    <dialog ref="dialogRef" class="modal">
-        <div class="modal-box max-w-2xl">
-            <h3 class="text-lg font-bold">
-                {{ t("pages.runs.buildTitle") }}
-            </h3>
-            <p class="py-2 text-sm text-base-content/70">
-                {{ t("pages.runs.buildHint") }}
+    <PageLayout title-key="pages.runs.buildTitle" hint-key="pages.runs.buildHint">
+        <template #actions>
+            <RouterLink to="/runs" class="btn btn-ghost btn-sm">
+                {{ t("pages.runs.backToRuns") }}
+            </RouterLink>
+        </template>
+
+        <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
+            <div class="alert border border-info/20 bg-info/10 text-sm">
+                <span>{{ t("pages.runs.buildIntro") }}</span>
+            </div>
+
+            <ol class="list-decimal space-y-2 pl-5 text-sm text-base-content/80">
+                <li>{{ t("pages.runs.buildStep1") }}</li>
+                <li>{{ t("pages.runs.buildStep2") }}</li>
+                <li>{{ t("pages.runs.buildStep3") }}</li>
+            </ol>
+
+            <div
+                v-if="!hasServices"
+                class="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm"
+            >
+                <p>{{ t("pages.runs.buildNoServices") }}</p>
+                <RouterLink to="/runs/deploy" class="link link-primary mt-2 inline-block">
+                    {{ t("pages.runs.buildGoDeploy") }}
+                </RouterLink>
+            </div>
+
+            <p v-if="!canBuild" class="text-sm text-base-content/70">
+                {{ t("pages.runs.buildNoPermission") }}
             </p>
 
-            <div class="space-y-4">
-                <div class="alert border border-info/20 bg-info/10 text-sm">
-                    <span>{{ t("pages.runs.buildIntro") }}</span>
-                </div>
+            <ErrorAlert :error="store.error" />
 
-                <ol class="list-decimal space-y-2 pl-5 text-sm text-base-content/80">
-                    <li>{{ t("pages.runs.buildStep1") }}</li>
-                    <li>{{ t("pages.runs.buildStep2") }}</li>
-                    <li>{{ t("pages.runs.buildStep3") }}</li>
-                </ol>
-
-                <div
-                    v-if="!hasServices"
-                    class="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm"
-                >
-                    <p>{{ t("pages.runs.buildNoServices") }}</p>
-                    <RouterLink to="/runs?deploy=open" class="link link-primary mt-2 inline-block" @click="close">
-                        {{ t("pages.runs.buildGoDeploy") }}
-                    </RouterLink>
-                </div>
-
-                <p v-if="!canBuild" class="text-sm text-base-content/70">
-                    {{ t("pages.runs.buildNoPermission") }}
-                </p>
-
-                <ErrorAlert :error="store.error" />
-
-                <form
-                    v-if="canBuild"
-                    class="grid gap-4 md:grid-cols-2"
-                    @submit.prevent="triggerBuild"
-                >
+            <form
+                v-if="canBuild"
+                class="card bg-base-100 shadow"
+                @submit.prevent="triggerBuild"
+            >
+                <div class="card-body grid gap-4 md:grid-cols-2">
                     <label class="form-control w-full">
                         <span class="label-text">{{ t("pages.runs.buildServiceName") }}</span>
                         <select
@@ -194,32 +164,27 @@ defineExpose({
                             {{ t("pages.runs.buildRegistryHint") }}
                         </span>
                     </label>
+                </div>
+            </form>
 
-                    <p v-if="submitMessage" class="text-sm text-base-content/70 md:col-span-2">
-                        {{ submitMessage }}
-                    </p>
-
-                    <div class="modal-action mt-0 px-0 md:col-span-2">
-                        <button type="button" class="btn" @click="close">
-                            {{ t("common.cancel") }}
-                        </button>
-                        <RouterLink to="/container-registry" class="btn btn-ghost" @click="close">
-                            {{ t("pages.runs.buildViewRegistry") }}
-                        </RouterLink>
-                        <button
-                            type="submit"
-                            class="btn btn-primary"
-                            :class="{ loading: submitting || store.loading }"
-                            :disabled="!canSubmit"
-                        >
-                            {{ t("pages.runs.buildTrigger") }}
-                        </button>
-                    </div>
-                </form>
+            <div class="flex flex-wrap justify-end gap-2">
+                <RouterLink to="/runs" class="btn">
+                    {{ t("common.cancel") }}
+                </RouterLink>
+                <RouterLink to="/container-registry" class="btn btn-ghost">
+                    {{ t("pages.runs.buildViewRegistry") }}
+                </RouterLink>
+                <button
+                    v-if="canBuild"
+                    type="button"
+                    class="btn btn-primary"
+                    :class="{ loading: submitting || store.loading }"
+                    :disabled="!canSubmit"
+                    @click="triggerBuild"
+                >
+                    {{ t("pages.runs.buildTrigger") }}
+                </button>
             </div>
         </div>
-        <form method="dialog" class="modal-backdrop">
-            <button type="submit">{{ t("common.cancel") }}</button>
-        </form>
-    </dialog>
+    </PageLayout>
 </template>

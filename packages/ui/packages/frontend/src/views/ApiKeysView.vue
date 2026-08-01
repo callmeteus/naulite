@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { ApiKey } from "@naulite/sdk";
@@ -8,14 +8,19 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import { useAuthStore } from "../stores/Auth";
 
 const { t } = useI18n();
+const auth = useAuthStore();
 const keys = ref<ApiKey[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const name = ref("");
 const createdSecret = ref<string | null>(null);
 const creating = ref(false);
+const createModalRef = ref<HTMLDialogElement | null>(null);
+
+const canWrite = computed(() => auth.hasPermission("admin:api-keys:write"));
 
 /**
  * Loads API keys from the control plane.
@@ -36,6 +41,25 @@ async function refresh(): Promise<void> {
 }
 
 /**
+ * Opens the create API key modal.
+ *
+ * @returns Nothing.
+ */
+function openCreateModal(): void {
+    name.value = "";
+    createModalRef.value?.showModal();
+}
+
+/**
+ * Closes the create API key modal.
+ *
+ * @returns Nothing.
+ */
+function closeCreateModal(): void {
+    createModalRef.value?.close();
+}
+
+/**
  * Creates a new API key for remote CLI access.
  *
  * @returns Nothing.
@@ -52,7 +76,7 @@ async function createKey(): Promise<void> {
     try {
         const created = await nauliteClient.createApiKey(trimmedName);
         createdSecret.value = created.secret;
-        name.value = "";
+        closeCreateModal();
         await refresh();
     } catch (err) {
         error.value = err instanceof Error ? err.message : String(err);
@@ -94,6 +118,17 @@ onMounted(() => {
 
 <template>
     <PageLayout title-key="pages.apiKeys.title" hint-key="pages.apiKeys.hint">
+        <template #actions>
+            <button
+                v-if="canWrite"
+                type="button"
+                class="btn btn-primary btn-sm"
+                @click="openCreateModal"
+            >
+                {{ t("pages.apiKeys.create") }}
+            </button>
+        </template>
+
         <ErrorAlert :error="error" />
 
         <div v-if="createdSecret" class="alert alert-warning">
@@ -109,27 +144,6 @@ onMounted(() => {
             </div>
         </div>
 
-        <div class="card bg-base-100 shadow">
-            <div class="card-body">
-                <form class="flex flex-wrap items-end gap-3" @submit.prevent="createKey">
-                    <label class="form-control w-full max-w-md">
-                        <span class="label-text">{{ t("pages.apiKeys.name") }}</span>
-                        <input
-                            id="api-key-name"
-                            v-model="name"
-                            type="text"
-                            maxlength="120"
-                            class="input input-bordered w-full"
-                            :placeholder="t('pages.apiKeys.namePlaceholder')"
-                        />
-                    </label>
-                    <button type="submit" class="btn btn-primary" :disabled="creating || !name.trim()">
-                        {{ t("pages.apiKeys.create") }}
-                    </button>
-                </form>
-            </div>
-        </div>
-
         <div v-if="loading" class="flex items-center gap-2">
             <LoadingSpinner />
             <span>{{ t("common.loading") }}</span>
@@ -139,7 +153,8 @@ onMounted(() => {
             v-else-if="!error && keys.length === 0"
             title-key="pages.apiKeys.emptyTitle"
             description-key="pages.apiKeys.emptyDescription"
-            action-label-key="pages.apiKeys.emptyAction"
+            :action-label-key="canWrite ? 'pages.apiKeys.emptyAction' : undefined"
+            @action="openCreateModal"
         />
 
         <div v-else-if="!error" class="card bg-base-100 shadow">
@@ -151,7 +166,9 @@ onMounted(() => {
                             <th>{{ t("pages.apiKeys.prefix") }}</th>
                             <th>{{ t("pages.apiKeys.createdAt") }}</th>
                             <th>{{ t("pages.apiKeys.lastUsed") }}</th>
-                            <th>{{ t("common.actions") }}</th>
+                            <th v-if="canWrite">
+                                {{ t("common.actions") }}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -160,7 +177,7 @@ onMounted(() => {
                             <td><code>{{ apiKey.prefix }}...</code></td>
                             <td>{{ apiKey.createdAt }}</td>
                             <td>{{ apiKey.lastUsedAt ?? "-" }}</td>
-                            <td>
+                            <td v-if="canWrite">
                                 <button type="button" class="btn btn-error btn-outline btn-sm" @click="revokeKey(apiKey.id)">
                                     {{ t("pages.apiKeys.revoke") }}
                                 </button>
@@ -170,5 +187,42 @@ onMounted(() => {
                 </table>
             </div>
         </div>
+
+        <dialog ref="createModalRef" class="modal">
+            <div class="modal-box">
+                <h3 class="text-lg font-bold">
+                    {{ t("pages.apiKeys.addTitle") }}
+                </h3>
+
+                <form class="mt-4 grid gap-4" @submit.prevent="createKey">
+                    <label class="form-control w-full">
+                        <span class="label-text">{{ t("pages.apiKeys.name") }}</span>
+                        <input
+                            id="api-key-name"
+                            v-model="name"
+                            type="text"
+                            maxlength="120"
+                            class="input input-bordered w-full"
+                            :placeholder="t('pages.apiKeys.namePlaceholder')"
+                            autocomplete="off"
+                        />
+                    </label>
+
+                    <div class="modal-action mt-2 px-0">
+                        <button type="button" class="btn" @click="closeCreateModal">
+                            {{ t("common.cancel") }}
+                        </button>
+                        <button type="submit" class="btn btn-primary" :disabled="creating || !name.trim()">
+                            {{ t("pages.apiKeys.create") }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <form method="dialog" class="modal-backdrop">
+                <button type="button" @click="closeCreateModal">
+                    close
+                </button>
+            </form>
+        </dialog>
     </PageLayout>
 </template>

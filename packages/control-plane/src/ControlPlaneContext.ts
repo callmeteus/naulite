@@ -39,6 +39,7 @@ import { LeaderElection } from "./services/LeaderElection";
 import { createMetricsSyncService, type MetricsSyncService } from "./services/MetricsSyncService";
 import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
 import { NetBirdEnrollmentService } from "./services/NetBirdEnrollmentService";
+import type { NetBirdAdapter } from "./services/NetBirdService";
 import { NetBirdService } from "./services/NetBirdService";
 import { createNodeProvisionService, type NodeProvisionService } from "./services/NodeProvisionService";
 import { SecretsService, resolveSecretMasterKey } from "./services/SecretsService";
@@ -68,6 +69,7 @@ export interface ControlPlaneContext {
     containerRegistryService: ContainerRegistryService;
     controlPlaneSync: ControlPlaneSync;
     leaderElection: LeaderElection;
+    netBirdAdapter: NetBirdAdapter;
     netBirdService: NetBirdService;
     netBirdEnrollment: NetBirdEnrollmentService;
     gatewayProvider: TraefikNetBirdGatewayProvider;
@@ -161,6 +163,7 @@ export function createControlPlaneContext(
         containerRegistryService: createContainerRegistryService(),
         controlPlaneSync,
         leaderElection,
+        netBirdAdapter,
         netBirdService,
         netBirdEnrollment,
         gatewayProvider,

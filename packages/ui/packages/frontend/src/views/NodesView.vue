@@ -16,6 +16,11 @@ import {
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 import { getRelationLabel } from "../utils/Relation";
+import {
+    formatNodeCpuUsage,
+    formatNodeMemoryUsage,
+    formatNodeOsLabel
+} from "../utils/formatNodePresentation";
 
 const { t } = useI18n();
 const store = useClusterStore();
@@ -101,7 +106,7 @@ async function refreshAll(): Promise<void> {
                 title-key="pages.nodes.emptyTitle"
                 description-key="pages.nodes.emptyDescription"
                 :action-label-key="canProvision ? 'pages.provision.newAction' : 'pages.nodes.emptyAction'"
-                :action-to="canProvision ? '/nodes/new' : '/runs?deploy=open'"
+                :action-to="canProvision ? '/nodes/new' : '/runs/deploy'"
             />
 
             <div v-else-if="!store.error" class="card bg-base-100 shadow">
@@ -125,10 +130,10 @@ async function refreshAll(): Promise<void> {
                                         {{ node.hostname }}
                                     </RouterLink>
                                 </td>
-                                <td>{{ node.osFamily ?? "-" }} {{ node.osVersion ?? "" }}</td>
+                                <td>{{ formatNodeOsLabel(node.osFamily, node.osVersion) }}</td>
                                 <td><StatusPill :status="node.status" /></td>
-                                <td>{{ node.resources.cpuMillisUsed }}</td>
-                                <td>{{ node.resources.memoryMbUsed }} MB</td>
+                                <td>{{ formatNodeCpuUsage(node.resources) }}</td>
+                                <td>{{ formatNodeMemoryUsage(node.resources) }}</td>
                             </tr>
                         </tbody>
                     </table>

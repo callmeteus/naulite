@@ -258,6 +258,45 @@ export class MockNetBirdAdapter implements NetBirdAdapter {
     registerAcl(acl: NetBirdAclRule): void {
         this.acls.set(acl.id, acl);
     }
+
+    /**
+     * Seeds a default private mesh for local development when the mock adapter is empty.
+     *
+     * @param nodes Cluster nodes to mirror as mesh devices
+     * @returns Nothing.
+     */
+    async bootstrapDevMesh(nodes: Array<{ deviceId: string; hostname: string }>): Promise<void> {
+        if (this.groups.size > 0) {
+            return;
+        }
+
+        const nodesGroup = await this.ensureGroup("naulite-nodes");
+        const effectiveNodes = nodes.length > 0
+            ? nodes
+            : [{ deviceId: "mock-peer-dev-local", hostname: "dev-local" }];
+        const peerIds: string[] = [];
+
+        for (const node of effectiveNodes) {
+            this.registerDevice({
+                id: node.deviceId,
+                name: node.hostname,
+                hostname: node.hostname,
+                groups: [nodesGroup.id],
+                online: true
+            });
+            peerIds.push(node.deviceId);
+        }
+
+        await this.assignPeersToGroup(nodesGroup.id, peerIds);
+        await this.ensurePolicy({
+            name: "naulite-nodes-access",
+            sourceGroupIds: [nodesGroup.id],
+            destinationGroupIds: [nodesGroup.id],
+            ports: [],
+            protocol: "tcp",
+            bidirectional: true
+        });
+    }
 }
 
 /**

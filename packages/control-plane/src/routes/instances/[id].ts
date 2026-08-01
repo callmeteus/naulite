@@ -3,9 +3,19 @@ import {
     InstanceSchema,
     RouteMessageResponseSchema
 } from "@naulite/shared";
+import { z } from "zod";
+
 import { ControlPlaneService } from "../../ControlPlaneService";
+import { AuthPreHandlers } from "../../auth/AuthPreHandlers";
+import { LeaderPreHandlers } from "../../auth/LeaderPreHandlers";
 import { PermissionPreHandlers } from "../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../routing/DefineRoute";
+
+const InstanceLifecycleResultSchema = z.object({
+    instanceId: z.string(),
+    status: z.enum(["dispatched", "failed"]),
+    message: z.string().optional()
+});
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("workloads:read"),
@@ -31,5 +41,28 @@ export const GET = defineRoute({
         }
 
         return instance;
+    }
+});
+
+export const DELETE = defineRoute({
+    preHandler: [
+        AuthPreHandlers.authorizedLocalOrApiKey,
+        LeaderPreHandlers.requireLeader(),
+        PermissionPreHandlers.requirePermission("workloads:write")
+    ],
+
+    schema: {
+        summary: "Remove instance",
+        description: "Stops and removes a workload instance from its node agent and deletes the control plane record.",
+        tags: ["instances"],
+        operationId: "removeInstance",
+        params: IdParamsSchema,
+        response: {
+            200: InstanceLifecycleResultSchema
+        }
+    },
+
+    async handler(req) {
+        return ControlPlaneService.InstanceLifecycle.removeInstance(req.params.id);
     }
 });

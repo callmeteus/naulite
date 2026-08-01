@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { RouterLink } from "vue-router";
 import { ChevronRight, Folder, KeyRound, Plus } from "@lucide/vue";
 
 import PageLayout from "../components/layout/PageLayout.vue";
-import SecretFormModal from "../components/secrets/SecretFormModal.vue";
 import SecretRevealModal from "../components/secrets/SecretRevealModal.vue";
 import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
@@ -18,29 +18,20 @@ const { t } = useI18n();
 const store = useClusterStore();
 const auth = useAuthStore();
 const currentPath = ref<string[]>([]);
-const formModalRef = ref<InstanceType<typeof SecretFormModal> | null>(null);
 const revealModalRef = ref<InstanceType<typeof SecretRevealModal> | null>(null);
 const deleteTarget = ref("");
 const deleteModalRef = ref<InstanceType<typeof ConfirmModal> | null>(null);
 
 const browserEntries = computed(() => listSecretBrowserEntries(store.secrets, currentPath.value));
 
-const currentFolderPrefix = computed(() => (
-    currentPath.value.length > 0 ? `${currentPath.value.join("/")}/` : ""
-));
+const createSecretTo = computed(() => {
+    const prefix = currentPath.value.length > 0 ? `${currentPath.value.join("/")}/` : "";
+    return prefix.length > 0 ? `/secrets/new?prefix=${encodeURIComponent(prefix)}` : "/secrets/new";
+});
 
 onMounted(() => {
     void store.refreshSecrets();
 });
-
-/**
- * Opens the create secret modal with the active folder prefix.
- *
- * @returns Nothing.
- */
-function openCreateModal(): void {
-    formModalRef.value?.open(currentFolderPrefix.value);
-}
 
 /**
  * Navigates to a virtual folder path.
@@ -63,18 +54,13 @@ function openFolder(path: string[]): void {
 }
 
 /**
- * Saves a secret from the form modal.
+ * Builds the edit route for a secret.
  *
- * @param payload Secret upsert payload
- * @returns Nothing.
+ * @param name Secret name
+ * @returns Edit page route
  */
-async function saveSecret(payload: {
-    name: string;
-    data: Record<string, string>;
-    description?: string;
-}): Promise<void> {
-    await store.upsertSecret(payload.name, payload.data, payload.description);
-    formModalRef.value?.close();
+function secretEditTo(name: string): string {
+    return `/secrets/edit?name=${encodeURIComponent(name)}`;
 }
 
 /**
@@ -116,10 +102,10 @@ async function confirmDeleteSecret(): Promise<void> {
 <template>
     <PageLayout title-key="pages.secrets.title" hint-key="pages.secrets.hint">
         <template v-if="auth.hasPermission('secrets:write')" #actions>
-            <button type="button" class="btn btn-primary" @click="openCreateModal">
+            <RouterLink :to="createSecretTo" class="btn btn-primary">
                 <Plus class="size-4" />
                 {{ t("pages.secrets.add") }}
-            </button>
+            </RouterLink>
         </template>
 
         <ErrorAlert :error="store.error" />
@@ -134,7 +120,7 @@ async function confirmDeleteSecret(): Promise<void> {
             title-key="pages.secrets.emptyTitle"
             description-key="pages.secrets.emptyDescription"
             :action-label-key="auth.hasPermission('secrets:write') ? 'pages.secrets.emptyAction' : undefined"
-            @action="openCreateModal"
+            action-to="/secrets/new"
         />
 
         <div v-else-if="!store.error" class="flex flex-col gap-4">
@@ -161,6 +147,13 @@ async function confirmDeleteSecret(): Promise<void> {
                 <p class="text-sm text-base-content/70">
                     {{ t("pages.secrets.emptyFolder") }}
                 </p>
+                <RouterLink
+                    v-if="auth.hasPermission('secrets:write')"
+                    :to="createSecretTo"
+                    class="btn btn-primary btn-sm mt-4"
+                >
+                    {{ t("pages.secrets.add") }}
+                </RouterLink>
             </div>
 
             <div v-else class="card bg-base-100 shadow">
@@ -222,6 +215,13 @@ async function confirmDeleteSecret(): Promise<void> {
                                         >
                                             {{ t("pages.secrets.reveal") }}
                                         </button>
+                                        <RouterLink
+                                            v-if="auth.hasPermission('secrets:write')"
+                                            :to="secretEditTo(entry.fullName)"
+                                            class="btn btn-outline btn-sm"
+                                        >
+                                            {{ t("common.edit") }}
+                                        </RouterLink>
                                         <button
                                             v-if="auth.hasPermission('secrets:write')"
                                             type="button"
@@ -247,7 +247,6 @@ async function confirmDeleteSecret(): Promise<void> {
             </div>
         </div>
 
-        <SecretFormModal ref="formModalRef" @save="saveSecret" />
         <SecretRevealModal ref="revealModalRef" />
 
         <ConfirmModal

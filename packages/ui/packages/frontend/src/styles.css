@@ -61,3 +61,7 @@ body,
 body {
     margin: 0;
 }
+
+.metrics-chart .uplot {
+    width: 100%;
+}

@@ -15,6 +15,17 @@ import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import { useClusterStore } from "../stores/Cluster";
+import {
+    formatCpuUsageSummary,
+    formatInstanceCpuPercent,
+    formatInstanceMemoryBytes,
+    formatMemoryUsageSummary,
+    latestSeriesValue,
+    pickPromqlSampleValue,
+    sumPromqlSamples,
+    toPercentPlotData
+} from "../utils/formatMetrics";
+import { percentChartFormatter, renderMetricsPlot, syncMetricsPlotSize } from "../utils/metricsCharts";
 import { resolveApiErrorMessage } from "../utils/ApiErrorMessage";
 
 const { t, locale } = useI18n();
@@ -33,12 +44,55 @@ const nodeCpuChart = ref<HTMLElement | null>(null);
 const nodeMemChart = ref<HTMLElement | null>(null);
 const agentMetricsReachable = ref<boolean | null>(null);
 const instanceRows = ref<Array<{ instanceId: string; serviceName: string; cpu: string; memory: string }>>([]);
+const clusterCpuSummary = ref("-");
+const clusterMemSummary = ref("-");
+const nodeCpuSummary = ref("-");
+const nodeMemSummary = ref("-");
 
 let clusterCpuPlot: uPlot | null = null;
 let clusterMemPlot: uPlot | null = null;
 let nodeCpuPlot: uPlot | null = null;
 let nodeMemPlot: uPlot | null = null;
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
+let resizeObserver: ResizeObserver | null = null;
+
+/**
+ * Re-renders chart width after the layout changes.
+ *
+ * @returns Nothing.
+ */
+function syncPlotSizes(): void {
+    syncMetricsPlotSize(clusterCpuPlot, clusterCpuChart.value);
+    syncMetricsPlotSize(clusterMemPlot, clusterMemChart.value);
+    syncMetricsPlotSize(nodeCpuPlot, nodeCpuChart.value);
+    syncMetricsPlotSize(nodeMemPlot, nodeMemChart.value);
+}
+
+/**
+ * Watches chart containers for width changes.
+ *
+ * @returns Nothing.
+ */
+function observeChartContainers(): void {
+    if (!resizeObserver) {
+        resizeObserver = new ResizeObserver(() => {
+            syncPlotSizes();
+        });
+    } else {
+        resizeObserver.disconnect();
+    }
+
+    for (const container of [
+        clusterCpuChart.value,
+        clusterMemChart.value,
+        nodeCpuChart.value,
+        nodeMemChart.value
+    ]) {
+        if (container) {
+            resizeObserver.observe(container);
+        }
+    }
+}
 
 const selectedNode = computed(() => store.nodes.find((node) => node.id === selectedNodeId.value) ?? null);
 
@@ -77,6 +131,7 @@ onMounted(async () => {
     await store.refreshOverview();
     selectedNodeId.value = store.nodes[0]?.id ?? "";
     await refreshMetrics();
+
     refreshTimer = setInterval(() => {
         void refreshMetrics();
     }, 30000);
@@ -84,6 +139,11 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     destroyPlots();
+
+    if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+    }
 
     if (refreshTimer) {
         clearInterval(refreshTimer);
@@ -151,13 +211,14 @@ function hasPlotData(data: [number[], number[]]): boolean {
 }
 
 /**
- * Renders or updates a uPlot chart in the given container.
+ * Renders or updates a metrics chart in the given container.
  *
  * @param container Target element
  * @param label Series label for the legend
  * @param data uPlot data tuple
  * @param color Line color
  * @param existing Existing plot instance
+ * @param totalCapacity Optional capacity total for percentage scaling
  * @returns Updated plot instance
  */
 function renderPlot(
@@ -165,49 +226,24 @@ function renderPlot(
     label: string,
     data: [number[], number[]],
     color: string,
-    existing: uPlot | null
+    existing: uPlot | null,
+    totalCapacity?: number | null
 ): uPlot | null {
-    if (!container) {
-        return existing;
-    }
+    const hasCapacity = typeof totalCapacity === "number" && totalCapacity > 0;
+    const plotData = hasCapacity ? toPercentPlotData(data, totalCapacity) : data;
 
-    existing?.destroy();
-
-    return new uPlot(
+    return renderMetricsPlot(
+        container,
+        plotData,
         {
-            width: container.clientWidth || 640,
-            height: 220,
-            series: [
-                {},
-                {
-                    label,
-                    stroke: color,
-                    width: 2
-                }
-            ],
-            axes: [
-                {
-                    stroke: "rgba(255, 255, 255, 0.35)",
-                    grid: {
-                        stroke: "rgba(255, 255, 255, 0.08)"
-                    }
-                },
-                {
-                    stroke: "rgba(255, 255, 255, 0.35)",
-                    grid: {
-                        stroke: "rgba(255, 255, 255, 0.08)"
-                    }
-                }
-            ],
-            legend: {
-                show: true
-            },
-            cursor: {
-                show: true
-            }
+            label,
+            color,
+            locale: locale.value,
+            yMax: hasCapacity ? 100 : undefined,
+            yAxisLabel: hasCapacity ? "%" : undefined,
+            formatY: hasCapacity ? percentChartFormatter() : (value) => String(Math.round(value))
         },
-        data,
-        container
+        existing
     );
 }
 
@@ -247,6 +283,10 @@ async function refreshMetrics(): Promise<void> {
             nodeCpuHasData.value = false;
             nodeMemHasData.value = false;
             instanceRows.value = [];
+            clusterCpuSummary.value = "-";
+            clusterMemSummary.value = "-";
+            nodeCpuSummary.value = "-";
+            nodeMemSummary.value = "-";
             agentMetricsReachable.value = null;
             lastRefreshedAt.value = new Date();
             return;
@@ -254,7 +294,7 @@ async function refreshMetrics(): Promise<void> {
 
         const range = lastHourRange();
 
-        const [clusterCpu, clusterMem, nodeCpu, nodeMem, instanceCpu, instanceMem, agentUp] = await Promise.all([
+        const [clusterCpu, clusterMem, nodeCpu, nodeMem, instanceCpu, instanceMem, agentUp, clusterCpuTotal, clusterMemTotal, nodeCpuTotal, nodeMemTotal] = await Promise.all([
             nauliteClient.queryMetricsRange(
                 "sum(naulite_node_cpu_millis_used)",
                 range.start,
@@ -277,8 +317,17 @@ async function refreshMetrics(): Promise<void> {
             ),
             nauliteClient.queryMetrics("naulite_instance_cpu_percent"),
             nauliteClient.queryMetrics("naulite_instance_memory_bytes"),
-            nauliteClient.queryMetrics("naulite_agent_up")
+            nauliteClient.queryMetrics("naulite_agent_up"),
+            nauliteClient.queryMetrics("sum(naulite_node_cpu_millis_total)"),
+            nauliteClient.queryMetrics("sum(naulite_node_memory_mb_total)"),
+            nauliteClient.queryMetrics("naulite_node_cpu_millis_total"),
+            nauliteClient.queryMetrics("naulite_node_memory_mb_total")
         ]);
+
+        const clusterCpuCapacity = sumPromqlSamples(clusterCpuTotal.data?.result);
+        const clusterMemCapacity = sumPromqlSamples(clusterMemTotal.data?.result);
+        const nodeCpuCapacity = pickPromqlSampleValue(nodeCpuTotal.data?.result, selectedNodeId.value);
+        const nodeMemCapacity = pickPromqlSampleValue(nodeMemTotal.data?.result, selectedNodeId.value);
 
         agentMetricsReachable.value = (agentUp.data?.result?.length ?? 0) > 0;
 
@@ -291,6 +340,10 @@ async function refreshMetrics(): Promise<void> {
         }
 
         clusterCpuHasData.value = nextClusterCpuHasData;
+        clusterCpuSummary.value = formatCpuUsageSummary(
+            latestSeriesValue(clusterCpuData),
+            clusterCpuCapacity
+        );
 
         if (nextClusterCpuHasData) {
             await nextTick();
@@ -299,8 +352,10 @@ async function refreshMetrics(): Promise<void> {
                 t("pages.metrics.clusterCpu"),
                 clusterCpuData,
                 "#7cc4ff",
-                clusterCpuPlot
+                clusterCpuPlot,
+                clusterCpuCapacity
             );
+            syncMetricsPlotSize(clusterCpuPlot, clusterCpuChart.value);
         }
 
         const clusterMemData = toPlotData(pickSeries(clusterMem.data?.result));
@@ -312,6 +367,10 @@ async function refreshMetrics(): Promise<void> {
         }
 
         clusterMemHasData.value = nextClusterMemHasData;
+        clusterMemSummary.value = formatMemoryUsageSummary(
+            latestSeriesValue(clusterMemData),
+            clusterMemCapacity
+        );
 
         if (nextClusterMemHasData) {
             await nextTick();
@@ -320,8 +379,10 @@ async function refreshMetrics(): Promise<void> {
                 t("pages.metrics.clusterMemory"),
                 clusterMemData,
                 "#3fb950",
-                clusterMemPlot
+                clusterMemPlot,
+                clusterMemCapacity
             );
+            syncMetricsPlotSize(clusterMemPlot, clusterMemChart.value);
         }
 
         if (selectedNodeId.value) {
@@ -334,6 +395,10 @@ async function refreshMetrics(): Promise<void> {
             }
 
             nodeCpuHasData.value = nextNodeCpuHasData;
+            nodeCpuSummary.value = formatCpuUsageSummary(
+                latestSeriesValue(nodeCpuData),
+                nodeCpuCapacity
+            );
 
             if (nextNodeCpuHasData) {
                 await nextTick();
@@ -342,8 +407,10 @@ async function refreshMetrics(): Promise<void> {
                     t("pages.metrics.nodeCpu"),
                     nodeCpuData,
                     "#d2a8ff",
-                    nodeCpuPlot
+                    nodeCpuPlot,
+                    nodeCpuCapacity
                 );
+                syncMetricsPlotSize(nodeCpuPlot, nodeCpuChart.value);
             }
 
             const nodeMemData = toPlotData(pickSeries(nodeMem.data?.result, selectedNodeId.value));
@@ -355,6 +422,10 @@ async function refreshMetrics(): Promise<void> {
             }
 
             nodeMemHasData.value = nextNodeMemHasData;
+            nodeMemSummary.value = formatMemoryUsageSummary(
+                latestSeriesValue(nodeMemData),
+                nodeMemCapacity
+            );
 
             if (nextNodeMemHasData) {
                 await nextTick();
@@ -363,12 +434,16 @@ async function refreshMetrics(): Promise<void> {
                     t("pages.metrics.nodeMemory"),
                     nodeMemData,
                     "#ffa657",
-                    nodeMemPlot
+                    nodeMemPlot,
+                    nodeMemCapacity
                 );
+                syncMetricsPlotSize(nodeMemPlot, nodeMemChart.value);
             }
         } else {
             nodeCpuHasData.value = false;
             nodeMemHasData.value = false;
+            nodeCpuSummary.value = "-";
+            nodeMemSummary.value = "-";
             nodeCpuPlot?.destroy();
             nodeMemPlot?.destroy();
             nodeCpuPlot = null;
@@ -395,10 +470,13 @@ async function refreshMetrics(): Promise<void> {
                 (entry.metric.instance_id ?? entry.metric.instanceId) === instanceId
             )?.metric.service_name ?? "-",
 
-            cpu: cpuByInstance.get(instanceId) ?? "-",
-            memory: memByInstance.get(instanceId) ?? "-"
+            cpu: formatInstanceCpuPercent(cpuByInstance.get(instanceId) ?? "-"),
+            memory: formatInstanceMemoryBytes(memByInstance.get(instanceId) ?? "-")
         }));
         lastRefreshedAt.value = new Date();
+        await nextTick();
+        observeChartContainers();
+        syncPlotSizes();
     } catch (err) {
         error.value = resolveApiErrorMessage(err, t, (key) => key.startsWith("errors."));
     } finally {
@@ -498,29 +576,45 @@ async function refreshMetrics(): Promise<void> {
             <div class="grid gap-4 lg:grid-cols-2">
                 <div class="card bg-base-100 shadow">
                     <div class="card-body gap-3">
-                        <h2 class="card-title text-base">
-                            {{ t("pages.metrics.clusterCpu") }}
-                        </h2>
+                        <div class="flex flex-wrap items-baseline justify-between gap-2">
+                            <h2 class="card-title text-base">
+                                {{ t("pages.metrics.clusterCpu") }}
+                            </h2>
+                            <p
+                                v-if="clusterCpuHasData"
+                                class="text-sm font-medium tabular-nums text-base-content/80"
+                            >
+                                {{ clusterCpuSummary }}
+                            </p>
+                        </div>
                         <ChartEmptyState
                             v-if="!clusterCpuHasData"
                             title-key="pages.metrics.chartsEmptyTitle"
                             description-key="pages.metrics.chartsEmptyDescription"
                         />
-                        <div v-else ref="clusterCpuChart" class="min-h-[220px] w-full" />
+                        <div v-else ref="clusterCpuChart" class="metrics-chart min-h-[220px] w-full" />
                     </div>
                 </div>
 
                 <div class="card bg-base-100 shadow">
                     <div class="card-body gap-3">
-                        <h2 class="card-title text-base">
-                            {{ t("pages.metrics.clusterMemory") }}
-                        </h2>
+                        <div class="flex flex-wrap items-baseline justify-between gap-2">
+                            <h2 class="card-title text-base">
+                                {{ t("pages.metrics.clusterMemory") }}
+                            </h2>
+                            <p
+                                v-if="clusterMemHasData"
+                                class="text-sm font-medium tabular-nums text-base-content/80"
+                            >
+                                {{ clusterMemSummary }}
+                            </p>
+                        </div>
                         <ChartEmptyState
                             v-if="!clusterMemHasData"
                             title-key="pages.metrics.chartsEmptyTitle"
                             description-key="pages.metrics.chartsEmptyDescription"
                         />
-                        <div v-else ref="clusterMemChart" class="min-h-[220px] w-full" />
+                        <div v-else ref="clusterMemChart" class="metrics-chart min-h-[220px] w-full" />
                     </div>
                 </div>
             </div>
@@ -552,27 +646,43 @@ async function refreshMetrics(): Promise<void> {
 
                     <div class="grid gap-4 lg:grid-cols-2">
                         <div class="rounded-lg border border-base-300/60 p-4">
-                            <h3 class="mb-3 text-sm font-semibold">
-                                {{ t("pages.metrics.nodeCpu") }}
-                            </h3>
+                            <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                                <h3 class="text-sm font-semibold">
+                                    {{ t("pages.metrics.nodeCpu") }}
+                                </h3>
+                                <p
+                                    v-if="nodeCpuHasData"
+                                    class="text-sm font-medium tabular-nums text-base-content/80"
+                                >
+                                    {{ nodeCpuSummary }}
+                                </p>
+                            </div>
                             <ChartEmptyState
                                 v-if="!nodeCpuHasData"
                                 compact
                                 title-key="pages.metrics.chartsEmptyTitle"
                             />
-                            <div v-else ref="nodeCpuChart" class="min-h-[220px] w-full" />
+                            <div v-else ref="nodeCpuChart" class="metrics-chart min-h-[220px] w-full" />
                         </div>
 
                         <div class="rounded-lg border border-base-300/60 p-4">
-                            <h3 class="mb-3 text-sm font-semibold">
-                                {{ t("pages.metrics.nodeMemory") }}
-                            </h3>
+                            <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                                <h3 class="text-sm font-semibold">
+                                    {{ t("pages.metrics.nodeMemory") }}
+                                </h3>
+                                <p
+                                    v-if="nodeMemHasData"
+                                    class="text-sm font-medium tabular-nums text-base-content/80"
+                                >
+                                    {{ nodeMemSummary }}
+                                </p>
+                            </div>
                             <ChartEmptyState
                                 v-if="!nodeMemHasData"
                                 compact
                                 title-key="pages.metrics.chartsEmptyTitle"
                             />
-                            <div v-else ref="nodeMemChart" class="min-h-[220px] w-full" />
+                            <div v-else ref="nodeMemChart" class="metrics-chart min-h-[220px] w-full" />
                         </div>
                     </div>
                 </div>

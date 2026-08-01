@@ -115,12 +115,16 @@ fn detectLinuxOsVersion(
     };
     defer allocator.free(content);
 
-    if (parseOsReleaseValue(content, "PRETTY_NAME")) |pretty| {
-        return try allocator.dupe(u8, pretty);
+    if (parseOsReleaseValue(content, "NAME")) |name| {
+        if (parseOsReleaseValue(content, "VERSION_ID")) |version_id| {
+            return try std.fmt.allocPrint(allocator, "{s} {s}", .{ name, version_id });
+        }
+
+        return try allocator.dupe(u8, name);
     }
 
-    if (parseOsReleaseValue(content, "VERSION_ID")) |version_id| {
-        return try allocator.dupe(u8, version_id);
+    if (parseOsReleaseValue(content, "PRETTY_NAME")) |pretty| {
+        return try allocator.dupe(u8, pretty);
     }
 
     return try allocator.dupe(u8, "linux");
@@ -158,17 +162,17 @@ fn detectWindowsOsVersion(
 fn formatWindowsOsVersion(
     allocator: std.mem.Allocator,
     major: u32,
-    minor: u32,
+    _: u32,
     build: u32,
 ) ![]u8 {
     const product_name = if (major == 10 and build >= 22000)
-        "Microsoft Windows 11"
+        "Windows 11"
     else if (major == 10)
-        "Microsoft Windows 10"
+        "Windows 10"
     else
-        "Microsoft Windows";
+        "Windows";
 
-    return std.fmt.allocPrint(allocator, "{s} {d}.{d}.{d}", .{ product_name, major, minor, build });
+    return try allocator.dupe(u8, product_name);
 }
 
 /// Detects a human-readable macOS OS version string.
@@ -183,10 +187,10 @@ fn detectMacOsVersion(
 
     const trimmed = std.mem.trim(u8, output, " \t\r\n");
     if (trimmed.len == 0) {
-        return try allocator.dupe(u8, "macos");
+        return try allocator.dupe(u8, "macOS");
     }
 
-    return try allocator.dupe(u8, trimmed);
+    return try std.fmt.allocPrint(allocator, "macOS {s}", .{trimmed});
 }
 
 /// Parses a value from an OS release file.
@@ -266,16 +270,16 @@ test "parseOsReleaseValue returns null for missing key" {
     try std.testing.expect(parseOsReleaseValue(content, "PRETTY_NAME") == null);
 }
 
-test "formatWindowsOsVersion uses ascii product name" {
+test "formatWindowsOsVersion uses concise product name" {
     const allocator = std.testing.allocator;
 
     const win10 = try formatWindowsOsVersion(allocator, 10, 0, 19045);
     defer allocator.free(win10);
-    try std.testing.expectEqualStrings("Microsoft Windows 10 10.0.19045", win10);
+    try std.testing.expectEqualStrings("Windows 10", win10);
 
     const win11 = try formatWindowsOsVersion(allocator, 10, 0, 22631);
     defer allocator.free(win11);
-    try std.testing.expectEqualStrings("Microsoft Windows 11 10.0.22631", win11);
+    try std.testing.expectEqualStrings("Windows 11", win11);
 }
 
 test "detectOsVersion returns non-empty string" {

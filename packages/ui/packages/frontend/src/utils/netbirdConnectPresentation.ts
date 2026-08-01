@@ -45,7 +45,7 @@ export function buildTeamCliConnectCommand(
 ): string {
     if (platform === "windows") {
         return [
-            "# Install NetBird from https://netbird.io/download if needed",
+            "# Install the VPN client from https://netbird.io/download if needed",
             `netbird up --management-url "${enrollment.netbirdManagementUrl}" --setup-key "${enrollment.setupKey}"`
         ].join("\n");
     }

@@ -81,8 +81,17 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return client.listNodeHostUpdates(params.id);
     });
 
-    app.get("/instances", async () => {
-        return app.controlPlane.listInstances();
+    app.get("/instances", async (request) => {
+        const query = z.object({
+            serviceName: z.string().min(1).optional(),
+            nodeId: z.string().min(1).optional()
+        }).parse(request.query);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.listInstances({
+            serviceName: query.serviceName,
+            nodeId: query.nodeId
+        });
     });
 
     app.get("/instances/:id", async (request) => {
@@ -112,6 +121,42 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return client.reconcileInstance(params.id);
     });
 
+    app.post("/instances/:id/stop", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.stopInstance(params.id);
+    });
+
+    app.post("/instances/:id/start", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.startInstance(params.id);
+    });
+
+    app.post("/instances/:id/restart", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.restartInstance(params.id);
+    });
+
+    app.delete("/instances/:id", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.removeInstance(params.id);
+    });
+
     app.get("/volumes", async () => {
         return app.controlPlane.listVolumes();
     });
@@ -132,6 +177,15 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return app.controlPlane.listServices();
     });
 
+    app.get("/services/:name", async (request) => {
+        const params = z.object({
+            name: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.getService(params.name);
+    });
+
     app.post("/services/:name/reconcile", async (request) => {
         const params = z.object({
             name: z.string().min(1)
@@ -139,6 +193,36 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
 
         const client = controlPlaneForRequest(app, request);
         return client.reconcileService(params.name);
+    });
+
+    app.delete("/services/:name", async (request) => {
+        const params = z.object({
+            name: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        await client.deleteService(params.name);
+        return { deleted: true, name: params.name };
+    });
+
+    app.get("/functions/:name/runs", async (request) => {
+        const params = z.object({
+            name: z.string().min(1)
+        }).parse(request.params);
+        const pagination = parsePaginationQuery(request.query as Record<string, unknown>);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.listFunctionRuns(params.name, pagination);
+    });
+
+    app.get("/functions/:name/runs/:id", async (request) => {
+        const params = z.object({
+            name: z.string().min(1),
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.getFunctionRun(params.name, params.id);
     });
 
     app.post("/gitops/rollback/:revisionId", async (request) => {

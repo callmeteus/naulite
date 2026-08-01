@@ -512,12 +512,36 @@ export class NauliteClient {
     }
 
     /**
+     * Returns a service by name.
+     *
+     * @param name Service name
+     * @returns Service record
+     */
+    async getService(name: string): Promise<Service> {
+        return this.request<Service>("GET", `/services/${encodeURIComponent(name)}`);
+    }
+
+    /**
      * Lists running instances.
-     * 
+     *
+     * @param filters Optional service or node filters
      * @returns Instance records
      */
-    async listInstances(): Promise<Instance[]> {
-        return this.request<Instance[]>("GET", "/instances");
+    async listInstances(filters?: { serviceName?: string; nodeId?: string }): Promise<Instance[]> {
+        const params = new URLSearchParams();
+
+        if (filters?.serviceName) {
+            params.set("serviceName", filters.serviceName);
+        }
+
+        if (filters?.nodeId) {
+            params.set("nodeId", filters.nodeId);
+        }
+
+        const query = params.toString();
+        const path = query.length > 0 ? `/instances?${query}` : "/instances";
+
+        return this.request<Instance[]>("GET", path);
     }
 
     /**
@@ -797,6 +821,58 @@ export class NauliteClient {
         return this.request<InstanceReconcileResult>(
             "POST",
             `/instances/${encodeURIComponent(instanceId)}/reconcile`
+        );
+    }
+
+    /**
+     * Stops a running instance on its node agent.
+     *
+     * @param instanceId Instance identifier
+     * @returns Lifecycle dispatch outcome
+     */
+    async stopInstance(instanceId: string): Promise<InstanceReconcileResult> {
+        return this.request<InstanceReconcileResult>(
+            "POST",
+            `/instances/${encodeURIComponent(instanceId)}/stop`
+        );
+    }
+
+    /**
+     * Starts a stopped instance on its node agent.
+     *
+     * @param instanceId Instance identifier
+     * @returns Lifecycle dispatch outcome
+     */
+    async startInstance(instanceId: string): Promise<InstanceReconcileResult> {
+        return this.request<InstanceReconcileResult>(
+            "POST",
+            `/instances/${encodeURIComponent(instanceId)}/start`
+        );
+    }
+
+    /**
+     * Restarts a running instance on its node agent.
+     *
+     * @param instanceId Instance identifier
+     * @returns Lifecycle dispatch outcome
+     */
+    async restartInstance(instanceId: string): Promise<InstanceReconcileResult> {
+        return this.request<InstanceReconcileResult>(
+            "POST",
+            `/instances/${encodeURIComponent(instanceId)}/restart`
+        );
+    }
+
+    /**
+     * Removes an instance from its node agent and deletes the control plane record.
+     *
+     * @param instanceId Instance identifier
+     * @returns Lifecycle dispatch outcome
+     */
+    async removeInstance(instanceId: string): Promise<InstanceReconcileResult> {
+        return this.request<InstanceReconcileResult>(
+            "DELETE",
+            `/instances/${encodeURIComponent(instanceId)}`
         );
     }
 
@@ -1101,7 +1177,8 @@ export class NauliteClient {
      * @returns Gateway route summaries
      */
     async listGatewayRoutes(): Promise<GatewayRouteSummary[]> {
-        return this.request<GatewayRouteSummary[]>("GET", "/gateway/routes");
+        const response = await this.listGatewayRoutesPaginated({ page: 1, limit: 500 });
+        return response.items;
     }
 
     /**

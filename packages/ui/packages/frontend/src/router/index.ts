@@ -23,6 +23,13 @@ import ProvisionDetailView from "../views/ProvisionDetailView.vue";
 import RunsView from "../views/RunsView.vue";
 import RunDetailView from "../views/RunDetailView.vue";
 import SecretsView from "../views/SecretsView.vue";
+import BuildTriggerView from "../views/BuildTriggerView.vue";
+import NotificationDestinationFormView from "../views/NotificationDestinationFormView.vue";
+import QuickDeployView from "../views/QuickDeployView.vue";
+import SecretEditView from "../views/SecretEditView.vue";
+import SecretNewView from "../views/SecretNewView.vue";
+import ServiceDetailView from "../views/ServiceDetailView.vue";
+import ServiceManifestEditView from "../views/ServiceManifestEditView.vue";
 import ServicesView from "../views/ServicesView.vue";
 import VolumesView from "../views/VolumesView.vue";
 
@@ -40,24 +47,32 @@ const router = createRouter({
         { path: "/nodes/provisions/:id", component: ProvisionDetailView, meta: { permissions: ["nodes:provision"] satisfies NaulitePermission[] } },
         { path: "/nodes/:id", component: NodeDetailView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
         { path: "/services", component: ServicesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
+        { path: "/services/:name/edit", component: ServiceManifestEditView, meta: { permissions: ["manifests:apply"] satisfies NaulitePermission[] } },
+        { path: "/services/:name", component: ServiceDetailView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
         { path: "/instances", component: InstancesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
         { path: "/instances/:id", component: InstanceDetailView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
         { path: "/volumes", component: VolumesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
         { path: "/secrets", component: SecretsView, meta: { permissions: ["secrets:read"] satisfies NaulitePermission[] } },
+        { path: "/secrets/new", component: SecretNewView, meta: { permissions: ["secrets:write"] satisfies NaulitePermission[] } },
+        { path: "/secrets/edit", component: SecretEditView, meta: { permissions: ["secrets:write"] satisfies NaulitePermission[] } },
         { path: "/cluster", component: ClusterView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/metrics", component: MetricsView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/gitops", component: GitOpsView, meta: { permissions: ["gitops:read"] satisfies NaulitePermission[] } },
-        { path: "/deploy", redirect: { path: "/runs", query: { deploy: "open" } } },
-        { path: "/build", redirect: { path: "/runs", query: { build: "open" } } },
+        { path: "/deploy", redirect: "/runs/deploy" },
+        { path: "/build", redirect: "/runs/build" },
         { path: "/provision", redirect: "/nodes" },
         { path: "/provision/new", redirect: "/nodes/new" },
         { path: "/provision/:id", redirect: (to) => `/nodes/provisions/${String(to.params.id ?? "")}` },
+        { path: "/runs/deploy", component: QuickDeployView, meta: { permissions: ["manifests:apply"] satisfies NaulitePermission[] } },
+        { path: "/runs/build", component: BuildTriggerView, meta: { permissions: ["runs:write"] satisfies NaulitePermission[] } },
         { path: "/runs/:id", component: RunDetailView, meta: { permissions: ["runs:read"] satisfies NaulitePermission[] } },
         { path: "/runs", component: RunsView, meta: { permissions: ["runs:read"] satisfies NaulitePermission[] } },
         { path: "/gateway-routes", component: GatewayRoutesView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },
         { path: "/container-registry", component: ContainerRegistryView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },
         { path: "/backups", component: BackupsView, meta: { permissions: ["backups:read"] satisfies NaulitePermission[] } },
         { path: "/netbird", component: NetBirdView, meta: { permissions: ["netbird:read"] satisfies NaulitePermission[] } },
+        { path: "/notifications/new", component: NotificationDestinationFormView, meta: { permissions: ["notifications:write"] satisfies NaulitePermission[] } },
+        { path: "/notifications/:id/edit", component: NotificationDestinationFormView, meta: { permissions: ["notifications:write"] satisfies NaulitePermission[] } },
         { path: "/notifications", component: NotificationsView, meta: { permissions: ["notifications:read"] satisfies NaulitePermission[] } },
         { path: "/api-keys", component: ApiKeysView, meta: { permissions: ["admin:api-keys:read"] satisfies NaulitePermission[] } },
         { path: "/admin-users", component: AdminUsersView, meta: { permissions: ["admin:users:read"] satisfies NaulitePermission[] } }

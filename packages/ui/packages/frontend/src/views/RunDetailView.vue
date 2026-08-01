@@ -9,6 +9,8 @@ import PageLayout from "../components/layout/PageLayout.vue";
 import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
+import MetadataGrid from "../components/ui/MetadataGrid.vue";
+import MetadataGridItem from "../components/ui/MetadataGridItem.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
 import { useClusterStore } from "../stores/Cluster";
 import {
@@ -344,7 +346,7 @@ async function rerunBuild(): Promise<void> {
         return;
     }
 
-    await router.push("/runs?build=open");
+    await router.push("/runs/build");
 }
 
 /**
@@ -362,7 +364,7 @@ function requestRedeploy(): void {
  * @returns Nothing.
  */
 async function confirmRedeploy(): Promise<void> {
-    await router.push("/runs?deploy=open");
+    await router.push("/runs/deploy");
 }
 </script>
 
@@ -465,24 +467,16 @@ async function confirmRedeploy(): Promise<void> {
                         </div>
                     </div>
 
-                    <dl class="grid gap-3 text-sm sm:grid-cols-2">
-                        <div>
-                            <dt class="text-base-content/60">
-                                {{ t("common.tableColumns.service") }}
-                            </dt>
-                            <dd class="font-medium">
-                                {{ run.serviceName ?? "-" }}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-base-content/60">
-                                {{ t("common.tableColumns.started") }}
-                            </dt>
-                            <dd class="font-medium">
-                                {{ formatTimestamp(run.startedAt ?? run.createdAt) }}
-                            </dd>
-                        </div>
-                    </dl>
+                    <MetadataGrid :columns="2" density="compact">
+                        <MetadataGridItem
+                            :label="t('common.tableColumns.service')"
+                            :value="run.serviceName"
+                        />
+                        <MetadataGridItem
+                            :label="t('common.tableColumns.started')"
+                            :value="formatTimestamp(run.startedAt ?? run.createdAt)"
+                        />
+                    </MetadataGrid>
 
                     <ErrorAlert :error="run.errorMessage ?? null" />
                 </div>

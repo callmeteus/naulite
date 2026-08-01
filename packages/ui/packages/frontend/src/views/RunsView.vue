@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import type { ListPipelineRunsQuery, PipelineRunKind, PipelineRunStatus } from "@naulite/sdk";
-import BuildTriggerCard from "../components/build/BuildTriggerCard.vue";
-import QuickDeployDialog from "../components/deploy/QuickDeployDialog.vue";
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
@@ -24,8 +22,6 @@ const store = useClusterStore();
 
 const kindFilter = ref<PipelineRunKind | "">("");
 const statusFilter = ref<PipelineRunStatus | "">("");
-const buildDialogRef = ref<InstanceType<typeof BuildTriggerCard> | null>(null);
-const deployDialogRef = ref<InstanceType<typeof QuickDeployDialog> | null>(null);
 
 const canBuild = computed(() => auth.hasPermission("runs:write"));
 const canDeploy = computed(() => auth.hasPermission("manifests:apply"));
@@ -67,7 +63,7 @@ watch(
 );
 
 /**
- * Applies list filters and opens dialogs from route query parameters.
+ * Applies list filters from route query parameters.
  *
  * @returns Nothing.
  */
@@ -76,18 +72,6 @@ function applyRouteQuery(): void {
 
     if (kind === "ci_build" || kind === "apply" || kind === "gitops_sync" || kind === "node_event") {
         kindFilter.value = kind;
-    }
-
-    if (route.query.build === "open" && canBuild.value) {
-        void nextTick(() => {
-            buildDialogRef.value?.open();
-        });
-    }
-
-    if (route.query.deploy === "open" && canDeploy.value) {
-        void nextTick(() => {
-            deployDialogRef.value?.open();
-        });
     }
 }
 
@@ -142,39 +126,17 @@ function openRun(runId: string): void {
     void router.push(`/runs/${runId}`);
 }
 
-/**
- * Opens the build dialog.
- *
- * @returns Nothing.
- */
-function openBuildDialog(): void {
-    buildDialogRef.value?.open();
-}
-
-/**
- * Opens the quick deploy dialog.
- *
- * @returns Nothing.
- */
-function openDeployDialog(): void {
-    deployDialogRef.value?.open();
-}
-
-/**
- * Handles the empty-state primary action.
- *
- * @returns Nothing.
- */
-function handleEmptyAction(): void {
+const emptyActionTo = computed(() => {
     if (canDeploy.value) {
-        openDeployDialog();
-        return;
+        return "/runs/deploy";
     }
 
     if (canBuild.value) {
-        openBuildDialog();
+        return "/runs/build";
     }
-}
+
+    return undefined;
+});
 
 const emptyActionLabelKey = computed(() => {
     if (canDeploy.value) {
@@ -192,22 +154,20 @@ const emptyActionLabelKey = computed(() => {
 <template>
     <PageLayout title-key="pages.runs.title" hint-key="pages.runs.hint">
         <template #actions>
-            <button
+            <RouterLink
                 v-if="canDeploy"
-                type="button"
+                to="/runs/deploy"
                 class="btn btn-outline btn-sm"
-                @click="openDeployDialog"
             >
                 {{ t("pages.runs.quickDeploy") }}
-            </button>
-            <button
+            </RouterLink>
+            <RouterLink
                 v-if="canBuild"
-                type="button"
+                to="/runs/build"
                 class="btn btn-primary btn-sm"
-                @click="openBuildDialog"
             >
                 {{ t("pages.runs.buildTrigger") }}
-            </button>
+            </RouterLink>
         </template>
 
         <template #filters>
@@ -242,9 +202,6 @@ const emptyActionLabelKey = computed(() => {
         </template>
 
         <div class="flex flex-col gap-6">
-            <BuildTriggerCard v-if="canBuild" ref="buildDialogRef" />
-            <QuickDeployDialog v-if="canDeploy" ref="deployDialogRef" />
-
             <ErrorAlert :error="store.error || listError || null" />
 
             <div v-if="listLoading && paginatedRuns.length === 0" class="flex items-center gap-2">
@@ -257,7 +214,7 @@ const emptyActionLabelKey = computed(() => {
                 title-key="pages.runs.emptyTitle"
                 description-key="pages.runs.emptyDescription"
                 :action-label-key="emptyActionLabelKey"
-                @action="handleEmptyAction"
+                :action-to="emptyActionTo"
             />
 
             <div v-else class="card bg-base-100 shadow">
