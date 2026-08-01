@@ -135,17 +135,44 @@ fn detectWindowsOsVersion(
     // The allocator to use.
     allocator: std.mem.Allocator,
 ) ![]u8 {
-    const output = runCommand(allocator, &.{ "cmd", "/c", "ver" }) catch {
-        return try allocator.dupe(u8, "windows");
-    };
-    defer allocator.free(output);
-
-    const trimmed = std.mem.trim(u8, output, " \t\r\n");
-    if (trimmed.len == 0) {
+    if (builtin.os.tag != .windows) {
         return try allocator.dupe(u8, "windows");
     }
 
-    return try allocator.dupe(u8, trimmed);
+    const windows = std.os.windows;
+    const ntdll = std.os.windows.ntdll;
+
+    var version_info: windows.RTL_OSVERSIONINFOW = undefined;
+    version_info.dwOSVersionInfoSize = @sizeOf(windows.RTL_OSVERSIONINFOW);
+
+    const status = ntdll.RtlGetVersion(&version_info);
+    if (status != .SUCCESS) {
+        return try allocator.dupe(u8, "windows");
+    }
+
+    return try formatWindowsOsVersion(
+        allocator,
+        version_info.dwMajorVersion,
+        version_info.dwMinorVersion,
+        version_info.dwBuildNumber,
+    );
+}
+
+/// Formats a Windows version triple into a stable ASCII product string.
+fn formatWindowsOsVersion(
+    allocator: std.mem.Allocator,
+    major: u32,
+    minor: u32,
+    build: u32,
+) ![]u8 {
+    const product_name = if (major == 10 and build >= 22000)
+        "Microsoft Windows 11"
+    else if (major == 10)
+        "Microsoft Windows 10"
+    else
+        "Microsoft Windows";
+
+    return std.fmt.allocPrint(allocator, "{s} {d}.{d}.{d}", .{ product_name, major, minor, build });
 }
 
 /// Detects a human-readable macOS OS version string.
@@ -241,6 +268,18 @@ test "parseOsReleaseValue returns null for missing key" {
     ;
 
     try std.testing.expect(parseOsReleaseValue(content, "PRETTY_NAME") == null);
+}
+
+test "formatWindowsOsVersion uses ascii product name" {
+    const allocator = std.testing.allocator;
+
+    const win10 = try formatWindowsOsVersion(allocator, 10, 0, 19045);
+    defer allocator.free(win10);
+    try std.testing.expectEqualStrings("Microsoft Windows 10 10.0.19045", win10);
+
+    const win11 = try formatWindowsOsVersion(allocator, 10, 0, 22631);
+    defer allocator.free(win11);
+    try std.testing.expectEqualStrings("Microsoft Windows 11 10.0.22631", win11);
 }
 
 test "detectOsVersion returns non-empty string" {

@@ -1,6 +1,51 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const logger = @import("logger");
+
+const winsock_io = if (builtin.os.tag == .windows) struct {
+    const c = std.c;
+    const FIONBIO: c_long = @bitCast(@as(c_ulong, 0x8004667e));
+
+    extern "ws2_32" fn ioctlsocket(
+        socket_handle: std.posix.socket_t,
+        command: c_long,
+        argument: [*]c_ulong,
+    ) callconv(.c) c_int;
+
+    fn setBlocking(socket_handle: std.posix.socket_t) void {
+        var mode: c_ulong = 0;
+        _ = ioctlsocket(socket_handle, FIONBIO, @ptrCast(&mode));
+    }
+
+    fn read(socket_handle: std.posix.socket_t, dest: []u8) !usize {
+        const received = c.recv(socket_handle, dest.ptr, dest.len, 0);
+
+        if (received < 0) {
+            return error.ReadFailed;
+        }
+
+        if (received == 0) {
+            return 0;
+        }
+
+        return @intCast(received);
+    }
+
+    fn writeAll(socket_handle: std.posix.socket_t, data: []const u8) !void {
+        var offset: usize = 0;
+
+        while (offset < data.len) {
+            const sent = c.send(socket_handle, data.ptr + offset, data.len - offset, 0);
+
+            if (sent <= 0) {
+                return error.WriteFailed;
+            }
+
+            offset += @intCast(sent);
+        }
+    }
+} else struct {};
 
 const backup_executor = @import("backup_executor.zig");
 const blocking_io = @import("blocking_io.zig");
@@ -199,6 +244,11 @@ pub fn serveWithIo(
     // HTTP server and Docker client configuration.
     config: Config,
 ) !void {
+    if (builtin.os.tag == .windows) {
+        const http_server_windows = @import("http_server_windows.zig");
+        return http_server_windows.serve(allocator, io, config);
+    }
+
     var docker_client = docker.DockerClient.init(allocator, config.docker_socket);
     defer docker_client.deinit();
 
@@ -214,6 +264,10 @@ pub fn serveWithIo(
             continue;
         };
 
+        if (builtin.os.tag == .windows) {
+            winsock_io.setBlocking(stream.socket.handle);
+        }
+
         handleConnection(allocator, io, &docker_client, config.docker_socket, &stream) catch |err| {
             log_http.warn("connection failed: {}", .{err});
         };
@@ -227,12 +281,16 @@ fn streamRead(
     stream: *const std.Io.net.Stream,
     dest: []u8,
 ) !usize {
+    if (builtin.os.tag == .windows) {
+        return winsock_io.read(stream.socket.handle, dest);
+    }
+
     var read_buffer: [4096]u8 = undefined;
     var net_reader = stream.reader(io, &read_buffer);
     return try std.Io.Reader.readSliceShort(&net_reader.interface, dest);
 }
 
-fn handleConnection(
+pub fn handleConnection(
     allocator: std.mem.Allocator,
     // Process I/O handle.
     io: std.Io,
@@ -808,14 +866,24 @@ fn writeRawResponse(
     content_type: []const u8,
     body: []const u8,
 ) !void {
+    var header_buffer: [512]u8 = undefined;
+    const header = try std.fmt.bufPrint(
+        &header_buffer,
+        "HTTP/1.1 {d} {s}\r\nContent-Type: {s}\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n",
+        .{ status, status_text, content_type, body.len },
+    );
+
+    if (builtin.os.tag == .windows) {
+        try winsock_io.writeAll(stream.socket.handle, header);
+        try winsock_io.writeAll(stream.socket.handle, body);
+        return;
+    }
+
     var write_buffer: [4096]u8 = undefined;
     var net_writer = stream.writer(io, &write_buffer);
 
-    try std.Io.Writer.print(
-        &net_writer.interface,
-        "HTTP/1.1 {d} {s}\r\nContent-Type: {s}\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n{s}",
-        .{ status, status_text, content_type, body.len, body },
-    );
+    try std.Io.Writer.writeAll(&net_writer.interface, header);
+    try std.Io.Writer.writeAll(&net_writer.interface, body);
     try std.Io.Writer.flush(&net_writer.interface);
 }
 

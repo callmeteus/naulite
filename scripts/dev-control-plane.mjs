@@ -10,6 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isDockerAvailable } from "./dev-docker.mjs";
+import { createDevWatcher, isDevReuseEnabled, waitForShutdownSignal } from "./dev-watch.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const traefikMockPort = process.env.NAULITE_TRAEFIK_MOCK_PORT ?? "18099";
@@ -35,7 +36,7 @@ function run(command, args) {
 }
 
 process.env.PORT = process.env.NAULITE_CP_PORT ?? "18080";
-process.env.HOST = process.env.NAULITE_CP_HOST ?? "127.0.0.1";
+process.env.HOST = process.env.NAULITE_CP_HOST ?? "0.0.0.0";
 const controlPlanePort = process.env.PORT;
 const controlPlaneHost = process.env.HOST;
 
@@ -138,18 +139,29 @@ async function ensureTraefikMock() {
  *
  * @returns Promise resolved by the first shutdown signal
  */
-function waitForShutdownSignal() {
-    return new Promise((resolve) => {
-        const keepAlive = setInterval(() => {}, 60 * 60 * 1000);
+function waitForShutdownSignalLegacy() {
+    return waitForShutdownSignal();
+}
 
-        const finish = () => {
-            clearInterval(keepAlive);
-            resolve();
-        };
+/**
+ * Builds shared and control-plane packages.
+ *
+ * @returns Nothing.
+ */
+function buildControlPlane() {
+    run("yarn", ["workspace", "@naulite/shared", "build"]);
+    run("yarn", ["workspace", "@naulite/control-plane", "build"]);
+}
 
-        process.once("SIGINT", finish);
-        process.once("SIGTERM", finish);
-    });
+/**
+ * Starts the control plane HTTP server from the compiled dist bundle.
+ *
+ * @returns Started server handle
+ */
+async function startControlPlaneServer() {
+    const { startServer } = await import(new URL("../packages/control-plane/dist/Server.js", import.meta.url).href);
+
+    return startServer();
 }
 
 /**
@@ -201,28 +213,48 @@ const controlPlaneHealthUrl = `http://127.0.0.1:${controlPlanePort}/health`;
 let server = null;
 let ownsControlPlane = false;
 
-if (await isHealthy(controlPlaneHealthUrl)) {
+const canReuseControlPlane = isDevReuseEnabled();
+
+if (canReuseControlPlane && await isHealthy(controlPlaneHealthUrl)) {
     console.log(`[dev] reusing control plane at http://${controlPlaneHost}:${controlPlanePort}`);
-    console.warn("[dev] Reused control plane may miss new routes until you stop the process on this port and restart yarn dev.");
-
-    if (!prometheusReady) {
-        console.warn("[dev] Reused control plane may still proxy metrics to Prometheus. Restart yarn dev after Docker is up.");
-    }
+    console.warn("[dev] Reused control plane will not reload code until you stop it or unset NAULITE_DEV_REUSE.");
 } else {
-    run("yarn", ["workspace", "@naulite/shared", "build"]);
-    run("yarn", ["workspace", "@naulite/control-plane", "build"]);
+    if (!canReuseControlPlane && await isHealthy(controlPlaneHealthUrl)) {
+        console.warn(
+            `[dev] control plane already listening on http://${controlPlaneHost}:${controlPlanePort}; starting a watched instance is skipped. Stop the other process or set NAULITE_DEV_REUSE=1 to reuse it.`
+        );
+    } else {
+        buildControlPlane();
+        server = await startControlPlaneServer();
+        ownsControlPlane = true;
 
-    const { startServer } = await import(new URL("../packages/control-plane/dist/Server.js", import.meta.url).href);
-
-    server = await startServer();
-    ownsControlPlane = true;
-
-    console.log(`[dev] Naulite control plane listening on http://${server.host}:${server.port}`);
+        console.log(`[dev] Naulite control plane listening on http://${server.host}:${server.port}`);
+    }
 }
 
 console.log(`[dev] traefik-mock at http://127.0.0.1:${traefikMockPort}`);
 console.log(`[dev] Prometheus URL for CP: ${process.env.PROMETHEUS_URL ?? "(disabled)"}`);
 console.log("[dev] Bootstrap login: admin@local.dev / naulite-dev");
+
+if (ownsControlPlane) {
+    createDevWatcher({
+        label: "dev-control-plane",
+        paths: [
+            path.join(repoRoot, "packages", "control-plane", "src"),
+            path.join(repoRoot, "packages", "nodejs", "shared", "src")
+        ],
+        onChange: async () => {
+            if (server) {
+                await server.stop();
+                server = null;
+            }
+
+            buildControlPlane();
+            server = await startControlPlaneServer();
+            console.log(`[dev] control plane restarted on http://${server.host}:${server.port}`);
+        }
+    });
+}
 
 const shutdown = async () => {
     if (ownsControlPlane && server) {
@@ -236,5 +268,5 @@ const shutdown = async () => {
     process.exit(0);
 };
 
-await waitForShutdownSignal();
+await waitForShutdownSignalLegacy();
 await shutdown();

@@ -111,10 +111,7 @@ fn writeLog(comptime level: Level, comptime module: []const u8, comptime fmt: []
 fn formatTimestamp(buffer: []u8) ![]const u8 {
     const now = time(null);
     const local = localtime(&now) orelse return error.LocalTimeUnavailable;
-    const millis: i32 = if (io_handle) |io|
-        @intCast(@mod(std.Io.Clock.real.now(io).toMilliseconds(), 1000))
-    else
-        0;
+    const millis: i32 = 0;
 
     return std.fmt.bufPrint(buffer, "{d:0>4}-{d:0>2}-{d:0>2} {d:0>2}:{d:0>2}:{d:0>2}.{d:0>3}", .{
         @as(u16, @intCast(local.*.tm_year + 1900)),

@@ -5,12 +5,15 @@ import { useRoute } from "vue-router";
 
 import type { HostInventory, HostPackage, HostUpdateRun } from "@naulite/sdk";
 
+import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
+import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
+import { isAgentRelatedApiError } from "../utils/instanceDetailPresentation";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -20,12 +23,18 @@ const auth = useAuthStore();
 const nodeId = computed(() => String(route.params.id));
 const node = computed(() => store.nodes.find((entry) => entry.id === nodeId.value) ?? null);
 const inventory = ref<HostInventory | null>(null);
+const inventoryError = ref<ParsedApiError | null>(null);
 const updateRuns = ref<HostUpdateRun[]>([]);
 const selectedPackages = ref<string[]>([]);
 const showOutdatedOnly = ref(false);
 const actionMessage = ref("");
+const inventoryLoading = ref(false);
 
 const canUpdateHost = computed(() => auth.hasPermission("nodes:host-update"));
+
+const showAgentUnreachableBanner = computed(() =>
+    isAgentRelatedApiError(inventoryError.value)
+);
 
 const visiblePackages = computed(() => {
     const packages = inventory.value?.packages ?? [];
@@ -39,7 +48,7 @@ const visiblePackages = computed(() => {
 
 onMounted(async () => {
     if (store.nodes.length === 0) {
-        await store.refreshOverview();
+        await store.refreshOverview({ silent: true });
     }
 
     await refreshInventory();
@@ -53,8 +62,19 @@ onMounted(async () => {
  */
 async function refreshInventory(): Promise<void> {
     actionMessage.value = "";
-    inventory.value = await store.getNodeHostInventory(nodeId.value, true);
-    selectedPackages.value = [];
+    inventoryError.value = null;
+    inventoryLoading.value = true;
+    store.error = null;
+
+    try {
+        inventory.value = await nauliteClient.getNodeHostInventory(nodeId.value, { refresh: true });
+        selectedPackages.value = [];
+    } catch (err) {
+        inventory.value = null;
+        inventoryError.value = parseApiError(err);
+    } finally {
+        inventoryLoading.value = false;
+    }
 }
 
 /**
@@ -133,9 +153,25 @@ async function updateSystem(): Promise<void> {
 
 <template>
     <PageLayout title-key="pages.nodeDetail.title" hint-key="pages.nodeDetail.hint">
-        <ErrorAlert :error="store.error" />
+        <div
+            v-if="showAgentUnreachableBanner"
+            class="alert border-warning/30 bg-warning/10 text-sm"
+        >
+            <div class="flex w-full flex-col gap-2">
+                <p class="font-medium">
+                    {{ t("pages.nodeDetail.agentUnreachableTitle") }}
+                </p>
+                <p>{{ t("pages.nodeDetail.agentUnreachableDescription") }}</p>
+                <p v-if="node?.agentUrl" class="text-base-content/70">
+                    {{ t("pages.nodeDetail.agentUrlLabel") }}:
+                    <span class="font-mono">{{ node.agentUrl }}</span>
+                </p>
+            </div>
+        </div>
 
-        <div v-if="store.loading && !inventory" class="flex items-center gap-2">
+        <ErrorAlert v-else-if="inventoryError" :error="inventoryError" />
+
+        <div v-if="inventoryLoading && !inventory" class="flex items-center gap-2">
             <LoadingSpinner />
             <span>{{ t("common.loading") }}</span>
         </div>
@@ -187,7 +223,13 @@ async function updateSystem(): Promise<void> {
 
             <div class="card bg-base-100 shadow">
                 <div class="card-body overflow-x-auto p-0 sm:p-6">
-                    <table class="table table-zebra">
+                    <p
+                        v-if="!inventory && inventoryError"
+                        class="p-6 text-sm text-base-content/70"
+                    >
+                        {{ t("pages.nodeDetail.inventoryUnavailable") }}
+                    </p>
+                    <table v-else class="table table-zebra">
                         <thead>
                             <tr>
                                 <th v-if="canUpdateHost" />

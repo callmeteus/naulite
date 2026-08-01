@@ -11,6 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ensureDockerReady, isDockerAvailable } from "./dev-docker.mjs";
+import { createDevWatcher, waitForShutdownSignal } from "./dev-watch.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const controlPlanePort = process.env.NAULITE_CP_PORT ?? "18080";
@@ -23,15 +24,39 @@ const hostBinaryPath = path.join(repoRoot, "packages", "agent", "zig-out", "bin"
 const agentConfigPath = path.join(repoRoot, "data", "dev-agent", "agent.json");
 const composeFile = path.join(repoRoot, "scripts", "dev-agent.compose.yml");
 
+/** Windows flag that prevents a visible console window for child processes. */
+const WINDOWS_CREATE_NO_WINDOW = 0x08000000;
+
+/**
+ * Spawns a child process without opening a desktop console on Windows.
+ *
+ * @param command Executable path
+ * @param args Command arguments
+ * @param options `node:child_process` spawn options
+ * @returns Child process handle
+ */
+function spawnHidden(command, args, options = {}) {
+    return spawn(command, args, {
+        ...options,
+        windowsHide: true,
+        ...(process.platform === "win32"
+            ? { creationFlags: WINDOWS_CREATE_NO_WINDOW }
+            : {})
+    });
+}
+
 /**
  * Returns whether an HTTP health endpoint responds successfully.
  *
  * @param url Health check URL
+ * @param timeoutMs Request timeout in milliseconds
  * @returns `true` when the endpoint returns a 2xx status
  */
-async function isHealthy(url) {
+async function isHealthy(url, timeoutMs = 5_000) {
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            signal: AbortSignal.timeout(timeoutMs)
+        });
 
         return response.ok;
     } catch {
@@ -149,7 +174,7 @@ function buildAgentEnv(setupKey) {
         HOSTNAME: process.env.NAULITE_DEV_AGENT_HOSTNAME ?? os.hostname(),
         AGENT_URL: `http://127.0.0.1:${agentPort}`,
         AGENT_PORT: agentPort,
-        NAULITE_AGENT_CONFIG: agentConfigPath,
+        NAULITE_AGENT_CONFIG: agentConfigPath.split(path.sep).join("/"),
         NAULITE_LOG_LEVEL: process.env.NAULITE_LOG_LEVEL ?? "info"
     };
 
@@ -174,7 +199,7 @@ function buildAgentEnv(setupKey) {
 async function startHostAgent(setupKey) {
     await mkdir(path.dirname(agentConfigPath), { recursive: true });
 
-    const child = spawn(hostBinaryPath, [], {
+    const child = spawnHidden(hostBinaryPath, [], {
         env: buildAgentEnv(setupKey),
         stdio: ["ignore", "pipe", "pipe"]
     });
@@ -250,22 +275,74 @@ function stopDockerAgent() {
 }
 
 /**
+ * Stops processes that are listening on the dev agent port.
+ *
+ * @param port TCP port to free
+ * @returns Number of processes terminated
+ */
+function killListenersOnPort(port) {
+    if (process.platform === "win32") {
+        const result = spawnSync("netstat", ["-ano"], { encoding: "utf8" });
+        const lines = result.stdout?.split(/\r?\n/) ?? [];
+        const pids = new Set();
+
+        for (const line of lines) {
+            if (!line.includes(`:${port}`) || !line.includes("LISTENING")) {
+                continue;
+            }
+
+            const parts = line.trim().split(/\s+/);
+            const pid = parts.at(-1);
+
+            if (pid && pid !== "0") {
+                pids.add(pid);
+            }
+        }
+
+        for (const pid of pids) {
+            spawnSync("taskkill", ["/PID", pid, "/F"], { stdio: "ignore" });
+        }
+
+        return pids.size;
+    }
+
+    const result = spawnSync("lsof", ["-ti", `tcp:${port}`], { encoding: "utf8" });
+
+    if (result.status !== 0 || !result.stdout?.trim()) {
+        return 0;
+    }
+
+    const pids = result.stdout.trim().split(/\s+/);
+
+    for (const pid of pids) {
+        spawnSync("kill", ["-9", pid], { stdio: "ignore" });
+    }
+
+    return pids.length;
+}
+
+/**
+ * Clears stale Docker and host listeners before starting a fresh dev agent.
+ *
+ * @returns Nothing.
+ */
+function resetAgentPort() {
+    stopDockerAgent();
+
+    const killed = killListenersOnPort(agentPort);
+
+    if (killed > 0) {
+        console.log(`[dev-agent] freed port ${agentPort} (${killed} process(es) stopped)`);
+    }
+}
+
+/**
  * Waits until the process receives SIGINT or SIGTERM.
  *
  * @returns Promise resolved by the first shutdown signal
  */
-function waitForShutdownSignal() {
-    return new Promise((resolve) => {
-        const keepAlive = setInterval(() => {}, 60 * 60 * 1000);
-
-        const finish = () => {
-            clearInterval(keepAlive);
-            resolve();
-        };
-
-        process.once("SIGINT", finish);
-        process.once("SIGTERM", finish);
-    });
+function waitForShutdownSignalLegacy() {
+    return waitForShutdownSignal();
 }
 
 /**
@@ -283,8 +360,12 @@ async function ensureLocalAgent(setupKey) {
         };
     }
 
+    resetAgentPort();
+
     let hostChild = null;
     let ownsDockerAgent = false;
+
+    const preferHostOnWindows = process.platform === "win32";
 
     if (await ensureHostBinary()) {
         hostChild = await startHostAgent(setupKey);
@@ -303,7 +384,7 @@ async function ensureLocalAgent(setupKey) {
         }
     }
 
-    if (!hostChild) {
+    if (!hostChild && !preferHostOnWindows) {
         ownsDockerAgent = await startDockerAgent(setupKey);
 
         if (!ownsDockerAgent) {
@@ -315,6 +396,11 @@ async function ensureLocalAgent(setupKey) {
 
         await waitForHealthy(agentHealthUrl, 120_000);
         console.log(`[dev-agent] Docker agent ready at ${agentHealthUrl}`);
+    } else
+    if (!hostChild && preferHostOnWindows) {
+        console.error(
+            "[dev-agent] host Zig agent is required on Windows dev. Build with `zig build` in packages/agent."
+        );
     }
 
     return {
@@ -347,14 +433,38 @@ let ownedAgent = await ensureLocalAgent(setupKey);
 
 if (!await isHealthy(agentHealthUrl)) {
     console.warn(
-        "[dev-agent] could not start a local agent. Install Zig or Docker, then restart yarn dev."
+        "[dev-agent] could not start a local agent. Install Zig or Docker, then restart the dev stack."
     );
     console.warn("[dev-agent] You can still connect a node manually from Nodes > Add node.");
-    await waitForShutdownSignal();
+    await waitForShutdownSignalLegacy();
     process.exit(0);
 }
 
 console.log(`[dev-agent] registered against ${controlPlaneUrl}`);
+
+const agentWatchPaths = [
+    path.join(repoRoot, "packages", "agent", "src"),
+    path.join(repoRoot, "packages", "agent", "build.zig"),
+    path.join(repoRoot, "packages", "agent", "build.zig.zon")
+];
+
+createDevWatcher({
+    label: "dev-agent",
+    paths: agentWatchPaths,
+    debounceMs: 1500,
+    onChange: async () => {
+        console.log("[dev-agent] rebuilding agent after source change...");
+        stopOwnedAgent(ownedAgent);
+        resetAgentPort();
+        ownedAgent = await ensureLocalAgent(setupKey);
+
+        if (await isHealthy(agentHealthUrl)) {
+            console.log(`[dev-agent] agent restarted at ${agentHealthUrl}`);
+        } else {
+            console.error("[dev-agent] agent restart failed after source change");
+        }
+    }
+});
 
 const watchdog = setInterval(() => {
     void (async () => {
@@ -364,6 +474,7 @@ const watchdog = setInterval(() => {
 
         console.warn("[dev-agent] agent is not healthy, attempting restart...");
         stopOwnedAgent(ownedAgent);
+        resetAgentPort();
         ownedAgent = await ensureLocalAgent(setupKey);
 
         if (await isHealthy(agentHealthUrl)) {
@@ -374,7 +485,7 @@ const watchdog = setInterval(() => {
     })();
 }, 15_000);
 
-await waitForShutdownSignal();
+await waitForShutdownSignalLegacy();
 
 clearInterval(watchdog);
 stopOwnedAgent(ownedAgent);

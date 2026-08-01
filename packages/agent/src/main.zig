@@ -31,18 +31,46 @@ pub fn main(init: std.process.Init.Minimal) !void {
         log_agent_config.warn("bootstrap persist failed: {}", .{err});
     };
 
-    ensureNetbirdConnected(allocator, &agent_cfg);
-
-    try cp_client.startBackground(allocator, io, &agent_cfg);
-    try metrics_exporter.startBackground(allocator, agent_cfg.node_id, agent_cfg.docker_socket);
-
     const server_config = http_server.Config{
         .listen_address = "0.0.0.0",
         .listen_port = agent_cfg.agent_port,
         .docker_socket = agent_cfg.docker_socket,
     };
 
-    try http_server.serve(allocator, server_config);
+    const http_thread = try std.Thread.spawn(.{}, httpServerThread, .{ allocator, init.environ, server_config });
+    http_thread.detach();
+
+    blocking_io.sleepMs(500);
+
+    const netbird_thread = try std.Thread.spawn(.{}, netbirdConnectThread, .{ allocator, &agent_cfg });
+    netbird_thread.detach();
+
+    try cp_client.startBackground(allocator, io, &agent_cfg);
+    try metrics_exporter.startBackground(allocator, agent_cfg.node_id, agent_cfg.docker_socket);
+
+    while (true) {
+        blocking_io.sleepSeconds(3600);
+    }
+}
+
+fn httpServerThread(
+    allocator: std.mem.Allocator,
+    environ: std.process.Environ,
+    config: http_server.Config,
+) void {
+    var threaded = std.Io.Threaded.init(allocator, .{ .environ = environ });
+    const http_io = threaded.io();
+
+    http_server.serveWithIo(allocator, http_io, config) catch |err| {
+        log_agent.err("http server failed: {}", .{err});
+    };
+}
+
+fn netbirdConnectThread(
+    allocator: std.mem.Allocator,
+    agent_cfg: *agent_config.AgentConfig,
+) void {
+    ensureNetbirdConnected(allocator, agent_cfg);
 }
 
 /// Ensures the NetBird client is connected to the NetBird server.
