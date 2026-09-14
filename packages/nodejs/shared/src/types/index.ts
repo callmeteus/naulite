@@ -139,6 +139,12 @@ export type {
 export type { ApiKey, CreatedApiKey } from "./ApiKey";
 
 export type {
+    TargetGroup,
+    CreateTargetGroupBody,
+    UpdateTargetGroupBody
+} from "../schemas/TargetGroup";
+
+export type {
     NotificationDestination,
     CreateNotificationDestinationInput,
     UpdateNotificationDestinationInput,

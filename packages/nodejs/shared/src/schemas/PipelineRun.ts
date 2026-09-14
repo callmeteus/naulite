@@ -3,7 +3,13 @@ import { z } from "zod";
 /**
  * Pipeline run lifecycle status.
  */
-export const PipelineRunStatusSchema = z.enum(["pending", "running", "succeeded", "failed"]);
+export const PipelineRunStatusSchema = z.enum([
+    "pending",
+    "running",
+    "awaiting_approval",
+    "succeeded",
+    "failed"
+]);
 
 /**
  * High-level pipeline run kinds.
@@ -38,7 +44,8 @@ export const PipelineEventKindSchema = z.enum([
     "node.joined_cluster",
     "deploy.step.started",
     "deploy.step.finished",
-    "deploy.step.failed"
+    "deploy.step.failed",
+    "deploy.gate.awaiting"
 ]);
 
 /**
@@ -99,6 +106,10 @@ export const PipelineRunSchema = z.object({
     completedAt: z.string().optional(),
     errorMessage: z.string().optional(),
     failureLog: z.string().optional(),
+    createdBy: z.string().optional(),
+    gateStepId: z.string().optional(),
+    pendingPlan: z.record(z.string(), z.unknown()).optional(),
+    approvedBy: z.string().optional(),
     createdAt: z.string(),
     steps: z.array(PipelineStepSchema).optional(),
     events: z.array(PipelineEventSchema).optional()

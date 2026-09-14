@@ -16,6 +16,13 @@ export { ExposurePlanner, type ExposurePlan } from "./orchestration/ExposurePlan
 export { NetworkGroupId } from "./orchestration/NetworkGroupId";
 export { Planner, type ClusterActualState, type PlannerDiff } from "./orchestration/Planner";
 export { Scheduler, type NodeScore, type ScheduleResult } from "./orchestration/Scheduler";
+export { TargetGroupResolver } from "./orchestration/TargetGroupResolver";
+export { TaskModuleRegistry } from "./orchestration/TaskModuleRegistry";
+export { TargetGroupService } from "./services/TargetGroupService";
+export { ApplyStageRunner } from "./services/ApplyStageRunner";
+export { WarpgateSshTarget } from "./runtime/WarpgateSshTarget";
+export { HostSessionPath } from "./runtime/HostSessionPath";
+export { HostExecutorProvider } from "./runtime/HostExecutorProvider";
 export { PluginLoader } from "./plugins/PluginLoader";
 export { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";
 export { SecretProviderRegistry } from "./plugins/SecretProviderRegistry";

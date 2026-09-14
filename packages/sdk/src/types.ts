@@ -7,10 +7,11 @@ import type {
     LogRotationTask,
     Node,
     NodeProvision,
-    PipelineEvent,
-    PipelineRun,
     PipelineRunKind,
     PipelineRunStatus,
+    TargetGroup,
+    CreateTargetGroupBody,
+    UpdateTargetGroupBody,
     ResolvedSecret,
     Secret,
     Service,
@@ -242,7 +243,8 @@ export interface ListPipelineRunsQuery {
     page?: number;
 }
 
-export type { PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus };
+export type { PipelineEvent, PipelineRun, PipelineRunKind, PipelineRunStatus, PipelineStep } from "@naulite/shared";
+export type { HostPackage, NodeResources } from "@naulite/shared";
 
 /**
  * Registry operation response.
@@ -491,6 +493,7 @@ export type {
     ApiKey,
     BackupTask,
     ContainerRegistryImage,
+    CreateTargetGroupBody,
     CreatedApiKey,
     Instance,
     LogRotationTask,
@@ -499,5 +502,7 @@ export type {
     ResolvedSecret,
     Secret,
     Service,
+    TargetGroup,
+    UpdateTargetGroupBody,
     Volume
 };

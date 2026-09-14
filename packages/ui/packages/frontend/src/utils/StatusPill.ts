@@ -20,6 +20,7 @@ const SUCCESS_STATUSES = new Set([
  * Status values mapped to the warning tone.
  */
 const WARNING_STATUSES = new Set([
+    "awaiting_approval",
     "registering",
     "pending",
     "deploying",

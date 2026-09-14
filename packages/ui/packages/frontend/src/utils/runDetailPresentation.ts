@@ -117,6 +117,16 @@ export function hasUnreachableRunNodes(nodeIds: string[], nodes: Node[]): boolea
  * @returns True when the run is pending or running
  */
 export function isActivePipelineRun(status: PipelineRun["status"]): boolean {
+    return status === "pending" || status === "running" || status === "awaiting_approval";
+}
+
+/**
+ * Returns whether the run should show the generic in-progress banner.
+ *
+ * @param status Pipeline run status
+ * @returns True for pending or running only
+ */
+export function isRunInProgressBanner(status: PipelineRun["status"]): boolean {
     return status === "pending" || status === "running";
 }
 

@@ -10,6 +10,7 @@
         },
         "infrastructure": {
             "nodes": "Nós",
+            "groups": "Grupos de destino",
             "cluster": "Cluster",
             "metrics": "Métricas",
             "provision": "Adicionar nós"
@@ -22,6 +23,7 @@
         },
         "delivery": {
             "deploy": "Deploy",
+            "entrega": "Entrega",
             "gitops": "GitOps",
             "build": "Build",
             "runs": "Execuções de pipeline"
@@ -163,7 +165,8 @@
             "queued": "Na fila",
             "active": "Ativo",
             "disabled": "Desabilitado",
-            "unknown": "Desconhecido"
+            "unknown": "Desconhecido",
+            "awaiting_approval": "Aguardando aprovação"
         }
     },
     "pages": {
@@ -314,7 +317,32 @@
             "actionOpenCluster": "Visão do cluster",
             "applyingTitle": "Aplicando manifesto",
             "applyingDescription": "Enviando o manifesto e iniciando a execução do pipeline. Você será redirecionado para a página da execução quando estiver pronta.",
-            "applySuccessNoRun": "Manifesto aplicado. Abra as execuções de pipeline para acompanhar o rollout."
+            "applySuccessNoRun": "Manifesto aplicado. Abra as execuções de pipeline para acompanhar o rollout.",
+            "varsTitle": "Variáveis do manifesto",
+            "varsHint": "Preencha os valores das vars declaradas no manifesto antes de aplicar."
+        },
+        "delivery": {
+            "title": "Entrega",
+            "hint": "Revisões GitOps e execuções de pipeline em um só lugar.",
+            "tabs": {
+                "gitops": "GitOps",
+                "pipeline": "Execuções de pipeline"
+            }
+        },
+        "groups": {
+            "title": "Grupos de destino",
+            "hint": "Conjuntos nomeados de nós usados no direcionamento de rollout.",
+            "create": "Criar grupo",
+            "createTitle": "Novo grupo de destino",
+            "editTitle": "Editar grupo de destino",
+            "deleteTitle": "Excluir grupo de destino",
+            "deleteConfirm": "Excluir este grupo de destino? Manifestos que o referenciam podem falhar até você atualizá-los.",
+            "emptyTitle": "Nenhum grupo de destino ainda",
+            "emptyDescription": "Crie um grupo para direcionar nós específicos nos deploys.",
+            "members": "Membros",
+            "noNodes": "Nenhum nó registrado ainda.",
+            "id": "Id do grupo",
+            "idPlaceholder": "workers-producao"
         },
         "forbidden": {
             "title": "Acesso negado",
@@ -777,6 +805,25 @@
             "rerunBuild": "Executar build novamente",
             "redeploy": "Deploy rápido",
             "redeployConfirm": "Abrir o deploy rápido para aplicar o manifesto novamente?",
+            "launchedBy": "Iniciado por",
+            "elapsed": "Tempo decorrido",
+            "tabs": {
+                "details": "Detalhes",
+                "output": "Output",
+                "nodes": "Nós"
+            },
+            "gateTitle": "Aprovação necessária",
+            "gateHint": "Revise o plano e confirme para continuar o rollout, ou recuse para abortar.",
+            "gateConfirm": "Confirmar e continuar",
+            "gateReject": "Recusar",
+            "relaunch": "Relançar",
+            "relaunchFailed": "Relançar o que falhou",
+            "cancelRun": "Cancelar",
+            "cancelRunConfirm": "Cancelar esta execução de pipeline? O trabalho em andamento será interrompido.",
+            "outputSearch": "Buscar nos logs",
+            "outputSearchPlaceholder": "Filtrar linhas do log",
+            "nodesEmpty": "Nenhuma etapa de nó foi registrada nesta execução.",
+            "nodeStepCount": "Etapas",
             "kinds": {
                 "ci_build": "Build",
                 "apply": "Deploy",
@@ -786,6 +833,7 @@
             "statuses": {
                 "pending": "Pendente",
                 "running": "Em execução",
+                "awaiting_approval": "Aguardando aprovação",
                 "succeeded": "Concluída",
                 "failed": "Falhou"
             }

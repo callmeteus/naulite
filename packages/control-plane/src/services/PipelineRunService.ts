@@ -127,6 +127,42 @@ export namespace PipelineRunService {
      * @param runId Pipeline run identifier
      * @returns Updated pipeline run
      */
+    /**
+     * Updates mutable pipeline run fields (gate state, pending plan).
+     *
+     * @param runId Pipeline run identifier
+     * @param fields Fields to update
+     * @returns Updated pipeline run
+     */
+    export async function updateRunFields(
+        runId: string,
+        fields: {
+            status?: PipelineRunStatus;
+            createdBy?: string | null;
+            gateStepId?: string | null;
+            pendingPlan?: unknown | null;
+            approvedBy?: string | null;
+        }
+    ): Promise<PipelineRun | null> {
+        const row = await PipelineRunModel.findByPk(runId);
+
+        if (!row) {
+            return null;
+        }
+
+        await row.update({
+            status: fields.status ?? row.status,
+            createdBy: fields.createdBy === undefined ? row.get("createdBy") : fields.createdBy,
+            gateStepId: fields.gateStepId === undefined ? row.get("gateStepId") : fields.gateStepId,
+            pendingPlan: fields.pendingPlan === undefined
+                ? row.get("pendingPlan")
+                : fields.pendingPlan === null ? null : JSON.stringify(fields.pendingPlan),
+            approvedBy: fields.approvedBy === undefined ? row.get("approvedBy") : fields.approvedBy
+        });
+
+        return getRun(runId);
+    }
+
     export async function markRunning(runId: string): Promise<PipelineRun | null> {
         const row = await PipelineRunModel.findByPk(runId);
 
@@ -520,8 +556,38 @@ export namespace PipelineRunService {
             completedAt: plain.completedAt ? String(plain.completedAt) : undefined,
             errorMessage: plain.errorMessage ? String(plain.errorMessage) : undefined,
             failureLog: plain.failureLog ? String(plain.failureLog) : undefined,
+            createdBy: plain.createdBy ? String(plain.createdBy) : undefined,
+            gateStepId: plain.gateStepId ? String(plain.gateStepId) : undefined,
+            pendingPlan: parsePendingPlan(plain.pendingPlan),
+            approvedBy: plain.approvedBy ? String(plain.approvedBy) : undefined,
             createdAt: String(plain.createdAt)
         };
+    }
+
+    /**
+     * Parses pending plan JSON from storage.
+     *
+     * @param value Raw database value
+     * @returns Parsed pending plan or undefined
+     */
+    function parsePendingPlan(value: unknown): Record<string, unknown> | undefined {
+        if (!value) {
+            return undefined;
+        }
+
+        if (typeof value === "object") {
+            return value as Record<string, unknown>;
+        }
+
+        if (typeof value === "string") {
+            try {
+                return JSON.parse(value) as Record<string, unknown>;
+            } catch {
+                return undefined;
+            }
+        }
+
+        return undefined;
     }
 
     /**

@@ -13,8 +13,7 @@ import {
     Route,
     Server,
     Shield,
-    Users,
-    Workflow
+    Users
 } from "@lucide/vue";
 import type { NaulitePermission } from "@naulite/sdk";
 
@@ -40,6 +39,7 @@ export const navigationSections: NavSection[] = [
         labelKey: "menu.sections.infrastructure",
         items: [
             { path: "/nodes", labelKey: "menu.infrastructure.nodes", permission: "nodes:read", icon: Server },
+            { path: "/target-groups", labelKey: "menu.infrastructure.groups", permission: "nodes:read", icon: Users },
             { path: "/cluster", labelKey: "menu.infrastructure.cluster", permission: "metrics:read", icon: LayoutDashboard },
             { path: "/metrics", labelKey: "menu.infrastructure.metrics", permission: "metrics:read", icon: Activity }
         ]
@@ -58,8 +58,7 @@ export const navigationSections: NavSection[] = [
         id: "delivery",
         labelKey: "menu.sections.delivery",
         items: [
-            { path: "/gitops", labelKey: "menu.delivery.gitops", permission: "gitops:read", icon: GitBranch },
-            { path: "/runs", labelKey: "menu.delivery.runs", permission: "runs:read", icon: Workflow }
+            { path: "/delivery/gitops", labelKey: "menu.delivery.entrega", permission: "gitops:read", icon: GitBranch }
         ]
     },
     {

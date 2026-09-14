@@ -59,4 +59,16 @@ export class PipelineRunModel extends Model {
 
     @Column({ type: DataType.STRING, field: "created_at" })
     declare createdAt: string;
+
+    @Column({ type: DataType.STRING, field: "created_by" })
+    declare createdBy: string | null;
+
+    @Column({ type: DataType.STRING, field: "gate_step_id" })
+    declare gateStepId: string | null;
+
+    @Column({ type: DataType.TEXT, field: "pending_plan" })
+    declare pendingPlan: string | null;
+
+    @Column({ type: DataType.STRING, field: "approved_by" })
+    declare approvedBy: string | null;
 }

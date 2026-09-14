@@ -15,6 +15,7 @@ import { registerNodeProvisionRoutes } from "./nodes-provision";
 import { registerNotificationRoutes } from "./notifications";
 import { registerRunsRoutes } from "./runs";
 import { registerSecretRoutes } from "./secrets";
+import { registerTargetGroupRoutes } from "./TargetGroups";
 
 /**
  * Registers all admin API HTTP routes.
@@ -28,6 +29,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     await registerClusterRoutes(app);
     await registerApiKeyRoutes(app);
     await registerSecretRoutes(app);
+    await registerTargetGroupRoutes(app);
     await registerBackupRoutes(app);
     await registerNetBirdRoutes(app);
     await registerMetricsRoutes(app);

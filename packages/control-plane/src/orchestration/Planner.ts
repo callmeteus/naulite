@@ -192,7 +192,6 @@ export class Planner {
             image: Planner.resolveImage(service),
             desiredReplicas: Planner.resolveReplicas(service),
             status: "pending" as const,
-            cluster: service.cluster ?? manifest.defaults?.cluster,
             capabilities: service.capabilities,
             networks: service.networks ?? [],
             ingress: service.ingress,
@@ -531,7 +530,7 @@ export class Planner {
             return 0;
         }
 
-        return service.deploy?.replicas ?? 1;
+        return service.scale?.replicas ?? service.deploy?.replicas ?? 1;
     }
 
     /**

@@ -7,6 +7,7 @@ export namespace ManifestMerge {
     /**
      * Merges a base manifest with an overlay using deep object merge.
      * Arrays and scalars in the overlay replace the base value.
+     * Service keys set to null in the overlay remove that service from the base.
      *
      * @param baseYaml Base manifest YAML
      * @param overlayYaml Overlay manifest YAML
@@ -47,10 +48,55 @@ export namespace ManifestMerge {
         const result: Record<string, unknown> = { ...base };
 
         for (const [key, overlayValue] of Object.entries(overlay)) {
+            if (key === "services" && isPlainObject(overlayValue)) {
+                result[key] = mergeServices(
+                    isPlainObject(result[key]) ? (result[key] as Record<string, unknown>) : {},
+                    overlayValue as Record<string, unknown>
+                );
+                continue;
+            }
+
+            if (key === "tasks" && Array.isArray(overlayValue)) {
+                const baseTasks = Array.isArray(result[key]) ? (result[key] as unknown[]) : [];
+                result[key] = [...baseTasks, ...overlayValue];
+                continue;
+            }
+
             if (key in result) {
                 result[key] = deepMerge(result[key], overlayValue);
             } else {
                 result[key] = overlayValue;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Merges compose services maps, omitting keys explicitly set to null.
+     *
+     * @param base Base services map
+     * @param overlay Overlay services map
+     * @returns Merged services map
+     */
+    export function mergeServices(
+        base: Record<string, unknown>,
+        overlay: Record<string, unknown>
+    ): Record<string, unknown> {
+        const result: Record<string, unknown> = { ...base };
+
+        for (const [serviceName, overlayService] of Object.entries(overlay)) {
+            if (overlayService === null) {
+                delete result[serviceName];
+                continue;
+            }
+
+            const baseService = result[serviceName];
+
+            if (isPlainObject(baseService) && isPlainObject(overlayService)) {
+                result[serviceName] = deepMerge(baseService, overlayService);
+            } else {
+                result[serviceName] = overlayService;
             }
         }
 

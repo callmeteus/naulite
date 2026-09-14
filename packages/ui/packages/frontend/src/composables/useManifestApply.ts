@@ -1,10 +1,11 @@
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type { Router } from "vue-router";
 
 import { nauliteClient } from "../api/Client";
 import { DEFAULT_MANIFEST_YAML } from "../constants/defaultManifest";
 import { parseApiError, type ParsedApiError } from "./useApiAction";
 import { useClusterStore } from "../stores/Cluster";
+import { parseManifestVarNames } from "../utils/RunPresentation";
 
 type GitOpsRevisionRow = {
     manifestYaml?: string;
@@ -20,9 +21,22 @@ type GitOpsRevisionRow = {
 export function useManifestApply(initialYaml = DEFAULT_MANIFEST_YAML) {
     const store = useClusterStore();
     const manifestYaml = ref(initialYaml);
+    const manifestVars = ref<Record<string, string>>({});
     const applying = ref(false);
     const loadingManifest = ref(false);
     const applyError = ref<ParsedApiError | null>(null);
+
+    const manifestVarNames = computed(() => parseManifestVarNames(manifestYaml.value));
+
+    watch(manifestVarNames, (names) => {
+        const next: Record<string, string> = {};
+
+        for (const name of names) {
+            next[name] = manifestVars.value[name] ?? "";
+        }
+
+        manifestVars.value = next;
+    });
 
     /**
      * Prefills the editor from the latest applied GitOps revision.
@@ -60,6 +74,25 @@ export function useManifestApply(initialYaml = DEFAULT_MANIFEST_YAML) {
     }
 
     /**
+     * Builds the vars payload for apply when survey fields are filled.
+     *
+     * @returns Vars record or undefined when there are no declared vars
+     */
+    function buildApplyVars(): Record<string, string> | undefined {
+        if (manifestVarNames.value.length === 0) {
+            return undefined;
+        }
+
+        const vars: Record<string, string> = {};
+
+        for (const name of manifestVarNames.value) {
+            vars[name] = manifestVars.value[name] ?? "";
+        }
+
+        return vars;
+    }
+
+    /**
      * Submits the manifest asynchronously and opens the pipeline run page.
      *
      * @param router Vue router instance
@@ -75,7 +108,11 @@ export function useManifestApply(initialYaml = DEFAULT_MANIFEST_YAML) {
         store.error = null;
 
         try {
-            const result = await store.applyManifest(manifestYaml.value, { async: true });
+            const vars = buildApplyVars();
+            const result = await store.applyManifest(manifestYaml.value, {
+                async: true,
+                vars
+            });
 
             if (result.runId) {
                 await router.push(`/runs/${result.runId}`);
@@ -92,6 +129,8 @@ export function useManifestApply(initialYaml = DEFAULT_MANIFEST_YAML) {
 
     return {
         manifestYaml,
+        manifestVars,
+        manifestVarNames,
         applying,
         loadingManifest,
         applyError,

@@ -7,10 +7,7 @@ enum MetadataGridColumns {
     FOUR = 4
 }
 
-enum MetadataGridDensity {
-    DEFAULT = "default",
-    COMPACT = "compact"
-}
+type MetadataGridDensity = "default" | "compact";
 
 const props = withDefaults(defineProps<{
     /**
@@ -24,14 +21,14 @@ const props = withDefaults(defineProps<{
     density?: MetadataGridDensity;
 }>(), {
     columns: MetadataGridColumns.THREE,
-    density: MetadataGridDensity.DEFAULT
+    density: "default"
 });
 
 provide("metadataGridColumns", computed(() => props.columns));
 provide("metadataGridDensity", computed(() => props.density));
 
 const gridClass = computed(() => {
-    const gap = props.density === MetadataGridDensity.COMPACT ? "gap-3" : "gap-4";
+    const gap = props.density === "compact" ? "gap-3" : "gap-4";
     const base = `grid ${gap}`;
 
     if (props.columns === MetadataGridColumns.TWO) {

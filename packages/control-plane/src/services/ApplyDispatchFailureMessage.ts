@@ -64,7 +64,11 @@ export function explainDispatchFailure(entry: AgentDispatchResult): string {
             : `The agent rejected the request (${detail})`;
     }
 
-    if (/fetch failed|econnrefused|enotfound|network/i.test(message)) {
+    if (
+        message === "The control plane could not connect to the agent."
+        || /fetch failed|econnrefused|enotfound|network/i.test(rawMessage)
+        || /fetch failed|econnrefused|enotfound|network/i.test(message)
+    ) {
         return agentUrl
             ? `The control plane could not connect to the agent at ${agentUrl}`
             : "The control plane could not connect to the agent";

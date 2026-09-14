@@ -156,11 +156,37 @@ export namespace ManifestResolver {
             }
 
             merged = ManifestMerge.deepMerge(merged, baseDoc) as Record<string, unknown>;
+            merged = concatTasks(merged, baseDoc as Record<string, unknown>);
         }
 
         // Merge local on top of extended base
         merged = ManifestMerge.deepMerge(merged, options.doc) as Record<string, unknown>;
+        merged = concatTasks(merged, options.doc);
         return { mergedRoot: merged, rootWorkDirs: workDirs, rootSources: sources };
+    }
+
+    /**
+     * Concatenates task arrays from an overlay document into the merged root.
+     *
+     * @param merged Merged manifest document
+     * @param overlay Overlay document
+     * @returns Document with concatenated tasks
+     */
+    function concatTasks(
+        merged: Record<string, unknown>,
+        overlay: Record<string, unknown>
+    ): Record<string, unknown> {
+        const baseTasks = Array.isArray(merged.tasks) ? merged.tasks : [];
+        const overlayTasks = Array.isArray(overlay.tasks) ? overlay.tasks : [];
+
+        if (overlayTasks.length === 0) {
+            return merged;
+        }
+
+        return {
+            ...merged,
+            tasks: [...baseTasks, ...overlayTasks]
+        };
     }
 
     function normalizeRootExtends(value: unknown): Array<{ file: string; credentials?: GitCredentials }> {

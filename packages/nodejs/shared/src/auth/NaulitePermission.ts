@@ -5,6 +5,7 @@ export type NaulitePermission =
     | "secrets:read"
     | "secrets:write"
     | "nodes:read"
+    | "nodes:write"
     | "nodes:provision"
     | "nodes:terminate"
     | "nodes:host-update"
@@ -14,6 +15,7 @@ export type NaulitePermission =
     | "workloads:write"
     | "runs:read"
     | "runs:write"
+    | "runs:approve"
     | "gitops:read"
     | "gitops:rollback"
     | "registry:read"
@@ -42,6 +44,7 @@ export namespace PermissionCatalog {
             "secrets:read",
             "secrets:write",
             "nodes:read",
+            "nodes:write",
             "nodes:provision",
             "nodes:terminate",
             "nodes:host-update",
@@ -51,6 +54,7 @@ export namespace PermissionCatalog {
             "workloads:write",
             "runs:read",
             "runs:write",
+            "runs:approve",
             "gitops:read",
             "gitops:rollback",
             "registry:read",

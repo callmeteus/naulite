@@ -240,6 +240,44 @@ export namespace ControlPlaneService {
         }
 
         /**
+         * @param pagination Pagination query
+         * @returns Paginated target groups
+         */
+        export function listTargetGroups(
+            ...args: Parameters<ControlPlaneStore["listTargetGroups"]>
+        ): ReturnType<ControlPlaneStore["listTargetGroups"]> {
+            return backing().listTargetGroups(...args);
+        }
+
+        /**
+         * @param id Target group id
+         * @returns Target group when found
+         */
+        export function getTargetGroup(id: string): ReturnType<ControlPlaneStore["getTargetGroup"]> {
+            return backing().getTargetGroup(id);
+        }
+
+        /**
+         * @param group Target group payload
+         * @param memberNodeIds Member node ids
+         * @returns Nothing.
+         */
+        export function saveTargetGroup(
+            group: Parameters<ControlPlaneStore["saveTargetGroup"]>[0],
+            memberNodeIds: Parameters<ControlPlaneStore["saveTargetGroup"]>[1]
+        ): ReturnType<ControlPlaneStore["saveTargetGroup"]> {
+            return backing().saveTargetGroup(group, memberNodeIds);
+        }
+
+        /**
+         * @param id Target group id
+         * @returns Whether a row was deleted
+         */
+        export function deleteTargetGroup(id: string): ReturnType<ControlPlaneStore["deleteTargetGroup"]> {
+            return backing().deleteTargetGroup(id);
+        }
+
+        /**
          * @returns Cluster services
          */
         export function listServices(): ReturnType<ControlPlaneStore["listServices"]> {
@@ -1124,6 +1162,27 @@ export namespace ControlPlaneService {
                 nodes: Parameters<ControlPlaneContext["scheduler"]["schedule"]>[2]
             ) {
                 return ControlPlaneService.requireContext().scheduler.schedule(service, manifestService, nodes);
+            }
+
+            /**
+             * @param service Service record
+             * @param manifestService Manifest service definition
+             * @param nodes Eligible cluster nodes
+             * @param replicaCount Replica count to place
+             * @returns Node id per replica
+             */
+            export function scheduleReplicaNodes(
+                service: Parameters<ControlPlaneContext["scheduler"]["scheduleReplicaNodes"]>[0],
+                manifestService: Parameters<ControlPlaneContext["scheduler"]["scheduleReplicaNodes"]>[1],
+                nodes: Parameters<ControlPlaneContext["scheduler"]["scheduleReplicaNodes"]>[2],
+                replicaCount: Parameters<ControlPlaneContext["scheduler"]["scheduleReplicaNodes"]>[3]
+            ) {
+                return ControlPlaneService.requireContext().scheduler.scheduleReplicaNodes(
+                    service,
+                    manifestService,
+                    nodes,
+                    replicaCount
+                );
             }
         }
 

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Op } from "sequelize";
-import type { ApiKey, CreatedApiKey, HostInventory, HostUpdateRun, Instance, Node, NodeProvision, PaginatedList, PaginationQuery, Secret, Service, Volume } from "@naulite/shared";
+import type { ApiKey, CreatedApiKey, HostInventory, HostUpdateRun, Instance, Node, NodeProvision, PaginatedList, PaginationQuery, Secret, Service, TargetGroup, Volume } from "@naulite/shared";
 import { buildPaginatedList, paginationOffset } from "@naulite/shared";
 
 import { ApiKeyCrypto } from "../auth/ApiKeyCrypto";
@@ -18,6 +18,8 @@ import {
     NodeProvisionModel,
     SecretModel,
     ServiceModel,
+    TargetGroupMemberModel,
+    TargetGroupModel,
     VolumeModel
 } from "./models/index";
 
@@ -1093,5 +1095,105 @@ export class ControlPlaneStore {
             completedAt: run.completedAt ?? null,
             createdAt: run.createdAt
         });
+    }
+
+    /**
+     * Lists target groups with member node ids.
+     *
+     * @param pagination Pagination query parameters
+     * @returns Paginated target groups
+     */
+    async listTargetGroups(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<TargetGroup>> {
+        const page = pagination.page;
+        const limit = pagination.limit;
+        const { count, rows } = await TargetGroupModel.findAndCountAll({
+            order: [["id", "ASC"]],
+            limit,
+            offset: paginationOffset(page, limit)
+        });
+
+        const items = await Promise.all(rows.map(async (row) => {
+            return this.mapTargetGroupRow(row.get({ plain: true }));
+        }));
+
+        return buildPaginatedList(items, count, page, limit);
+    }
+
+    /**
+     * Finds a target group by id.
+     *
+     * @param id Target group id
+     * @returns Target group when found
+     */
+    async getTargetGroup(id: string): Promise<TargetGroup | null> {
+        const row = await TargetGroupModel.findByPk(id);
+
+        if (!row) {
+            return null;
+        }
+
+        return this.mapTargetGroupRow(row.get({ plain: true }));
+    }
+
+    /**
+     * Persists a target group and optional membership replacement.
+     *
+     * @param group Target group payload
+     * @param memberNodeIds Member node ids
+     * @returns Nothing.
+     */
+    async saveTargetGroup(group: TargetGroup, memberNodeIds: string[]): Promise<void> {
+        await TargetGroupModel.upsert({
+            id: group.id,
+            name: group.name,
+            createdAt: group.createdAt,
+            updatedAt: group.updatedAt
+        });
+
+        await TargetGroupMemberModel.destroy({ where: { groupId: group.id } });
+
+        for (const nodeId of memberNodeIds) {
+            await TargetGroupMemberModel.create({
+                groupId: group.id,
+                nodeId
+            });
+        }
+    }
+
+    /**
+     * Deletes a target group and its membership rows.
+     *
+     * @param id Target group id
+     * @returns Whether a row was deleted
+     */
+    async deleteTargetGroup(id: string): Promise<boolean> {
+        const deleted = await TargetGroupModel.destroy({ where: { id } });
+        return deleted > 0;
+    }
+
+    /**
+     * Maps a target group database row including members.
+     *
+     * @param row Target group row
+     * @returns Target group model
+     */
+    private async mapTargetGroupRow(row: {
+        id: string;
+        name: string;
+        createdAt: string;
+        updatedAt: string;
+    }): Promise<TargetGroup> {
+        const memberRows = await TargetGroupMemberModel.findAll({
+            where: { groupId: row.id },
+            order: [["nodeId", "ASC"]]
+        });
+
+        return {
+            id: row.id,
+            name: row.name,
+            memberNodeIds: memberRows.map((member) => member.nodeId),
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt
+        };
     }
 }

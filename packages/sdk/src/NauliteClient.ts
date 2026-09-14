@@ -22,6 +22,7 @@ import type {
     ContainerRegistryImageDeleteResult,
     ContainerRegistryImageHead,
     CreateAdminUserInput,
+    CreateTargetGroupBody,
     CreatedApiKey,
     DisableAdminUserInput,
     UpdateAdminUserInput,
@@ -66,6 +67,8 @@ import type {
     Secret,
     Service,
     ServiceReconcileResult,
+    TargetGroup,
+    UpdateTargetGroupBody,
     UpsertSecretInput,
     Volume
 } from "./types";
@@ -743,7 +746,10 @@ export class NauliteClient {
      * @param manifestYaml Raw compose manifest YAML
      * @returns Apply summary
      */
-    async applyManifest(manifestYaml: string, options?: { async?: boolean }): Promise<ApplyResponse> {
+    async applyManifest(
+        manifestYaml: string,
+        options?: { async?: boolean; vars?: Record<string, string> }
+    ): Promise<ApplyResponse> {
         const params = new URLSearchParams();
 
         if (options?.async) {
@@ -752,9 +758,97 @@ export class NauliteClient {
 
         const query = params.toString();
         const path = query.length > 0 ? `/apply?${query}` : "/apply";
-        const payload = await this.request<ApplyResultPayload | ApplyResponse | ApplyAcceptedPayload>("POST", path, { manifest: manifestYaml });
+        const payload = await this.request<ApplyResultPayload | ApplyResponse | ApplyAcceptedPayload>("POST", path, {
+            manifest: manifestYaml,
+            vars: options?.vars
+        });
 
         return normalizeApplyResponse(payload);
+    }
+
+    /**
+     * Continues a pipeline run paused at awaiting_approval.
+     *
+     * @param runId Pipeline run id
+     * @returns Run status payload
+     */
+    async continuePipelineRun(runId: string): Promise<{ id: string; status: string }> {
+        return this.request<{ id: string; status: string }>(
+            "POST",
+            `/runs/${encodeURIComponent(runId)}/continue`
+        );
+    }
+
+    /**
+     * Aborts a running or gated pipeline run.
+     *
+     * @param runId Pipeline run id
+     * @returns Message response
+     */
+    async abortPipelineRun(runId: string): Promise<{ message: string }> {
+        return this.request<{ message: string }>(
+            "POST",
+            `/runs/${encodeURIComponent(runId)}/abort`
+        );
+    }
+
+    /**
+     * Relaunches a pipeline run.
+     *
+     * @param runId Source pipeline run id
+     * @param options Relaunch options
+     * @returns New run payload
+     */
+    async relaunchPipelineRun(
+        runId: string,
+        options?: { failedOnly?: boolean }
+    ): Promise<{ id: string; status: string }> {
+        return this.request<{ id: string; status: string }>(
+            "POST",
+            `/runs/${encodeURIComponent(runId)}/relaunch`,
+            options ?? {}
+        );
+    }
+
+    /**
+     * Lists target groups with server-side pagination.
+     *
+     * @param query Pagination parameters
+     * @returns Paginated target groups
+     */
+    async listTargetGroups(query: PaginationQuery = {}): Promise<PaginatedResponse<TargetGroup>> {
+        return this.requestPaginated<TargetGroup>("GET", "/target-groups", query);
+    }
+
+    /**
+     * Creates a deployment target group.
+     *
+     * @param body Target group payload
+     * @returns Created target group
+     */
+    async createTargetGroup(body: CreateTargetGroupBody): Promise<TargetGroup> {
+        return this.request<TargetGroup>("POST", "/target-groups", body);
+    }
+
+    /**
+     * Updates a target group by id.
+     *
+     * @param id Target group id
+     * @param body Fields to update
+     * @returns Updated target group
+     */
+    async updateTargetGroup(id: string, body: UpdateTargetGroupBody): Promise<TargetGroup> {
+        return this.request<TargetGroup>("PATCH", `/target-groups/${encodeURIComponent(id)}`, body);
+    }
+
+    /**
+     * Deletes a target group by id.
+     *
+     * @param id Target group id
+     * @returns Nothing.
+     */
+    async deleteTargetGroup(id: string): Promise<void> {
+        await this.request<void>("DELETE", `/target-groups/${encodeURIComponent(id)}`);
     }
 
     /**

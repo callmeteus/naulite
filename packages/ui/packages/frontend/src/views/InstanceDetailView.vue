@@ -754,7 +754,7 @@ async function confirmRemoveInstance(): Promise<void> {
                             type="button"
                             class="btn btn-ghost btn-sm"
                             :disabled="logsLoading"
-                            @click="loadLogs"
+                            @click="() => void loadLogs()"
                         >
                             {{ t("pages.instanceDetail.refresh") }}
                         </button>

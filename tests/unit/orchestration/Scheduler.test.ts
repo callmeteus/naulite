@@ -37,11 +37,6 @@ function buildService(overrides: Partial<Service> = {}): Service {
         status: "pending",
         capabilities: ["gpu"],
         networks: [],
-        cluster: {
-            labels: {
-                region: "us-east"
-            }
-        },
         createdAt: now,
         updatedAt: now,
         ...overrides
@@ -51,20 +46,14 @@ function buildService(overrides: Partial<Service> = {}): Service {
 describe("Scheduler", () => {
     const scheduler = new Scheduler();
 
-    it("selects the highest-scoring node that matches labels and capabilities", () => {
+    it("selects the highest-scoring node that matches capabilities", () => {
         const service = buildService();
         const manifestService: ManifestService = {
-            capabilities: ["gpu"],
-            cluster: {
-                labels: {
-                    region: "us-east"
-                }
-            }
+            capabilities: ["gpu"]
         };
         const nodes = [
             buildNode({
                 id: "node-a",
-                labels: { region: "us-east" },
                 capabilities: ["gpu"],
                 resources: {
                     cpuMillisTotal: 4000,
@@ -77,7 +66,6 @@ describe("Scheduler", () => {
             }),
             buildNode({
                 id: "node-b",
-                labels: { region: "us-east" },
                 capabilities: ["gpu"],
                 resources: {
                     cpuMillisTotal: 4000,
@@ -93,22 +81,16 @@ describe("Scheduler", () => {
         const result = scheduler.schedule(service, manifestService, nodes);
 
         expect(result?.node.id).toBe("node-b");
-        expect(result?.score.matchedLabels).toEqual(["region"]);
         expect(result?.score.matchedCapabilities).toEqual(["gpu"]);
     });
 
-    it("returns null when no node satisfies required labels", () => {
+    it("returns null when required capabilities are missing", () => {
         const service = buildService({
-            cluster: {
-                labels: {
-                    region: "eu-west"
-                }
-            }
+            capabilities: ["gpu"]
         });
         const nodes = [
             buildNode({
-                labels: { region: "us-east" },
-                capabilities: ["gpu"]
+                capabilities: []
             })
         ];
 
@@ -121,8 +103,7 @@ describe("Scheduler", () => {
     it("excludes builder-role nodes for runtime image services", () => {
         const service = buildService({
             image: "nginx:1.27-alpine",
-            capabilities: ["docker"],
-            cluster: undefined
+            capabilities: ["docker"]
         });
         const manifestService: ManifestService = {
             capabilities: ["docker"]
@@ -151,5 +132,17 @@ describe("Scheduler", () => {
         const result = scheduler.schedule(service, manifestService, nodes);
 
         expect(result?.node.id).toBe("agent-worker");
+    });
+
+    it("spreads replicas round-robin across eligible nodes", () => {
+        const service = buildService({ capabilities: [] });
+        const nodes = [
+            buildNode({ id: "node-a" }),
+            buildNode({ id: "node-b" })
+        ];
+
+        const assignments = scheduler.scheduleReplicaNodes(service, undefined, nodes, 3);
+
+        expect(assignments).toEqual(["node-a", "node-b", "node-a"]);
     });
 });

@@ -26,7 +26,7 @@ export interface ServiceBuildConfig {
     buildRef: string;
     contextPath: string;
     dockerfile?: string;
-    provider: "docker" | "kaniko";
+    provider: "docker" | "kaniko" | "script";
     tags: string[];
     crName: string;
     crTag: string;

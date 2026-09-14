@@ -6,6 +6,8 @@ import {
     collectRunNodeIds,
     hasAgentRelatedRunContent,
     hasUnreachableRunNodes,
+    isActivePipelineRun,
+    isRunInProgressBanner,
     shouldShowRunAgentUnreachableBanner
 } from "../../../packages/ui/packages/frontend/src/utils/runDetailPresentation";
 
@@ -44,6 +46,11 @@ function buildNode(overrides: Partial<Node> = {}): Node {
 }
 
 describe("runDetailPresentation", () => {
+    it("treats awaiting_approval as active for live updates", () => {
+        expect(isActivePipelineRun("awaiting_approval")).toBe(true);
+        expect(isRunInProgressBanner("awaiting_approval")).toBe(false);
+    });
+
     it("collects node ids from run metadata and steps", () => {
         const run = buildRun({
             nodeId: "node-a",

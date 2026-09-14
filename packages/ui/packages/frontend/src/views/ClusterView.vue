@@ -13,6 +13,7 @@ import MetadataGridItem from "../components/ui/MetadataGridItem.vue";
 import StatusPill from "../components/ui/StatusPill.vue";
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
+import type { NaulitePermission } from "@naulite/sdk";
 
 const { t, locale } = useI18n();
 const store = useClusterStore();
@@ -60,7 +61,13 @@ const healthHintKey = computed(() => {
 });
 
 const quickLinks = computed(() => {
-    const links = [
+    const links: Array<{
+        to: string;
+        labelKey: string;
+        hintKey: string;
+        icon: typeof Server;
+        permission: NaulitePermission;
+    }> = [
         {
             to: "/nodes",
             labelKey: "pages.cluster.linkNodes",
@@ -97,7 +104,7 @@ const quickLinks = computed(() => {
             labelKey: "pages.cluster.linkProvision",
             hintKey: "pages.cluster.linkProvisionHint",
             icon: Cloud,
-            permission: "nodes:provision"
+            permission: "nodes:provision" as const
         });
     }
 

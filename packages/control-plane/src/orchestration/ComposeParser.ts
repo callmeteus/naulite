@@ -1,6 +1,14 @@
 import { parse as parseYaml } from "yaml";
 import { ZodError } from "zod";
-import { ManifestSchema, type Manifest, type ManifestBuild, type ManifestService, type NetworkExposure } from "@naulite/shared";
+import {
+    ManifestSchema,
+    TaskSchema,
+    type Manifest,
+    type ManifestBuild,
+    type ManifestService,
+    type NetworkExposure,
+    type Task
+} from "@naulite/shared";
 
 import { InvalidManifestDocumentError } from "../errors/orchestration/compose/InvalidManifestDocumentError";
 import { ManifestValidationError } from "../errors/orchestration/compose/ManifestValidationError";
@@ -12,6 +20,9 @@ import { YamlParseError } from "../errors/orchestration/compose/YamlParseError";
 interface RawComposeDocument {
     name?: string;
     services?: Record<string, Record<string, unknown>>;
+    tasks?: unknown[];
+    vars?: Record<string, string>;
+    apps?: Record<string, { path: string }>;
     volumes?: Record<string, Record<string, unknown>>;
     networks?: Record<string, Record<string, unknown>>;
     registries?: Record<string, Record<string, unknown>>;
@@ -46,17 +57,26 @@ export class ComposeParser {
             throw new InvalidManifestDocumentError();
         }
 
+        ComposeParser.rejectLegacyCluster(document);
+
         const manifestName = document.name ?? "default";
         const services: Record<string, ManifestService> = {};
         const rawServices = document.services ?? {};
 
         for (const [serviceName, rawService] of Object.entries(rawServices)) {
-            services[serviceName] = ComposeParser.mapService(rawService);
+            if (!rawService || typeof rawService !== "object") {
+                continue;
+            }
+
+            services[serviceName] = ComposeParser.mapService(rawService as Record<string, unknown>);
         }
 
         const manifestCandidate = {
             name: manifestName,
             services,
+            tasks: ComposeParser.mapTasks(document.tasks ?? []),
+            vars: document.vars ?? {},
+            apps: document.apps,
             volumes: ComposeParser.mapVolumes(document.volumes ?? {}),
             networks: ComposeParser.mapNetworks(document.networks ?? {}),
             registries: ComposeParser.mapRegistries(document.registries ?? document.xPlatform?.registries as Record<string, Record<string, unknown>> ?? {}),
@@ -83,24 +103,176 @@ export class ComposeParser {
      */
     private static mapService(rawService: Record<string, unknown>): ManifestService {
         const platform = (rawService["x-naulite"] ?? rawService.xNaulite ?? {}) as Record<string, unknown>;
+        const placement = ComposeParser.mapPlacement(platform, rawService);
+        const hostRuntime = ComposeParser.mapHostRuntime(platform);
+        const scale = ComposeParser.mapScale(platform.scale ?? platform.deploy);
 
         return {
-            image: rawService.image as string | undefined,
-            build: ComposeParser.mapBuild(rawService, platform),
+            image: hostRuntime ? undefined : (rawService.image as string | undefined),
+            build: hostRuntime ? undefined : ComposeParser.mapBuild(rawService, platform),
             command: rawService.command as ManifestService["command"],
             environment: rawService.environment as ManifestService["environment"],
             ports: rawService.ports as ManifestService["ports"],
             volumes: rawService.volumes as ManifestService["volumes"],
             networks: rawService.networks as ManifestService["networks"],
             dependsOn: rawService.dependsOn as ManifestService["dependsOn"],
-            cluster: (platform.cluster ?? rawService.cluster) as ManifestService["cluster"],
+            placement,
+            runtime: hostRuntime?.runtime,
+            unit: hostRuntime?.unit,
+            scale,
             capabilities: (platform.capabilities ?? rawService.capabilities ?? []) as string[],
             ingress: (platform.ingress ?? rawService.ingress) as ManifestService["ingress"],
             logRotation: (platform.logRotation ?? rawService.logRotation) as ManifestService["logRotation"],
             secrets: (platform.secrets ?? rawService.secrets ?? []) as ManifestService["secrets"],
-            deploy: ComposeParser.mapDeploy(platform.deploy ?? rawService.deploy),
+            deploy: ComposeParser.mapDeploy(platform.deploy ?? rawService.deploy, scale),
             function: (platform.function ?? rawService.function) as ManifestService["function"]
         };
+    }
+
+    /**
+     * Rejects deprecated cluster placement keys anywhere in the document.
+     *
+     * @param document Parsed YAML root object
+     * @throws {ManifestValidationError} {@link ManifestValidationError}
+     */
+    private static rejectLegacyCluster(document: RawComposeDocument): void {
+        const issues: { path: (string | number)[]; message: string }[] = [];
+
+        const defaults = document.defaults ?? document.xPlatform?.defaults as Record<string, unknown> | undefined;
+
+        if (defaults && typeof defaults === "object" && "cluster" in defaults) {
+            issues.push({
+                path: ["defaults", "cluster"],
+                message: "cluster placement was removed; use x-naulite.target or x-naulite.targetGroup."
+            });
+        }
+
+        const services = document.services ?? {};
+
+        for (const [serviceName, rawService] of Object.entries(services)) {
+            if (!rawService || typeof rawService !== "object") {
+                continue;
+            }
+
+            const service = rawService as Record<string, unknown>;
+            const platform = (service["x-naulite"] ?? service.xNaulite ?? {}) as Record<string, unknown>;
+
+            if ("cluster" in service || "cluster" in platform) {
+                issues.push({
+                    path: ["services", serviceName, "cluster"],
+                    message: "cluster placement was removed; use x-naulite.target or x-naulite.targetGroup."
+                });
+            }
+
+            const build = service.build;
+
+            if (build && typeof build === "object" && "cluster" in (build as Record<string, unknown>)) {
+                issues.push({
+                    path: ["services", serviceName, "build", "cluster"],
+                    message: "cluster placement was removed from build; use target or targetGroup."
+                });
+            }
+        }
+
+        if (issues.length > 0) {
+            throw new ManifestValidationError(issues.map((issue) => ({
+                code: "custom",
+                message: issue.message,
+                path: issue.path
+            })));
+        }
+    }
+
+    /**
+     * Maps x-naulite placement fields.
+     *
+     * @param platform Parsed x-naulite block
+     * @param rawService Raw compose service
+     * @returns Placement when target or targetGroup is set
+     */
+    private static mapPlacement(
+        platform: Record<string, unknown>,
+        rawService: Record<string, unknown>
+    ): ManifestService["placement"] {
+        const target = (platform.target ?? rawService.target) as string | undefined;
+        const targetGroup = (platform.targetGroup ?? rawService.targetGroup) as string | undefined;
+
+        if (!target && !targetGroup) {
+            return undefined;
+        }
+
+        return { target, targetGroup };
+    }
+
+    /**
+     * Maps host runtime fields from x-naulite.
+     *
+     * @param platform Parsed x-naulite block
+     * @returns Host runtime descriptor when runtime is host
+     */
+    private static mapHostRuntime(platform: Record<string, unknown>): {
+        runtime: "host";
+        unit: NonNullable<ManifestService["unit"]>;
+    } | undefined {
+        if (platform.runtime !== "host") {
+            return undefined;
+        }
+
+        const unit = platform.unit as ManifestService["unit"];
+
+        if (!unit) {
+            return undefined;
+        }
+
+        return {
+            runtime: "host",
+            unit
+        };
+    }
+
+    /**
+     * Maps scale hints from x-naulite.
+     *
+     * @param rawScale Raw scale or deploy block
+     * @returns Scale block when present
+     */
+    private static mapScale(rawScale: unknown): ManifestService["scale"] {
+        if (!rawScale || typeof rawScale !== "object") {
+            return undefined;
+        }
+
+        const scale = rawScale as Record<string, unknown>;
+        const replicas = scale.replicas !== undefined ? Number(scale.replicas) : undefined;
+        const processes = scale.processes !== undefined ? Number(scale.processes) : undefined;
+
+        if (replicas === undefined && processes === undefined) {
+            return undefined;
+        }
+
+        return {
+            replicas: replicas !== undefined && Number.isInteger(replicas) && replicas > 0 ? replicas : undefined,
+            processes: processes !== undefined && Number.isInteger(processes) && processes > 0 ? processes : undefined
+        };
+    }
+
+    /**
+     * Maps playbook tasks from YAML.
+     *
+     * @param rawTasks Raw task list
+     * @returns Validated tasks
+     */
+    private static mapTasks(rawTasks: unknown[]): Task[] {
+        const tasks: Task[] = [];
+
+        for (const rawTask of rawTasks) {
+            if (!rawTask || typeof rawTask !== "object") {
+                continue;
+            }
+
+            tasks.push(TaskSchema.parse(rawTask));
+        }
+
+        return tasks;
     }
 
     /**
@@ -124,7 +296,8 @@ export class ComposeParser {
                     dockerfile: legacyOptions.dockerfile as string | undefined,
                     image: legacyOptions.image as string | undefined,
                     provider: (legacyOptions.provider as ManifestBuild["provider"]) ?? "docker",
-                    cluster: legacyOptions.cluster as ManifestBuild["cluster"]
+                    target: legacyOptions.target as string | undefined,
+                    targetGroup: legacyOptions.targetGroup as string | undefined
                 };
             }
 
@@ -142,8 +315,10 @@ export class ComposeParser {
                     ?? (legacyOptions?.provider as ManifestBuild["provider"])
                     ?? "docker",
 
-                cluster: (buildObject.cluster as ManifestBuild["cluster"])
-                    ?? (legacyOptions?.cluster as ManifestBuild["cluster"])
+                target: (buildObject.target as string | undefined)
+                    ?? (legacyOptions?.target as string | undefined),
+                targetGroup: (buildObject.targetGroup as string | undefined)
+                    ?? (legacyOptions?.targetGroup as string | undefined)
             };
         }
 
@@ -188,13 +363,20 @@ export class ComposeParser {
      * @param rawDeploy Raw deploy object
      * @returns Manifest deploy options when present
      */
-    private static mapDeploy(rawDeploy: unknown): ManifestService["deploy"] {
+    private static mapDeploy(
+        rawDeploy: unknown,
+        scale?: ManifestService["scale"]
+    ): ManifestService["deploy"] {
         if (!rawDeploy || typeof rawDeploy !== "object") {
+            if (scale?.replicas) {
+                return { replicas: scale.replicas };
+            }
+
             return undefined;
         }
 
         const deploy = rawDeploy as Record<string, unknown>;
-        const replicas = Number(deploy.replicas ?? 1);
+        const replicas = Number(deploy.replicas ?? scale?.replicas ?? 1);
 
         if (!Number.isInteger(replicas) || replicas < 1) {
             return undefined;
@@ -275,7 +457,6 @@ export class ComposeParser {
         }
 
         return {
-            cluster: rawDefaults.cluster as Manifest["defaults"] extends { cluster?: infer C } ? C : never,
             logRotation: rawDefaults.logRotation as Manifest["defaults"] extends { logRotation?: infer L } ? L : never
         };
     }

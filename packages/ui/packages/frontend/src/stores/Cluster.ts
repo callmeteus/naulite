@@ -22,7 +22,7 @@ interface GitOpsRevision {
  */
 async function applyManifestWithCsrfRetry(
     manifestYaml: string,
-    options?: { async?: boolean }
+    options?: { async?: boolean; vars?: Record<string, string> }
 ): Promise<ApplyResponse> {
     try {
         return await nauliteClient.applyManifest(manifestYaml, options);
@@ -613,7 +613,10 @@ export const clusterStore = reactive({
      * @returns Apply summary including the pipeline run id when available
      * @throws {unknown}
      */
-    async applyManifest(manifestYaml: string, options?: { async?: boolean }): Promise<ApplyResponse> {
+    async applyManifest(
+        manifestYaml: string,
+        options?: { async?: boolean; vars?: Record<string, string> }
+    ): Promise<ApplyResponse> {
         this.loading = true;
         this.error = null;
 

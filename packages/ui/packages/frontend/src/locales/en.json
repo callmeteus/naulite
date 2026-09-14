@@ -10,6 +10,7 @@
         },
         "infrastructure": {
             "nodes": "Nodes",
+            "groups": "Target groups",
             "cluster": "Cluster",
             "metrics": "Metrics",
             "provision": "Add nodes"
@@ -22,6 +23,7 @@
         },
         "delivery": {
             "deploy": "Deploy",
+            "entrega": "Delivery",
             "gitops": "GitOps",
             "build": "Build",
             "runs": "Pipeline runs"
@@ -163,7 +165,8 @@
             "queued": "Queued",
             "active": "Active",
             "disabled": "Disabled",
-            "unknown": "Unknown"
+            "unknown": "Unknown",
+            "awaiting_approval": "Awaiting approval"
         }
     },
     "pages": {
@@ -314,7 +317,32 @@
             "actionOpenCluster": "Cluster overview",
             "applyingTitle": "Applying manifest",
             "applyingDescription": "Submitting the manifest and starting the pipeline run. You will be redirected to the run page when it is ready.",
-            "applySuccessNoRun": "Manifest applied. Open pipeline runs to follow rollout progress."
+            "applySuccessNoRun": "Manifest applied. Open pipeline runs to follow rollout progress.",
+            "varsTitle": "Manifest variables",
+            "varsHint": "Fill in values for vars declared in the manifest before applying."
+        },
+        "delivery": {
+            "title": "Delivery",
+            "hint": "GitOps revisions and pipeline runs in one place.",
+            "tabs": {
+                "gitops": "GitOps",
+                "pipeline": "Pipeline runs"
+            }
+        },
+        "groups": {
+            "title": "Target groups",
+            "hint": "Named sets of nodes used for rollout targeting.",
+            "create": "Create group",
+            "createTitle": "New target group",
+            "editTitle": "Edit target group",
+            "deleteTitle": "Delete target group",
+            "deleteConfirm": "Delete this target group? Manifests that reference it may fail until you update them.",
+            "emptyTitle": "No target groups yet",
+            "emptyDescription": "Create a group to target specific nodes during deploys.",
+            "members": "Members",
+            "noNodes": "No nodes are registered yet.",
+            "id": "Group id",
+            "idPlaceholder": "production-workers"
         },
         "forbidden": {
             "title": "Access denied",
@@ -777,6 +805,25 @@
             "rerunBuild": "Re-run build",
             "redeploy": "Quick deploy",
             "redeployConfirm": "Open quick deploy to apply the manifest again?",
+            "launchedBy": "Launched by",
+            "elapsed": "Elapsed",
+            "tabs": {
+                "details": "Details",
+                "output": "Output",
+                "nodes": "Nodes"
+            },
+            "gateTitle": "Approval required",
+            "gateHint": "Review the plan and confirm to continue the rollout, or reject to abort.",
+            "gateConfirm": "Confirm and continue",
+            "gateReject": "Reject",
+            "relaunch": "Relaunch",
+            "relaunchFailed": "Relaunch failed steps",
+            "cancelRun": "Cancel run",
+            "cancelRunConfirm": "Cancel this pipeline run? Work in progress will be stopped.",
+            "outputSearch": "Search logs",
+            "outputSearchPlaceholder": "Filter log lines",
+            "nodesEmpty": "No node steps were recorded for this run.",
+            "nodeStepCount": "Steps",
             "kinds": {
                 "ci_build": "Build",
                 "apply": "Deploy",
@@ -786,6 +833,7 @@
             "statuses": {
                 "pending": "Pending",
                 "running": "Running",
+                "awaiting_approval": "Awaiting approval",
                 "succeeded": "Succeeded",
                 "failed": "Failed"
             }

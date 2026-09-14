@@ -24,11 +24,11 @@ export interface ScheduleResult {
  */
 export class Scheduler {
     /**
-     * Selects the best node for a service using CPU, memory, disk, labels, and capabilities.
-     * 
+     * Selects the best node for a service using resource headroom and capabilities.
+     *
      * @param service Service to schedule
      * @param manifestService Manifest service definition used for placement constraints
-     * @param nodes Candidate nodes
+     * @param nodes Candidate nodes (already filtered by target / target group when applicable)
      * @returns Best schedule result or null when no node qualifies
      */
     schedule(
@@ -71,8 +71,42 @@ export class Scheduler {
     }
 
     /**
+     * Picks nodes for each replica using round-robin over scored eligible nodes.
+     *
+     * @param service Service to schedule
+     * @param manifestService Manifest service definition
+     * @param nodes Eligible candidate nodes
+     * @param replicaCount Number of instances to place
+     * @returns Node id per replica index
+     */
+    scheduleReplicaNodes(
+        service: Service,
+        manifestService: ManifestService | undefined,
+        nodes: Node[],
+        replicaCount: number
+    ): string[] {
+        const scores = nodes
+            .map((node) => Scheduler.scoreNode(node, service, manifestService))
+            .filter((score): score is NodeScore => score !== null)
+            .sort((left, right) => right.score - left.score);
+
+        if (scores.length === 0 || replicaCount < 1) {
+            return [];
+        }
+
+        const assignments: string[] = [];
+
+        for (let index = 0; index < replicaCount; index += 1) {
+            const pick = scores[index % scores.length];
+            assignments.push(pick.node.id);
+        }
+
+        return assignments;
+    }
+
+    /**
      * Scores all eligible nodes for a service.
-     * 
+     *
      * @param service Service to schedule
      * @param manifestService Manifest service definition
      * @param nodes Candidate nodes
@@ -91,7 +125,7 @@ export class Scheduler {
 
     /**
      * Scores a single node for service placement.
-     * 
+     *
      * @param node Candidate node
      * @param service Service to schedule
      * @param manifestService Manifest service definition
@@ -102,25 +136,12 @@ export class Scheduler {
         service: Service,
         manifestService: ManifestService | undefined
     ): NodeScore | null {
-        const requiredLabels = {
-            ...service.cluster?.labels,
-            ...manifestService?.cluster?.labels
-        };
-
         const requiredCapabilities = [
             ...new Set([
                 ...service.capabilities,
                 ...(manifestService?.capabilities ?? [])
             ])
         ];
-
-        const matchedLabels = Object.entries(requiredLabels).filter(([key, value]) => {
-            return node.labels[key] === value;
-        }).map(([key]) => key);
-
-        if (matchedLabels.length !== Object.keys(requiredLabels).length) {
-            return null;
-        }
 
         const matchedCapabilities = requiredCapabilities.filter((capability) => {
             return node.capabilities.includes(capability);
@@ -142,13 +163,12 @@ export class Scheduler {
         const memoryScore = memoryFree / Math.max(node.resources.memoryMbTotal, 1);
         const diskScore = diskFree / Math.max(node.resources.diskMbTotal, 1);
         const capabilityBonus = matchedCapabilities.length * 0.05;
-        const labelBonus = matchedLabels.length * 0.02;
-        const score = cpuScore * 0.4 + memoryScore * 0.4 + diskScore * 0.2 + capabilityBonus + labelBonus;
+        const score = cpuScore * 0.4 + memoryScore * 0.4 + diskScore * 0.2 + capabilityBonus;
 
         return {
             node,
             score,
-            matchedLabels,
+            matchedLabels: [],
             matchedCapabilities
         };
     }

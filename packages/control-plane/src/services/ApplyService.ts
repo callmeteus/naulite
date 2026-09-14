@@ -9,6 +9,7 @@ import { HTTP503Error } from "../errors/TreatedError";
 import type { SecretProvider } from "../modules/secrets/SecretProvider";
 import { NetworkGroupId } from "../orchestration/NetworkGroupId";
 import type { PlannerDiff } from "../orchestration/Planner";
+import { TargetGroupResolver } from "../orchestration/TargetGroupResolver";
 
 import { AgentDispatcher, type AgentDispatchResult } from "./AgentDispatcher";
 import { formatRolloutDispatchFailureMessage, explainDispatchFailure } from "./ApplyDispatchFailureMessage";
@@ -217,23 +218,33 @@ export namespace ApplyService {
             const newInstances = diff.instancesToCreate.filter((entry) => entry.serviceId === service.id);
 
             if (newInstances.length > 0) {
-                const schedule = ControlPlaneService.Orchestration.Scheduler.schedule(
-                    service,
-                    manifestService,
-                    nodes
-                );
+                const eligibleNodes = await TargetGroupResolver.resolveEligibleNodes(manifestService, nodes);
 
-                if (!schedule) {
+                if (eligibleNodes.length === 0) {
                     logApply.debug("schedule failed service=%s nodes=%d", service.name, nodes.length);
-                    throw new HTTP503Error(`No eligible node found for service "${service.name}".`, {
+                    throw new HTTP503Error(`No eligible target for service "${service.name}".`, {
                         serviceName: service.name
                     });
                 }
 
-                for (const instance of newInstances) {
+                const replicaNodeIds = ControlPlaneService.Orchestration.Scheduler.scheduleReplicaNodes(
+                    service,
+                    manifestService,
+                    eligibleNodes,
+                    newInstances.length
+                );
+
+                if (replicaNodeIds.length !== newInstances.length) {
+                    throw new HTTP503Error(`No eligible target for service "${service.name}".`, {
+                        serviceName: service.name
+                    });
+                }
+
+                for (let index = 0; index < newInstances.length; index += 1) {
+                    const instance = newInstances[index];
                     const scheduled: Instance = {
                         ...instance,
-                        nodeId: schedule.node.id,
+                        nodeId: replicaNodeIds[index],
                         updatedAt: new Date().toISOString()
                     };
 

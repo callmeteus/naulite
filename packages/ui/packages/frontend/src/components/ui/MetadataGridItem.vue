@@ -7,10 +7,7 @@ enum MetadataGridColumns {
     FOUR = 4
 }
 
-enum MetadataGridDensity {
-    DEFAULT = "default",
-    COMPACT = "compact"
-}
+type MetadataGridDensity = "default" | "compact";
 
 const props = withDefaults(defineProps<{
     /**
@@ -44,7 +41,7 @@ const columns = inject<Ref<MetadataGridColumns>>(
 
 const density = inject<Ref<MetadataGridDensity>>(
     "metadataGridDensity",
-    computed(() => MetadataGridDensity.DEFAULT)
+    computed(() => "default" as MetadataGridDensity)
 );
 
 const labelClass = computed(() => {
@@ -52,7 +49,7 @@ const labelClass = computed(() => {
         return "sr-only";
     }
 
-    if (density.value === MetadataGridDensity.COMPACT) {
+    if (density.value === "compact") {
         return "text-xs text-base-content/60";
     }
 
@@ -60,7 +57,7 @@ const labelClass = computed(() => {
 });
 
 const valueClass = computed(() => {
-    if (density.value === MetadataGridDensity.COMPACT) {
+    if (density.value === "compact") {
         return "font-medium";
     }
 

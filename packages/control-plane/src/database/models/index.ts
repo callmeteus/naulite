@@ -24,6 +24,8 @@ import { PipelineStepModel } from "./PipelineStepModel";
 import { SchemaMigrationModel } from "./SchemaMigrationModel";
 import { SecretModel } from "./SecretModel";
 import { ServiceModel } from "./ServiceModel";
+import { TargetGroupMemberModel } from "./TargetGroupMemberModel";
+import { TargetGroupModel } from "./TargetGroupModel";
 import { TenantModel } from "./TenantModel";
 import { VolumeModel } from "./VolumeModel";
 
@@ -52,6 +54,8 @@ export {
     SchemaMigrationModel,
     SecretModel,
     ServiceModel,
+    TargetGroupModel,
+    TargetGroupMemberModel,
     TenantModel,
     VolumeModel,
     NotificationProviderFilterModel,
@@ -71,6 +75,8 @@ export const controlPlaneModels = [
     HostInventoryModel,
     HostUpdateRunModel,
     ServiceModel,
+    TargetGroupModel,
+    TargetGroupMemberModel,
     InstanceModel,
     VolumeModel,
     SecretModel,

@@ -194,6 +194,20 @@ fn dispatchRuns(
         return try runVoid(commands.getRunLogs(allocator, client, argv[2], step_name));
     }
 
+    if (std.mem.eql(u8, argv[1], "continue")) {
+        if (argv.len < 3) {
+            return error.InvalidArgument;
+        }
+        return try runVoid(commands.continueRun(allocator, client, argv[2]));
+    }
+
+    if (std.mem.eql(u8, argv[1], "abort")) {
+        if (argv.len < 3) {
+            return error.InvalidArgument;
+        }
+        return try runVoid(commands.abortRun(allocator, client, argv[2]));
+    }
+
     try printUsage(io_output.stderrWriter());
     return error.InvalidArgument;
 }

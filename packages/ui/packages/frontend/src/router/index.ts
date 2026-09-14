@@ -9,6 +9,7 @@ import ClusterView from "../views/ClusterView.vue";
 import ContainerRegistryView from "../views/ContainerRegistryView.vue";
 import ForbiddenView from "../views/ForbiddenView.vue";
 import GatewayRoutesView from "../views/GatewayRoutesView.vue";
+import DeliveryView from "../views/DeliveryView.vue";
 import GitOpsView from "../views/GitOpsView.vue";
 import InstancesView from "../views/InstancesView.vue";
 import InstanceDetailView from "../views/InstanceDetailView.vue";
@@ -22,6 +23,7 @@ import ProvisionNewView from "../views/ProvisionNewView.vue";
 import ProvisionDetailView from "../views/ProvisionDetailView.vue";
 import RunsView from "../views/RunsView.vue";
 import RunDetailView from "../views/RunDetailView.vue";
+import TargetGroupsView from "../views/TargetGroupsView.vue";
 import SecretsView from "../views/SecretsView.vue";
 import BuildTriggerView from "../views/BuildTriggerView.vue";
 import NotificationDestinationFormView from "../views/NotificationDestinationFormView.vue";
@@ -57,7 +59,13 @@ const router = createRouter({
         { path: "/secrets/edit", component: SecretEditView, meta: { permissions: ["secrets:write"] satisfies NaulitePermission[] } },
         { path: "/cluster", component: ClusterView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/metrics", component: MetricsView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
-        { path: "/gitops", component: GitOpsView, meta: { permissions: ["gitops:read"] satisfies NaulitePermission[] } },
+        { path: "/target-groups", component: TargetGroupsView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
+        { path: "/delivery", component: DeliveryView, children: [
+            { path: "", redirect: "/delivery/gitops" },
+            { path: "gitops", component: GitOpsView, meta: { deliveryTab: true, permissions: ["gitops:read"] satisfies NaulitePermission[] } },
+            { path: "pipeline", component: RunsView, meta: { deliveryTab: true, permissions: ["runs:read"] satisfies NaulitePermission[] } }
+        ] },
+        { path: "/gitops", redirect: "/delivery/gitops" },
         { path: "/deploy", redirect: "/runs/deploy" },
         { path: "/build", redirect: "/runs/build" },
         { path: "/provision", redirect: "/nodes" },
@@ -66,7 +74,7 @@ const router = createRouter({
         { path: "/runs/deploy", component: QuickDeployView, meta: { permissions: ["manifests:apply"] satisfies NaulitePermission[] } },
         { path: "/runs/build", component: BuildTriggerView, meta: { permissions: ["runs:write"] satisfies NaulitePermission[] } },
         { path: "/runs/:id", component: RunDetailView, meta: { permissions: ["runs:read"] satisfies NaulitePermission[] } },
-        { path: "/runs", component: RunsView, meta: { permissions: ["runs:read"] satisfies NaulitePermission[] } },
+        { path: "/runs", redirect: "/delivery/pipeline" },
         { path: "/gateway-routes", component: GatewayRoutesView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },
         { path: "/container-registry", component: ContainerRegistryView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },
         { path: "/backups", component: BackupsView, meta: { permissions: ["backups:read"] satisfies NaulitePermission[] } },

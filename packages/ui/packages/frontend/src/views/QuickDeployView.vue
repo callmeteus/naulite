@@ -18,6 +18,8 @@ const store = useClusterStore();
 
 const {
     manifestYaml,
+    manifestVars,
+    manifestVarNames,
     applying,
     applyError,
     submitApply
@@ -94,6 +96,30 @@ async function submitDeploy(): Promise<void> {
           >
             <LoadingSpinner />
             <span>{{ t("pages.runs.quickDeployStarting") }}</span>
+          </div>
+          <div
+            v-if="manifestVarNames.length > 0"
+            class="card bg-base-100 shadow"
+          >
+            <div class="card-body gap-4">
+              <h2 class="text-base font-semibold">{{ t("pages.deploy.varsTitle") }}</h2>
+              <p class="text-sm text-base-content/70">{{ t("pages.deploy.varsHint") }}</p>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label
+                  v-for="varName in manifestVarNames"
+                  :key="varName"
+                  class="form-control w-full"
+                >
+                  <span class="label-text font-mono text-sm">{{ varName }}</span>
+                  <input
+                    v-model="manifestVars[varName]"
+                    type="text"
+                    class="input input-bordered input-sm w-full"
+                    :disabled="applying || !canDeploy"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </template>
 

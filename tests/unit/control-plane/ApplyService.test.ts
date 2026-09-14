@@ -126,7 +126,10 @@ function createApplyTestContext(): ControlPlaneContext {
                 service: { id: "minimal:web", name: "web" },
                 node: { id: "agent-1" },
                 score: { score: 1, matchedLabels: [], matchedCapabilities: [], node: { id: "agent-1" } }
-            }))
+            })),
+            scheduleReplicaNodes: vi.fn((_service, _manifest, _nodes, count: number) => {
+                return Array.from({ length: count }, () => "agent-1");
+            })
         },
         exposurePlanner: {
             plan: vi.fn(() => ({ entries: [] }))
@@ -279,11 +282,11 @@ describe("ApplyService phase 1.2", () => {
 
     it("fails explicitly when scheduling returns null", async () => {
         const context = createApplyTestContext();
-        context.scheduler.schedule = vi.fn(() => null);
+        context.scheduler.scheduleReplicaNodes = vi.fn(() => []);
         installApplyTestContext(context);
 
         await expect(ApplyService.execute("name: minimal")).rejects.toMatchObject({
-            message: 'No eligible node found for service "web".',
+            message: 'No eligible target for service "web".',
             statusCode: 503
         });
     });
@@ -374,13 +377,13 @@ describe("ApplyService phase 1.2", () => {
 
         expect(context.store.updateInstance).toHaveBeenCalledWith("minimal:web-1", expect.objectContaining({
             status: "failed",
-            lastError: "Node has no agentUrl"
+            lastError: "This node has no registered agent URL."
         }));
         expect(PipelineRunService.completeRun).toHaveBeenCalledWith(
             "apply-run-test-1",
             "failed",
             expect.objectContaining({
-                errorMessage: expect.stringContaining("agent dispatch")
+                errorMessage: expect.stringContaining("no registered agent URL")
             })
         );
         expect(watchSpy).not.toHaveBeenCalled();

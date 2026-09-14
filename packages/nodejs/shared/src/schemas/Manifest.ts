@@ -1,27 +1,79 @@
 import { z } from "zod";
 
 import { VolumeBackupPolicySchema } from "./BackupTask";
-import { ClusterPlacementSchema } from "./ClusterLabels";
 import { CronExpressionSchema, DurationSchema, SecretReferenceSchema } from "./Common";
+import { AppsCatalogSchema, ManifestVarsSchema } from "./ComposeExtends";
 import { IngressSchema } from "./Ingress";
 import { LogRotationPolicySchema } from "./LogRotationTask";
+import { TaskSchema } from "./Task";
+
+/**
+ * Deployment placement (single node or target group).
+ */
+export const NaulitePlacementSchema = z.object({
+    target: z.string().min(1).optional(),
+    targetGroup: z.string().min(1).optional()
+}).superRefine((placement, ctx) => {
+    if (placement.target && placement.targetGroup) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Cannot declare both target and targetGroup.",
+            path: ["targetGroup"]
+        });
+    }
+});
+
+/**
+ * Host process runtime (PM2 or systemd).
+ */
+export const NauliteHostUnitSchema = z.object({
+    kind: z.enum(["pm2", "systemd"]),
+    name: z.string().min(1)
+});
+
+/**
+ * Host runtime extension block.
+ */
+export const NauliteHostRuntimeSchema = z.object({
+    runtime: z.literal("host"),
+    unit: NauliteHostUnitSchema
+});
+
+/**
+ * Horizontal / process scale hints from x-naulite.
+ */
+export const NauliteScaleSchema = z.object({
+    replicas: z.number().int().positive().optional(),
+    processes: z.number().int().positive().optional()
+});
 
 /**
  * @todo rename platform prefix after final platform name is chosen
  * Unified build block: context, output image tag, provider, and builder placement.
  */
-export const ManifestBuildSchema = z.object({
+const ManifestBuildBaseSchema = z.object({
     context: z.string().min(1),
     dockerfile: z.string().min(1).optional(),
     image: z.string().min(1).optional(),
-    provider: z.enum(["docker", "kaniko"]).default("docker"),
-    cluster: ClusterPlacementSchema.optional()
+    provider: z.enum(["docker", "kaniko", "script"]).default("docker"),
+    target: z.string().min(1).optional(),
+    targetGroup: z.string().min(1).optional()
+});
+
+export const ManifestBuildSchema = ManifestBuildBaseSchema.superRefine((build, ctx) => {
+    if (build.target && build.targetGroup) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Build cannot declare both target and targetGroup.",
+            path: ["targetGroup"]
+        });
+    }
 });
 
 /**
  * @deprecated Use ManifestBuildSchema fields inside `build` instead.
  */
-export const BuildOptionsSchema = ManifestBuildSchema.omit({ context: true }).extend({
+export const BuildOptionsSchema = ManifestBuildBaseSchema.omit({ context: true }).extend({
     context: z.string().min(1).optional()
 });
 
@@ -41,7 +93,6 @@ export const ManifestPipelineNotificationsSchema = z.object({
  * Manifest-level defaults applied to services and volumes.
  */
 export const ManifestDefaultsSchema = z.object({
-    cluster: ClusterPlacementSchema.optional(),
     logRotation: LogRotationPolicySchema.optional()
 });
 
@@ -74,7 +125,10 @@ export const ManifestServiceSchema = z.object({
     volumes: z.array(z.string()).optional(),
     networks: z.array(z.string()).optional(),
     dependsOn: z.array(z.string()).optional(),
-    cluster: ClusterPlacementSchema.optional(),
+    placement: NaulitePlacementSchema.optional(),
+    runtime: z.literal("host").optional(),
+    unit: NauliteHostUnitSchema.optional(),
+    scale: NauliteScaleSchema.optional(),
     capabilities: z.array(z.string()).default([]),
     ingress: IngressSchema.optional(),
     logRotation: LogRotationPolicySchema.optional(),
@@ -83,6 +137,8 @@ export const ManifestServiceSchema = z.object({
         replicas: z.number().int().positive().default(1)
     }).optional()
 }).superRefine((service, ctx) => {
+    const isHost = service.runtime === "host";
+
     if (service.image && service.build) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -91,10 +147,26 @@ export const ManifestServiceSchema = z.object({
         });
     }
 
-    if (!service.image && !service.build) {
+    if (isHost) {
+        if (service.image || service.build) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Host runtime service cannot declare image or build.",
+                path: ["runtime"]
+            });
+        }
+
+        if (!service.unit) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Host runtime service requires unit.kind and unit.name.",
+                path: ["unit"]
+            });
+        }
+    } else if (!service.image && !service.build) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Service must declare image or build.",
+            message: "Service must declare image, build, or host runtime.",
             path: ["image"]
         });
     }
@@ -156,7 +228,10 @@ export const ManifestRegistrySchema = z.object({
  */
 export const ManifestSchema = z.object({
     name: z.string().min(1),
-    services: z.record(z.string(), ManifestServiceSchema),
+    services: z.record(z.string(), ManifestServiceSchema).default({}),
+    tasks: z.array(TaskSchema).default([]),
+    vars: ManifestVarsSchema,
+    apps: AppsCatalogSchema.optional(),
     volumes: z.record(z.string(), ManifestVolumeSchema).default({}),
     networks: z.record(z.string(), ManifestNetworkSchema).default({}),
     registries: z.record(z.string(), ManifestRegistrySchema).default({}),

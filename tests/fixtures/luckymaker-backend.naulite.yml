@@ -1,0 +1,36 @@
+name: luckymaker-backend
+vars:
+  TENANT_SLUG: ""
+  WARPGATE_TARGET: ""
+services:
+  backend:
+    x-naulite:
+      runtime: host
+      unit:
+        kind: pm2
+        name: luckymaker-backend
+      targetGroup: service-backend
+      connect: ssh
+      username: ubuntu
+      chdir: /var/www
+      warpgate:
+        enabled: true
+        host: warpgate.arpa
+        port: 2222
+        targetName: "${WARPGATE_TARGET}"
+      scale:
+        replicas: 2
+        processes: 8
+tasks:
+  - name: yarn build
+    module: build
+    targetGroup: ci-builders
+    connect: agent
+    command: ["yarn", "build"]
+    outputs:
+      - out/
+  - name: Reiniciar depois do deploy?
+    module: confirm
+    prompt: Reiniciar depois do deploy?
+    default: true
+    register: restart

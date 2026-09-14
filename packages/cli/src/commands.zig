@@ -215,6 +215,26 @@ pub fn getRunLogs(
     try printJson(stdout, encoded);
 }
 
+/// Continues a pipeline run paused at awaiting_approval.
+pub fn continueRun(allocator: std.mem.Allocator, client: *Client, run_id: []const u8) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/runs/{s}/continue", .{run_id});
+    defer allocator.free(path);
+    const response = try client.postJson(path, "{}");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
+/// Aborts a running or gated pipeline run.
+pub fn abortRun(allocator: std.mem.Allocator, client: *Client, run_id: []const u8) !void {
+    const stdout = io_output.stdoutWriter();
+    const path = try std.fmt.allocPrint(allocator, "/runs/{s}/abort", .{run_id});
+    defer allocator.free(path);
+    const response = try client.postJson(path, "{}");
+    defer allocator.free(response.body);
+    try printJson(stdout, response.body);
+}
+
 /// Lists backup runs.
 pub fn getBackups(allocator: std.mem.Allocator, client: *Client) !void {
     const stdout = io_output.stdoutWriter();

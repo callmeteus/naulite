@@ -126,6 +126,17 @@ export {
 } from "./ExecutionPlan";
 
 export {
+    TargetGroupSchema,
+    TargetGroupMemberSchema,
+    CreateTargetGroupBodySchema,
+    UpdateTargetGroupBodySchema,
+    TargetGroupListQuerySchema,
+    type TargetGroup,
+    type CreateTargetGroupBody,
+    type UpdateTargetGroupBody
+} from "./TargetGroup";
+
+export {
     ManifestSchema,
     ManifestServiceSchema,
     ManifestFunctionSchema,
@@ -135,8 +146,22 @@ export {
     ManifestDefaultsSchema,
     ManifestBuildSchema,
     ManifestPipelineNotificationsSchema,
-    BuildOptionsSchema
+    BuildOptionsSchema,
+    NaulitePlacementSchema,
+    NauliteHostRuntimeSchema,
+    NauliteHostUnitSchema,
+    NauliteScaleSchema
 } from "./Manifest";
+
+export {
+    TaskSchema,
+    TaskModuleSchema,
+    TaskRunModeSchema,
+    TaskConnectSchema,
+    type Task,
+    type TaskModule,
+    type TaskRunMode
+} from "./Task";
 
 export {
     GitCredentialsSchema,
