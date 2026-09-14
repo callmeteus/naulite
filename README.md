@@ -163,6 +163,15 @@ yarn build
 yarn test:unit
 ```
 
+Local development (control plane, agent, admin UI, docs, Prometheus):
+
+```bash
+yarn install
+yarn dev
+```
+
+`yarn dev` compiles workspace packages as needed. A separate `yarn build` is not required before it.
+
 With Docker available:
 
 ```bash
@@ -174,6 +183,7 @@ yarn test:e2e
 Common scripts:
 
 * `yarn build` - Build all packages with Turborepo.
+* `yarn dev` - Start the local development stack (control plane, agent, admin UI, docs).
 * `yarn lint` - Run ESLint across packages.
 * `yarn test:unit` - Run unit tests.
 * `yarn test:unit:docker` - Run Docker-backed unit tests.

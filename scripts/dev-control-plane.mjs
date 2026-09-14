@@ -147,13 +147,59 @@ function waitForShutdownSignalLegacy() {
 }
 
 /**
- * Builds shared and control-plane packages.
+ * Workspace packages that the control plane imports at compile time.
  *
+ * Shared is built separately first because these packages depend on it.
+ * Keep this list in sync with `@naulite/*` dependencies in
+ * `packages/control-plane/package.json` except `@naulite/shared`.
+ */
+const controlPlaneProviderPackages = [
+    "@naulite/logger",
+    "@naulite/builder-docker",
+    "@naulite/builder-kaniko",
+    "@naulite/gateway",
+    "@naulite/runtime-containerd",
+    "@naulite/runtime-docker",
+    "@naulite/runtime-podman",
+    "@naulite/plugin-notification-slack",
+    "@naulite/plugin-notification-webhook"
+];
+
+/**
+ * Builds a single workspace package.
+ *
+ * @param name Workspace package name
  * @returns Nothing.
  */
-function buildControlPlane() {
-    run("yarn", ["workspace", "@naulite/shared", "build"]);
-    run("yarn", ["workspace", "@naulite/control-plane", "build"]);
+function buildWorkspacePackage(name) {
+    run("yarn", ["workspace", name, "build"]);
+}
+
+/**
+ * Builds shared, provider packages, and the control-plane bundle.
+ *
+ * Provider packages ship types from `dist/`. Skipping them makes `tsc` fail
+ * with TS2307 on a fresh clone (`yarn install && yarn dev`).
+ *
+ * @param options Build flags
+ * @param options.includeProviders When `true`, also compile logger, builder,
+ * runtime, gateway, and notification packages. Use on first start; watch
+ * reloads can skip them when those trees did not change.
+ * @returns Nothing.
+ */
+function buildControlPlane(options = {}) {
+    const includeProviders = options.includeProviders === true;
+
+    buildWorkspacePackage("@naulite/shared");
+
+    // Compile workspace providers so control-plane `tsc` can resolve `@naulite/*`
+    if (includeProviders) {
+        for (const name of controlPlaneProviderPackages) {
+            buildWorkspacePackage(name);
+        }
+    }
+
+    buildWorkspacePackage("@naulite/control-plane");
 }
 
 /**
@@ -227,7 +273,7 @@ if (canReuseControlPlane && await isHealthy(controlPlaneHealthUrl)) {
             `[dev] control plane already listening on http://${controlPlaneHost}:${controlPlanePort}; starting a watched instance is skipped. Stop the other process or set NAULITE_DEV_REUSE=1 to reuse it.`
         );
     } else {
-        buildControlPlane();
+        buildControlPlane({ includeProviders: true });
         server = await startControlPlaneServer();
         ownsControlPlane = true;
 
