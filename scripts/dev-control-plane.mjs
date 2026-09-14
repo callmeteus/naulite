@@ -9,6 +9,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { DevAgentHelpers } from "./dev-agent-helpers.mjs";
 import { isDockerAvailable } from "./dev-docker.mjs";
 import { createDevWatcher, isDevReuseEnabled, waitForShutdownSignal } from "./dev-watch.mjs";
 
@@ -40,8 +41,10 @@ process.env.HOST = process.env.NAULITE_CP_HOST ?? "0.0.0.0";
 const controlPlanePort = process.env.PORT;
 const controlPlaneHost = process.env.HOST;
 
-process.env.NAULITE_BOOTSTRAP_ADMIN_USERNAME ??= "admin@local.dev";
-process.env.NAULITE_BOOTSTRAP_ADMIN_PASSWORD ??= "naulite-dev";
+process.env.NAULITE_BOOTSTRAP_ADMIN_USERNAME ??= "admin@example.com";
+process.env.NAULITE_BOOTSTRAP_ADMIN_PASSWORD ??= "admin";
+process.env.NAULITE_AGENT_API_KEY ??= DevAgentHelpers.DEFAULT_API_KEY;
+process.env.NAULITE_ALLOW_DOCKER_BRIDGE ??= "1";
 process.env.NAULITE_NETBIRD_MOCK ??= "1";
 process.env.NAULITE_PUBLIC_URL ??= `http://127.0.0.1:${controlPlanePort}`;
 process.env.NETBIRD_PUBLIC_MANAGEMENT_URL ??= "http://127.0.0.1:9081";
@@ -283,7 +286,7 @@ if (canReuseControlPlane && await isHealthy(controlPlaneHealthUrl)) {
 
 console.log(`[dev] traefik-mock at http://127.0.0.1:${traefikMockPort}`);
 console.log(`[dev] Prometheus URL for CP: ${process.env.PROMETHEUS_URL ?? "(disabled)"}`);
-console.log("[dev] Bootstrap login: admin@local.dev / naulite-dev");
+console.log("[dev] Bootstrap login: admin@example.com / admin");
 
 if (ownsControlPlane) {
     createDevWatcher({

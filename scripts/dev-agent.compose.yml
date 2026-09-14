@@ -7,6 +7,7 @@ services:
         restart: unless-stopped
         environment:
             NAULITE_CP_URL: ${NAULITE_CP_URL:-http://host.docker.internal:18080}
+            NAULITE_API_KEY: ${NAULITE_API_KEY:-naulite-dev-agent}
             NODE_ID: ${NAULITE_DEV_AGENT_ID:-dev-local}
             HOSTNAME: ${NAULITE_DEV_AGENT_HOSTNAME:-dev-local}
             AGENT_URL: http://127.0.0.1:${NAULITE_AGENT_PORT:-9470}

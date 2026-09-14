@@ -3,11 +3,38 @@
  */
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const DOCKER_HOST_ALIAS = "host.docker.internal";
+const DEFAULT_DEV_API_KEY = "naulite-dev-agent";
 
 /**
  * Rewrites loopback control-plane URLs so a Docker agent can reach the host.
  */
 export const DevAgentHelpers = {
+    DEFAULT_API_KEY: DEFAULT_DEV_API_KEY,
+
+    /**
+     * Resolves the API key shared by the local control plane and Docker agent.
+     *
+     * @param env Process environment
+     * @returns Non-empty API key
+     */
+    resolveApiKey(env = process.env) {
+        const fromAgent = typeof env.NAULITE_API_KEY === "string" ? env.NAULITE_API_KEY.trim() : "";
+
+        if (fromAgent) {
+            return fromAgent;
+        }
+
+        const fromControlPlane = typeof env.NAULITE_AGENT_API_KEY === "string"
+            ? env.NAULITE_AGENT_API_KEY.trim()
+            : "";
+
+        if (fromControlPlane) {
+            return fromControlPlane;
+        }
+
+        return DevAgentHelpers.DEFAULT_API_KEY;
+    },
+
     /**
      * Returns a control-plane URL reachable from inside a Docker container.
      *

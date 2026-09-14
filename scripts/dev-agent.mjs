@@ -254,6 +254,7 @@ async function startDockerAgent(setupKey) {
     const env = {
         ...process.env,
         NAULITE_CP_URL: DevAgentHelpers.controlPlaneUrlForDocker(controlPlaneUrl),
+        NAULITE_API_KEY: DevAgentHelpers.resolveApiKey(process.env),
         NAULITE_AGENT_PORT: agentPort,
         NAULITE_DEV_AGENT_ID: process.env.NAULITE_DEV_AGENT_ID ?? "dev-local",
         NAULITE_DEV_AGENT_HOSTNAME: process.env.NAULITE_DEV_AGENT_HOSTNAME ?? os.hostname()

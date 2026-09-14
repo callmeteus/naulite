@@ -79,4 +79,14 @@ describe("dev-control-plane build graph", () => {
         expect(devScript).toBe("turbo run dev");
         expect(String(devScript)).not.toContain("--parallel");
     });
+
+    it("allows Docker-bridge callers and shares a default agent API key", async () => {
+        const script = await readRepoFile("scripts/dev-control-plane.mjs");
+
+        expect(script).toContain("NAULITE_ALLOW_DOCKER_BRIDGE ??= \"1\"");
+        expect(script).toContain("NAULITE_AGENT_API_KEY ??= DevAgentHelpers.DEFAULT_API_KEY");
+        expect(script).toContain("NAULITE_BOOTSTRAP_ADMIN_USERNAME ??= \"admin@example.com\"");
+        expect(script).toContain("NAULITE_BOOTSTRAP_ADMIN_PASSWORD ??= \"admin\"");
+        expect(script).toContain("Bootstrap login: admin@example.com / admin");
+    });
 });

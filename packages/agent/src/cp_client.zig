@@ -58,6 +58,8 @@ fn backgroundLoop(
         while (true) {
             sendHeartbeat(allocator, io, config.*) catch |err| {
                 log_cp.warn("heartbeat failed: {}", .{err});
+                // A 401 without this pause re-registers immediately and floods the control plane.
+                blocking_io.sleepSeconds(5);
                 break;
             };
             blocking_io.sleepSeconds(30);

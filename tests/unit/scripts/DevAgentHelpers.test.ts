@@ -46,11 +46,31 @@ describe("DevAgentHelpers.controlPlaneUrlForDocker", () => {
     });
 });
 
+describe("DevAgentHelpers.resolveApiKey", () => {
+    it("prefers NAULITE_API_KEY over the control-plane env and the default", () => {
+        expect(DevAgentHelpers.resolveApiKey({
+            NAULITE_API_KEY: "from-agent",
+            NAULITE_AGENT_API_KEY: "from-cp"
+        })).toBe("from-agent");
+    });
+
+    it("falls back to NAULITE_AGENT_API_KEY then the default key", () => {
+        expect(DevAgentHelpers.resolveApiKey({
+            NAULITE_AGENT_API_KEY: "from-cp"
+        })).toBe("from-cp");
+        expect(DevAgentHelpers.resolveApiKey({})).toBe("naulite-dev-agent");
+        expect(DevAgentHelpers.resolveApiKey({
+            NAULITE_API_KEY: "   "
+        })).toBe("naulite-dev-agent");
+    });
+});
+
 describe("dev-agent Docker startup", () => {
     it("passes the Docker-reachable control-plane URL into compose", async () => {
         const script = await readRepoFile("scripts/dev-agent.mjs");
 
         expect(script).toContain("NAULITE_CP_URL: DevAgentHelpers.controlPlaneUrlForDocker(controlPlaneUrl)");
+        expect(script).toContain("NAULITE_API_KEY: DevAgentHelpers.resolveApiKey(process.env)");
     });
 
     it("does not throw when the Docker agent health check times out", async () => {
