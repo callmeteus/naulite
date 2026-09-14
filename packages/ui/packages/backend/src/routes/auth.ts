@@ -1,12 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { NauliteApiError } from "@naulite/sdk";
 import { z } from "zod";
 
 import { CsrfProtection, NAULITE_CSRF_COOKIE } from "../auth/CsrfProtection";
+import { LoginError } from "../auth/LoginError";
 import { RolePreHandlers } from "../auth/RolePreHandlers";
 import { buildClearSessionCookie, buildSessionCookie, parseCookies, resolveSecureCookies } from "../auth/SessionCookie";
 import { resolveConfigFromEnv } from "../Config";
-import { createBffError } from "../errors/BffError";
 
 const LoginBodySchema = z.object({
     email: z.string().email(),
@@ -28,26 +27,9 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         try {
             login = await app.controlPlane.adminLogin(body);
         } catch (error) {
-            if (error instanceof NauliteApiError) {
-                throw createBffError(error.status, "errors.authFailed", {
-                    code: error.code
-                });
-            }
-
             const controlPlaneUrl = resolveConfigFromEnv().controlPlaneInstances[0] ?? "http://localhost:18080";
-            const isUnreachable = error instanceof Error
-                && error.message.toLowerCase().includes("fetch failed");
 
-            if (isUnreachable) {
-                throw createBffError(503, "errors.controlPlaneUnreachable", {
-                    code: "control_plane_unreachable",
-                    i18nParams: { url: controlPlaneUrl }
-                });
-            }
-
-            throw createBffError(503, "errors.authFailed", {
-                code: "auth_failed"
-            });
+            throw LoginError.toBffError(error, controlPlaneUrl);
         }
 
         const csrfToken = CsrfProtection.generateToken();

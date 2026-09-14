@@ -114,7 +114,7 @@
         "insufficientPermission": "You do not have permission to perform this action.",
         "invalidSession": "Your session is no longer valid.",
         "controlPlaneUnreachable": "Could not reach the control plane at {url}. Check that the control plane service is running and reachable.",
-        "authFailed": "Sign-in failed. Check your email and password, or make sure the control plane is running.",
+        "authFailed": "Incorrect email or password.",
         "pipelineStreamFailed": "Pipeline run stream failed.",
         "prometheusUnavailable": "Prometheus is not ready yet. Check the monitoring service logs, then refresh this page.",
         "noEligibleNode": "No online node can run service \"{serviceName}\". Workloads need at least one agent connected to the cluster.",

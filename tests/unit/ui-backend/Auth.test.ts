@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { NauliteApiError } from "../../../packages/sdk/src/NauliteApiError";
 import { createApp } from "../../../packages/ui/packages/backend/src/App";
 import { buildSessionCookie, NAULITE_SESSION_COOKIE } from "../../../packages/ui/packages/backend/src/auth/SessionCookie";
 import { NAULITE_CSRF_COOKIE } from "../../../packages/ui/packages/backend/src/auth/CsrfProtection";
@@ -58,7 +59,7 @@ describe("ui-backend auth", () => {
         });
 
         expect(response.statusCode).toBe(401);
-        expect(response.json()).toEqual({ message: "Não autorizado." });
+        expect(response.json()).toEqual({ i18n: "errors.unauthorized" });
 
         await app.close();
     });
@@ -101,7 +102,7 @@ describe("ui-backend auth", () => {
         });
 
         expect(response.statusCode).toBe(401);
-        expect(response.json()).toEqual({ message: "Não autorizado." });
+        expect(response.json()).toEqual({ i18n: "errors.unauthorized" });
 
         await app.close();
     });
@@ -118,7 +119,7 @@ describe("ui-backend auth", () => {
         });
 
         expect(response.statusCode).toBe(401);
-        expect(response.json()).toEqual({ message: "Não autorizado." });
+        expect(response.json()).toEqual({ i18n: "errors.unauthorized" });
 
         await app.close();
     });
@@ -221,6 +222,64 @@ describe("ui-backend auth routes", () => {
         const logoutCookies = logoutResponse.headers["set-cookie"];
         const logoutCookieHeader = Array.isArray(logoutCookies) ? logoutCookies.join(";") : String(logoutCookies ?? "");
         expect(logoutCookieHeader).toContain("Max-Age=0");
+
+        await app.close();
+    });
+
+    it("returns credentials-only i18n when the control plane rejects the password", async () => {
+        const app = await createApp({
+            adminApiKey: "secret-key",
+            logger: false
+        });
+
+        app.controlPlane = {
+            adminLogin: async () => {
+                throw new NauliteApiError(401, "Invalid username or password.");
+            }
+        } as unknown as typeof app.controlPlane;
+
+        const response = await app.inject({
+            method: "POST",
+            url: "/auth/login",
+            payload: {
+                email: "admin@local.dev",
+                password: "wrong"
+            }
+        });
+
+        expect(response.statusCode).toBe(401);
+        expect(response.json()).toEqual({
+            i18n: "errors.authFailed",
+            code: "auth_failed"
+        });
+
+        await app.close();
+    });
+
+    it("returns control-plane unreachable i18n when login cannot connect", async () => {
+        const app = await createApp({
+            adminApiKey: "secret-key",
+            logger: false
+        });
+
+        app.controlPlane = {
+            adminLogin: async () => {
+                throw new TypeError("fetch failed");
+            }
+        } as unknown as typeof app.controlPlane;
+
+        const response = await app.inject({
+            method: "POST",
+            url: "/auth/login",
+            payload: {
+                email: "admin@local.dev",
+                password: "naulite-dev"
+            }
+        });
+
+        expect(response.statusCode).toBe(503);
+        expect(response.json().i18n).toBe("errors.controlPlaneUnreachable");
+        expect(response.json().code).toBe("control_plane_unreachable");
 
         await app.close();
     });
