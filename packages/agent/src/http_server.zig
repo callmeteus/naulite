@@ -45,7 +45,51 @@ const winsock_io = if (builtin.os.tag == .windows) struct {
             offset += @intCast(sent);
         }
     }
-} else struct {};
+} else struct {
+    const c = std.c;
+
+    /// Clears `O_NONBLOCK` on an accepted TCP socket.
+    fn setBlocking(socket_handle: std.posix.socket_t) void {
+        const flags = c.fcntl(socket_handle, c.F.GETFL, @as(usize, 0));
+
+        if (flags < 0) {
+            return;
+        }
+
+        const nonblock_bit = @as(c_int, 1) << @bitOffsetOf(c.O, "NONBLOCK");
+        _ = c.fcntl(socket_handle, c.F.SETFL, flags & ~nonblock_bit);
+    }
+
+    /// Reads whatever is already queued on the socket, without waiting to fill `dest`.
+    fn read(socket_handle: std.posix.socket_t, dest: []u8) !usize {
+        const received = c.recv(socket_handle, dest.ptr, dest.len, 0);
+
+        if (received < 0) {
+            return error.ReadFailed;
+        }
+
+        if (received == 0) {
+            return 0;
+        }
+
+        return @intCast(received);
+    }
+
+    /// Writes `data` in a loop until the kernel accepts every byte.
+    fn writeAll(socket_handle: std.posix.socket_t, data: []const u8) !void {
+        var offset: usize = 0;
+
+        while (offset < data.len) {
+            const sent = c.send(socket_handle, data.ptr + offset, data.len - offset, 0);
+
+            if (sent <= 0) {
+                return error.WriteFailed;
+            }
+
+            offset += @intCast(sent);
+        }
+    }
+};
 
 const backup_executor = @import("backup_executor.zig");
 const blocking_io = @import("blocking_io.zig");
@@ -264,9 +308,9 @@ pub fn serveWithIo(
             continue;
         };
 
-        if (builtin.os.tag == .windows) {
-            winsock_io.setBlocking(stream.socket.handle);
-        }
+        // Zig 0.16 listen() leaves sockets non-blocking. The Io reader then waits
+        // to fill a 4KiB buffer while the HTTP client waits for a response.
+        winsock_io.setBlocking(stream.socket.handle);
 
         handleConnection(allocator, io, &docker_client, config.docker_socket, &stream) catch |err| {
             log_http.warn("connection failed: {}", .{err});
@@ -281,13 +325,9 @@ fn streamRead(
     stream: *const std.Io.net.Stream,
     dest: []u8,
 ) !usize {
-    if (builtin.os.tag == .windows) {
-        return winsock_io.read(stream.socket.handle, dest);
-    }
+    _ = io;
 
-    var read_buffer: [4096]u8 = undefined;
-    var net_reader = stream.reader(io, &read_buffer);
-    return try std.Io.Reader.readSliceShort(&net_reader.interface, dest);
+    return winsock_io.read(stream.socket.handle, dest);
 }
 
 pub fn handleConnection(
@@ -899,18 +939,10 @@ fn writeRawResponse(
         .{ status, status_text, content_type, body.len },
     );
 
-    if (builtin.os.tag == .windows) {
-        try winsock_io.writeAll(stream.socket.handle, header);
-        try winsock_io.writeAll(stream.socket.handle, body);
-        return;
-    }
+    _ = io;
 
-    var write_buffer: [4096]u8 = undefined;
-    var net_writer = stream.writer(io, &write_buffer);
-
-    try std.Io.Writer.writeAll(&net_writer.interface, header);
-    try std.Io.Writer.writeAll(&net_writer.interface, body);
-    try std.Io.Writer.flush(&net_writer.interface);
+    try winsock_io.writeAll(stream.socket.handle, header);
+    try winsock_io.writeAll(stream.socket.handle, body);
 }
 
 fn statusText(status: u16) []const u8 {

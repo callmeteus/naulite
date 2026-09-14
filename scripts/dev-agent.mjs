@@ -10,6 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { DevAgentHelpers } from "./dev-agent-helpers.mjs";
 import { ensureDockerReady, isDockerAvailable } from "./dev-docker.mjs";
 import { createDevWatcher, waitForShutdownSignal } from "./dev-watch.mjs";
 import { ZigToolchain } from "./zig-toolchain.mjs";
@@ -252,7 +253,7 @@ async function startDockerAgent(setupKey) {
 
     const env = {
         ...process.env,
-        NAULITE_CP_URL: controlPlaneUrl,
+        NAULITE_CP_URL: DevAgentHelpers.controlPlaneUrlForDocker(controlPlaneUrl),
         NAULITE_AGENT_PORT: agentPort,
         NAULITE_DEV_AGENT_ID: process.env.NAULITE_DEV_AGENT_ID ?? "dev-local",
         NAULITE_DEV_AGENT_HOSTNAME: process.env.NAULITE_DEV_AGENT_HOSTNAME ?? os.hostname()
@@ -406,8 +407,12 @@ async function ensureLocalAgent(setupKey) {
             };
         }
 
-        await waitForHealthy(agentHealthUrl, 120_000);
-        console.log(`[dev-agent] Docker agent ready at ${agentHealthUrl}`);
+        try {
+            await waitForHealthy(agentHealthUrl, 120_000);
+            console.log(`[dev-agent] Docker agent ready at ${agentHealthUrl}`);
+        } catch (error) {
+            console.error("[dev-agent] Docker agent failed to become healthy: %s", error.message);
+        }
     } else
     if (!hostChild && preferHostOnWindows) {
         console.error(
