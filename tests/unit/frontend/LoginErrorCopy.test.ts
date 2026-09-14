@@ -37,6 +37,28 @@ function readErrors(locale: Record<string, unknown>): Record<string, unknown> {
     return errors as Record<string, unknown>;
 }
 
+/**
+ * Reads the nested `pages.login` object from a locale file.
+ *
+ * @param locale - Parsed locale
+ * @returns Login copy map
+ */
+function readLogin(locale: Record<string, unknown>): Record<string, unknown> {
+    const pages = locale["pages"];
+
+    if (typeof pages !== "object" || pages === null) {
+        throw new Error("locale is missing pages");
+    }
+
+    const login = (pages as Record<string, unknown>)["login"];
+
+    if (typeof login !== "object" || login === null) {
+        throw new Error("locale is missing pages.login");
+    }
+
+    return login as Record<string, unknown>;
+}
+
 describe("login error copy", () => {
     it("keeps credential and control-plane failures on separate keys", async () => {
         const english = readErrors(await readLocale("en.json"));
@@ -50,5 +72,13 @@ describe("login error copy", () => {
 
         expect(String(english["controlPlaneUnreachable"]).toLowerCase()).toContain("control plane");
         expect(String(portuguese["controlPlaneUnreachable"]).toLowerCase()).toContain("control plane");
+    });
+
+    it("uses the local bootstrap email as the login placeholder", async () => {
+        const english = await readLocale("en.json");
+        const portuguese = await readLocale("pt-BR.json");
+
+        expect(readLogin(english)["emailPlaceholder"]).toBe("admin{'@'}example.com");
+        expect(readLogin(portuguese)["emailPlaceholder"]).toBe("admin{'@'}example.com");
     });
 });

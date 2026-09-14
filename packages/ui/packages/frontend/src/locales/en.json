@@ -406,7 +406,7 @@
             "tagline": "Platform operations dashboard",
             "hint": "Use your platform operator credentials.",
             "email": "Email",
-            "emailPlaceholder": "admin{'@'}naulite.local",
+            "emailPlaceholder": "admin{'@'}example.com",
             "password": "Password",
             "passwordPlaceholder": "Your password",
             "submit": "Sign In",

@@ -27,10 +27,10 @@ Default bootstrap user when the control plane database is empty:
 
 | Field | Value |
 | ----- | ----- |
-| Email | `admin@local.dev` |
-| Password | `naulite-dev` |
+| Email | `admin@example.com` |
+| Password | `admin` |
 
-The username stored in the control plane is the normalized email (`admin@local.dev`).
+The username stored in the control plane is the normalized email (`admin@example.com`).
 
 Vite proxies `/api` to `http://localhost:3001` and strips the `/api` prefix. Local dev does not require `ADMIN_API_KEY`.
 

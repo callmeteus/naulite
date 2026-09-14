@@ -406,7 +406,7 @@
             "tagline": "Painel de operações da plataforma",
             "hint": "Use suas credenciais de operador da plataforma.",
             "email": "E-mail",
-            "emailPlaceholder": "admin{'@'}naulite.local",
+            "emailPlaceholder": "admin{'@'}example.com",
             "password": "Senha",
             "passwordPlaceholder": "Sua senha",
             "submit": "Entrar",

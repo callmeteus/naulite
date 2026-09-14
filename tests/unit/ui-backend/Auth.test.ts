@@ -242,7 +242,7 @@ describe("ui-backend auth routes", () => {
             method: "POST",
             url: "/auth/login",
             payload: {
-                email: "admin@local.dev",
+                email: "admin@example.com",
                 password: "wrong"
             }
         });
@@ -272,8 +272,8 @@ describe("ui-backend auth routes", () => {
             method: "POST",
             url: "/auth/login",
             payload: {
-                email: "admin@local.dev",
-                password: "naulite-dev"
+                email: "admin@example.com",
+                password: "admin"
             }
         });
 
