@@ -96,6 +96,7 @@ const blocking_io = @import("blocking_io.zig");
 const bootstrap = @import("bootstrap.zig");
 const build_context = @import("build_context.zig");
 const build_executor = @import("build_executor.zig");
+const command_executor = @import("command_executor.zig");
 const exec_stream = @import("exec_stream.zig");
 const execution_plan = @import("execution_plan.zig");
 const function_executor = @import("function_executor.zig");
@@ -249,6 +250,10 @@ pub fn handleRequestWithSocket(
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/system-update")) {
         return try handleSystemUpdateTask(&ctx);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/command")) {
+        return try handleCommandTask(&ctx, body);
     }
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/backups/receive")) {
@@ -694,6 +699,20 @@ fn handleSystemUpdateTask(ctx: *const RouteContext) !HttpResponse {
     };
 }
 
+fn handleCommandTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try command_executor.executeCommandTask(ctx.allocator, body);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = if (result.error_message != null) 500 else 200,
+        .content_type = "application/json",
+        .body = result.body,
+    };
+}
+
 fn handleBuildContext(ctx: *const RouteContext, body: []const u8, service_name_hint: ?[]const u8) !HttpResponse {
     const result = try build_context.receiveBuildContext(ctx.allocator, body, service_name_hint);
     defer ctx.allocator.free(result.service_name);
@@ -1119,6 +1138,24 @@ test "build context route rejects missing archive payload" {
     );
 
     try std.testing.expectError(error.MissingArchive, response);
+}
+
+test "command route runs echo" {
+    const allocator = std.testing.allocator;
+    var docker_client = docker.DockerClient.init(allocator, "/var/run/docker.sock");
+    defer docker_client.deinit();
+
+    const response = try handleRequest(
+        allocator,
+        &docker_client,
+        "POST",
+        "/tasks/command",
+        "{\"command\":[\"/bin/echo\",\"gated-before\"]}",
+    );
+    defer allocator.free(response.body);
+
+    try std.testing.expectEqual(@as(u16, 200), response.status);
+    try std.testing.expect(std.mem.indexOf(u8, response.body, "gated-before") != null);
 }
 
 test "unknown route returns 404" {

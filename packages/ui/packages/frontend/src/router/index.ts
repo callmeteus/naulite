@@ -71,9 +71,15 @@ const router = createRouter({
         { path: "/provision", redirect: "/nodes" },
         { path: "/provision/new", redirect: "/nodes/new" },
         { path: "/provision/:id", redirect: (to) => `/nodes/provisions/${String(to.params.id ?? "")}` },
-        { path: "/runs/deploy", component: QuickDeployView, meta: { permissions: ["manifests:apply"] satisfies NaulitePermission[] } },
-        { path: "/runs/build", component: BuildTriggerView, meta: { permissions: ["runs:write"] satisfies NaulitePermission[] } },
-        { path: "/runs/:id", component: RunDetailView, meta: { permissions: ["runs:read"] satisfies NaulitePermission[] } },
+        { path: "/runs/deploy", component: DeliveryView, children: [
+            { path: "", component: QuickDeployView, meta: { deliveryTab: true, permissions: ["manifests:apply"] satisfies NaulitePermission[] } }
+        ] },
+        { path: "/runs/build", component: DeliveryView, children: [
+            { path: "", component: BuildTriggerView, meta: { deliveryTab: true, permissions: ["runs:write"] satisfies NaulitePermission[] } }
+        ] },
+        { path: "/runs/:id", component: DeliveryView, children: [
+            { path: "", component: RunDetailView, meta: { deliveryTab: true, permissions: ["runs:read"] satisfies NaulitePermission[] } }
+        ] },
         { path: "/runs", redirect: "/delivery/pipeline" },
         { path: "/gateway-routes", component: GatewayRoutesView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },
         { path: "/container-registry", component: ContainerRegistryView, meta: { permissions: ["registry:read"] satisfies NaulitePermission[] } },

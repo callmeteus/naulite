@@ -11,6 +11,8 @@ import { registerRawBodyParser } from "./openapi/RegisterRawBodyParser";
 import { registerRoutes } from "./routes/index";
 import { registerExecWebSocket } from "./routing/RegisterExecWebSocket";
 import { registerFunctionIngressFallback } from "./routing/RegisterFunctionIngressFallback";
+import { AgentHostExecutor } from "./runtime/AgentHostExecutor";
+import { HostExecutorProvider } from "./runtime/HostExecutorProvider";
 
 /**
  * Options for creating the control plane Fastify application.
@@ -38,6 +40,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     });
 
     ControlPlaneService.install(context);
+    HostExecutorProvider.set(new AgentHostExecutor());
 
     registerErrorHandler(app);
 

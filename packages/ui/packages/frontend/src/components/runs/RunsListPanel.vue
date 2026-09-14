@@ -64,6 +64,9 @@ onMounted(() => {
     elapsedTimer = setInterval(() => {
         elapsedNowMs.value = Date.now();
     }, 1000);
+
+    // Filter watch is not immediate; load the first page like NodesView history
+    void resetPage();
 });
 
 onBeforeUnmount(() => {

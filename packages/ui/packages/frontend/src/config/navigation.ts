@@ -22,6 +22,10 @@ export interface NavItem {
     labelKey: string;
     permission: NaulitePermission;
     icon: Component;
+    /**
+     * Extra path prefixes that keep this item selected (nested run pages, sibling tabs).
+     */
+    matchPrefixes?: string[];
 }
 
 export interface NavSection {
@@ -58,7 +62,13 @@ export const navigationSections: NavSection[] = [
         id: "delivery",
         labelKey: "menu.sections.delivery",
         items: [
-            { path: "/delivery/gitops", labelKey: "menu.delivery.entrega", permission: "gitops:read", icon: GitBranch }
+            {
+                path: "/delivery/gitops",
+                labelKey: "menu.delivery.entrega",
+                permission: "gitops:read",
+                icon: GitBranch,
+                matchPrefixes: ["/delivery", "/runs"]
+            }
         ]
     },
     {

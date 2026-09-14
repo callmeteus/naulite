@@ -211,7 +211,10 @@ function buildControlPlane(options = {}) {
  * @returns Started server handle
  */
 async function startControlPlaneServer() {
-    const { startServer } = await import(new URL("../packages/control-plane/dist/Server.js", import.meta.url).href);
+    const serverModuleUrl = new URL("../packages/control-plane/dist/Server.js", import.meta.url);
+
+    // Bust the ESM cache so a watch rebuild actually reloads MigrationRunner
+    const { startServer } = await import(`${serverModuleUrl.href}?t=${Date.now()}`);
 
     return startServer();
 }

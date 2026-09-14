@@ -1,0 +1,18 @@
+name: gated-playbook
+
+tasks:
+    - name: before-gate
+      module: command
+      target: dev-local
+      command:
+          - /bin/echo
+          - gated-before
+    - name: wait-for-operator
+      module: confirm
+      prompt: Continuar o playbook de teste?
+    - name: after-gate
+      module: command
+      target: dev-local
+      command:
+          - /bin/echo
+          - gated-after

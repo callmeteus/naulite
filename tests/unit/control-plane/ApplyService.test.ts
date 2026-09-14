@@ -584,4 +584,62 @@ describe("ApplyService filterOperationsForNode", () => {
 
         expect(idleOps).toEqual([]);
     });
+
+    it("runs playbook tasks instead of rollout watch when the manifest has tasks", async () => {
+        const context = createApplyTestContext();
+        context.composeParser.parse = vi.fn(() => ({
+            name: "gated-playbook",
+            services: {},
+            tasks: [
+                {
+                    name: "wait-for-operator",
+                    module: "confirm",
+                    prompt: "Continuar o playbook de teste?"
+                }
+            ],
+            volumes: {},
+            networks: {},
+            registries: {}
+        }));
+        context.planner.diff = vi.fn(() => ({
+            servicesToCreate: [],
+            servicesToUpdate: [],
+            servicesToRemove: [],
+            instancesToCreate: [],
+            instancesToRedeploy: [],
+            instancesToRemove: [],
+            volumesToEnsure: [],
+            volumesToRemove: [],
+            operations: []
+        }));
+        installApplyTestContext(context);
+
+        vi.spyOn(ControlPlaneService.GitOps, "recordRevision").mockResolvedValue({
+            id: "rev-1",
+            repositoryUrl: "inline://apply",
+            branch: "main",
+            commitSha: "rev-1",
+            manifestName: "gated-playbook",
+            createdAt: new Date().toISOString()
+        } as never);
+
+        const agentDispatcher = await import("../../../packages/control-plane/src/services/AgentDispatcher");
+        vi.spyOn(agentDispatcher.AgentDispatcher, "dispatchPlans").mockResolvedValue([]);
+
+        const playbook = await import("../../../packages/control-plane/src/services/ApplyPlaybookRunner");
+        const runSpy = vi.spyOn(playbook.ApplyPlaybookRunner, "runIfPresent").mockResolvedValue("awaiting_approval");
+
+        const rolloutWatcher = await import("../../../packages/control-plane/src/services/RolloutWatcher");
+        const watchSpy = vi.spyOn(rolloutWatcher.RolloutWatcher, "watch").mockImplementation(() => undefined);
+
+        await ApplyService.execute("name: gated-playbook");
+
+        expect(runSpy).toHaveBeenCalledWith(
+            "apply-run-test-1",
+            expect.objectContaining({
+                name: "gated-playbook"
+            })
+        );
+        expect(watchSpy).not.toHaveBeenCalled();
+    });
 });

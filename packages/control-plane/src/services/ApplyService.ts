@@ -13,6 +13,7 @@ import { TargetGroupResolver } from "../orchestration/TargetGroupResolver";
 
 import { AgentDispatcher, type AgentDispatchResult } from "./AgentDispatcher";
 import { formatRolloutDispatchFailureMessage, explainDispatchFailure } from "./ApplyDispatchFailureMessage";
+import { ApplyPlaybookRunner } from "./ApplyPlaybookRunner";
 import { BuildContextService } from "./BuildContextService";
 import { BuildService } from "./BuildService";
 import { PipelineRunService } from "./PipelineRunService";
@@ -393,6 +394,10 @@ export namespace ApplyService {
             await PipelineRunService.completeRun(applyRun.id, "failed", {
                 errorMessage
             });
+        } else
+        // Playbook owns run completion, including awaiting_approval gates
+        if ((manifest.tasks ?? []).length > 0) {
+            await ApplyPlaybookRunner.runIfPresent(applyRun.id, manifest);
         } else {
             RolloutWatcher.watch(applyRun.id, watchedInstanceIds);
         }

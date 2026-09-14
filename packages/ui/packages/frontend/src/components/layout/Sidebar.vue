@@ -8,6 +8,7 @@ import { useLocale, type AppLocale } from "../../composables/useLocale";
 import { useTheme } from "../../composables/useTheme";
 import { navigationSections } from "../../config/navigation";
 import { useAuthStore } from "../../stores/Auth";
+import { isNavItemActive } from "../../utils/NavItemActive";
 import NauliteBrand from "../brand/NauliteBrand.vue";
 
 const auth = useAuthStore();
@@ -67,7 +68,7 @@ function changeLocale(value: AppLocale): void {
                             :to="item.path"
                             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
                             :class="
-                                route.path === item.path
+                                isNavItemActive(route.path, item)
                                     ? 'bg-primary text-primary-content shadow-sm'
                                     : 'text-base-content/80 hover:bg-base-100 hover:text-base-content'
                             "

@@ -1,6 +1,7 @@
 import {
     CreateTargetGroupBodySchema,
     PaginatedListSchema,
+    RouteErrorResponseSchema,
     TargetGroupListQuerySchema,
     TargetGroupSchema
 } from "@naulite/shared";
@@ -41,7 +42,8 @@ export const POST = defineRoute({
         operationId: "createTargetGroup",
         body: CreateTargetGroupBodySchema,
         response: {
-            200: TargetGroupSchema
+            200: TargetGroupSchema,
+            409: RouteErrorResponseSchema
         }
     },
 

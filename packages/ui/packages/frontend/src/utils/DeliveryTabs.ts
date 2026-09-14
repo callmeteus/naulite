@@ -5,7 +5,8 @@
  * @returns Active delivery tab id
  */
 export function resolveDeliveryTab(path: string): "gitops" | "pipeline" {
-    if (path.includes("/pipeline")) {
+    // Run list, run detail, deploy, and build all belong to the pipeline tab
+    if (path.includes("/pipeline") || path === "/runs" || path.startsWith("/runs/")) {
         return "pipeline";
     }
 

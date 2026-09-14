@@ -22,6 +22,7 @@ export { TargetGroupService } from "./services/TargetGroupService";
 export { ApplyStageRunner } from "./services/ApplyStageRunner";
 export { WarpgateSshTarget } from "./runtime/WarpgateSshTarget";
 export { HostSessionPath } from "./runtime/HostSessionPath";
+export { AgentHostExecutor } from "./runtime/AgentHostExecutor";
 export { HostExecutorProvider } from "./runtime/HostExecutorProvider";
 export { PluginLoader } from "./plugins/PluginLoader";
 export { PluginRegistryWiring } from "./plugins/PluginRegistryWiring";

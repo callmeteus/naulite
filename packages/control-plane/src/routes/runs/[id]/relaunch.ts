@@ -34,11 +34,15 @@ export const POST = defineRoute({
         const source = await PipelineRunService.getRun(req.params.id);
 
         if (!source) {
-            throw new HTTP409Error("Pipeline run not found.");
+            throw new HTTP409Error("Pipeline run not found.", {
+                error: "conflict"
+            });
         }
 
         if (source.status === "running" || source.status === "pending") {
-            throw new HTTP409Error("Run is still running.");
+            throw new HTTP409Error("Run is still running.", {
+                error: "conflict"
+            });
         }
 
         const run = await PipelineRunService.createRun({

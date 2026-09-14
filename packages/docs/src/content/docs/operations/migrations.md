@@ -9,7 +9,7 @@ The control plane applies schema migrations automatically on startup via `Migrat
 
 ## SQLite (development)
 
-On SQLite, the runner calls `sequelize.sync()` and records a single `001-initial-schema` migration row. This path is for local dev only - do not rely on it for production schema evolution.
+On SQLite, `yarn dev` / control plane startup still calls `sequelize.sync()` so model tables exist, then applies every pending file under `packages/control-plane/src/database/migrations/sqlite/`. Each file is recorded in `schema_migrations`. Duplicate columns and existing tables are skipped so an older local DB (for example missing `pipeline_runs.created_by`) is upgraded on the next boot.
 
 ## PostgreSQL (production and HA)
 
@@ -37,7 +37,7 @@ During a rolling upgrade, deploy control plane replicas one at a time. The elect
 
 ## Adding a new migration
 
-1. Add `NNNN_description.sql` under `packages/control-plane/migrations/postgresql/` (copied to `dist` at build time via `scripts/copy-control-plane-migrations.mjs`)
+1. Add `NNNN_description.sql` under `packages/control-plane/src/database/migrations/postgresql/` (and the sqlite twin when the change is needed locally). Files are copied to `dist` at build time via `scripts/copy-control-plane-migrations.mjs`. Production **must** pick them up on the next control plane start.
 2. Ship the new control plane image to all replicas
 3. Roll replicas sequentially; the first starter applies the new file
 4. Verify `schema_migrations` contains the new name on the leader database

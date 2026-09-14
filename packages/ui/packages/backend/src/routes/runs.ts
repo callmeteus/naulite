@@ -110,4 +110,28 @@ export async function registerRunsRoutes(app: FastifyInstance): Promise<void> {
 
         return;
     });
+
+    // Proxy gated-run approval to the control plane
+    app.post("/runs/:id/continue", async (request) => {
+        const params = RunIdParamsSchema.parse(request.params);
+
+        return controlPlaneForRequest(app, request).continuePipelineRun(params.id);
+    });
+
+    // Proxy operator abort to the control plane
+    app.post("/runs/:id/abort", async (request) => {
+        const params = RunIdParamsSchema.parse(request.params);
+
+        return controlPlaneForRequest(app, request).abortPipelineRun(params.id);
+    });
+
+    // Proxy relaunch so the UI does not call the control plane directly
+    app.post("/runs/:id/relaunch", async (request) => {
+        const params = RunIdParamsSchema.parse(request.params);
+        const body = z.object({
+            failedOnly: z.boolean().optional()
+        }).parse(request.body ?? {});
+
+        return controlPlaneForRequest(app, request).relaunchPipelineRun(params.id, body);
+    });
 }

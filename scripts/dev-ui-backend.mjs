@@ -74,7 +74,10 @@ function buildAdminApi() {
  * @returns Started server handle
  */
 async function startAdminApiServer() {
-    const { startServer } = await import(new URL("../packages/ui/packages/backend/dist/Server.js", import.meta.url).href);
+    const serverModuleUrl = new URL("../packages/ui/packages/backend/dist/Server.js", import.meta.url);
+
+    // Bust the ESM cache so a watch rebuild actually reloads route modules
+    const { startServer } = await import(`${serverModuleUrl.href}?t=${Date.now()}`);
 
     return startServer();
 }

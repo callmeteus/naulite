@@ -91,6 +91,11 @@ export function resolveBffRoutePermissions(path: string, method: string): Naulit
     }
 
     if (path.startsWith("/runs")) {
+        // Continue is an approval action, not a generic run write
+        if (path.endsWith("/continue") && !isRead) {
+            return ["runs:approve"];
+        }
+
         return isRead ? ["runs:read"] : ["runs:write"];
     }
 

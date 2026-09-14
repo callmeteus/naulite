@@ -6,7 +6,7 @@ import type {
     UpdateTargetGroupBody
 } from "@naulite/shared";
 
-import { HTTP404Error } from "../errors/TreatedError";
+import { HTTP404Error, HTTP409Error } from "../errors/TreatedError";
 import { ControlPlaneService } from "../ControlPlaneService";
 
 /**
@@ -47,8 +47,18 @@ export namespace TargetGroupService {
      *
      * @param body Create payload
      * @returns Created target group
+     * @throws {HTTP409Error} {@link HTTP409Error}
      */
     export async function create(body: CreateTargetGroupBody): Promise<TargetGroup> {
+        // Reject duplicates instead of upserting the existing group
+        const existing = await ControlPlaneService.Store.getTargetGroup(body.id);
+
+        if (existing) {
+            throw new HTTP409Error("Target group already exists.", {
+                error: "conflict"
+            });
+        }
+
         const now = new Date().toISOString();
         const group: TargetGroup = {
             id: body.id,

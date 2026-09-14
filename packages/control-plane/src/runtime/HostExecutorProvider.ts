@@ -17,6 +17,15 @@ export namespace HostExecutorProvider {
     }
 
     /**
+     * Clears the bound host executor (tests).
+     *
+     * @returns Nothing.
+     */
+    export function reset(): void {
+        executor = null;
+    }
+
+    /**
      * Returns the configured host executor.
      *
      * @returns Host executor
