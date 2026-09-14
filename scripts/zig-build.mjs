@@ -3,6 +3,18 @@ import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { ZigToolchain } from "./zig-toolchain.mjs";
+
+const pinnedVersion = ZigToolchain.loadPinnedVersion();
+const installedVersion = ZigToolchain.readInstalledVersion();
+
+if (!ZigToolchain.isCompatible(installedVersion, pinnedVersion)) {
+    console.error(
+        `error: pinned Zig version is ${pinnedVersion}, found ${installedVersion || "none"}`
+    );
+    process.exit(1);
+}
+
 const cacheDir = join(tmpdir(), "naulite-zig-cache");
 
 mkdirSync(cacheDir, { recursive: true });

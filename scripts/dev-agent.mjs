@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 
 import { ensureDockerReady, isDockerAvailable } from "./dev-docker.mjs";
 import { createDevWatcher, waitForShutdownSignal } from "./dev-watch.mjs";
+import { ZigToolchain } from "./zig-toolchain.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const controlPlanePort = process.env.NAULITE_CP_PORT ?? "18080";
@@ -115,6 +116,17 @@ async function ensureHostBinary() {
     }
 
     if (!hasCommand("zig")) {
+        return false;
+    }
+
+    const pinnedVersion = ZigToolchain.loadPinnedVersion(repoRoot);
+    const installedVersion = ZigToolchain.readInstalledVersion();
+
+    // Skip host Zig that cannot compile `std.process.Init` (requires 0.16.0)
+    if (!ZigToolchain.isCompatible(installedVersion, pinnedVersion)) {
+        console.warn(
+            `[dev-agent] host zig ${installedVersion || "missing"} does not match pinned ${pinnedVersion}; using Docker fallback`
+        );
         return false;
     }
 

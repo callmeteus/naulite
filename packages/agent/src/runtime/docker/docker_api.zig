@@ -725,63 +725,60 @@ pub const DockerApi = struct {
     ) !std.Io.net.Stream {
         if (builtin.os.tag == .windows) {
             return error.DockerExecUnsupported;
-        }
+        } else {
+            const io = blocking_io.io();
 
-        const io = blocking_io.io();
+            var connection = try docker_transport.connect(self.allocator, self.socket_path);
+            var stream_released = false;
+            defer if (!stream_released) {
+                connection.close(io);
+            };
 
-        var connection = try docker_transport.connect(self.allocator, self.socket_path);
-        var stream_released = false;
-        defer if (!stream_released) {
-            connection.close(io);
-        };
+            const unix_stream = connection.stream;
 
-        const unix_stream = switch (connection) {
-            .unix => |stream| stream,
-            .windows_pipe => return error.DockerExecUnsupported,
-        };
+            const start_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/start", .{exec_id});
+            defer self.allocator.free(start_path);
 
-        const start_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/start", .{exec_id});
-        defer self.allocator.free(start_path);
+            const start_body = if (allocate_tty)
+                "{\"Detach\":false,\"Tty\":true}"
+            else
+                "{\"Detach\":false,\"Tty\":false}";
 
-        const start_body = if (allocate_tty)
-            "{\"Detach\":false,\"Tty\":true}"
-        else
-            "{\"Detach\":false,\"Tty\":false}";
+            const request_payload = try std.fmt.allocPrint(
+                self.allocator,
+                "POST {s} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nConnection: Upgrade\r\nUpgrade: tcp\r\nContent-Length: {d}\r\n\r\n{s}",
+                .{ start_path, start_body.len, start_body },
+            );
+            defer self.allocator.free(request_payload);
 
-        const request_payload = try std.fmt.allocPrint(
-            self.allocator,
-            "POST {s} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nConnection: Upgrade\r\nUpgrade: tcp\r\nContent-Length: {d}\r\n\r\n{s}",
-            .{ start_path, start_body.len, start_body },
-        );
-        defer self.allocator.free(request_payload);
+            try connection.writeAll(io, request_payload);
 
-        try connection.writeAll(io, request_payload);
+            var response_buffer: std.ArrayList(u8) = .empty;
+            defer response_buffer.deinit(self.allocator);
 
-        var response_buffer: std.ArrayList(u8) = .empty;
-        defer response_buffer.deinit(self.allocator);
+            var read_buffer: [4096]u8 = undefined;
+            while (true) {
+                const read_count = connection.read(io, &read_buffer) catch break;
 
-        var read_buffer: [4096]u8 = undefined;
-        while (true) {
-            const read_count = connection.read(io, &read_buffer) catch break;
+                if (read_count == 0) {
+                    break;
+                }
 
-            if (read_count == 0) {
-                break;
+                try response_buffer.appendSlice(self.allocator, read_buffer[0..read_count]);
+
+                if (std.mem.indexOf(u8, response_buffer.items, "\r\n\r\n") != null) {
+                    break;
+                }
             }
 
-            try response_buffer.appendSlice(self.allocator, read_buffer[0..read_count]);
-
-            if (std.mem.indexOf(u8, response_buffer.items, "\r\n\r\n") != null) {
-                break;
+            if (!std.mem.startsWith(u8, response_buffer.items, "HTTP/1.1 101")) {
+                log_docker.err("exec hijack failed body={s}", .{response_buffer.items});
+                return error.DockerExecFailed;
             }
-        }
 
-        if (!std.mem.startsWith(u8, response_buffer.items, "HTTP/1.1 101")) {
-            log_docker.err("exec hijack failed body={s}", .{response_buffer.items});
-            return error.DockerExecFailed;
+            stream_released = true;
+            return unix_stream;
         }
-
-        stream_released = true;
-        return unix_stream;
     }
 
     /// Reads the exit code for a finished exec instance.

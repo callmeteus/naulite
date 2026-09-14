@@ -2,7 +2,7 @@
     .name = .naulite_agent,
     .version = "0.1.0",
     .fingerprint = 0x101db0314b35cf45,
-    .minimum_zig_version = "0.14.0",
+    .minimum_zig_version = "0.16.0",
     .paths = .{
         "build.zig",
         "build.zig.zon",
