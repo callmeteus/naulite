@@ -115,6 +115,7 @@ export class ComposeParser {
             ports: rawService.ports as ManifestService["ports"],
             volumes: rawService.volumes as ManifestService["volumes"],
             networks: rawService.networks as ManifestService["networks"],
+            networkMode: ComposeParser.readNetworkMode(rawService),
             dependsOn: rawService.dependsOn as ManifestService["dependsOn"],
             placement,
             runtime: hostRuntime?.runtime,
@@ -181,6 +182,22 @@ export class ComposeParser {
                 path: issue.path
             })));
         }
+    }
+
+    /**
+     * Reads Docker network mode from compose `network_mode`.
+     *
+     * @param rawService Raw compose service
+     * @returns Network mode when declared
+     */
+    private static readNetworkMode(rawService: Record<string, unknown>): string | undefined {
+        const value = rawService["network_mode"];
+
+        if (typeof value !== "string" || value.trim() === "") {
+            return undefined;
+        }
+
+        return value.trim();
     }
 
     /**

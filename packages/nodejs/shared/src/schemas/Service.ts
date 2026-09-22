@@ -23,7 +23,8 @@ export const ServiceDeploySpecSchema = z.object({
         volumeName: z.string().min(1),
         mountPath: z.string().min(1),
         readOnly: z.boolean().default(false)
-    })).default([])
+    })).default([]),
+    networkMode: z.string().min(1).optional()
 });
 
 /**

@@ -246,6 +246,7 @@ export class Planner {
             volumes: Planner.resolveVolumeMounts(manifestService),
             networks: manifestService?.networks ?? [],
             ports: Planner.resolvePorts(manifestService),
+            networkMode: manifestService?.networkMode,
             secrets: []
         });
 
@@ -515,7 +516,8 @@ export class Planner {
             environment: service?.environment ?? {},
             ports: Planner.resolvePorts(service),
             secrets: service?.secrets ?? [],
-            volumeMounts: Planner.resolveVolumeMounts(service)
+            volumeMounts: Planner.resolveVolumeMounts(service),
+            networkMode: service?.networkMode
         };
     }
 

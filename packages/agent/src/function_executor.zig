@@ -95,7 +95,7 @@ pub fn executeFunctionTask(
     );
     defer allocator.free(create_body);
 
-    const create_path = try std.fmt.allocPrint(allocator, "/v1.44/containers/create?name={s}", .{container_name});
+    const create_path = try std.fmt.allocPrint(allocator, "/v1.43/containers/create?name={s}", .{container_name});
     defer allocator.free(create_path);
 
     var create_resp = try api.request("POST", create_path, create_body);

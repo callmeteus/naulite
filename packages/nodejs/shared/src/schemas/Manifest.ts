@@ -124,6 +124,7 @@ export const ManifestServiceSchema = z.object({
 
     volumes: z.array(z.string()).optional(),
     networks: z.array(z.string()).optional(),
+    networkMode: z.string().min(1).optional(),
     dependsOn: z.array(z.string()).optional(),
     placement: NaulitePlacementSchema.optional(),
     runtime: z.literal("host").optional(),

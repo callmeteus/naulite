@@ -151,6 +151,26 @@ curl -fsSL <repo>/bootstrap/agent-install.sh | sudo bash -s -- \
 
 `agent-install.sh` accepts `--netbird-management-url`, `--management-url`, or `--url`.
 
+On hosts with an old glibc where the published agent binary fails, install the agent from the **Connect** panel curl one-liner on a machine with Docker.
+
+---
+
+## Cloop stack on an enrolled node
+
+Canonical GitOps manifest: [`packages/cloop/cloop.naulite.yml`](../cloop/cloop.naulite.yml) (service `agent` on `cloop-host`, image `naulite-cr/cloop-agent:latest`, host network).
+
+After Ansible sync/build on the server, apply through the control plane so Naulite tracks the instance:
+
+```bash
+export NAULITE_CP_URL=http://<your-cp>:18080
+export NAULITE_ADMIN_API_KEY=<admin-api-bearer-token>   # optional on 127.0.0.1 / localhost CP
+cd ../cloop && yarn apply:naulite
+```
+
+With `NAULITE_CP_URL` set, `yarn deploy` in cloop builds on SSH, stops compose/Naulite name clashes on the host, skips SSH `compose up`, applies the manifest, validates dispatch on `cloop-host`, and waits for `http://<ssh_host>:8787/health`.
+
+Dev CP stuck on `cloop:agent` failed after fixing image/agent: `cd ../cloop && yarn naulite:dev-reset-cloop-service` then `yarn apply:naulite`.
+
 ---
 
 ## Useful commands

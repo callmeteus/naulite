@@ -57,4 +57,21 @@ describe("ComposeParser.kinds", () => {
 
         expect(() => parser.parse(yaml)).toThrow(ManifestValidationError);
     });
+
+    it("maps network_mode from compose services", () => {
+        const yaml = [
+            "name: cloop",
+            "services:",
+            "  agent:",
+            "    image: naulite-cr/cloop-agent:latest",
+            "    network_mode: host",
+            "    x-naulite:",
+            "      target: cloop-host"
+        ].join("\n");
+
+        const manifest = parser.parse(yaml);
+
+        expect(manifest.services.agent?.networkMode).toBe("host");
+        expect(manifest.services.agent?.placement?.target).toBe("cloop-host");
+    });
 });

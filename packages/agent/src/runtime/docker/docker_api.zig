@@ -8,8 +8,8 @@ const builtin = @import("builtin");
 const blocking_io = @import("../../blocking_io.zig");
 const docker_transport = @import("docker_transport.zig");
 
-/// Minimum Docker Engine API version supported by current daemons.
-const docker_api_version = "v1.44";
+/// Docker Engine API version used for Unix socket requests (keep <= common LTS daemons).
+const docker_api_version = "v1.43";
 
 /// Platform-managed container metadata used for metrics collection.
 pub const ManagedContainer = struct {
@@ -127,7 +127,7 @@ pub const DockerApi = struct {
 
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/v1.44/images/create?fromImage={s}&tag={s}",
+            "/v1.43/images/create?fromImage={s}&tag={s}",
             .{ repo, tag },
         );
 
@@ -173,8 +173,10 @@ pub const DockerApi = struct {
         binds_json: []const u8,
         // Docker labels JSON object for platform metadata.
         labels_json: []const u8,
+        // Optional Docker HostConfig.NetworkMode (for example "host").
+        network_mode: ?[]const u8,
     ) ![]u8 {
-        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/create?name={s}", .{container_name});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.43/containers/create?name={s}", .{container_name});
         defer self.allocator.free(path);
 
         const cmd_json = try stringArrayToJson(self.allocator, command);
@@ -183,11 +185,18 @@ pub const DockerApi = struct {
         const env_json = try stringArrayToJson(self.allocator, env_pairs);
         defer self.allocator.free(env_json);
 
-        const body = try std.fmt.allocPrint(
-            self.allocator,
-            "{{\"Image\":\"{s}\",\"Cmd\":{s},\"Env\":{s},\"Labels\":{s},\"HostConfig\":{{\"PortBindings\":{s},\"Binds\":{s}}}}}",
-            .{ image, cmd_json, env_json, labels_json, port_bindings_json, binds_json },
-        );
+        const body = if (network_mode) |mode|
+            try std.fmt.allocPrint(
+                self.allocator,
+                "{{\"Image\":\"{s}\",\"Cmd\":{s},\"Env\":{s},\"Labels\":{s},\"HostConfig\":{{\"NetworkMode\":\"{s}\",\"PortBindings\":{s},\"Binds\":{s}}}}}",
+                .{ image, cmd_json, env_json, labels_json, mode, port_bindings_json, binds_json },
+            )
+        else
+            try std.fmt.allocPrint(
+                self.allocator,
+                "{{\"Image\":\"{s}\",\"Cmd\":{s},\"Env\":{s},\"Labels\":{s},\"HostConfig\":{{\"PortBindings\":{s},\"Binds\":{s}}}}}",
+                .{ image, cmd_json, env_json, labels_json, port_bindings_json, binds_json },
+            );
 
         defer self.allocator.free(body);
 
@@ -227,7 +236,7 @@ pub const DockerApi = struct {
     ) ![]u8 {
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/v1.44/containers/{s}/json",
+            "/v1.43/containers/{s}/json",
             .{container_ref},
         );
         defer self.allocator.free(path);
@@ -250,7 +259,7 @@ pub const DockerApi = struct {
         // The name or id of the container.
         container_ref: []const u8,
     ) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/{s}/start", .{container_ref});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.43/containers/{s}/start", .{container_ref});
         defer self.allocator.free(path);
 
         var response = try self.request("POST", path, null);
@@ -272,7 +281,7 @@ pub const DockerApi = struct {
         // The name or id of the container.
         container_ref: []const u8,
     ) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/{s}/stop", .{container_ref});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.43/containers/{s}/stop", .{container_ref});
         defer self.allocator.free(path);
 
         var response = try self.request("POST", path, null);
@@ -298,7 +307,7 @@ pub const DockerApi = struct {
     ) !void {
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/v1.44/containers/{s}?force={s}",
+            "/v1.43/containers/{s}?force={s}",
             .{ container_ref, if (force) "true" else "false" },
         );
 
@@ -326,7 +335,7 @@ pub const DockerApi = struct {
         const body = try std.fmt.allocPrint(self.allocator, "{{\"Name\":\"{s}\"}}", .{volume_name});
         defer self.allocator.free(body);
 
-        var response = try self.request("POST", "/v1.44/volumes/create", body);
+        var response = try self.request("POST", "/v1.43/volumes/create", body);
         defer response.deinit(self.allocator);
 
         if (response.status == 201 or response.status == 200) {
@@ -351,7 +360,7 @@ pub const DockerApi = struct {
     ) !void {
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/v1.44/volumes/{s}?force={s}",
+            "/v1.43/volumes/{s}?force={s}",
             .{ volume_name, if (force) "true" else "false" },
         );
         defer self.allocator.free(path);
@@ -371,17 +380,17 @@ pub const DockerApi = struct {
 
     /// Returns Docker Engine info JSON.
     pub fn getInfo(self: *const DockerApi) !DockerResponse {
-        return self.request("GET", "/v1.44/info", null);
+        return self.request("GET", "/v1.43/info", null);
     }
 
     /// Returns Docker disk usage summary JSON.
     pub fn getSystemDf(self: *const DockerApi) !DockerResponse {
-        return self.request("GET", "/v1.44/system/df", null);
+        return self.request("GET", "/v1.43/system/df", null);
     }
 
     /// Lists naulite-managed running containers with instance metadata.
     pub fn listManagedContainers(self: *const DockerApi) ![]ManagedContainer {
-        var response = try self.request("GET", "/v1.44/containers/json", null);
+        var response = try self.request("GET", "/v1.43/containers/json", null);
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
@@ -464,7 +473,7 @@ pub const DockerApi = struct {
 
     /// Lists identifiers for running containers.
     pub fn listRunningContainerIds(self: *const DockerApi) ![]const []const u8 {
-        var response = try self.request("GET", "/v1.44/containers/json", null);
+        var response = try self.request("GET", "/v1.43/containers/json", null);
         defer response.deinit(self.allocator);
 
         if (response.status < 200 or response.status >= 300) {
@@ -518,7 +527,7 @@ pub const DockerApi = struct {
     ) !DockerResponse {
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/v1.44/containers/{s}/stats?stream=false",
+            "/v1.43/containers/{s}/stats?stream=false",
             .{container_ref},
         );
         defer self.allocator.free(path);
@@ -534,7 +543,7 @@ pub const DockerApi = struct {
         // Container name or id.
         container_ref: []const u8,
     ) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/networks/{s}/connect", .{network_name});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.43/networks/{s}/connect", .{network_name});
         defer self.allocator.free(path);
 
         const body = try std.fmt.allocPrint(
@@ -566,7 +575,7 @@ pub const DockerApi = struct {
         // Whether to force disconnect.
         force: bool,
     ) !void {
-        const path = try std.fmt.allocPrint(self.allocator, "/v1.44/networks/{s}/disconnect", .{network_name});
+        const path = try std.fmt.allocPrint(self.allocator, "/v1.43/networks/{s}/disconnect", .{network_name});
         defer self.allocator.free(path);
 
         const body = try std.fmt.allocPrint(
@@ -596,7 +605,7 @@ pub const DockerApi = struct {
         // Command argv to run inside the container.
         command: []const []const u8,
     ) !ExecResult {
-        const create_path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/{s}/exec", .{container_ref});
+        const create_path = try std.fmt.allocPrint(self.allocator, "/v1.43/containers/{s}/exec", .{container_ref});
         defer self.allocator.free(create_path);
 
         const cmd_json = try stringArrayToJson(self.allocator, command);
@@ -624,7 +633,7 @@ pub const DockerApi = struct {
         const exec_id = try parseJsonStringField(self.allocator, create_response.body, "Id");
         defer self.allocator.free(exec_id);
 
-        const start_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/start", .{exec_id});
+        const start_path = try std.fmt.allocPrint(self.allocator, "/v1.43/exec/{s}/start", .{exec_id});
         defer self.allocator.free(start_path);
 
         const start_body = "{\"Detach\":false,\"Tty\":false}";
@@ -646,7 +655,7 @@ pub const DockerApi = struct {
             self.allocator.free(streams.stderr);
         }
 
-        const inspect_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/json", .{exec_id});
+        const inspect_path = try std.fmt.allocPrint(self.allocator, "/v1.43/exec/{s}/json", .{exec_id});
         defer self.allocator.free(inspect_path);
 
         var inspect_response = try self.request("GET", inspect_path, null);
@@ -681,7 +690,7 @@ pub const DockerApi = struct {
         // Whether a TTY is allocated.
         allocate_tty: bool,
     ) ![]u8 {
-        const create_path = try std.fmt.allocPrint(self.allocator, "/v1.44/containers/{s}/exec", .{container_ref});
+        const create_path = try std.fmt.allocPrint(self.allocator, "/v1.43/containers/{s}/exec", .{container_ref});
         defer self.allocator.free(create_path);
 
         const cmd_json = try stringArrayToJson(self.allocator, command);
@@ -736,7 +745,7 @@ pub const DockerApi = struct {
 
             const unix_stream = connection.stream;
 
-            const start_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/start", .{exec_id});
+            const start_path = try std.fmt.allocPrint(self.allocator, "/v1.43/exec/{s}/start", .{exec_id});
             defer self.allocator.free(start_path);
 
             const start_body = if (allocate_tty)
@@ -787,7 +796,7 @@ pub const DockerApi = struct {
         // Docker exec identifier.
         exec_id: []const u8,
     ) !u8 {
-        const inspect_path = try std.fmt.allocPrint(self.allocator, "/v1.44/exec/{s}/json", .{exec_id});
+        const inspect_path = try std.fmt.allocPrint(self.allocator, "/v1.43/exec/{s}/json", .{exec_id});
         defer self.allocator.free(inspect_path);
 
         var inspect_response = try self.request("GET", inspect_path, null);
@@ -812,7 +821,7 @@ pub const DockerApi = struct {
         const tail_count = tail orelse 200;
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/v1.44/containers/{s}/logs?stdout=true&stderr=false&timestamps=false&tail={d}",
+            "/v1.43/containers/{s}/logs?stdout=true&stderr=false&timestamps=false&tail={d}",
             .{ container_ref, tail_count },
         );
 
@@ -840,7 +849,7 @@ pub const DockerApi = struct {
     ) !ContainerState {
         const path = try std.fmt.allocPrint(
             self.allocator,
-            "/v1.44/containers/{s}/json",
+            "/v1.43/containers/{s}/json",
             .{container_ref},
         );
         defer self.allocator.free(path);

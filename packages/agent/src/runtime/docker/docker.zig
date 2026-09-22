@@ -283,6 +283,9 @@ pub const DockerClient = struct {
         const labels_json = try buildPlatformLabelsJson(self.allocator, instance_id, service_name);
         defer self.allocator.free(labels_json);
 
+        const network_mode_owned = try readOptionalStringField(self.allocator, raw_json, "networkMode");
+        defer if (network_mode_owned) |owned| self.allocator.free(owned);
+
         const container_id = try api.createContainer(
             container_name,
             runtime_image,
@@ -291,6 +294,7 @@ pub const DockerClient = struct {
             port_bindings_json,
             binds_json,
             labels_json,
+            network_mode_owned,
         );
         defer self.allocator.free(container_id);
 

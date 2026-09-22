@@ -654,6 +654,7 @@ export namespace ApplyService {
             if (
                 operation.type === "create"
                 && !operation.image.startsWith("build://")
+                && !operation.image.startsWith("naulite-cr/")
                 && !pulledImages.has(operation.image)
             ) {
                 output.push({

@@ -195,6 +195,7 @@ Common scripts:
 ## Documentation
 
 * [CONTEXT.md](CONTEXT.md) - Architecture and product philosophy.
+* [ROADMAP.md](ROADMAP.md) - Sandbox de workspace (Incus CoW, bake, checklist).
 * [CHANGELOG.md](CHANGELOG.md) - Release and development history.
 * [packages/docs/src/content/docs/bootstrap.md](packages/docs/src/content/docs/bootstrap.md) - Bootstrap details.
 * [packages/docs/src/content/docs/get-started/install.md](packages/docs/src/content/docs/get-started/install.md) - Installation guide.

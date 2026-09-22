@@ -34,6 +34,7 @@ export const CreateInstanceOperationSchema = z.object({
         protocol: z.enum(["tcp", "udp"]).default("tcp")
     })).default([]),
 
+    networkMode: z.string().min(1).optional(),
     resources: ResourceRequirementsSchema.optional(),
     secrets: z.array(ResolvedSecretSchema).default([])
 });
