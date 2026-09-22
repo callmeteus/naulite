@@ -164,6 +164,29 @@ export {
 } from "./Task";
 
 export {
+    TaskSandboxSchema,
+    TaskSandboxCheckoutSchema,
+    type TaskSandbox,
+    type TaskSandboxCheckout
+} from "./TaskSandbox";
+
+export {
+    SandboxTemplateSchema,
+    SandboxInstanceSchema,
+    SandboxInstanceKindSchema,
+    SandboxInstanceStatusSchema,
+    UpdateSandboxTemplateBodySchema,
+    CreateSandboxTemplateBodySchema,
+    SandboxTemplateListQuerySchema,
+    type SandboxTemplate,
+    type SandboxInstance,
+    type SandboxInstanceKind,
+    type SandboxInstanceStatus,
+    type UpdateSandboxTemplateBody,
+    type CreateSandboxTemplateBody
+} from "./SandboxTemplate";
+
+export {
     GitCredentialsSchema,
     RootExtendsSchema,
     RootExtendsEntrySchema,

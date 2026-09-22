@@ -11,6 +11,7 @@
         "infrastructure": {
             "nodes": "Nós",
             "groups": "Grupos de destino",
+            "sandboxes": "Sandboxes",
             "cluster": "Cluster",
             "metrics": "Métricas",
             "provision": "Adicionar nós"
@@ -343,6 +344,20 @@
             "noNodes": "Nenhum nó registrado ainda.",
             "id": "Id do grupo",
             "idPlaceholder": "workers-producao"
+        },
+        "sandboxes": {
+            "title": "Sandboxes",
+            "hint": "Templates Incus, pool quente e bake.",
+            "emptyTitle": "Nenhum template ainda",
+            "emptyDescription": "Registre um template após o bake no host sandbox.",
+            "node": "Nó",
+            "lastBake": "Último bake",
+            "warmPool": "Pool quente",
+            "poolIdle": "Idle no pool",
+            "bakeCron": "Cron do bake",
+            "bakeCronPlaceholder": "0 3 * * *",
+            "bake": "Bake",
+            "editTitle": "Configurar sandbox"
         },
         "forbidden": {
             "title": "Acesso negado",

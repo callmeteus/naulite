@@ -170,6 +170,7 @@ export namespace ApplyStageRunner {
                     message: task.name
                 });
                 const result = await executor.execute(nodeId, task, {
+                    runId,
                     registers: plan.registers,
                     vars: plan.vars
                 });

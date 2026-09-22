@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TaskSandboxSchema, type TaskSandbox } from "./TaskSandbox";
+
 /**
  * Supported task module identifiers.
  */
@@ -118,6 +120,7 @@ export type Task = {
     failIfMissing?: boolean;
     recurse?: boolean;
     kind?: "pm2" | "systemd";
+    sandbox?: TaskSandbox;
 };
 
 /**
@@ -182,13 +185,22 @@ export const TaskSchema: z.ZodType<Task> = z.lazy(() =>
         from: z.array(z.string()).optional(),
         failIfMissing: z.boolean().optional(),
         recurse: z.boolean().optional(),
-        kind: z.enum(["pm2", "systemd"]).optional()
+        kind: z.enum(["pm2", "systemd"]).optional(),
+        sandbox: TaskSandboxSchema.optional()
     }).superRefine((task, ctx) => {
         if (task.target && task.targetGroup) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: "Task cannot declare both target and targetGroup.",
                 path: ["targetGroup"]
+            });
+        }
+
+        if (task.module === "build" && task.sandbox && !task.sandbox.parent) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "sandbox.parent is required when sandbox is set on a build task.",
+                path: ["sandbox", "parent"]
             });
         }
     })

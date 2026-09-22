@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Op } from "sequelize";
-import type { ApiKey, CreatedApiKey, HostInventory, HostUpdateRun, Instance, Node, NodeProvision, PaginatedList, PaginationQuery, Secret, Service, TargetGroup, Volume } from "@naulite/shared";
+import type { ApiKey, CreatedApiKey, HostInventory, HostUpdateRun, Instance, Node, NodeProvision, PaginatedList, PaginationQuery, SandboxInstance, SandboxTemplate, Secret, Service, TargetGroup, Volume } from "@naulite/shared";
 import { buildPaginatedList, paginationOffset } from "@naulite/shared";
 
 import { ApiKeyCrypto } from "../auth/ApiKeyCrypto";
@@ -20,6 +20,8 @@ import {
     ServiceModel,
     TargetGroupMemberModel,
     TargetGroupModel,
+    SandboxTemplateModel,
+    SandboxInstanceModel,
     VolumeModel
 } from "./models/index";
 
@@ -1194,6 +1196,199 @@ export class ControlPlaneStore {
             memberNodeIds: memberRows.map((member) => member.nodeId),
             createdAt: row.createdAt,
             updatedAt: row.updatedAt
+        };
+    }
+
+    /**
+     * Lists sandbox templates.
+     *
+     * @param pagination Pagination query parameters
+     * @returns Paginated sandbox templates
+     */
+    async listSandboxTemplates(pagination: PaginationQuery = { page: 1, limit: 50 }): Promise<PaginatedList<SandboxTemplate>> {
+        const page = pagination.page;
+        const limit = pagination.limit;
+        const { count, rows } = await SandboxTemplateModel.findAndCountAll({
+            order: [["id", "ASC"]],
+            limit,
+            offset: paginationOffset(page, limit)
+        });
+
+        const items = rows.map((row) => this.mapSandboxTemplateRow(row.get({ plain: true })));
+
+        return buildPaginatedList(items, count, page, limit);
+    }
+
+    /**
+     * Finds a sandbox template by id.
+     *
+     * @param id Template id
+     * @returns Template when found
+     */
+    async getSandboxTemplate(id: string): Promise<SandboxTemplate | null> {
+        const row = await SandboxTemplateModel.findByPk(id);
+
+        if (!row) {
+            return null;
+        }
+
+        return this.mapSandboxTemplateRow(row.get({ plain: true }));
+    }
+
+    /**
+     * Persists a sandbox template row.
+     *
+     * @param template Template payload
+     * @returns Nothing.
+     */
+    async saveSandboxTemplate(template: SandboxTemplate): Promise<void> {
+        await SandboxTemplateModel.upsert({
+            id: template.id,
+            nodeId: template.nodeId,
+            incusName: template.incusName,
+            snapshot: template.snapshot,
+            modulesVolume: template.modulesVolume ?? null,
+            warmPoolSize: template.warmPoolSize,
+            bakeCron: template.bakeCron ?? null,
+            bakedAt: template.bakedAt ?? null,
+            sizeBytes: template.sizeBytes ?? null,
+            createdAt: template.createdAt,
+            updatedAt: template.updatedAt
+        });
+    }
+
+    /**
+     * Lists sandbox instances for a template.
+     *
+     * @param parentId Sandbox template id
+     * @returns Instance rows
+     */
+    async listSandboxInstances(parentId: string): Promise<SandboxInstance[]> {
+        const rows = await SandboxInstanceModel.findAll({
+            where: { parentId },
+            order: [["createdAt", "DESC"]]
+        });
+
+        return rows.map((row) => this.mapSandboxInstanceRow(row.get({ plain: true })));
+    }
+
+    /**
+     * Finds a sandbox instance by id.
+     *
+     * @param id Instance id
+     * @returns Instance when found
+     */
+    async getSandboxInstance(id: string): Promise<SandboxInstance | null> {
+        const row = await SandboxInstanceModel.findByPk(id);
+
+        if (!row) {
+            return null;
+        }
+
+        return this.mapSandboxInstanceRow(row.get({ plain: true }));
+    }
+
+    /**
+     * Persists a sandbox instance row.
+     *
+     * @param instance Instance payload
+     * @returns Nothing.
+     */
+    async saveSandboxInstance(instance: SandboxInstance): Promise<void> {
+        await SandboxInstanceModel.upsert({
+            id: instance.id,
+            parentId: instance.parentId,
+            runId: instance.runId ?? null,
+            incusName: instance.incusName,
+            kind: instance.kind,
+            status: instance.status,
+            createdAt: instance.createdAt,
+            destroyedAt: instance.destroyedAt ?? null
+        });
+    }
+
+    /**
+     * Finds an idle warm-pool clone for a template.
+     *
+     * @param parentId Sandbox template id
+     * @returns Warm instance when available
+     */
+    async findIdleWarmSandboxInstance(parentId: string): Promise<SandboxInstance | null> {
+        const row = await SandboxInstanceModel.findOne({
+            where: {
+                parentId,
+                kind: "warm",
+                status: "idle"
+            },
+            order: [["createdAt", "ASC"]]
+        });
+
+        if (!row) {
+            return null;
+        }
+
+        return this.mapSandboxInstanceRow(row.get({ plain: true }));
+    }
+
+    /**
+     * Maps a sandbox template database row.
+     *
+     * @param row Template row
+     * @returns Sandbox template model
+     */
+    private mapSandboxTemplateRow(row: {
+        id: string;
+        nodeId: string;
+        incusName: string;
+        snapshot: string;
+        modulesVolume: string | null;
+        warmPoolSize: number;
+        bakeCron: string | null;
+        bakedAt: string | null;
+        sizeBytes: number | null;
+        createdAt: string;
+        updatedAt: string;
+    }): SandboxTemplate {
+        return {
+            id: row.id,
+            nodeId: row.nodeId,
+            incusName: row.incusName,
+            snapshot: row.snapshot,
+            modulesVolume: row.modulesVolume,
+            warmPoolSize: row.warmPoolSize,
+            bakeCron: row.bakeCron,
+            bakedAt: row.bakedAt,
+            sizeBytes: row.sizeBytes,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt
+        };
+    }
+
+    /**
+     * Maps a sandbox instance database row.
+     *
+     * @param row Instance row
+     * @returns Sandbox instance model
+     */
+    private mapSandboxInstanceRow(row: {
+        id: string;
+        parentId: string;
+        runId: string | null;
+        incusName: string;
+        kind: string;
+        status: string;
+        createdAt: string;
+        destroyedAt: string | null;
+    }): SandboxInstance {
+        return {
+            id: row.id,
+            parentId: row.parentId,
+            runId: row.runId,
+            incusName: row.incusName,
+            kind: row.kind as SandboxInstance["kind"],
+            status: row.status as SandboxInstance["status"],
+            createdAt: row.createdAt,
+            destroyedAt: row.destroyedAt
         };
     }
 }

@@ -3,17 +3,11 @@ const std = @import("std");
 var threaded_io: std.Io.Threaded = undefined;
 var io_ready = false;
 
-/// Initializes the process-wide blocking I/O runtime with a real allocator and
-/// the current process environment.
+/// Initializes the process-wide blocking I/O runtime with a real allocator.
 ///
-/// Required before subprocess APIs (`std.process.run`) - `global_single_threaded`
-/// uses a failing allocator and always returns `error.OutOfMemory` on spawn.
-///
-/// The `environ` must come from `main`'s `std.process.Init.Minimal`; without it
-/// spawned children (e.g. the NetBird daemon) inherit an empty environment and
-/// lose PATH.
-pub fn init(allocator: std.mem.Allocator, environ: std.process.Environ) void {
-    threaded_io = std.Io.Threaded.init(allocator, .{ .environ = environ });
+/// @param allocator Heap allocator for threaded I/O
+pub fn init(allocator: std.mem.Allocator) void {
+    threaded_io = std.Io.Threaded.init(allocator, .{});
     io_ready = true;
 }
 

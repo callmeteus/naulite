@@ -16,6 +16,7 @@ import type { ControlPlaneContext } from "../ControlPlaneContext";
 import { Logger } from "../Logger";
 import { AgentProxyError, AgentProxyService } from "./AgentProxyService";
 import { PipelineRunService } from "./PipelineRunService";
+import { SandboxService } from "./SandboxService";
 const logBuild = Logger.create("build");
 
 /**
@@ -46,6 +47,18 @@ export namespace BuildService {
      */
     export function resolveBuilderNode(nodes: Node[]): Node | undefined {
         return nodes.find((node) => node.capabilities.includes("builder") && node.agentUrl);
+    }
+
+    /**
+     * Resolves the first online node that can run Incus sandbox builds.
+     *
+     * @param nodes Registered cluster nodes
+     * @returns Sandbox-capable node when one exposes an agent URL
+     */
+    export function resolveSandboxNode(nodes: Node[]): Node | undefined {
+        return nodes.find((node) => {
+            return Boolean(node.agentUrl) && SandboxService.isCowSandboxNode(node);
+        });
     }
 
     /**

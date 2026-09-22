@@ -14,9 +14,9 @@ const http_server = @import("http_server.zig");
 const netbird = @import("netbird.zig");
 const metrics_exporter = @import("runtime/docker/metrics_exporter.zig");
 
-pub fn main(init: std.process.Init.Minimal) !void {
+pub fn main() !void {
     const allocator = std.heap.smp_allocator;
-    blocking_io.init(allocator, init.environ);
+    blocking_io.init(allocator);
     const io = blocking_io.io();
 
     logger.init(io);
@@ -37,7 +37,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         .docker_socket = agent_cfg.docker_socket,
     };
 
-    const http_thread = try std.Thread.spawn(.{}, httpServerThread, .{ allocator, init.environ, server_config });
+    const http_thread = try std.Thread.spawn(.{}, httpServerThread, .{ allocator, server_config });
     http_thread.detach();
 
     blocking_io.sleepMs(500);
@@ -55,10 +55,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
 fn httpServerThread(
     allocator: std.mem.Allocator,
-    environ: std.process.Environ,
     config: http_server.Config,
 ) void {
-    var threaded = std.Io.Threaded.init(allocator, .{ .environ = environ });
+    var threaded = std.Io.Threaded.init(allocator, .{});
     const http_io = threaded.io();
 
     http_server.serveWithIo(allocator, http_io, config) catch |err| {

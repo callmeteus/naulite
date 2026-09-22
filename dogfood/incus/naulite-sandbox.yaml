@@ -1,0 +1,8 @@
+config:
+  security.nesting: "true"
+  security.privileged: "false"
+  linux.kernel_modules: "overlay,br_netfilter"
+devices:
+  eth0:
+    type: nic
+    network: incusbr0

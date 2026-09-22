@@ -24,6 +24,7 @@ import ProvisionDetailView from "../views/ProvisionDetailView.vue";
 import RunsView from "../views/RunsView.vue";
 import RunDetailView from "../views/RunDetailView.vue";
 import TargetGroupsView from "../views/TargetGroupsView.vue";
+import SandboxesView from "../views/SandboxesView.vue";
 import SecretsView from "../views/SecretsView.vue";
 import BuildTriggerView from "../views/BuildTriggerView.vue";
 import NotificationDestinationFormView from "../views/NotificationDestinationFormView.vue";
@@ -60,6 +61,7 @@ const router = createRouter({
         { path: "/cluster", component: ClusterView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/metrics", component: MetricsView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/target-groups", component: TargetGroupsView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
+        { path: "/sandboxes", component: SandboxesView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
         { path: "/delivery", component: DeliveryView, children: [
             { path: "", redirect: "/delivery/gitops" },
             { path: "gitops", component: GitOpsView, meta: { deliveryTab: true, permissions: ["gitops:read"] satisfies NaulitePermission[] } },

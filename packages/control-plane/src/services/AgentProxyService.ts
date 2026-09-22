@@ -261,6 +261,41 @@ export namespace AgentProxyService {
     }
 
     /**
+     * Sends an idempotent DELETE to a node agent sandbox route.
+     *
+     * @param agentUrl Node agent base URL
+     * @param path Agent path including instance id
+     * @returns Parsed JSON response when present
+     * @throws {AgentProxyError} {@link AgentProxyError}
+     */
+    export async function deleteTask(agentUrl: string, path: string): Promise<unknown> {
+        const response = await fetchAgent(`${agentUrl}${path}`, {
+            method: "DELETE",
+            headers: {
+                Accept: "application/json"
+            }
+        });
+
+        if (!response.ok && response.status !== 404) {
+            throw new AgentProxyError(
+                "AGENT_REQUEST_FAILED",
+                `Agent request failed with HTTP ${response.status}.`,
+                response.status,
+                {
+                    i18n: "errors.agentRequestFailed",
+                    i18nParams: { status: String(response.status) }
+                }
+            );
+        }
+
+        if (response.status === 204) {
+            return {};
+        }
+
+        return response.json();
+    }
+
+    /**
      * Fetches a backup archive from a node agent.
      *
      * @param agentUrl Node agent base URL

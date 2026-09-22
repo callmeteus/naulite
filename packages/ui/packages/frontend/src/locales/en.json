@@ -11,6 +11,7 @@
         "infrastructure": {
             "nodes": "Nodes",
             "groups": "Target groups",
+            "sandboxes": "Sandboxes",
             "cluster": "Cluster",
             "metrics": "Metrics",
             "provision": "Add nodes"
@@ -343,6 +344,20 @@
             "noNodes": "No nodes are registered yet.",
             "id": "Group id",
             "idPlaceholder": "production-workers"
+        },
+        "sandboxes": {
+            "title": "Sandboxes",
+            "hint": "Incus templates, warm pool, and bake.",
+            "emptyTitle": "No templates yet",
+            "emptyDescription": "Register a template after baking on a sandbox host.",
+            "node": "Node",
+            "lastBake": "Last bake",
+            "warmPool": "Warm pool",
+            "poolIdle": "Pool idle",
+            "bakeCron": "Bake cron",
+            "bakeCronPlaceholder": "0 3 * * *",
+            "bake": "Bake",
+            "editTitle": "Configure sandbox"
         },
         "forbidden": {
             "title": "Access denied",

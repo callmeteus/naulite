@@ -1,0 +1,15 @@
+name: luckymaker-frontend-sandbox
+tasks:
+  - name: yarn build
+    module: build
+    targetGroup: ci-builders
+    connect: agent
+    sandbox:
+      parent: luckymaker-workspace
+      workdir: /workspace
+      checkout:
+        root: luckymaker-workspace
+        branch: "${GIT_BRANCH}"
+    command: ["lm", "build", "frontend"]
+    outputs:
+      - luckymaker-frontend/dist/

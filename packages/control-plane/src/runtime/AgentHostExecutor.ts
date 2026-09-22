@@ -3,6 +3,7 @@ import type { Node, Task } from "@naulite/shared";
 import { ControlPlaneService } from "../ControlPlaneService";
 import { Logger } from "../Logger";
 import { AgentProxyService } from "../services/AgentProxyService";
+import { SandboxService, type SandboxBuildContext } from "../services/SandboxService";
 
 import type { HostExecutor, HostExecutorResult } from "./HostExecutor";
 
@@ -27,6 +28,61 @@ export class AgentHostExecutor implements HostExecutor {
      * @inheritdoc
      */
     async execute(nodeId: string, task: Task, context: Record<string, unknown>): Promise<HostExecutorResult> {
+        if (task.module === "build" && task.sandbox) {
+            const sandboxContext = toSandboxBuildContext(context);
+            const result = await SandboxService.executeBuild(nodeId, task, sandboxContext);
+
+            return {
+                changed: result.changed,
+                rc: result.rc,
+                stdout: result.stdout,
+                failed: false,
+                sandboxInstance: result.sandboxInstance,
+                outputPaths: result.outputPaths
+            };
+        }
+
+        if (task.module === "build") {
+            const node = await resolveAgentNode(nodeId);
+            const agentUrl = node.agentUrl;
+
+            if (!agentUrl) {
+                throw new Error(`Node ${node.id} does not expose an agent URL.`);
+            }
+
+            const argv = resolveBuildCommandArgv(task.command);
+
+            if (argv.length === 0) {
+                throw new Error("build command must not be empty");
+            }
+
+            logHostExecutor.debug(
+                "execute build on host node=%s argv0=%s",
+                node.id,
+                argv[0]
+            );
+
+            const raw = await AgentProxyService.postTask(agentUrl, "/tasks/command", {
+                command: argv,
+                chdir: task.chdir,
+                env: task.env,
+                context
+            });
+            const result = parseCommandResult(raw);
+
+            if (result.failed || (result.rc !== undefined && result.rc !== 0)) {
+                const detail = result.stderr?.trim() || result.stdout?.trim() || `exit ${result.rc ?? 1}`;
+                throw new Error(`Build failed on ${node.id}: ${detail}`);
+            }
+
+            return {
+                changed: result.changed ?? true,
+                failed: false,
+                rc: result.rc ?? 0,
+                stdout: result.stdout ?? ""
+            };
+        }
+
         if (task.module !== "command") {
             throw new Error(`Host module ${task.module} is not implemented.`);
         }
@@ -71,6 +127,35 @@ export class AgentHostExecutor implements HostExecutor {
             stdout: result.stdout ?? ""
         };
     }
+}
+
+/**
+ * Builds sandbox execution context from the host executor bag.
+ *
+ * @param context Host executor context
+ * @returns Sandbox build context
+ */
+function toSandboxBuildContext(context: Record<string, unknown>): SandboxBuildContext {
+    const runId = typeof context["runId"] === "string" ? context["runId"] : undefined;
+    const registers = isRecord(context["registers"]) ? context["registers"] : undefined;
+    const varsRaw = context["vars"];
+    let vars: Record<string, string> | undefined;
+
+    if (isRecord(varsRaw)) {
+        vars = {};
+
+        for (const [key, value] of Object.entries(varsRaw)) {
+            if (typeof value === "string") {
+                vars[key] = value;
+            }
+        }
+    }
+
+    return {
+        runId,
+        registers,
+        vars
+    };
 }
 
 /**
@@ -151,6 +236,21 @@ function resolveCommandArgv(command: Task["command"]): string[] {
     }
 
     return [];
+}
+
+/**
+ * Normalizes a build task command into argv.
+ *
+ * @param command Build task command
+ * @returns Argv array
+ * @throws {Error} {@link Error}
+ */
+function resolveBuildCommandArgv(command: Task["command"]): string[] {
+    if (Array.isArray(command)) {
+        return command.filter((part) => part.trim() !== "");
+    }
+
+    throw new Error("build command must be a non-empty argv array.");
 }
 
 /**

@@ -69,6 +69,10 @@ import type {
     ServiceReconcileResult,
     TargetGroup,
     UpdateTargetGroupBody,
+    SandboxTemplate,
+    UpdateSandboxTemplateBody,
+    CreateSandboxTemplateBody,
+    SandboxInstance,
     UpsertSecretInput,
     Volume
 } from "./types";
@@ -849,6 +853,61 @@ export class NauliteClient {
      */
     async deleteTargetGroup(id: string): Promise<void> {
         await this.request<void>("DELETE", `/target-groups/${encodeURIComponent(id)}`);
+    }
+
+    /**
+     * Lists sandbox templates.
+     *
+     * @param query Pagination parameters
+     * @returns Paginated sandbox templates
+     */
+    async listSandboxTemplates(query: PaginationQuery = {}): Promise<PaginatedResponse<SandboxTemplate>> {
+        return this.requestPaginated<SandboxTemplate>("GET", "/sandboxes", query);
+    }
+
+    /**
+     * Returns a sandbox template and its clone rows.
+     *
+     * @param id Template id
+     * @returns Template with instances
+     */
+    async getSandboxTemplate(id: string): Promise<{ template: SandboxTemplate; instances: SandboxInstance[] }> {
+        return this.request("GET", `/sandboxes/${encodeURIComponent(id)}`);
+    }
+
+    /**
+     * Registers a sandbox template after host bake.
+     *
+     * @param body Create payload
+     * @returns Created template
+     */
+    async createSandboxTemplate(body: CreateSandboxTemplateBody): Promise<SandboxTemplate> {
+        return this.request<SandboxTemplate>("POST", "/sandboxes", body);
+    }
+
+    /**
+     * Updates sandbox template pool and bake settings.
+     *
+     * @param id Template id
+     * @param body Fields to update
+     * @returns Updated template
+     */
+    async updateSandboxTemplate(id: string, body: UpdateSandboxTemplateBody): Promise<SandboxTemplate> {
+        return this.request<SandboxTemplate>("PATCH", `/sandboxes/${encodeURIComponent(id)}`, body);
+    }
+
+    /**
+     * Triggers a sandbox template bake on the host.
+     *
+     * @param id Template id
+     * @returns Accepted status payload
+     */
+    async triggerSandboxBake(id: string): Promise<{ status: string; templateId: string }> {
+        return this.request<{ status: string; templateId: string }>(
+            "POST",
+            `/sandboxes/${encodeURIComponent(id)}/bake`,
+            {}
+        );
     }
 
     /**

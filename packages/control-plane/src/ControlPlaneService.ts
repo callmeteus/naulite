@@ -278,6 +278,64 @@ export namespace ControlPlaneService {
         }
 
         /**
+         * @param pagination Pagination query
+         * @returns Paginated sandbox templates
+         */
+        export function listSandboxTemplates(
+            ...args: Parameters<ControlPlaneStore["listSandboxTemplates"]>
+        ): ReturnType<ControlPlaneStore["listSandboxTemplates"]> {
+            return backing().listSandboxTemplates(...args);
+        }
+
+        /**
+         * @param id Sandbox template id
+         * @returns Template when found
+         */
+        export function getSandboxTemplate(id: string): ReturnType<ControlPlaneStore["getSandboxTemplate"]> {
+            return backing().getSandboxTemplate(id);
+        }
+
+        /**
+         * @param template Sandbox template payload
+         * @returns Nothing.
+         */
+        export function saveSandboxTemplate(
+            template: Parameters<ControlPlaneStore["saveSandboxTemplate"]>[0]
+        ): ReturnType<ControlPlaneStore["saveSandboxTemplate"]> {
+            return backing().saveSandboxTemplate(template);
+        }
+
+        /**
+         * @param parentId Sandbox template id
+         * @returns Instance rows for the template
+         */
+        export function listSandboxInstances(
+            parentId: string
+        ): ReturnType<ControlPlaneStore["listSandboxInstances"]> {
+            return backing().listSandboxInstances(parentId);
+        }
+
+        /**
+         * @param instance Sandbox instance payload
+         * @returns Nothing.
+         */
+        export function saveSandboxInstance(
+            instance: Parameters<ControlPlaneStore["saveSandboxInstance"]>[0]
+        ): ReturnType<ControlPlaneStore["saveSandboxInstance"]> {
+            return backing().saveSandboxInstance(instance);
+        }
+
+        /**
+         * @param parentId Sandbox template id
+         * @returns Idle warm clone when present
+         */
+        export function findIdleWarmSandboxInstance(
+            parentId: string
+        ): ReturnType<ControlPlaneStore["findIdleWarmSandboxInstance"]> {
+            return backing().findIdleWarmSandboxInstance(parentId);
+        }
+
+        /**
          * @returns Cluster services
          */
         export function listServices(): ReturnType<ControlPlaneStore["listServices"]> {

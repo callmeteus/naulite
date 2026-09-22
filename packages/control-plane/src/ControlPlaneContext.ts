@@ -15,6 +15,7 @@ import { BackupScheduler } from "./modules/backup/BackupScheduler";
 import { createContainerRegistryService, type ContainerRegistryService } from "./modules/container-registry/ContainerRegistryService";
 import { FunctionScheduler } from "./modules/functions/FunctionScheduler";
 import { LogRotationScheduler } from "./modules/log-rotation/LogRotationScheduler";
+import { SandboxBakeScheduler } from "./services/SandboxBakeScheduler";
 import { createLocalSecretProvider } from "./modules/secrets/LocalSecretProvider";
 import { resolveSecretBackendId } from "./modules/secrets/PluginSecretProviderAdapter";
 import { createPostgresSecretProvider } from "./modules/secrets/PostgresSecretProvider";
@@ -66,6 +67,7 @@ export interface ControlPlaneContext {
     backupScheduler: BackupScheduler;
     logRotationScheduler: LogRotationScheduler;
     functionScheduler: FunctionScheduler;
+    sandboxBakeScheduler: SandboxBakeScheduler;
     containerRegistryService: ContainerRegistryService;
     controlPlaneSync: ControlPlaneSync;
     leaderElection: LeaderElection;
@@ -157,6 +159,10 @@ export function createControlPlaneContext(
         }),
 
         functionScheduler: new FunctionScheduler(60_000, {
+            isLeader: () => leaderElection.isLeader()
+        }),
+
+        sandboxBakeScheduler: new SandboxBakeScheduler(60_000, {
             isLeader: () => leaderElection.isLeader()
         }),
 

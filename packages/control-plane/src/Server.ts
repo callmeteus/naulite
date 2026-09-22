@@ -152,6 +152,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
     context.backupScheduler.start();
     context.logRotationScheduler.start();
     context.functionScheduler.start();
+    context.sandboxBakeScheduler.start();
     context.controlPlaneSync.start();
 
     const app = await createApp({
@@ -174,6 +175,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Con
             context.backupScheduler.stop();
             context.logRotationScheduler.stop();
             context.functionScheduler.stop();
+            context.sandboxBakeScheduler.stop();
             context.controlPlaneSync.stop();
             await app.close();
             await databaseProvider.disconnect();

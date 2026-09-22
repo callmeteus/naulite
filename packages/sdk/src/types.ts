@@ -506,3 +506,5 @@ export type {
     UpdateTargetGroupBody,
     Volume
 };
+
+export type { SandboxTemplate, UpdateSandboxTemplateBody, CreateSandboxTemplateBody, SandboxInstance } from "@naulite/shared";

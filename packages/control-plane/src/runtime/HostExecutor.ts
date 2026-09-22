@@ -22,6 +22,8 @@ export interface HostExecutorResult {
     exists?: boolean;
     isdir?: boolean;
     mode?: string;
+    sandboxInstance?: string;
+    outputPaths?: string[];
 }
 
 /**

@@ -235,9 +235,10 @@ fn enablePosixRawMode() !void {
     const stdin_fd: std.posix.fd_t = 0;
     var termios = try std.posix.tcgetattr(stdin_fd);
     saved_posix_termios = termios;
-    termios.lflag &= ~@as(std.posix.tcflag_t, std.posix.ICANON | std.posix.ECHO);
-    termios.cc[std.posix.V.MIN] = 0;
-    termios.cc[std.posix.V.TIME] = 1;
+    termios.lflag.ICANON = false;
+    termios.lflag.ECHO = false;
+    termios.cc[@intFromEnum(std.posix.V.MIN)] = 0;
+    termios.cc[@intFromEnum(std.posix.V.TIME)] = 1;
     try std.posix.tcsetattr(stdin_fd, .FLUSH, termios);
 }
 

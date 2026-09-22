@@ -8,6 +8,7 @@ export interface RunHostEventRow {
     hostname: string;
     status: "ok" | "failed" | "unreachable";
     stepCount: number;
+    sandboxIncusName?: string;
 }
 
 /**
@@ -93,6 +94,24 @@ export function aggregateRunHostEvents(run: PipelineRun, nodes: Node[]): RunHost
             hostname: node?.hostname ?? nodeId,
             status,
             stepCount: steps.length
+        });
+    }
+
+    for (const event of run.events ?? []) {
+        const message = event.message ?? "";
+
+        if (!message.startsWith("sandbox:")) {
+            continue;
+        }
+
+        const incusName = message.slice("sandbox:".length);
+
+        rows.push({
+            nodeId: incusName,
+            hostname: incusName,
+            status: "ok",
+            stepCount: 0,
+            sandboxIncusName: incusName
         });
     }
 

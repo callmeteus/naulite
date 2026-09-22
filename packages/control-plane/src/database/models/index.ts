@@ -26,6 +26,8 @@ import { SecretModel } from "./SecretModel";
 import { ServiceModel } from "./ServiceModel";
 import { TargetGroupMemberModel } from "./TargetGroupMemberModel";
 import { TargetGroupModel } from "./TargetGroupModel";
+import { SandboxInstanceModel } from "./SandboxInstanceModel";
+import { SandboxTemplateModel } from "./SandboxTemplateModel";
 import { TenantModel } from "./TenantModel";
 import { VolumeModel } from "./VolumeModel";
 
@@ -56,6 +58,8 @@ export {
     ServiceModel,
     TargetGroupModel,
     TargetGroupMemberModel,
+    SandboxTemplateModel,
+    SandboxInstanceModel,
     TenantModel,
     VolumeModel,
     NotificationProviderFilterModel,
@@ -77,6 +81,8 @@ export const controlPlaneModels = [
     ServiceModel,
     TargetGroupModel,
     TargetGroupMemberModel,
+    SandboxTemplateModel,
+    SandboxInstanceModel,
     InstanceModel,
     VolumeModel,
     SecretModel,

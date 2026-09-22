@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Task, TaskModule } from "@naulite/shared";
-import { TaskSchema } from "@naulite/shared";
+import { TaskSandboxSchema, TaskSchema } from "@naulite/shared";
 
 /**
  * Zod validators for task modules (happy-path required fields).
@@ -58,7 +58,16 @@ export namespace TaskModuleRegistry {
         }),
         build: z.object({
             command: z.array(z.string().min(1)).min(1),
-            outputs: z.array(z.string().min(1)).min(1)
+            outputs: z.array(z.string().min(1)).min(1),
+            sandbox: TaskSandboxSchema.optional()
+        }).superRefine((fields, ctx) => {
+            if (fields.sandbox && !fields.sandbox.parent) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "sandbox.parent is required.",
+                    path: ["sandbox", "parent"]
+                });
+            }
         }),
         confirm: z.object({
             prompt: z.string().min(1)

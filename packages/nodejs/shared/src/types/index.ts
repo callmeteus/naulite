@@ -145,6 +145,18 @@ export type {
 } from "../schemas/TargetGroup";
 
 export type {
+    SandboxTemplate,
+    SandboxInstance,
+    SandboxInstanceKind,
+    SandboxInstanceStatus,
+    UpdateSandboxTemplateBody
+} from "../schemas/SandboxTemplate";
+
+export type { CreateSandboxTemplateBody } from "../schemas/SandboxTemplate";
+
+export type { TaskSandbox, TaskSandboxCheckout } from "../schemas/TaskSandbox";
+
+export type {
     NotificationDestination,
     CreateNotificationDestinationInput,
     UpdateNotificationDestinationInput,

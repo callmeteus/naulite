@@ -11,6 +11,7 @@ const blocking_io = @import("blocking_io.zig");
 const bootstrap = @import("bootstrap.zig");
 const docker = @import("runtime/docker/docker.zig");
 const env_util = @import("env_util.zig");
+const process_cmd = @import("process_cmd.zig");
 const url_util = @import("url_util.zig");
 
 /// Control plane client configuration (persisted agent identity and connectivity).
@@ -73,11 +74,19 @@ fn registerNode(
     config: *Config,
 ) !void {
     const resources = collectResources(allocator, config.docker_socket);
-    const labels_json = buildLabelsJson(allocator) catch "{}";
+    const base_labels = buildLabelsJson(allocator) catch try allocator.dupe(u8, "{}");
+    const labels_json = mergeIncusPoolDriverLabel(allocator, base_labels) catch base_labels;
     defer allocator.free(labels_json);
+    if (labels_json.ptr != base_labels.ptr) {
+        allocator.free(base_labels);
+    }
 
-    const capabilities_json = buildCapabilitiesJson(allocator) catch "[\"docker\"]";
+    const base_capabilities = buildCapabilitiesJson(allocator) catch try allocator.dupe(u8, "[\"docker\"]");
+    const capabilities_json = appendSandboxCapabilityWhenCowPool(allocator, base_capabilities, labels_json) catch base_capabilities;
     defer allocator.free(capabilities_json);
+    if (capabilities_json.ptr != base_capabilities.ptr) {
+        allocator.free(base_capabilities);
+    }
 
     const netbird_device_json = if (config.netbird_device_id) |device_id|
         try std.fmt.allocPrint(allocator, ",\"netbirdDeviceId\":\"{s}\"", .{device_id})
@@ -262,6 +271,89 @@ fn buildCapabilitiesJson(allocator: std.mem.Allocator) ![]const u8 {
     }
 
     return try allocator.dupe(u8, "[]");
+}
+
+fn detectIncusPoolDriver(allocator: std.mem.Allocator) ?[]const u8 {
+    const pool_name_owned = env_util.readEnvOptional(allocator, "NAULITE_SANDBOX_POOL_NAME");
+    const pool_name = if (pool_name_owned) |name| name else "naulite-sandbox";
+    defer if (pool_name_owned) |name| {
+        allocator.free(name);
+    };
+
+    const argv = [_][]const u8{ "incus", "storage", "show", pool_name };
+    const captured = process_cmd.runCapture(allocator, &argv) catch return null;
+    defer allocator.free(captured.stdout);
+    defer allocator.free(captured.stderr);
+
+    if (!captured.exited_normally or captured.exit_code != 0) {
+        return null;
+    }
+
+    var lines = std.mem.splitScalar(u8, captured.stdout, '\n');
+    while (lines.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, " \t\r");
+        if (!std.mem.startsWith(u8, trimmed, "driver:")) {
+            continue;
+        }
+
+        const driver = std.mem.trim(u8, trimmed["driver:".len..], " \t\r");
+
+        if (driver.len == 0) {
+            return null;
+        }
+
+        return allocator.dupe(u8, driver) catch null;
+    }
+
+    return null;
+}
+
+fn mergeIncusPoolDriverLabel(allocator: std.mem.Allocator, labels_json: []const u8) ![]const u8 {
+    if (env_util.readEnvOptional(allocator, "NAULITE_NODE_LABELS")) |_| {
+        return try allocator.dupe(u8, labels_json);
+    }
+
+    const driver = detectIncusPoolDriver(allocator) orelse return try allocator.dupe(u8, labels_json);
+    defer allocator.free(driver);
+
+    return try std.fmt.allocPrint(allocator, "{{\"incusPoolDriver\":\"{s}\"}}", .{driver});
+}
+
+fn appendSandboxCapabilityWhenCowPool(allocator: std.mem.Allocator, capabilities_json: []const u8, labels_json: []const u8) ![]const u8 {
+    const driver = readIncusPoolDriverFromLabels(labels_json) orelse return try allocator.dupe(u8, capabilities_json);
+
+    if (!std.mem.eql(u8, driver, "zfs") and !std.mem.eql(u8, driver, "btrfs")) {
+        return try allocator.dupe(u8, capabilities_json);
+    }
+
+    if (std.mem.indexOf(u8, capabilities_json, "\"sandbox\"") != null) {
+        return try allocator.dupe(u8, capabilities_json);
+    }
+
+    if (std.mem.eql(u8, capabilities_json, "[]")) {
+        return try allocator.dupe(u8, "[\"sandbox\"]");
+    }
+
+    if (capabilities_json.len <= 1 or capabilities_json[0] != '[') {
+        return try allocator.dupe(u8, "[\"sandbox\"]");
+    }
+
+    const insert_at = capabilities_json.len - 1;
+    return try std.fmt.allocPrint(allocator, "{s},\"sandbox\"{s}", .{
+        capabilities_json[0..insert_at],
+        capabilities_json[insert_at..],
+    });
+}
+
+fn readIncusPoolDriverFromLabels(labels_json: []const u8) ?[]const u8 {
+    const needle = "\"incusPoolDriver\"";
+    const key_pos = std.mem.indexOf(u8, labels_json, needle) orelse return null;
+    const after_key = labels_json[key_pos + needle.len ..];
+    const colon = std.mem.indexOf(u8, after_key, ":") orelse return null;
+    const value_start = std.mem.indexOf(u8, after_key[colon + 1 ..], "\"") orelse return null;
+    const slice = after_key[colon + 1 + value_start + 1 ..];
+    const value_end = std.mem.indexOf(u8, slice, "\"") orelse return null;
+    return slice[0..value_end];
 }
 
 fn reportInstanceStatus(

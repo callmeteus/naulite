@@ -642,7 +642,7 @@ test "daemon start shell backgrounds netbird and records pid file" {
 
 test "main initializes blocking IO before NetBird subprocess calls" {
     const main_source = @embedFile("main.zig");
-    try std.testing.expect(std.mem.indexOf(u8, main_source, "blocking_io.init(allocator, init.environ)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, main_source, "blocking_io.init(allocator)") != null);
     try std.testing.expect(std.mem.indexOf(u8, main_source, "ensureNetbirdConnected") != null);
 }
 

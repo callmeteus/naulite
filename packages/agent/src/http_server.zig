@@ -97,6 +97,7 @@ const bootstrap = @import("bootstrap.zig");
 const build_context = @import("build_context.zig");
 const build_executor = @import("build_executor.zig");
 const command_executor = @import("command_executor.zig");
+const sandbox_executor = @import("sandbox_executor.zig");
 const exec_stream = @import("exec_stream.zig");
 const execution_plan = @import("execution_plan.zig");
 const function_executor = @import("function_executor.zig");
@@ -254,6 +255,26 @@ pub fn handleRequestWithSocket(
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/command")) {
         return try handleCommandTask(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/sandbox/clone")) {
+        return try handleSandboxCloneTask(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/sandbox/exec")) {
+        return try handleSandboxExecTask(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/sandbox/collect")) {
+        return try handleSandboxCollectTask(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/tasks/sandbox/bake")) {
+        return try handleSandboxBakeTask(&ctx, body);
+    }
+
+    if (std.mem.eql(u8, method, "DELETE") and std.mem.startsWith(u8, path, "/tasks/sandbox/")) {
+        return try handleSandboxDeleteTask(&ctx, path);
     }
 
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/backups/receive")) {
@@ -708,6 +729,82 @@ fn handleCommandTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
 
     return .{
         .status = if (result.error_message != null) 500 else 200,
+        .content_type = "application/json",
+        .body = result.body,
+    };
+}
+
+fn handleSandboxCloneTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try sandbox_executor.executeCloneTask(ctx.allocator, body);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = result.http_status,
+        .content_type = "application/json",
+        .body = result.body,
+    };
+}
+
+fn handleSandboxExecTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try sandbox_executor.executeExecTask(ctx.allocator, body);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = result.http_status,
+        .content_type = "application/json",
+        .body = result.body,
+    };
+}
+
+fn handleSandboxCollectTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try sandbox_executor.executeCollectTask(ctx.allocator, body);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = result.http_status,
+        .content_type = "application/json",
+        .body = result.body,
+    };
+}
+
+fn handleSandboxBakeTask(ctx: *const RouteContext, body: []const u8) !HttpResponse {
+    const result = try sandbox_executor.executeBakeTask(ctx.allocator, body);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = result.http_status,
+        .content_type = "application/json",
+        .body = result.body,
+    };
+}
+
+fn handleSandboxDeleteTask(ctx: *const RouteContext, path: []const u8) !HttpResponse {
+    const prefix = "/tasks/sandbox/";
+    if (path.len <= prefix.len) {
+        return error.InvalidSandboxTask;
+    }
+
+    const instance = path[prefix.len..];
+    const result = try sandbox_executor.executeDeleteTask(ctx.allocator, instance);
+    defer ctx.allocator.free(result.status);
+    if (result.error_message) |error_message| {
+        defer ctx.allocator.free(error_message);
+    }
+
+    return .{
+        .status = result.http_status,
         .content_type = "application/json",
         .body = result.body,
     };
