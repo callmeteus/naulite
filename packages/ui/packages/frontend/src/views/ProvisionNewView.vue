@@ -5,7 +5,8 @@ import { RouterLink, useRouter } from "vue-router";
 
 import PageLayout from "../components/layout/PageLayout.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
-import PlatformTerminalTabs, { type TerminalPlatform } from "../components/ui/PlatformTerminalTabs.vue";
+import PlatformTerminalTabs from "../components/ui/PlatformTerminalTabs.vue";
+import type { TerminalPlatform } from "../components/ui/TerminalPlatform";
 import RelationSelect from "../components/ui/RelationSelect.vue";
 import {
     NodeProvisionProvider,

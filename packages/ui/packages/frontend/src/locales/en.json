@@ -73,6 +73,8 @@
         "paginationNext": "Next",
         "paginationPage": "Page {page} of {total}",
         "retry": "Retry",
+        "copy": "Copy",
+        "copied": "Copied",
         "viewDetails": "View details",
         "noResults": "No results found.",
         "tableColumns": {
@@ -572,6 +574,18 @@
             "connectInstallCommand": "Install command",
             "connectEnrollmentUnavailable": "Enrollment details are not available right now. Check that the intranet is configured on the control plane.",
             "connectOpenTab": "Connect devices"
+        },
+        "connect": {
+            "sectionTitle": "Connect a machine",
+            "sectionHint": "Copy the install command on the host, then check whether the agent registered.",
+            "installOneLiner": "One-click install (download client, setup key, private network)",
+            "checkTitle": "Connection check",
+            "checkHint": "Run this after the install command finishes on the host.",
+            "checkAction": "Check connection",
+            "checkSuccessNodes": "{nodes} cluster node(s) online.",
+            "checkSuccessDevices": "No online nodes yet, but {devices} mesh device(s) are online.",
+            "checkRegisteredOffline": "A node registered but is not online yet. Wait for the agent service and try again.",
+            "checkNoneYet": "No node has registered yet. Run the install command on the host and try again."
         },
         "nodes": {
             "title": "Nodes",

@@ -1,6 +1,7 @@
 import { NetBirdEnrollmentResponseSchema, RouteMessageResponseSchema } from "@naulite/shared";
 import { ControlPlaneService } from "../../ControlPlaneService";
 import {
+    resolvePublicAgentInstallScriptUrl,
     resolvePublicControlPlaneUrl,
     resolvePublicNetBirdManagementUrl
 } from "../../bootstrap/BootstrapUrls";
@@ -33,7 +34,8 @@ export const GET = defineRoute({
         return {
             setupKey,
             cpUrl: resolvePublicControlPlaneUrl(req),
-            netbirdManagementUrl
+            netbirdManagementUrl,
+            agentInstallScriptUrl: resolvePublicAgentInstallScriptUrl()
         };
     }
 });

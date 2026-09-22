@@ -113,3 +113,24 @@ export function resolvePublicNetBirdManagementUrl(): string {
 
     return configured.replace(/\/+$/, "").replace(/\/api$/, "");
 }
+
+/**
+ * Default URL used to download the agent install script on a new host.
+ */
+const DEFAULT_AGENT_INSTALL_SCRIPT_URL =
+    "https://raw.githubusercontent.com/callmeteus/naulite/master/bootstrap/agent-install.sh";
+
+/**
+ * Resolves the public URL used to download the agent install script on a new host.
+ *
+ * @returns Normalized script URL without trailing slash
+ */
+export function resolvePublicAgentInstallScriptUrl(): string {
+    const configured = process.env.NAULITE_AGENT_INSTALL_SCRIPT_URL?.trim();
+
+    if (configured) {
+        return configured.replace(/\/+$/, "");
+    }
+
+    return DEFAULT_AGENT_INSTALL_SCRIPT_URL;
+}

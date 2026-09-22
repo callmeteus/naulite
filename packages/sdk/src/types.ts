@@ -335,6 +335,7 @@ export interface NetBirdEnrollment {
     setupKey: string;
     cpUrl: string;
     netbirdManagementUrl: string;
+    agentInstallScriptUrl: string;
 }
 
 /**

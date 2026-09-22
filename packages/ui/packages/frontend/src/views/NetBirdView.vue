@@ -7,14 +7,16 @@ import { RouterLink } from "vue-router";
 import type { NetBirdAcl, NetBirdDevice, NetBirdEnrollment, NetBirdGroup, Node } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
+import AgentConnectPanel from "../components/connect/AgentConnectPanel.vue";
+import CopyableCodeBlock from "../components/ui/CopyableCodeBlock.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
-import PlatformTerminalTabs, { type TerminalPlatform } from "../components/ui/PlatformTerminalTabs.vue";
+import PlatformTerminalTabs from "../components/ui/PlatformTerminalTabs.vue";
+import type { TerminalPlatform } from "../components/ui/TerminalPlatform";
 import StatusPill from "../components/ui/StatusPill.vue";
 import { parseApiError, type ParsedApiError } from "../composables/useApiAction";
 import {
-    buildInfrastructureInstallCommand,
     buildTeamCliConnectCommand
 } from "../utils/netbirdConnectPresentation";
 import {
@@ -117,14 +119,6 @@ const tabs = computed(() => [
     { id: NetBirdTab.ACCESS_RULES, labelKey: "pages.netbird.tabAccessRules", count: acls.value.length },
     { id: NetBirdTab.CONNECT, labelKey: "pages.netbird.tabConnect" }
 ]);
-
-const infrastructureInstallCommand = computed(() => {
-    if (!enrollment.value) {
-        return "";
-    }
-
-    return buildInfrastructureInstallCommand(enrollment.value, terminalPlatform.value);
-});
 
 const teamCliConnectCommand = computed(() => {
     if (!enrollment.value) {
@@ -603,16 +597,7 @@ async function loadEnrollment(): Promise<void> {
                             <li>{{ t("pages.netbird.connectInfrastructureStep3") }}</li>
                         </ol>
 
-                        <PlatformTerminalTabs v-model="terminalPlatform" />
-
-                        <div class="space-y-2">
-                            <p class="text-sm font-medium">
-                                {{ t("pages.netbird.connectInstallCommand") }}
-                            </p>
-                            <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
-                                infrastructureInstallCommand || t("pages.netbird.connectEnrollmentUnavailable")
-                            }}</code></pre>
-                        </div>
+                        <AgentConnectPanel />
 
                         <div class="rounded-lg border border-base-300 bg-base-200/40 p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -659,17 +644,11 @@ async function loadEnrollment(): Promise<void> {
 
                         <PlatformTerminalTabs v-model="terminalPlatform" />
 
-                        <div class="space-y-2">
-                            <p class="text-sm font-medium">
-                                {{ t("pages.netbird.connectTeamCliTitle") }}
-                            </p>
-                            <p class="text-xs text-base-content/60">
-                                {{ t("pages.netbird.connectTeamCliHint") }}
-                            </p>
-                            <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
-                                teamCliConnectCommand || t("pages.netbird.connectEnrollmentUnavailable")
-                            }}</code></pre>
-                        </div>
+                        <CopyableCodeBlock
+                            :code="teamCliConnectCommand"
+                            label-key="pages.netbird.connectTeamCliTitle"
+                            empty-key="pages.netbird.connectEnrollmentUnavailable"
+                        />
 
                         <div class="flex items-center gap-2 text-sm text-base-content/70">
                             <Link2 class="size-4 shrink-0" />

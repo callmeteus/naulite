@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 
-export type TerminalPlatform = "windows" | "unix";
+import type { TerminalPlatform } from "./TerminalPlatform";
 
 const platform = defineModel<TerminalPlatform>({ default: "windows" });
 

@@ -5,6 +5,7 @@ import { RouterLink } from "vue-router";
 
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
+import AgentConnectPanel from "../components/connect/AgentConnectPanel.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
@@ -27,6 +28,7 @@ const store = useClusterStore();
 const auth = useAuthStore();
 
 const canProvision = computed(() => auth.hasPermission("nodes:provision"));
+const canConnectAgent = computed(() => auth.hasPermission("netbird:read"));
 
 const {
     items: provisionHistory,
@@ -84,6 +86,20 @@ async function refreshAll(): Promise<void> {
         </template>
 
         <ErrorAlert :error="store.error || historyError" />
+
+        <section v-if="canConnectAgent" class="card bg-base-100 shadow">
+            <div class="card-body gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold">
+                        {{ t("pages.connect.sectionTitle") }}
+                    </h2>
+                    <p class="text-sm text-base-content/70">
+                        {{ t("pages.connect.sectionHint") }}
+                    </p>
+                </div>
+                <AgentConnectPanel />
+            </div>
+        </section>
 
         <div class="flex flex-col gap-8">
         <section class="space-y-3">

@@ -6,5 +6,6 @@ import { z } from "zod";
 export const NetBirdEnrollmentResponseSchema = z.object({
     setupKey: z.string(),
     cpUrl: z.string(),
-    netbirdManagementUrl: z.string()
+    netbirdManagementUrl: z.string(),
+    agentInstallScriptUrl: z.string().url()
 });
