@@ -26,6 +26,8 @@ export type {
     HostPackageStatus,
     HostPackage,
     HostInventory,
+    HostInventoryPage,
+    HostInventoryStatusFilter,
     HostUpdateRequest,
     HostUpdateKind,
     HostUpdateRunStatus,

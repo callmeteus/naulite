@@ -4,11 +4,14 @@ import { Logger } from "../Logger";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
 import type { ComposeParser } from "../orchestration/ComposeParser";
 import { Planner } from "../orchestration/Planner";
+import type { Scheduler } from "../orchestration/Scheduler";
+import { TargetGroupResolver } from "../orchestration/TargetGroupResolver";
 import { AgentDispatcher } from "./AgentDispatcher";
 import { explainDispatchFailure } from "./ApplyDispatchFailureMessage";
 import { ApplyService } from "./ApplyService";
 import { GitOpsService } from "./GitOpsService";
 import type { LeaderElection } from "./LeaderElection";
+import { InstancePlacementService } from "./InstancePlacementService";
 import { ServiceStatusService } from "./ServiceStatusService";
 
 const logInstanceReconcile = Logger.create("instance-reconcile");
@@ -61,6 +64,7 @@ export class InstanceReconcilerService {
         private readonly store: ControlPlaneStore,
         private readonly planner: Planner,
         private readonly composeParser: ComposeParser,
+        private readonly scheduler: Scheduler,
         private readonly resolveApplyRevision: () => number
     ) {}
 
@@ -120,11 +124,17 @@ export class InstanceReconcilerService {
         const now = new Date();
 
         for (const instance of instances) {
+            await this.maybeRescheduleFromUnreachableNode(instance, nodes);
+        }
+
+        const instancesAfterReschedule = await this.store.listInstances();
+
+        for (const instance of instancesAfterReschedule) {
             if (!InstanceReconcilerService.isReconcileCandidate(instance, nodes, now)) {
                 continue;
             }
 
-            await this.reconcileInstance(instance.id, instances, nodes);
+            await this.reconcileInstance(instance.id, instancesAfterReschedule, nodes);
         }
     }
 
@@ -345,6 +355,84 @@ export class InstanceReconcilerService {
     }
 
     /**
+     * Moves unpinned pending instances off offline or unreachable nodes.
+     *
+     * @param instance Instance record
+     * @param nodes Registered nodes
+     * @returns Nothing.
+     */
+    private async maybeRescheduleFromUnreachableNode(
+        instance: Instance,
+        nodes: Node[]
+    ): Promise<void> {
+        if (instance.status !== "pending" && instance.status !== "failed") {
+            return;
+        }
+
+        const scheduledNode = nodes.find((entry) => entry.id === instance.nodeId);
+
+        if (scheduledNode?.status === "online" && scheduledNode.agentUrl) {
+            return;
+        }
+
+        const services = await this.store.listServices();
+        const service = services.find((entry) => entry.id === instance.serviceId);
+
+        if (!service) {
+            return;
+        }
+
+        const revisions = (await GitOpsService.listRevisions(service.manifestName))
+            .sort((left, right) => right.appliedAt.localeCompare(left.appliedAt));
+
+        const latestRevision = revisions[0];
+
+        if (!latestRevision) {
+            return;
+        }
+
+        const manifest = this.composeParser.parse(latestRevision.manifestYaml);
+        const manifestService = manifest.services[instance.serviceName];
+
+        if (!InstancePlacementService.allowsRescheduleAwayFromNode(manifestService)) {
+            return;
+        }
+
+        const eligibleNodes = await TargetGroupResolver.resolveEligibleNodes(manifestService, nodes);
+        const candidates = eligibleNodes.filter((entry) => entry.id !== instance.nodeId);
+
+        if (candidates.length === 0) {
+            return;
+        }
+
+        const replicaNodeIds = this.scheduler.scheduleReplicaNodes(
+            service,
+            manifestService,
+            candidates,
+            1
+        );
+
+        if (replicaNodeIds.length !== 1) {
+            return;
+        }
+
+        const targetNodeId = replicaNodeIds[0];
+
+        await this.store.updateInstance(instance.id, {
+            nodeId: targetNodeId,
+            status: "pending",
+            lastError: null
+        });
+
+        console.debug(
+            "[instance-reconcile] rescheduled instanceId=%s fromNodeId=%s toNodeId=%s",
+            instance.id,
+            instance.nodeId,
+            targetNodeId
+        );
+    }
+
+    /**
      * Returns whether an instance should be retried by the reconciler.
      *
      * @param instance Instance record
@@ -467,7 +555,8 @@ export function createInstanceReconcilerService(
     store: ControlPlaneStore,
     planner: Planner,
     composeParser: ComposeParser,
+    scheduler: Scheduler,
     resolveApplyRevision: () => number
 ): InstanceReconcilerService {
-    return new InstanceReconcilerService(store, planner, composeParser, resolveApplyRevision);
+    return new InstanceReconcilerService(store, planner, composeParser, scheduler, resolveApplyRevision);
 }

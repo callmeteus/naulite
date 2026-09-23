@@ -2,10 +2,9 @@
  * Starts the admin API (BFF) for local UI development.
  */
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { createDevWatcher, isDevReuseEnabled, waitForShutdownSignal } from "./dev-watch.mjs";
+import { createDevWatcher, isDevReuseEnabled, runCommand, waitForShutdownSignal } from "./dev-watch.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const backendRoot = path.join(repoRoot, "packages/ui/packages/backend");
@@ -18,26 +17,6 @@ process.env.PORT = process.env.NAULITE_UI_BACKEND_PORT ?? "3001";
 process.env.HOST = process.env.NAULITE_UI_BACKEND_HOST ?? "0.0.0.0";
 const adminApiPort = process.env.PORT;
 const adminApiHost = process.env.HOST;
-
-/**
- * Runs a command and exits the process when it fails.
- *
- * @param command Executable name
- * @param args Command arguments
- * @param cwd Working directory
- */
-function run(command, args, cwd = repoRoot) {
-    const result = spawnSync(command, args, {
-        cwd,
-        stdio: "inherit",
-        env: process.env,
-        shell: true
-    });
-
-    if (result.status !== 0) {
-        process.exit(result.status ?? 1);
-    }
-}
 
 /**
  * Returns whether an HTTP endpoint responds successfully.
@@ -58,14 +37,41 @@ async function isReachable(url) {
 /**
  * Builds shared dependencies and the admin API bundle.
  *
- * @returns Nothing.
+ * @returns `true` when every compile step succeeded
  */
 function buildAdminApi() {
-    run("yarn", ["workspace", "@naulite/shared", "build"]);
-    run("yarn", ["workspace", "@naulite/sdk", "build"]);
-    run("yarn", ["workspace", "@naulite/logger", "build"]);
-    run("yarn", ["tsc", "-p", "tsconfig.json"], backendRoot);
-    run("node", ["../../../../scripts/fix-esm-imports.mjs", "dist"], backendRoot);
+    if (!runCommand("yarn", ["workspace", "@naulite/shared", "build"], {
+        cwd: repoRoot,
+        label: "dev-ui-backend"
+    })) {
+        return false;
+    }
+
+    if (!runCommand("yarn", ["workspace", "@naulite/sdk", "build"], {
+        cwd: repoRoot,
+        label: "dev-ui-backend"
+    })) {
+        return false;
+    }
+
+    if (!runCommand("yarn", ["workspace", "@naulite/logger", "build"], {
+        cwd: repoRoot,
+        label: "dev-ui-backend"
+    })) {
+        return false;
+    }
+
+    if (!runCommand("yarn", ["tsc", "-p", "tsconfig.json"], {
+        cwd: backendRoot,
+        label: "dev-ui-backend"
+    })) {
+        return false;
+    }
+
+    return runCommand("node", ["../../../../scripts/fix-esm-imports.mjs", "dist"], {
+        cwd: backendRoot,
+        label: "dev-ui-backend"
+    });
 }
 
 /**
@@ -84,7 +90,7 @@ async function startAdminApiServer() {
 
 const adminApiUrl = `http://127.0.0.1:${adminApiPort}/auth/me`;
 let server = null;
-let ownsServer = false;
+let managingDevAdminApi = false;
 const canReuseAdminApi = isDevReuseEnabled();
 
 if (canReuseAdminApi && await isReachable(adminApiUrl)) {
@@ -95,17 +101,20 @@ if (canReuseAdminApi && await isReachable(adminApiUrl)) {
             `[dev] admin API already listening on http://${adminApiHost}:${adminApiPort}; watched restarts are skipped until you stop it or set NAULITE_DEV_REUSE=1.`
         );
     } else {
-        buildAdminApi();
-        server = await startAdminApiServer();
-        ownsServer = true;
+        managingDevAdminApi = true;
 
-        console.log(`[dev] Naulite admin API listening on http://${server.host}:${server.port}`);
+        if (buildAdminApi()) {
+            server = await startAdminApiServer();
+            console.log(`[dev] Naulite admin API listening on http://${server.host}:${server.port}`);
+        } else {
+            console.error("[dev] admin API build failed; fix TypeScript errors and save to retry.");
+        }
     }
 }
 
 console.log(`[dev] Control plane: ${process.env.CONTROL_PLANE_INSTANCES}`);
 
-if (ownsServer) {
+if (managingDevAdminApi) {
     createDevWatcher({
         label: "dev-ui-backend",
         paths: [
@@ -115,12 +124,16 @@ if (ownsServer) {
             path.join(loggerRoot, "src")
         ],
         onChange: async () => {
+            if (!buildAdminApi()) {
+                console.error("[dev-ui-backend] rebuild failed; keeping the previous server until the next successful build.");
+                return;
+            }
+
             if (server) {
                 await server.stop();
                 server = null;
             }
 
-            buildAdminApi();
             server = await startAdminApiServer();
             console.log(`[dev] admin API restarted on http://${server.host}:${server.port}`);
         }
@@ -128,7 +141,7 @@ if (ownsServer) {
 }
 
 const shutdown = async () => {
-    if (ownsServer && server) {
+    if (managingDevAdminApi && server) {
         await server.stop();
     }
 

@@ -4,37 +4,18 @@
  * Defaults to 18080 so it does not collide with other Fastify apps on 8080.
  * Reuses traefik-mock and an existing control plane when their health checks pass.
  */
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { DevAgentHelpers } from "./dev-agent-helpers.mjs";
 import { isDockerAvailable } from "./dev-docker.mjs";
-import { createDevWatcher, isDevReuseEnabled, waitForShutdownSignal } from "./dev-watch.mjs";
+import { createDevWatcher, isDevReuseEnabled, runCommand, waitForShutdownSignal } from "./dev-watch.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const traefikMockPort = process.env.NAULITE_TRAEFIK_MOCK_PORT ?? "18099";
 const prometheusPort = process.env.NAULITE_PROMETHEUS_HOST_PORT ?? "19090";
-
-/**
- * Runs a command and exits the process when it fails.
- *
- * @param command Executable name
- * @param args Command arguments
- */
-function run(command, args) {
-    const result = spawnSync(command, args, {
-        cwd: repoRoot,
-        stdio: "inherit",
-        env: process.env,
-        shell: true
-    });
-
-    if (result.status !== 0) {
-        process.exit(result.status ?? 1);
-    }
-}
 
 process.env.PORT = process.env.NAULITE_CP_PORT ?? "18080";
 process.env.HOST = process.env.NAULITE_CP_HOST ?? "0.0.0.0";
@@ -172,10 +153,13 @@ const controlPlaneProviderPackages = [
  * Builds a single workspace package.
  *
  * @param name Workspace package name
- * @returns Nothing.
+ * @returns `true` when the workspace build succeeded
  */
 function buildWorkspacePackage(name) {
-    run("yarn", ["workspace", name, "build"]);
+    return runCommand("yarn", ["workspace", name, "build"], {
+        cwd: repoRoot,
+        label: "dev-control-plane"
+    });
 }
 
 /**
@@ -188,21 +172,25 @@ function buildWorkspacePackage(name) {
  * @param options.includeProviders When `true`, also compile logger, builder,
  * runtime, gateway, and notification packages. Use on first start; watch
  * reloads can skip them when those trees did not change.
- * @returns Nothing.
+ * @returns `true` when every compile step succeeded
  */
 function buildControlPlane(options = {}) {
     const includeProviders = options.includeProviders === true;
 
-    buildWorkspacePackage("@naulite/shared");
+    if (!buildWorkspacePackage("@naulite/shared")) {
+        return false;
+    }
 
     // Compile workspace providers so control-plane `tsc` can resolve `@naulite/*`
     if (includeProviders) {
         for (const name of controlPlaneProviderPackages) {
-            buildWorkspacePackage(name);
+            if (!buildWorkspacePackage(name)) {
+                return false;
+            }
         }
     }
 
-    buildWorkspacePackage("@naulite/control-plane");
+    return buildWorkspacePackage("@naulite/control-plane");
 }
 
 /**
@@ -266,7 +254,7 @@ if (prometheusReady) {
 
 const controlPlaneHealthUrl = `http://127.0.0.1:${controlPlanePort}/health`;
 let server = null;
-let ownsControlPlane = false;
+let managingDevControlPlane = false;
 
 const canReuseControlPlane = isDevReuseEnabled();
 
@@ -279,11 +267,14 @@ if (canReuseControlPlane && await isHealthy(controlPlaneHealthUrl)) {
             `[dev] control plane already listening on http://${controlPlaneHost}:${controlPlanePort}; starting a watched instance is skipped. Stop the other process or set NAULITE_DEV_REUSE=1 to reuse it.`
         );
     } else {
-        buildControlPlane({ includeProviders: true });
-        server = await startControlPlaneServer();
-        ownsControlPlane = true;
+        managingDevControlPlane = true;
 
-        console.log(`[dev] Naulite control plane listening on http://${server.host}:${server.port}`);
+        if (buildControlPlane({ includeProviders: true })) {
+            server = await startControlPlaneServer();
+            console.log(`[dev] Naulite control plane listening on http://${server.host}:${server.port}`);
+        } else {
+            console.error("[dev] control plane build failed; fix TypeScript errors and save to retry.");
+        }
     }
 }
 
@@ -291,7 +282,7 @@ console.log(`[dev] traefik-mock at http://127.0.0.1:${traefikMockPort}`);
 console.log(`[dev] Prometheus URL for CP: ${process.env.PROMETHEUS_URL ?? "(disabled)"}`);
 console.log("[dev] Bootstrap login: admin@example.com / admin");
 
-if (ownsControlPlane) {
+if (managingDevControlPlane) {
     createDevWatcher({
         label: "dev-control-plane",
         paths: [
@@ -299,12 +290,16 @@ if (ownsControlPlane) {
             path.join(repoRoot, "packages", "nodejs", "shared", "src")
         ],
         onChange: async () => {
+            if (!buildControlPlane()) {
+                console.error("[dev-control-plane] rebuild failed; keeping the previous server until the next successful build.");
+                return;
+            }
+
             if (server) {
                 await server.stop();
                 server = null;
             }
 
-            buildControlPlane();
             server = await startControlPlaneServer();
             console.log(`[dev] control plane restarted on http://${server.host}:${server.port}`);
         }
@@ -312,7 +307,7 @@ if (ownsControlPlane) {
 }
 
 const shutdown = async () => {
-    if (ownsControlPlane && server) {
+    if (managingDevControlPlane && server) {
         await server.stop();
     }
 

@@ -34,7 +34,7 @@ pub fn fallbackSnapshot() Snapshot {
         .cpu_millis_used = 0,
         .memory_mb_total = 1024,
         .memory_mb_used = 0,
-        .disk_mb_total = 102_400,
+        .disk_mb_total = 102_401,
         .disk_mb_used = 0,
     };
 }

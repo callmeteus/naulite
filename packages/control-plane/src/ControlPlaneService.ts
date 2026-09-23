@@ -197,6 +197,18 @@ export namespace ControlPlaneService {
 
         /**
          * @param nodeId Node identifier
+         * @param status New node status
+         * @returns Updated node when found
+         */
+        export function updateNodeStatus(
+            nodeId: string,
+            status: Parameters<ControlPlaneStore["updateNodeStatus"]>[1]
+        ): ReturnType<ControlPlaneStore["updateNodeStatus"]> {
+            return backing().updateNodeStatus(nodeId, status);
+        }
+
+        /**
+         * @param nodeId Node identifier
          * @returns Cached host inventory when present
          */
         export function getHostInventory(nodeId: string): ReturnType<ControlPlaneStore["getHostInventory"]> {

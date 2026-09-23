@@ -5,7 +5,12 @@ import {
     HostPackageSchema,
     HostPackageManagerSchema,
     HostUpdateRunSchema,
+    buildPaginatedList,
+    paginationOffset,
     type HostInventory,
+    type HostInventoryPage,
+    type HostInventoryStatusFilter,
+    type HostPackage,
     type HostUpdateRun,
     type Node
 } from "@naulite/shared";
@@ -43,8 +48,10 @@ export namespace HostPackageService {
     /**
      * Ensures the node exists and exposes an agent URL.
      *
+     * @param getNode Node lookup callback
      * @param nodeId Node identifier
      * @returns Online node with agent URL
+     * @throws {HostPackageError} When the node is missing or has no agent URL
      */
     export async function requireAgentNode(
         getNode: (nodeId: string) => Promise<Node | null>,
@@ -70,11 +77,63 @@ export namespace HostPackageService {
     }
 
     /**
+     * Returns whether a package row matches the requested status filter.
+     *
+     * @param packageStatus Package update status
+     * @param filter Requested status filter
+     * @returns `true` when the row belongs on this page
+     */
+    function matchesStatus(packageStatus: HostPackage["status"], filter: HostInventoryStatusFilter): boolean {
+        if (filter === "all") {
+            return true;
+        }
+
+        return packageStatus === filter;
+    }
+
+    /**
+     * Returns one page of a stored host inventory.
+     *
+     * Summary counts stay on the full snapshot. `total` is the count after the status filter.
+     *
+     * @param inventory Stored host inventory
+     * @param query Page, limit, and status filter
+     * @returns Inventory page for the control plane response
+     */
+    export function pageInventory(
+        inventory: HostInventory,
+        query: {
+            page: number;
+            limit: number;
+            status: HostInventoryStatusFilter;
+        }
+    ): HostInventoryPage {
+        const matched = inventory.packages.filter((entry) => matchesStatus(entry.status, query.status));
+        const offset = paginationOffset(query.page, query.limit);
+        const items = matched.slice(offset, offset + query.limit);
+        const page = buildPaginatedList(items, matched.length, query.page, query.limit);
+
+        return {
+            nodeId: inventory.nodeId,
+            packageManager: inventory.packageManager,
+            summary: inventory.summary,
+            collectedAt: inventory.collectedAt,
+            status: query.status,
+            items: page.items,
+            total: page.total,
+            page: page.page,
+            limit: page.limit,
+            hasMore: page.hasMore
+        };
+    }
+
+    /**
      * Collects and persists the host inventory for a node.
      *
      * @param node Target node
      * @param saveInventory Inventory persistence callback
      * @returns Persisted host inventory snapshot
+     * @throws {HostPackageError} When the agent URL is missing or inventory collection fails
      */
     export async function refreshInventory(
         node: Node,
@@ -90,7 +149,7 @@ export namespace HostPackageService {
         const response = await AgentProxyService.postTask(
             node.agentUrl,
             "/tasks/host-inventory",
-            {}
+            {},
         ) as AgentInventoryResponse;
 
         if (response.error === "unsupported_os") {
@@ -115,6 +174,7 @@ export namespace HostPackageService {
                 total: packages.length,
                 outdated: packages.filter((entry) => entry.status === "outdated").length
             },
+
             collectedAt
         });
 

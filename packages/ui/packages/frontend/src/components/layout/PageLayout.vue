@@ -18,7 +18,7 @@ defineProps<{
 </script>
 
 <template>
-    <section class="flex flex-col gap-6">
+    <section class="flex w-full flex-col gap-6">
         <header class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold">

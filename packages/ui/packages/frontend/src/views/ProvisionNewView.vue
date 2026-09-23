@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import { RouterLink, useRouter } from "vue-router";
 
 import PageLayout from "../components/layout/PageLayout.vue";
+import AgentConnectPanel from "../components/connect/AgentConnectPanel.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import PlatformTerminalTabs from "../components/ui/PlatformTerminalTabs.vue";
 import type { TerminalPlatform } from "../components/ui/TerminalPlatform";
@@ -12,6 +13,7 @@ import {
     NodeProvisionProvider,
     NodeProvisionProviderRelation
 } from "../domain/NodeProvisionProvider";
+import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 
 type AddNodeMode = "manual" | "cloud";
@@ -19,8 +21,12 @@ type AddNodeMode = "manual" | "cloud";
 const { t } = useI18n();
 const router = useRouter();
 const store = useClusterStore();
+const auth = useAuthStore();
 
-const mode = ref<AddNodeMode>("manual");
+const canProvision = computed(() => auth.hasPermission("nodes:provision"));
+const canConnectAgent = computed(() => auth.hasPermission("netbird:read"));
+
+const mode = ref<AddNodeMode>(canConnectAgent.value || !canProvision.value ? "manual" : "cloud");
 const provider = ref<NodeProvisionProvider>(NodeProvisionProvider.AWS);
 const instanceType = ref("t3.small");
 const amiId = ref("");
@@ -106,7 +112,7 @@ async function submitCloudProvision(): Promise<void> {
         <ErrorAlert :error="store.error" />
 
         <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
-            <div class="tabs tabs-boxed w-fit">
+            <div v-if="canProvision && canConnectAgent" class="tabs tabs-boxed w-fit">
                 <button
                     type="button"
                     class="tab"
@@ -125,102 +131,94 @@ async function submitCloudProvision(): Promise<void> {
                 </button>
             </div>
 
-            <div v-if="mode === 'manual'" class="flex flex-col gap-6">
+            <div v-if="mode === 'manual' || !canProvision" class="flex flex-col gap-6">
                 <div class="alert border border-info/20 bg-info/10 text-sm">
                     <span>{{ t("pages.provision.manualIntro") }}</span>
                 </div>
 
-                <div class="card bg-base-100 shadow">
+                <div v-if="canConnectAgent" class="card bg-base-100 shadow">
                     <div class="card-body gap-4">
                         <div>
                             <h2 class="text-lg font-semibold">
-                                {{ t("pages.provision.manualDevTitle") }}
+                                {{ t("pages.connect.sectionTitle") }}
                             </h2>
                             <p class="text-sm text-base-content/70">
-                                {{ t("pages.provision.manualDevHint") }}
+                                {{ t("pages.connect.sectionHint") }}
                             </p>
                         </div>
-                        <ol class="list-decimal space-y-2 pl-5 text-sm text-base-content/80">
-                            <li>{{ t("pages.provision.manualDevStep1") }}</li>
-                            <li>{{ t("pages.provision.manualDevStep2") }}</li>
-                            <li>{{ t("pages.provision.manualDevStep3") }}</li>
-                        </ol>
+                        <AgentConnectPanel />
                     </div>
                 </div>
 
-                <div class="card bg-base-100 shadow">
-                    <div class="card-body gap-4">
-                        <div>
-                            <h2 class="text-lg font-semibold">
-                                {{ t("pages.provision.manualInstallTitle") }}
-                            </h2>
-                            <p class="text-sm text-base-content/70">
-                                {{ t("pages.provision.manualInstallHint") }}
-                            </p>
-                        </div>
+                <template v-else>
+                    <div class="card bg-base-100 shadow">
+                        <div class="card-body gap-4">
+                            <div>
+                                <h2 class="text-lg font-semibold">
+                                    {{ t("pages.provision.manualInstallTitle") }}
+                                </h2>
+                                <p class="text-sm text-base-content/70">
+                                    {{ t("pages.provision.manualInstallHint") }}
+                                </p>
+                            </div>
 
-                        <PlatformTerminalTabs v-model="terminalPlatform" />
+                            <PlatformTerminalTabs v-model="terminalPlatform" />
 
-                        <div class="space-y-2">
-                            <p class="text-sm font-medium">
-                                {{ t("pages.provision.manualSetupKeyTitle") }}
-                            </p>
-                            <p class="text-xs text-base-content/60">
-                                {{ t("pages.provision.manualSetupKeyHint") }}
-                            </p>
-                            <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
-                                terminalPlatform === "windows"
-                                    ? setupKeyCommandWindows
-                                    : setupKeyCommandUnix
-                            }}</code></pre>
-                        </div>
+                            <div class="space-y-2">
+                                <p class="text-sm font-medium">
+                                    {{ t("pages.provision.manualSetupKeyTitle") }}
+                                </p>
+                                <p class="text-xs text-base-content/60">
+                                    {{ t("pages.provision.manualSetupKeyHint") }}
+                                </p>
+                                <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
+                                    terminalPlatform === "windows"
+                                        ? setupKeyCommandWindows
+                                        : setupKeyCommandUnix
+                                }}</code></pre>
+                            </div>
 
-                        <div class="space-y-2">
-                            <p class="text-sm font-medium">
-                                {{ t("pages.provision.manualInstallerTitle") }}
-                            </p>
-                            <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
-                                terminalPlatform === "windows"
-                                    ? installScriptCommandWindows
-                                    : installScriptCommandUnix
-                            }}</code></pre>
-                        </div>
+                            <div class="space-y-2">
+                                <p class="text-sm font-medium">
+                                    {{ t("pages.provision.manualInstallerTitle") }}
+                                </p>
+                                <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
+                                    terminalPlatform === "windows"
+                                        ? installScriptCommandWindows
+                                        : installScriptCommandUnix
+                                }}</code></pre>
+                            </div>
 
-                        <div class="space-y-2">
-                            <p class="text-sm font-medium">
-                                {{ t("pages.provision.manualBinaryTitle") }}
-                            </p>
-                            <p class="text-xs text-base-content/60">
-                                {{ t("pages.provision.manualBinaryHint") }}
-                            </p>
-                            <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
-                                terminalPlatform === "windows"
-                                    ? manualRunCommandWindows
-                                    : manualRunCommandUnix
-                            }}</code></pre>
-                        </div>
+                            <div class="space-y-2">
+                                <p class="text-sm font-medium">
+                                    {{ t("pages.provision.manualBinaryTitle") }}
+                                </p>
+                                <p class="text-xs text-base-content/60">
+                                    {{ t("pages.provision.manualBinaryHint") }}
+                                </p>
+                                <pre class="overflow-x-auto rounded-lg bg-base-300 p-3 text-xs"><code>{{
+                                    terminalPlatform === "windows"
+                                        ? manualRunCommandWindows
+                                        : manualRunCommandUnix
+                                }}</code></pre>
+                            </div>
 
-                        <div class="rounded-lg border border-base-300 bg-base-200/40 p-4 text-sm">
-                            <p class="font-medium">
-                                {{ t("pages.provision.manualRequirementsTitle") }}
-                            </p>
-                            <ul class="mt-2 list-disc space-y-1 pl-5 text-base-content/80">
-                                <li>{{ t("pages.provision.manualRequirementDocker") }}</li>
-                                <li>{{ t("pages.provision.manualRequirementReachable", { cpUrl: controlPlaneUrl }) }}</li>
-                                <li>{{ t("pages.provision.manualRequirementAgentPort") }}</li>
-                            </ul>
+                            <div class="rounded-lg border border-base-300 bg-base-200/40 p-4 text-sm">
+                                <p class="font-medium">
+                                    {{ t("pages.provision.manualRequirementsTitle") }}
+                                </p>
+                                <ul class="mt-2 list-disc space-y-1 pl-5 text-base-content/80">
+                                    <li>{{ t("pages.provision.manualRequirementDocker") }}</li>
+                                    <li>{{ t("pages.provision.manualRequirementReachable", { cpUrl: controlPlaneUrl }) }}</li>
+                                    <li>{{ t("pages.provision.manualRequirementAgentPort") }}</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="flex flex-wrap justify-end gap-3">
-                    <RouterLink to="/nodes" class="btn btn-primary">
-                        {{ t("pages.provision.manualCheckNodes") }}
-                    </RouterLink>
-                </div>
+                </template>
             </div>
 
-            <form v-else class="flex flex-col gap-6" @submit.prevent="submitCloudProvision">
+            <form v-else-if="canProvision" class="flex flex-col gap-6" @submit.prevent="submitCloudProvision">
                 <div class="alert border border-warning/20 bg-warning/10 text-sm">
                     <span>{{ t("pages.provision.cloudIntro") }}</span>
                 </div>

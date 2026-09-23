@@ -293,6 +293,30 @@ describe("NauliteClient", () => {
             "http://localhost:8080/nodes/node-1/host/inventory?refresh=true",
             expect.objectContaining({ method: "GET" })
         );
+
+        fetchImpl.mockImplementationOnce(async () => new Response(JSON.stringify({
+            nodeId: "node-1",
+            packageManager: "apt",
+            summary: { total: 2, outdated: 1 },
+            collectedAt: "2026-07-30T00:00:00.000Z",
+            status: "outdated",
+            items: [],
+            total: 1,
+            page: 2,
+            limit: 50,
+            hasMore: false
+        }), { status: 200 }));
+
+        const page = await client.getNodeHostPackages("node-1", {
+            page: 2,
+            limit: 50,
+            status: "outdated"
+        });
+        expect(page.total).toBe(1);
+        expect(fetchImpl).toHaveBeenCalledWith(
+            "http://localhost:8080/nodes/node-1/host/packages?page=2&limit=50&status=outdated",
+            expect.objectContaining({ method: "GET" })
+        );
         expect(fetchImpl).toHaveBeenCalledWith(
             "http://localhost:8080/nodes/node-1/host/packages/update",
             expect.objectContaining({ method: "POST" })

@@ -11,6 +11,7 @@ const blocking_io = @import("blocking_io.zig");
 const bootstrap = @import("bootstrap.zig");
 const docker = @import("runtime/docker/docker.zig");
 const env_util = @import("env_util.zig");
+const host_stats = @import("host_stats.zig");
 const process_cmd = @import("process_cmd.zig");
 const url_util = @import("url_util.zig");
 
@@ -183,11 +184,48 @@ fn collectResources(
     allocator: std.mem.Allocator,
     docker_socket: []const u8,
 ) docker.ResourceSnapshot {
+    if (builtin.os.tag == .linux) {
+        if (host_stats.collect(allocator)) |host_snapshot| {
+            const docker_snapshot = collectDockerResources(allocator, docker_socket);
+
+            return mergeHostAndDockerSnapshots(host_snapshot, docker_snapshot);
+        } else |host_err| {
+            log_cp.debug("host stats unavailable err={} falling back to docker", .{host_err});
+        }
+    }
+
+    return collectDockerResources(allocator, docker_socket);
+}
+
+fn collectDockerResources(
+    allocator: std.mem.Allocator,
+    docker_socket: []const u8,
+) docker.ResourceSnapshot {
     var docker_client = docker.DockerClient.init(allocator, docker_socket);
     defer docker_client.deinit();
-    return docker_client.collectNodeResources() catch {
-        log_cp.debug("docker stats unavailable socket={s} using fallback", .{docker_socket});
+
+    const docker_snapshot = docker_client.collectNodeResources() catch |err| {
+        log_cp.debug("docker stats unavailable socket={s} err={} using fallback", .{ docker_socket, err });
         return fallbackResources();
+    };
+
+    return docker_snapshot;
+}
+
+fn mergeHostAndDockerSnapshots(
+    host_snapshot: docker.ResourceSnapshot,
+    docker_snapshot: docker.ResourceSnapshot,
+) docker.ResourceSnapshot {
+    return .{
+        .cpu_millis_total = host_snapshot.cpu_millis_total,
+        .cpu_millis_used = host_snapshot.cpu_millis_used,
+        .memory_mb_total = host_snapshot.memory_mb_total,
+        .memory_mb_used = host_snapshot.memory_mb_used,
+        .disk_mb_total = if (docker_snapshot.disk_mb_used > 0)
+            docker_snapshot.disk_mb_total
+        else
+            host_snapshot.disk_mb_total,
+        .disk_mb_used = docker_snapshot.disk_mb_used,
     };
 }
 
@@ -197,7 +235,7 @@ fn fallbackResources() docker.ResourceSnapshot {
         .cpu_millis_used = 0,
         .memory_mb_total = 1024,
         .memory_mb_used = 0,
-        .disk_mb_total = 102_400,
+        .disk_mb_total = 102_401,
         .disk_mb_used = 0,
     };
 }

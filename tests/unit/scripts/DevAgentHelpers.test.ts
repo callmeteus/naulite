@@ -65,6 +65,23 @@ describe("DevAgentHelpers.resolveApiKey", () => {
     });
 });
 
+describe("DevAgentHelpers.isHostBinaryFresh", () => {
+    it("reuses a binary that is newer than the sources", () => {
+        expect(DevAgentHelpers.isHostBinaryFresh(200, 100)).toBe(true);
+        expect(DevAgentHelpers.isHostBinaryFresh(100, 100)).toBe(true);
+    });
+
+    it("rebuilds when the binary is missing or older than the sources", () => {
+        expect(DevAgentHelpers.isHostBinaryFresh(null, 100)).toBe(false);
+        expect(DevAgentHelpers.isHostBinaryFresh(Number.NaN, 100)).toBe(false);
+        expect(DevAgentHelpers.isHostBinaryFresh(100, 200)).toBe(false);
+    });
+
+    it("keeps a present binary when the source timestamp is missing", () => {
+        expect(DevAgentHelpers.isHostBinaryFresh(100, null)).toBe(true);
+    });
+});
+
 describe("dev-agent Docker startup", () => {
     it("passes the Docker-reachable control-plane URL into compose", async () => {
         const script = await readRepoFile("scripts/dev-agent.mjs");
@@ -78,5 +95,6 @@ describe("dev-agent Docker startup", () => {
 
         expect(script).toContain("[dev-agent] Docker agent failed to become healthy:");
         expect(script).toContain("await waitForHealthy(agentHealthUrl, 120_000)");
+        expect(script).toContain("DevAgentHelpers.isHostBinaryFresh");
     });
 });

@@ -13,8 +13,7 @@ import {
     Route,
     Server,
     Shield,
-    Users,
-    Layers
+    Users
 } from "@lucide/vue";
 import type { NaulitePermission } from "@naulite/sdk";
 
@@ -45,7 +44,6 @@ export const navigationSections: NavSection[] = [
         items: [
             { path: "/nodes", labelKey: "menu.infrastructure.nodes", permission: "nodes:read", icon: Server },
             { path: "/target-groups", labelKey: "menu.infrastructure.groups", permission: "nodes:read", icon: Users },
-            { path: "/sandboxes", labelKey: "menu.infrastructure.sandboxes", permission: "nodes:read", icon: Layers },
             { path: "/cluster", labelKey: "menu.infrastructure.cluster", permission: "metrics:read", icon: LayoutDashboard },
             { path: "/metrics", labelKey: "menu.infrastructure.metrics", permission: "metrics:read", icon: Activity }
         ]

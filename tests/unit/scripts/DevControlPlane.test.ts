@@ -89,4 +89,13 @@ describe("dev-control-plane build graph", () => {
         expect(script).toContain("NAULITE_BOOTSTRAP_ADMIN_PASSWORD ??= \"admin\"");
         expect(script).toContain("Bootstrap login: admin@example.com / admin");
     });
+
+    it("keeps the dev process alive when TypeScript build fails", async () => {
+        const script = await readRepoFile("scripts/dev-control-plane.mjs");
+
+        expect(script).toContain("runCommand");
+        expect(script).toContain("build failed; fix TypeScript errors and save to retry");
+        expect(script).toContain("keeping the previous server until the next successful build");
+        expect(script).not.toContain("process.exit(result.status");
+    });
 });

@@ -37,6 +37,8 @@ import type {
     FunctionRun,
     FunctionRunSummary,
     HostInventory,
+    HostInventoryPage,
+    HostInventoryStatusFilter,
     HostUpdateRun,
     PaginatedResponse,
     PaginationQuery,
@@ -439,6 +441,48 @@ export class NauliteClient {
         return this.request<HostInventory>(
             "GET",
             `/nodes/${encodeURIComponent(nodeId)}/host/inventory${query}`
+        );
+    }
+
+    /**
+     * Returns one page of installed host packages for a node.
+     *
+     * @param nodeId Node identifier
+     * @param options Page, limit, status filter, and optional agent refresh
+     * @returns Host inventory page
+     */
+    async getNodeHostPackages(
+        nodeId: string,
+        options: {
+            refresh?: boolean;
+            page?: number;
+            limit?: number;
+            status?: HostInventoryStatusFilter;
+        } = {}
+    ): Promise<HostInventoryPage> {
+        const params = new URLSearchParams();
+
+        if (options.refresh) {
+            params.set("refresh", "true");
+        }
+
+        if (options.page !== undefined) {
+            params.set("page", String(options.page));
+        }
+
+        if (options.limit !== undefined) {
+            params.set("limit", String(options.limit));
+        }
+
+        if (options.status) {
+            params.set("status", options.status);
+        }
+
+        const query = params.size > 0 ? `?${params.toString()}` : "";
+
+        return this.request<HostInventoryPage>(
+            "GET",
+            `/nodes/${encodeURIComponent(nodeId)}/host/packages${query}`
         );
     }
 

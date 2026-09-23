@@ -6,6 +6,7 @@ import { ClusterLabelsSchema, NodeOsFamilySchema, NodeResourcesSchema, NodeSchem
 
 import { ControlPlaneService } from "../../ControlPlaneService";
 import { defineRoute } from "../../routing/DefineRoute";
+import { NodeHealthWatcher } from "../../services/NodeHealthWatcher";
 
 const RegisterNodeBodySchema = z.object({
     id: z.string().min(1).optional(),
@@ -63,6 +64,7 @@ export const POST = defineRoute({
         await ControlPlaneService.Store.saveNode(node);
 
         if (body.agentUrl) {
+            await NodeHealthWatcher.onHeartbeat(node);
             void ControlPlaneService.InstanceReconciler.reconcileNode(node.id);
         }
 

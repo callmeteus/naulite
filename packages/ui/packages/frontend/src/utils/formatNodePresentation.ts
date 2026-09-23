@@ -1,4 +1,22 @@
-import type { NodeResources } from "@naulite/sdk";
+import type { Node, NodeResources } from "@naulite/sdk";
+
+/**
+ * Resolves the status label shown in the UI when live inventory proves the agent is down.
+ *
+ * @param nodeStatus Status from the cluster store
+ * @param agentInventoryUnreachable True when host inventory failed with an agent connectivity error
+ * @returns Status for badges on the node detail page
+ */
+export function resolveNodeDetailDisplayStatus(
+    nodeStatus: Node["status"] | undefined,
+    agentInventoryUnreachable: boolean
+): Node["status"] | undefined {
+    if (agentInventoryUnreachable) {
+        return "offline";
+    }
+
+    return nodeStatus;
+}
 
 /**
  * Formats a concise operating system label for node tables.
@@ -31,13 +49,32 @@ export function formatNodeOsLabel(osFamily?: string | null, osVersion?: string |
 }
 
 /**
+ * Returns whether resource numbers match the agent fallback snapshot (not real telemetry).
+ *
+ * @param resources Node resource snapshot from heartbeat
+ * @returns True when values look like the hard-coded fallback
+ */
+export function isPlaceholderNodeResources(resources?: NodeResources | null): boolean {
+    if (!resources) {
+        return false;
+    }
+
+    return resources.cpuMillisTotal === 1000
+        && resources.cpuMillisUsed === 0
+        && resources.memoryMbTotal === 1024
+        && resources.memoryMbUsed === 0
+        && resources.diskMbTotal === 102_401
+        && resources.diskMbUsed === 0;
+}
+
+/**
  * Formats node CPU usage as a percentage of schedulable capacity.
  *
  * @param resources Node resource snapshot
  * @returns Percentage label or "-" when unavailable
  */
 export function formatNodeCpuUsage(resources?: NodeResources | null): string {
-    if (!resources?.cpuMillisTotal) {
+    if (!resources?.cpuMillisTotal || isPlaceholderNodeResources(resources)) {
         return "-";
     }
 
@@ -53,7 +90,7 @@ export function formatNodeCpuUsage(resources?: NodeResources | null): string {
  * @returns Memory label or "-" when unavailable
  */
 export function formatNodeMemoryUsage(resources?: NodeResources | null): string {
-    if (!resources?.memoryMbTotal) {
+    if (!resources?.memoryMbTotal || isPlaceholderNodeResources(resources)) {
         return "-";
     }
 

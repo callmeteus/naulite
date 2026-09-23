@@ -39,8 +39,17 @@ export const POST = defineRoute({
     async handler(req, res) {
         const { id } = req.params;
         const body = req.body;
+        const existing = await ControlPlaneService.Store.getNode(id);
+
+        if (!existing) {
+            res.code(404);
+            return { message: "Node not found." };
+        }
+
+        const requestedStatus = body.status ?? "online";
+
         const updated = await ControlPlaneService.Store.updateNodeHeartbeat(id, {
-            status: body.status ?? "online",
+            status: requestedStatus,
             resources: body.resources,
             osFamily: body.osFamily,
             osVersion: body.osVersion,

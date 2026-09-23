@@ -9,6 +9,7 @@ const netbird = @import("netbird.zig");
 const process_cmd = @import("process_cmd.zig");
 const blocking_io = @import("blocking_io.zig");
 const docker_transport = @import("runtime/docker/docker_transport.zig");
+const env_util = @import("env_util.zig");
 
 /// Host operating system family detected at runtime.
 pub const OsFamily = enum {
@@ -109,11 +110,54 @@ fn detectLinuxOsVersion(
     // The allocator to use.
     allocator: std.mem.Allocator,
 ) ![]u8 {
+    if (env_util.readEnvOptional(allocator, "NAULITE_HOST_OS_RELEASE")) |custom_path| {
+        defer allocator.free(custom_path);
+
+        if (readLinuxOsVersionFromReleaseFile(allocator, custom_path)) |version| {
+            return version;
+        } else |_| {}
+    }
+
+    const default_paths = [_][]const u8{
+        "/host/etc/os-release",
+        "/etc/os-release",
+    };
+
+    for (default_paths) |release_path| {
+        if (readLinuxOsVersionFromReleaseFile(allocator, release_path)) |version| {
+            return version;
+        } else |_| {}
+    }
+
+    return try allocator.dupe(u8, "linux");
+}
+
+/// Reads and formats a Linux OS version from an os-release file path.
+fn readLinuxOsVersionFromReleaseFile(
+    allocator: std.mem.Allocator,
+    release_path: []const u8,
+) ![]u8 {
     const io = blocking_io.io();
-    const content = std.Io.Dir.cwd().readFileAlloc(io, "/etc/os-release", allocator, .limited(64 * 1024)) catch {
-        return try allocator.dupe(u8, "linux");
+    const content = std.Io.Dir.cwd().readFileAlloc(io, release_path, allocator, .limited(64 * 1024)) catch {
+        return error.LinuxOsReleaseUnavailable;
     };
     defer allocator.free(content);
+
+    return formatLinuxOsReleaseVersion(allocator, content);
+}
+
+/// Formats os-release contents into a stable display string for the control plane.
+fn formatLinuxOsReleaseVersion(allocator: std.mem.Allocator, content: []const u8) ![]u8 {
+    if (parseOsReleaseValue(content, "PRETTY_NAME")) |pretty| {
+        return try allocator.dupe(u8, pretty);
+    }
+
+    if (parseOsReleaseValue(content, "ID")) |id| {
+        if (parseOsReleaseValue(content, "VERSION_ID")) |version_id| {
+            const display_id = std.mem.trim(u8, id, " \t");
+            return try std.fmt.allocPrint(allocator, "{s} {s}", .{ display_id, version_id });
+        }
+    }
 
     if (parseOsReleaseValue(content, "NAME")) |name| {
         if (parseOsReleaseValue(content, "VERSION_ID")) |version_id| {
@@ -121,10 +165,6 @@ fn detectLinuxOsVersion(
         }
 
         return try allocator.dupe(u8, name);
-    }
-
-    if (parseOsReleaseValue(content, "PRETTY_NAME")) |pretty| {
-        return try allocator.dupe(u8, pretty);
     }
 
     return try allocator.dupe(u8, "linux");
@@ -245,7 +285,22 @@ test "detectOsFamily matches compile-time target" {
     try std.testing.expectEqual(expected, os);
 }
 
-test "parseOsReleaseValue prefers PRETTY_NAME" {
+test "formatLinuxOsReleaseVersion prefers PRETTY_NAME" {
+    const allocator = std.testing.allocator;
+    const content =
+        \\NAME="Debian GNU/Linux"
+        \\VERSION_ID="12"
+        \\ID=debian
+        \\PRETTY_NAME="Ubuntu 24.04.2 LTS"
+        \\VERSION_ID="24.04"
+    ;
+
+    const formatted = try formatLinuxOsReleaseVersion(allocator, content);
+    defer allocator.free(formatted);
+    try std.testing.expectEqualStrings("Ubuntu 24.04.2 LTS", formatted);
+}
+
+test "parseOsReleaseValue reads PRETTY_NAME and VERSION_ID" {
     const content =
         \\NAME="Ubuntu"
         \\VERSION="22.04.3 LTS (Jammy Jellyfish)"

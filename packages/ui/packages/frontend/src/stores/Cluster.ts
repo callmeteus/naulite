@@ -98,6 +98,26 @@ export const clusterStore = reactive({
     },
 
     /**
+     * Updates a single node status in the cached overview list.
+     *
+     * @param nodeId Node identifier
+     * @param status New node status
+     * @returns Nothing.
+     */
+    patchNodeStatus(nodeId: string, status: Node["status"]): void {
+        const index = this.nodes.findIndex((entry) => entry.id === nodeId);
+
+        if (index < 0) {
+            return;
+        }
+
+        this.nodes[index] = {
+            ...this.nodes[index],
+            status
+        };
+    },
+
+    /**
      * Loads backup runs from the admin API.
      *
      * @returns Nothing.

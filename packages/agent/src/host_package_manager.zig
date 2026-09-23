@@ -798,12 +798,15 @@ pub fn inventoryToJson(allocator: std.mem.Allocator, inventory: Inventory) ![]u8
         try appendJsonEscaped(allocator, &json, entry.installed_version);
         try json.appendSlice(allocator, "\",\"status\":\"");
         try json.appendSlice(allocator, entry.status.jsonTag());
+        try json.append(allocator, '"');
+
         if (entry.available_version) |available| {
-            try json.appendSlice(allocator, "\",\"availableVersion\":\"");
+            try json.appendSlice(allocator, ",\"availableVersion\":\"");
             try appendJsonEscaped(allocator, &json, available);
             try json.append(allocator, '"');
         }
-        try json.appendSlice(allocator, "}");
+
+        try json.append(allocator, '}');
     }
 
     const summary_suffix = try std.fmt.allocPrint(
@@ -929,4 +932,32 @@ test "inventoryToJson includes package manager" {
     const json = try inventoryToJson(allocator, inventory);
     defer allocator.free(json);
     try std.testing.expect(std.mem.indexOf(u8, json, "\"packageManager\":\"apt\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, json, "\"status\":\"upToDate\"") != null);
+}
+
+test "inventoryToJson closes status when no available version is present" {
+    const allocator = std.testing.allocator;
+    const packages = try allocator.alloc(PackageEntry, 1);
+    defer allocator.free(packages);
+
+    packages[0] = .{
+        .name = "curl",
+        .installed_version = "7.81.0-1",
+        .available_version = null,
+        .status = .up_to_date,
+    };
+
+    const inventory = Inventory{
+        .package_manager = .apt,
+        .packages = packages,
+        .summary = .{ .total = 1, .outdated = 0 },
+    };
+
+    const json = try inventoryToJson(allocator, inventory);
+    defer allocator.free(json);
+
+    try std.testing.expectEqualStrings(
+        "{\"packageManager\":\"apt\",\"packages\":[{\"name\":\"curl\",\"installedVersion\":\"7.81.0-1\",\"status\":\"upToDate\"}],\"summary\":{\"total\":1,\"outdated\":0}}",
+        json,
+    );
 }

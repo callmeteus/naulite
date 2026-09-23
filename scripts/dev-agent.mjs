@@ -5,7 +5,7 @@
  * binary, then falls back to a single-container Docker agent.
  */
 import { spawn, spawnSync } from "node:child_process";
-import { access, mkdir } from "node:fs/promises";
+import { access, mkdir, readdir, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -90,53 +90,127 @@ async function waitForHealthy(url, timeoutMs = 60_000) {
 }
 
 /**
- * Returns whether a command exists on PATH.
+ * Returns the newest mtime under a file or directory.
  *
- * @param command Executable name
- * @returns `true` when the command is available
+ * @param targetPath File or directory to inspect
+ * @returns mtime in milliseconds
  */
-function hasCommand(command) {
-    const checker = process.platform === "win32" ? "where" : "which";
-    const result = spawnSync(checker, [command], { stdio: "ignore" });
+async function newestMtimeMs(targetPath) {
+    const info = await stat(targetPath);
 
-    return result.status === 0;
+    if (!info.isDirectory()) {
+        return info.mtimeMs;
+    }
+
+    const entries = await readdir(targetPath, { withFileTypes: true });
+    let newest = info.mtimeMs;
+
+    for (const entry of entries) {
+        const childMtime = await newestMtimeMs(path.join(targetPath, entry.name));
+
+        if (childMtime > newest) {
+            newest = childMtime;
+        }
+    }
+
+    return newest;
 }
 
 /**
- * Builds the Zig agent binary when Zig is installed.
+ * Returns the newest mtime among agent sources that must trigger a rebuild.
+ *
+ * @returns Newest source mtime in milliseconds, or `0` when nothing is readable
+ */
+async function newestAgentSourceMtimeMs() {
+    const agentRoot = path.join(repoRoot, "packages", "agent");
+    const targets = [
+        path.join(agentRoot, "src"),
+        path.join(agentRoot, "build.zig"),
+        path.join(agentRoot, "build.zig.zon")
+    ];
+    let newest = 0;
+
+    for (const target of targets) {
+        try {
+            const mtime = await newestMtimeMs(target);
+
+            if (mtime > newest) {
+                newest = mtime;
+            }
+        } catch {
+            // A missing path does not make the binary look stale.
+        }
+    }
+
+    return newest;
+}
+
+/**
+ * Returns whether the host agent binary is newer than the Zig sources.
+ *
+ * @returns `true` when `yarn dev` can start the existing binary
+ */
+async function isHostBinaryFresh() {
+    let binaryMtimeMs = null;
+
+    try {
+        const binaryStat = await stat(hostBinaryPath);
+        binaryMtimeMs = binaryStat.mtimeMs;
+    } catch {
+        binaryMtimeMs = null;
+    }
+
+    const sourceMtimeMs = await newestAgentSourceMtimeMs();
+
+    return DevAgentHelpers.isHostBinaryFresh(binaryMtimeMs, sourceMtimeMs);
+}
+
+/**
+ * Resolves a Zig executable that can compile the agent.
+ *
+ * @returns Executable path, or `null` when the pinned toolchain cannot be prepared
+ */
+async function resolveZigExecutable() {
+    const pinnedVersion = ZigToolchain.loadPinnedVersion(repoRoot);
+
+    try {
+        return await ZigToolchain.ensurePinnedExecutable(repoRoot, pinnedVersion);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+
+        console.warn(
+            `[dev-agent] could not prepare Zig ${pinnedVersion}: ${message}; using Docker fallback`
+        );
+
+        return null;
+    }
+}
+
+/**
+ * Builds the Zig agent binary when the sources are newer than `zig-out`.
  *
  * @returns `true` when the binary exists after the build attempt
  */
 async function ensureHostBinary() {
-    try {
-        await access(hostBinaryPath);
-
+    if (await isHostBinaryFresh()) {
         return true;
-    } catch {
-        // Continue to build.
     }
 
-    if (!hasCommand("zig")) {
-        return false;
-    }
+    const zigBin = await resolveZigExecutable();
 
-    const pinnedVersion = ZigToolchain.loadPinnedVersion(repoRoot);
-    const installedVersion = ZigToolchain.readInstalledVersion();
-
-    // Skip host Zig that cannot compile `std.process.Init` (requires 0.16.0)
-    if (!ZigToolchain.isCompatible(installedVersion, pinnedVersion)) {
-        console.warn(
-            `[dev-agent] host zig ${installedVersion || "missing"} does not match pinned ${pinnedVersion}; using Docker fallback`
-        );
+    if (!zigBin) {
         return false;
     }
 
     console.log("[dev-agent] building Zig agent (first run may take a minute)...");
 
-    const buildScript = path.join(repoRoot, "scripts", "zig-build.mjs");
-    const result = spawnSync(process.execPath, [buildScript, "-Doptimize=ReleaseSafe"], {
+    const result = spawnSync(zigBin, ["build", "-Doptimize=ReleaseSafe"], {
         cwd: path.join(repoRoot, "packages", "agent"),
-        stdio: "inherit"
+        stdio: "inherit",
+        env: {
+            ...process.env,
+            ZIG_GLOBAL_CACHE_DIR: path.join(repoRoot, ".cache", "zig-global")
+        }
     });
 
     if (result.status !== 0) {

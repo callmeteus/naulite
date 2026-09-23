@@ -141,6 +141,34 @@ export class ControlPlaneStore {
     }
 
     /**
+     * Updates the persisted node status without touching heartbeat telemetry.
+     *
+     * @param nodeId Node identifier
+     * @param status New node status
+     * @returns Updated node when found
+     */
+    async updateNodeStatus(nodeId: string, status: Node["status"]): Promise<Node | null> {
+        const row = await NodeModel.findByPk(nodeId);
+
+        if (!row) {
+            return null;
+        }
+
+        if (row.status === status) {
+            return RowMapper.node(row.get({ plain: true }));
+        }
+
+        const now = new Date().toISOString();
+
+        await row.update({
+            status,
+            updatedAt: now
+        });
+
+        return RowMapper.node(row.get({ plain: true }));
+    }
+
+    /**
      * Lists backup run summaries with server-side pagination.
      *
      * @param pagination Pagination query parameters
@@ -692,6 +720,7 @@ export class ControlPlaneStore {
         instanceId: string,
         patch: {
             status?: Instance["status"];
+            nodeId?: string;
             containerId?: string;
             health?: Instance["health"];
             dispatchAttempts?: number;
@@ -712,6 +741,10 @@ export class ControlPlaneStore {
 
         if (patch.status) {
             updates.status = patch.status;
+        }
+
+        if (patch.nodeId) {
+            updates.nodeId = patch.nodeId;
         }
 
         if (patch.containerId) {
@@ -1320,6 +1353,7 @@ export class ControlPlaneStore {
                 kind: "warm",
                 status: "idle"
             },
+
             order: [["createdAt", "ASC"]]
         });
 

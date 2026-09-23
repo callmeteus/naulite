@@ -2,8 +2,13 @@ import type { Instance, Node } from "@naulite/shared";
 
 import { Logger } from "../Logger";
 import type { ControlPlaneStore } from "../database/ControlPlaneStore";
+import { NodeAgentUrlResolver } from "./NodeAgentUrlResolver";
+
 const logAgentProxy = Logger.create("agent-proxy");
 
+/**
+ * Default timeout for outbound agent HTTP requests when env is unset.
+ */
 const DEFAULT_AGENT_FETCH_TIMEOUT_MS = 15_000;
 
 /**
@@ -29,7 +34,10 @@ function resolveAgentFetchTimeoutMs(): number {
  * @returns Agent HTTP response
  * @throws {AgentProxyError} {@link AgentProxyError}
  */
-async function fetchAgent(url: string, init?: RequestInit): Promise<Response> {
+async function fetchAgent(
+    url: string,
+    init?: RequestInit
+): Promise<Response> {
     const controller = new AbortController();
     const timeoutMs = resolveAgentFetchTimeoutMs();
     const timer = setTimeout(() => {
@@ -43,13 +51,17 @@ async function fetchAgent(url: string, init?: RequestInit): Promise<Response> {
     }
 
     try {
-        return await fetch(url, {
+        const fetchUrl = NodeAgentUrlResolver.resolveControlPlaneFetchUrl(url);
+
+        return await fetch(fetchUrl, {
             ...init,
             signal: controller.signal
         });
     } catch (err) {
+        let proxyError: AgentProxyError;
+
         if (err instanceof Error && err.name === "AbortError") {
-            throw new AgentProxyError(
+            proxyError = new AgentProxyError(
                 "AGENT_REQUEST_TIMEOUT",
                 `Agent request timed out after ${timeoutMs}ms.`,
                 504,
@@ -58,18 +70,20 @@ async function fetchAgent(url: string, init?: RequestInit): Promise<Response> {
                     i18nParams: { timeoutSeconds: String(Math.round(timeoutMs / 1000)) }
                 }
             );
+        } else {
+            const message = err instanceof Error ? err.message : "Agent request failed.";
+
+            proxyError = new AgentProxyError(
+                "AGENT_REQUEST_FAILED",
+                message,
+                503,
+                {
+                    i18n: "errors.agentForwardFailed"
+                }
+            );
         }
 
-        const message = err instanceof Error ? err.message : "Agent request failed.";
-
-        throw new AgentProxyError(
-            "AGENT_REQUEST_FAILED",
-            message,
-            503,
-            {
-                i18n: "errors.agentForwardFailed"
-            }
-        );
+        throw proxyError;
     } finally {
         clearTimeout(timer);
     }
@@ -246,7 +260,7 @@ export namespace AgentProxyService {
         });
 
         if (!response.ok) {
-            throw new AgentProxyError(
+            const proxyError = new AgentProxyError(
                 "AGENT_REQUEST_FAILED",
                 `Agent request failed with HTTP ${response.status}.`,
                 response.status,
@@ -255,6 +269,8 @@ export namespace AgentProxyService {
                     i18nParams: { status: String(response.status) }
                 }
             );
+
+            throw proxyError;
         }
 
         return response.json();

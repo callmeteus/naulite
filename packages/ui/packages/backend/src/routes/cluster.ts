@@ -28,6 +28,26 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         return client.getNode(params.id);
     });
 
+    app.get("/nodes/:id/host/packages", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+        const query = z.object({
+            refresh: z.enum(["true", "false"]).optional(),
+            page: z.coerce.number().int().positive().optional(),
+            limit: z.coerce.number().int().positive().max(200).optional(),
+            status: z.enum(["all", "outdated", "upToDate"]).optional()
+        }).parse(request.query);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.getNodeHostPackages(params.id, {
+            refresh: query.refresh === "true",
+            page: query.page,
+            limit: query.limit,
+            status: query.status
+        });
+    });
+
     app.get("/nodes/:id/host/inventory", async (request) => {
         const params = z.object({
             id: z.string().min(1)

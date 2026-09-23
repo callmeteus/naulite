@@ -16,6 +16,7 @@ import { parseApiError, type ParsedApiError } from "../composables/useApiAction"
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 import { formatServiceReconcileError } from "../utils/formatReconcileResults";
+import { formatServiceDisplayNameFromService } from "../utils/formatServicePresentation";
 
 enum ServiceDetailTab {
     OVERVIEW = "overview",
@@ -46,6 +47,15 @@ const deleting = ref(false);
 const deleteModalRef = ref<InstanceType<typeof ConfirmModal> | null>(null);
 
 const serviceName = computed(() => String(route.params.name ?? ""));
+
+const serviceDisplayName = computed(() => {
+    if (service.value) {
+        return formatServiceDisplayNameFromService(service.value);
+    }
+
+    return serviceName.value || "-";
+});
+
 const canWrite = computed(() => auth.hasPermission("workloads:write"));
 const canEdit = computed(() => auth.hasPermission("manifests:apply"));
 
@@ -399,7 +409,7 @@ watch(serviceName, () => {
 <template>
     <PageLayout
         title-key="pages.services.title"
-        :title="service?.name ?? serviceName"
+        :title="serviceDisplayName"
         hint-key="pages.serviceDetail.hint"
     >
         <template #actions>
@@ -545,8 +555,12 @@ watch(serviceName, () => {
             <div v-else-if="activeTab === ServiceDetailTab.CONFIGURATION" class="card bg-base-100 shadow">
                 <div class="card-body gap-6">
                     <section>
-                        <h3 class="font-semibold">{{ t("pages.serviceDetail.ports") }}</h3>
-                        <p v-if="!service.deploySpec?.ports?.length" class="text-sm text-base-content/70">-</p>
+                        <h3 class="font-semibold">
+                            {{ t("pages.serviceDetail.ports") }}
+                        </h3>
+                        <p v-if="!service.deploySpec?.ports?.length" class="text-sm text-base-content/70">
+                            -
+                        </p>
                         <ul v-else class="mt-2 space-y-1 text-sm">
                             <li v-for="(port, index) in service.deploySpec.ports" :key="index">
                                 {{ port.containerPort }}/{{ port.protocol }}
@@ -556,8 +570,12 @@ watch(serviceName, () => {
                     </section>
 
                     <section>
-                        <h3 class="font-semibold">{{ t("pages.serviceDetail.environment") }}</h3>
-                        <p v-if="!Object.keys(service.deploySpec?.environment ?? {}).length" class="text-sm text-base-content/70">-</p>
+                        <h3 class="font-semibold">
+                            {{ t("pages.serviceDetail.environment") }}
+                        </h3>
+                        <p v-if="!Object.keys(service.deploySpec?.environment ?? {}).length" class="text-sm text-base-content/70">
+                            -
+                        </p>
                         <ul v-else class="mt-2 space-y-1 font-mono text-xs">
                             <li v-for="(value, key) in service.deploySpec?.environment" :key="key">
                                 {{ key }}={{ value }}
@@ -566,8 +584,12 @@ watch(serviceName, () => {
                     </section>
 
                     <section>
-                        <h3 class="font-semibold">{{ t("pages.serviceDetail.volumeMounts") }}</h3>
-                        <p v-if="!service.deploySpec?.volumeMounts?.length" class="text-sm text-base-content/70">-</p>
+                        <h3 class="font-semibold">
+                            {{ t("pages.serviceDetail.volumeMounts") }}
+                        </h3>
+                        <p v-if="!service.deploySpec?.volumeMounts?.length" class="text-sm text-base-content/70">
+                            -
+                        </p>
                         <ul v-else class="mt-2 space-y-1 text-sm">
                             <li v-for="(mount, index) in service.deploySpec.volumeMounts" :key="index">
                                 {{ mount.volumeName }} → {{ mount.mountPath }}
@@ -576,13 +598,21 @@ watch(serviceName, () => {
                     </section>
 
                     <section>
-                        <h3 class="font-semibold">{{ t("pages.serviceDetail.networks") }}</h3>
-                        <p class="text-sm">{{ service.networks?.length ? service.networks.join(", ") : "-" }}</p>
+                        <h3 class="font-semibold">
+                            {{ t("pages.serviceDetail.networks") }}
+                        </h3>
+                        <p class="text-sm">
+                            {{ service.networks?.length ? service.networks.join(", ") : "-" }}
+                        </p>
                     </section>
 
                     <section>
-                        <h3 class="font-semibold">{{ t("pages.serviceDetail.capabilities") }}</h3>
-                        <p class="text-sm">{{ service.capabilities?.length ? service.capabilities.join(", ") : "-" }}</p>
+                        <h3 class="font-semibold">
+                            {{ t("pages.serviceDetail.capabilities") }}
+                        </h3>
+                        <p class="text-sm">
+                            {{ service.capabilities?.length ? service.capabilities.join(", ") : "-" }}
+                        </p>
                     </section>
                 </div>
             </div>
@@ -624,13 +654,19 @@ watch(serviceName, () => {
             <div v-else-if="activeTab === ServiceDetailTab.INGRESS" class="card bg-base-100 shadow">
                 <div class="card-body gap-4">
                     <section v-if="service.ingress">
-                        <h3 class="font-semibold">{{ t("pages.serviceDetail.ingressConfig") }}</h3>
+                        <h3 class="font-semibold">
+                            {{ t("pages.serviceDetail.ingressConfig") }}
+                        </h3>
                         <pre class="mt-2 overflow-auto rounded-box bg-base-300 p-3 text-xs">{{ JSON.stringify(service.ingress, null, 2) }}</pre>
                     </section>
 
                     <section>
-                        <h3 class="font-semibold">{{ t("pages.serviceDetail.gatewayRoutes") }}</h3>
-                        <p v-if="gatewayRoutes.length === 0" class="text-sm text-base-content/70">-</p>
+                        <h3 class="font-semibold">
+                            {{ t("pages.serviceDetail.gatewayRoutes") }}
+                        </h3>
+                        <p v-if="gatewayRoutes.length === 0" class="text-sm text-base-content/70">
+                            -
+                        </p>
                         <ul v-else class="mt-2 space-y-2 text-sm">
                             <li v-for="routeEntry in gatewayRoutes" :key="routeEntry.id">
                                 <RouterLink to="/gateway-routes" class="link link-primary">
@@ -654,7 +690,9 @@ watch(serviceName, () => {
                         </thead>
                         <tbody>
                             <tr v-for="run in functionRuns" :key="run.id">
-                                <td class="font-mono text-sm">{{ run.id }}</td>
+                                <td class="font-mono text-sm">
+                                    {{ run.id }}
+                                </td>
                                 <td><StatusPill :status="run.status" /></td>
                                 <td>{{ formatTimestamp(run.startedAt) }}</td>
                             </tr>
@@ -669,7 +707,7 @@ watch(serviceName, () => {
             title-key="pages.serviceDetail.deleteTitle"
             message-key="pages.serviceDetail.deleteMessage"
             confirm-label-key="common.delete"
-            :danger="true"
+            danger
             :handler="confirmDeleteService"
         />
     </PageLayout>

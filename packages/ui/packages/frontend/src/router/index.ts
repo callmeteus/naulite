@@ -24,7 +24,6 @@ import ProvisionDetailView from "../views/ProvisionDetailView.vue";
 import RunsView from "../views/RunsView.vue";
 import RunDetailView from "../views/RunDetailView.vue";
 import TargetGroupsView from "../views/TargetGroupsView.vue";
-import SandboxesView from "../views/SandboxesView.vue";
 import SecretsView from "../views/SecretsView.vue";
 import BuildTriggerView from "../views/BuildTriggerView.vue";
 import NotificationDestinationFormView from "../views/NotificationDestinationFormView.vue";
@@ -46,7 +45,7 @@ const router = createRouter({
         { path: "/403", component: ForbiddenView },
         { path: "/", redirect: "/nodes" },
         { path: "/nodes", component: NodesView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
-        { path: "/nodes/new", component: ProvisionNewView, meta: { permissions: ["nodes:provision"] satisfies NaulitePermission[] } },
+        { path: "/nodes/new", component: ProvisionNewView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
         { path: "/nodes/provisions/:id", component: ProvisionDetailView, meta: { permissions: ["nodes:provision"] satisfies NaulitePermission[] } },
         { path: "/nodes/:id", component: NodeDetailView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
         { path: "/services", component: ServicesView, meta: { permissions: ["workloads:read"] satisfies NaulitePermission[] } },
@@ -61,7 +60,7 @@ const router = createRouter({
         { path: "/cluster", component: ClusterView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/metrics", component: MetricsView, meta: { permissions: ["metrics:read"] satisfies NaulitePermission[] } },
         { path: "/target-groups", component: TargetGroupsView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
-        { path: "/sandboxes", component: SandboxesView, meta: { permissions: ["nodes:read"] satisfies NaulitePermission[] } },
+        { path: "/sandboxes", redirect: "/delivery/gitops" },
         { path: "/delivery", component: DeliveryView, children: [
             { path: "", redirect: "/delivery/gitops" },
             { path: "gitops", component: GitOpsView, meta: { deliveryTab: true, permissions: ["gitops:read"] satisfies NaulitePermission[] } },

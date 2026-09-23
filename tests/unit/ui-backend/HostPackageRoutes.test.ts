@@ -42,7 +42,19 @@ function createMockControlPlane(): NauliteClient {
             rebootRequired: true,
             createdAt: "2026-07-30T00:00:00.000Z"
         })),
-        listNodeHostUpdates: vi.fn(async () => ({ items: [] }))
+        listNodeHostUpdates: vi.fn(async () => ({ items: [] })),
+        getNodeHostPackages: vi.fn(async () => ({
+            nodeId: "node-1",
+            packageManager: "apt",
+            summary: { total: 2, outdated: 1 },
+            collectedAt: "2026-07-30T00:00:00.000Z",
+            status: "outdated",
+            items: [],
+            total: 1,
+            page: 2,
+            limit: 50,
+            hasMore: false
+        }))
     } as unknown as NauliteClient;
 }
 
@@ -93,6 +105,38 @@ describe("ui-backend host package routes", () => {
         expect(systemUpdateResponse.statusCode).toBe(200);
         expect(controlPlane.updateNodeSystem).toHaveBeenCalledWith("node-1");
 
+        const packagesResponse = await app.inject({
+            method: "GET",
+            url: "/nodes/node-1/host/packages?page=2&limit=50&status=outdated",
+            headers: { authorization: "Bearer secret-key" }
+        });
+        expect(packagesResponse.statusCode).toBe(200);
+        expect(controlPlane.getNodeHostPackages).toHaveBeenCalledWith("node-1", {
+            refresh: false,
+            page: 2,
+            limit: 50,
+            status: "outdated"
+        });
+
+        await app.close();
+    });
+
+    it("rejects an invalid host package status filter", async () => {
+        const controlPlane = createMockControlPlane();
+        const app = await createApp({
+            adminApiKey: "secret-key",
+            logger: false
+        });
+        app.controlPlane = controlPlane;
+
+        const response = await app.inject({
+            method: "GET",
+            url: "/nodes/node-1/host/packages?status=broken",
+            headers: { authorization: "Bearer secret-key" }
+        });
+
+        expect(response.statusCode).toBeGreaterThanOrEqual(400);
+        expect(controlPlane.getNodeHostPackages).not.toHaveBeenCalled();
         await app.close();
     });
 });

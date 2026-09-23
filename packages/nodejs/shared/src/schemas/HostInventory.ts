@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { TimestampSchema } from "./Common";
+import { PaginationQuerySchema } from "./Pagination";
 
 /**
  * Supported Linux package manager identifiers.
@@ -91,4 +92,39 @@ export const HostUpdateRunSchema = z.object({
     startedAt: TimestampSchema.optional(),
     completedAt: TimestampSchema.optional(),
     createdAt: TimestampSchema
+});
+
+/**
+ * Status filter for a page of host packages.
+ */
+export const HostInventoryStatusFilterSchema = z.enum([
+    "all",
+    "outdated",
+    "upToDate"
+]);
+
+/**
+ * Query for one page of a node's installed packages.
+ */
+export const HostPackageListQuerySchema = PaginationQuerySchema.extend({
+    refresh: z.enum(["true", "false"]).optional(),
+    status: HostInventoryStatusFilterSchema.default("all")
+});
+
+/**
+ * One page of host packages plus the snapshot summary.
+ *
+ * `summary` counts the full inventory. `total` counts the rows after `status`.
+ */
+export const HostInventoryPageSchema = z.object({
+    nodeId: z.string().min(1),
+    packageManager: HostPackageManagerSchema,
+    summary: HostInventorySummarySchema,
+    collectedAt: TimestampSchema,
+    status: HostInventoryStatusFilterSchema,
+    items: z.array(HostPackageSchema),
+    total: z.number().int().nonnegative(),
+    page: z.number().int().positive(),
+    limit: z.number().int().positive(),
+    hasMore: z.boolean()
 });

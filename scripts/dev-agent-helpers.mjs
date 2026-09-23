@@ -74,5 +74,27 @@ export const DevAgentHelpers = {
         }
 
         return rewritten;
+    },
+
+    /**
+     * Returns whether the compiled host agent is at least as new as its sources.
+     *
+     * A missing binary is never fresh. A missing source timestamp is treated as
+     * fresh so a present binary can still start.
+     *
+     * @param binaryMtimeMs Binary mtime in milliseconds, or `null` when missing
+     * @param sourceMtimeMs Newest agent source mtime in milliseconds
+     * @returns `true` when `yarn dev` can reuse the binary without rebuilding
+     */
+    isHostBinaryFresh(binaryMtimeMs, sourceMtimeMs) {
+        if (typeof binaryMtimeMs !== "number" || !Number.isFinite(binaryMtimeMs)) {
+            return false;
+        }
+
+        if (typeof sourceMtimeMs !== "number" || !Number.isFinite(sourceMtimeMs)) {
+            return true;
+        }
+
+        return binaryMtimeMs >= sourceMtimeMs;
     }
 };

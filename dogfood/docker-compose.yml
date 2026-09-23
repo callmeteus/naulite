@@ -101,6 +101,7 @@ services:
             NAULITE_BOOTSTRAP_ADMIN_PASSWORD: ${NAULITE_BOOTSTRAP_ADMIN_PASSWORD:-naulite-dev}
             NAULITE_LOG_LEVEL: ${NAULITE_LOG_LEVEL:-debug}
             NAULITE_LOG_DIR: ${NAULITE_LOG_DIR:-/var/lib/naulite/logs}
+            NAULITE_AGENT_FETCH_VIA_HOST: ${NAULITE_AGENT_FETCH_VIA_HOST:-host.docker.internal}
         ports:
             - "8080:8080"
         volumes:
@@ -145,6 +146,7 @@ services:
             NAULITE_BOOTSTRAP_ADMIN_PASSWORD: ${NAULITE_BOOTSTRAP_ADMIN_PASSWORD:-naulite-dev}
             NAULITE_LOG_LEVEL: ${NAULITE_LOG_LEVEL:-debug}
             NAULITE_LOG_DIR: ${NAULITE_LOG_DIR:-/var/lib/naulite/logs}
+            NAULITE_AGENT_FETCH_VIA_HOST: ${NAULITE_AGENT_FETCH_VIA_HOST:-host.docker.internal}
         ports:
             - "8081:8080"
         volumes:

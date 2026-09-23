@@ -36,6 +36,7 @@ import { createNetBirdAdapter } from "./services/CreateNetBirdService";
 import { GatewayConfig } from "./services/GatewayConfig";
 import { GatewayRouteService } from "./services/GatewayRouteService";
 import { createInstanceReconcilerService, type InstanceReconcilerService } from "./services/InstanceReconcilerService";
+import { createNodeAgentConnectivityWatchdog, type NodeAgentConnectivityWatchdog } from "./services/NodeAgentConnectivityWatchdog";
 import { LeaderElection } from "./services/LeaderElection";
 import { createMetricsSyncService, type MetricsSyncService } from "./services/MetricsSyncService";
 import type { NetBirdCredentials } from "./services/NetBirdBootstrap";
@@ -79,6 +80,7 @@ export interface ControlPlaneContext {
     nodeProvisionerRegistry: NodeProvisionerRegistry;
     nodeProvisionService: NodeProvisionService;
     instanceReconcilerService: InstanceReconcilerService;
+    nodeAgentConnectivityWatchdog: NodeAgentConnectivityWatchdog;
     metricsSyncService: MetricsSyncService;
     builderProviders: Map<string, BuilderProvider>;
     applyRevision: number;
@@ -177,6 +179,7 @@ export function createControlPlaneContext(
         nodeProvisionerRegistry,
         nodeProvisionService,
         instanceReconcilerService: null!,
+        nodeAgentConnectivityWatchdog: createNodeAgentConnectivityWatchdog(store),
         metricsSyncService,
         builderProviders,
         applyRevision: options.applyRevision ?? 0
@@ -186,6 +189,7 @@ export function createControlPlaneContext(
         store,
         context.planner,
         context.composeParser,
+        context.scheduler,
         () => context.applyRevision
     );
 

@@ -1,6 +1,8 @@
 /**
  * Debounced file watching helpers for Naulite dev scripts.
  */
+import { spawnSync } from "node:child_process";
+
 import chokidar from "chokidar";
 
 /**
@@ -93,4 +95,36 @@ export function waitForShutdownSignal() {
  */
 export function isDevReuseEnabled() {
     return process.env.NAULITE_DEV_REUSE === "1";
+}
+
+/**
+ * Runs a shell command without exiting the dev process when it fails.
+ *
+ * @param command Executable name
+ * @param args Command arguments
+ * @param options Optional cwd and log label
+ * @returns `true` when the command exits with status 0
+ */
+export function runCommand(command, args, options = {}) {
+    const cwd = options.cwd ?? process.cwd();
+    const result = spawnSync(command, args, {
+        cwd,
+        stdio: "inherit",
+        env: process.env,
+        shell: true
+    });
+
+    const ok = result.status === 0;
+
+    if (!ok && options.label) {
+        console.error(
+            `[%s] command failed (exit %s): %s %s`,
+            options.label,
+            String(result.status ?? 1),
+            command,
+            args.join(" ")
+        );
+    }
+
+    return ok;
 }

@@ -90,8 +90,8 @@ Cada task `build` com `sandbox:` roda em clone Incus CoW (pai + snapshot `base`)
 
 | Item | Status |
 |------|--------|
-| `/sandboxes`, nav, i18n, lista + edit + bake | [x] |
-| Coluna idle warm pool (GET `/sandboxes/:id` + `instances`) | [x] |
+| API/BFF sandboxes (lista, edit, bake) | [x] |
+| Página `/sandboxes` fora do menu (fluxo integrado em Entrega / runs) | [x] |
 | Run Tower: nome clone Incus | [x] |
 
 ---
@@ -140,7 +140,7 @@ Somente com host Incus (zfs/btrfs) e credenciais git/lm. Não roda em CI genéri
 | `./dogfood/scripts/bake-luckymaker-sandbox.sh` | [ ] |
 | `POST /sandboxes` + apply fixture pipeline | [ ] |
 | `incus list` sem orphan `build-*` | [ ] |
-| Browser Sandboxes + run Entrega | [ ] |
+| Browser Entrega + run com sandbox no Tower | [ ] |
 
 ---
 

@@ -13,6 +13,7 @@ import { parseApiError, type ParsedApiError } from "../composables/useApiAction"
 import { useAuthStore } from "../stores/Auth";
 import { useClusterStore } from "../stores/Cluster";
 import { formatServiceReconcileError } from "../utils/formatReconcileResults";
+import { formatServiceDisplayNameFromService } from "../utils/formatServicePresentation";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -146,7 +147,7 @@ async function redispatchService(serviceName: string): Promise<void> {
                                     class="link link-hover font-medium"
                                     @click.stop
                                 >
-                                    {{ service.name }}
+                                    {{ formatServiceDisplayNameFromService(service) }}
                                 </RouterLink>
                             </td>
                             <td><StatusPill :status="service.status" /></td>

@@ -2,6 +2,11 @@ import type { ExecutionPlan, Node } from "@naulite/shared";
 
 import { formatAgentHttpFailureMessage } from "@naulite/shared";
 
+import { NodeAgentUrlResolver } from "./NodeAgentUrlResolver";
+
+/**
+ * Default timeout for outbound agent HTTP requests when env is unset.
+ */
 const DEFAULT_AGENT_FETCH_TIMEOUT_MS = 15_000;
 
 /**
@@ -26,6 +31,7 @@ function resolveAgentFetchTimeoutMs(): number {
  * @param init Fetch init options
  * @param fetchImpl Fetch implementation
  * @returns Agent HTTP response
+ * @throws {Error} When the request times out or the transport fails
  */
 async function fetchAgentBounded(
     url: string,
@@ -39,7 +45,9 @@ async function fetchAgentBounded(
     }, timeoutMs);
 
     try {
-        return await fetchImpl(url, {
+        const fetchUrl = NodeAgentUrlResolver.resolveControlPlaneFetchUrl(url);
+
+        return await fetchImpl(fetchUrl, {
             ...init,
             signal: controller.signal
         });
