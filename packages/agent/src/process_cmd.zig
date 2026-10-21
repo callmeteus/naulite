@@ -60,7 +60,21 @@ pub fn runCapture(
     /// The command to run.
     argv: []const []const u8,
 ) !CaptureResult {
-    return runCaptureLimited(allocator, argv, std.math.maxInt(usize));
+    return runCaptureEnv(allocator, argv, null);
+}
+
+/// Runs a subprocess with an optional environment map override.
+///
+/// @param allocator Allocator for output buffers
+/// @param argv Command argv slice
+/// @param env_map When non-null, replaces the process environment for the child
+/// @returns Captured stdout, stderr, and exit status
+pub fn runCaptureEnv(
+    allocator: std.mem.Allocator,
+    argv: []const []const u8,
+    env_map: ?*const std.process.EnvMap,
+) !CaptureResult {
+    return runCaptureLimitedEnv(allocator, argv, env_map, std.math.maxInt(usize));
 }
 
 /// Like `runCapture`, but fails with `error.OutputTooLarge` when stdout or stderr exceeds `max_bytes`.
@@ -72,10 +86,25 @@ pub fn runCaptureLimited(
     /// The maximum number of bytes to capture.
     max_bytes: usize,
 ) !CaptureResult {
+    return runCaptureLimitedEnv(allocator, argv, null, max_bytes);
+}
+
+/// Like `runCaptureEnv`, but fails when stdout or stderr exceeds `max_bytes`.
+pub fn runCaptureLimitedEnv(
+    /// The allocator to use.
+    allocator: std.mem.Allocator,
+    /// The command to run.
+    argv: []const []const u8,
+    /// When non-null, replaces the process environment for the child
+    env_map: ?*const std.process.EnvMap,
+    /// The maximum number of bytes to capture.
+    max_bytes: usize,
+) !CaptureResult {
     const io = blocking_io.io();
 
     const result = try std.process.run(allocator, io, .{
         .argv = argv,
+        .env_map = env_map,
     });
 
     if (result.stdout.len > max_bytes or result.stderr.len > max_bytes) {

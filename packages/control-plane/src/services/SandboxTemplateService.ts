@@ -141,7 +141,7 @@ export namespace SandboxTemplateService {
         }
 
         const bakeScript = process.env.NAULITE_SANDBOX_BAKE_SCRIPT
-            ?? "dogfood/scripts/bake-luckymaker-sandbox.sh";
+            ?? "dogfood/scripts/bake-dev-sandbox.sh";
 
         await AgentProxyService.postTask(node.agentUrl, "/tasks/sandbox/bake", {
             parent: template.incusName,

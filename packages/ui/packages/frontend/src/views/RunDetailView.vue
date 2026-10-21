@@ -28,6 +28,7 @@ import {
     isRunInProgressBanner,
     shouldShowRunAgentUnreachableBanner
 } from "../utils/runDetailPresentation";
+import { pipelineRunKindLabel } from "../utils/RunsListPresentation";
 
 enum RunDetailTab {
     DETAILS = "details",
@@ -35,7 +36,7 @@ enum RunDetailTab {
     NODES = "nodes"
 }
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
@@ -216,18 +217,6 @@ watch(
         }
     }
 );
-
-/**
- * Returns a localized label for a pipeline run kind.
- *
- * @param kind Pipeline run kind
- * @returns Localized label
- */
-function kindLabel(kind: string): string {
-    const key = `pages.runs.kinds.${kind}`;
-
-    return t(key) === key ? kind : t(key);
-}
 
 /**
  * Formats an ISO timestamp for display.
@@ -635,7 +624,7 @@ async function relaunchRun(failedOnly = false): Promise<void> {
                                 />
                                 <StatusPill :status="run.status" size="md" />
                                 <span class="badge badge-outline">
-                                    {{ kindLabel(run.kind) }}
+                                    {{ pipelineRunKindLabel(t, te, run.kind) }}
                                 </span>
                                 <span class="badge badge-ghost">
                                     {{ t("pages.runs.elapsed") }}: {{ elapsedLabel }}

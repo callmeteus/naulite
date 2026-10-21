@@ -1,8 +1,14 @@
-import { NodeProvisionSchema, IdParamsSchema } from "@naulite/shared";
+import { NodeProvisionSchema, IdParamsSchema, RouteMessageResponseSchema } from "@naulite/shared";
+import { z } from "zod";
 
 import { ControlPlaneService } from "../../../ControlPlaneService";
 import { PermissionPreHandlers } from "../../../auth/PermissionPreHandlers";
 import { defineRoute } from "../../../routing/DefineRoute";
+
+const AbandonNodeProvisionResponseSchema = z.object({
+    deleted: z.literal(true),
+    id: z.string().min(1)
+});
 
 export const GET = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:read"),
@@ -25,17 +31,18 @@ export const GET = defineRoute({
 export const DELETE = defineRoute({
     preHandler: PermissionPreHandlers.authorizedWithPermission("nodes:terminate"),
     schema: {
-        summary: "Terminate node provision",
-        description: "Terminates the cloud VM associated with a provision request.",
+        summary: "Remove node provision",
+        description: "Removes a provision from history and terminates the cloud VM when one exists.",
         tags: ["nodes"],
-        operationId: "terminateNodeProvision",
+        operationId: "abandonNodeProvision",
         params: IdParamsSchema,
         response: {
-            200: NodeProvisionSchema
+            200: AbandonNodeProvisionResponseSchema,
+            404: RouteMessageResponseSchema
         }
     },
 
     async handler(req) {
-        return ControlPlaneService.NodeProvision.terminateProvision(req.params.id);
+        return ControlPlaneService.NodeProvision.abandonProvision(req.params.id);
     }
 });

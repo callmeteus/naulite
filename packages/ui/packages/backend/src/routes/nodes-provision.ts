@@ -42,4 +42,9 @@ export async function registerNodeProvisionRoutes(app: FastifyInstance): Promise
         const params = ProvisionIdParamsSchema.parse(request.params);
         return controlPlaneForRequest(app, request).terminateNodeProvision(params.id);
     });
+
+    app.delete("/nodes/provisions/:id", async (request) => {
+        const params = ProvisionIdParamsSchema.parse(request.params);
+        return controlPlaneForRequest(app, request).abandonNodeProvision(params.id);
+    });
 }

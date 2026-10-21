@@ -7,8 +7,10 @@ import { LeaderPreHandlers } from "../../auth/LeaderPreHandlers";
 import { HTTP401Error } from "../../errors/TreatedError";
 import { WebhookSignature } from "../../gitops/WebhookSignature";
 import { defineRoute } from "../../routing/DefineRoute";
+import { ComposeParser } from "../../orchestration/ComposeParser";
 import { AppOfAppsService } from "../../services/AppOfAppsService";
 import { ApplyService } from "../../services/ApplyService";
+import { GitOpsPipelineTriggerService } from "../../services/pipeline/GitOpsPipelineTriggerService";
 
 /**
  * Verifies the GitOps webhook signature when a secret is configured.
@@ -59,7 +61,7 @@ export const POST = defineRoute({
     ],
 
     schema: {
-        summary: "Webhook GitOps",
+        summary: "GitOps webhook",
         description: "Receives a repository event, checks out/merges, and applies the resulting manifest.",
         tags: ["gitops"],
         operationId: "handleGitOpsWebhook",
@@ -88,12 +90,46 @@ export const POST = defineRoute({
         }
 
         const catalogName = readStringField(doc, "name") ?? "catalog";
+        const branch = body.branch ?? "main";
+        const commitSha = body.commitSha ?? body.revision ?? checkout.commitSha;
+
+        try {
+            const manifest = new ComposeParser().parse(checkout.manifestYaml);
+
+            if (manifest.pipeline?.triggers) {
+                const pipelineResult = await GitOpsPipelineTriggerService.handleRepositoryEvent(
+                    ControlPlaneService.requireContext(),
+                    {
+                        manifestYaml: checkout.manifestYaml,
+                        manifestName: manifest.name,
+                        workDir: checkout.workDir,
+                        repositoryUrl: body.repositoryUrl,
+                        repositoryFullName: body.repositoryFullName,
+                        branch,
+                        commitSha,
+                        deliveryId: body.deliveryId,
+                        deleted: body.deleted ?? body.event === "delete",
+                        runtimeVars: body.vars
+                    }
+                );
+
+                if (!pipelineResult.skipped) {
+                    return {
+                        accepted: true,
+                        runId: pipelineResult.runId,
+                        manifestName: manifest.name
+                    };
+                }
+            }
+        } catch {
+            // Fall through to legacy apply when the manifest is not a pipeline document.
+        }
 
         const applyRun = await ControlPlaneService.GitOps.createApplyRun({
             manifestName: catalogName,
             repositoryUrl: body.repositoryUrl,
-            branch: body.branch ?? "main",
-            commitSha: body.commitSha ?? body.revision ?? checkout.commitSha
+            branch,
+            commitSha
         });
 
         let applyResult: unknown;

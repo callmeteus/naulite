@@ -138,8 +138,23 @@ export class AwsNodeProvisionerProvider implements NodeProvisionerProvider {
             return this.injectedClient;
         }
 
+        const endpoint = process.env.AWS_ENDPOINT_URL
+            ?? process.env.EC2_ENDPOINT_URL
+            ?? process.env.AWS_EC2_ENDPOINT_URL;
+        const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+        const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
         return new EC2Client({
             region: region ?? process.env.AWS_REGION ?? "us-east-1",
+            ...(endpoint ? { endpoint } : {}),
+            ...(accessKeyId && secretAccessKey
+                ? {
+                    credentials: {
+                        accessKeyId,
+                        secretAccessKey
+                    }
+                }
+                : {}),
             ...this.defaultClientConfig
         });
     }

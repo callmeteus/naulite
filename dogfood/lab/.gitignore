@@ -1,0 +1,6 @@
+# Local-only state while running public dogfood/lab scripts (LM assets live in luckymaker/.naulite/lab)
+.lab-*
+.lab-target*
+logs/
+*.log
+tmp/

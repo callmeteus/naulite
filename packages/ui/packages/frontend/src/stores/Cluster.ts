@@ -118,6 +118,28 @@ export const clusterStore = reactive({
     },
 
     /**
+     * Deregisters a node from the control plane.
+     *
+     * @param nodeId Node identifier
+     * @returns Nothing.
+     * @throws {unknown}
+     */
+    async deleteNode(nodeId: string): Promise<void> {
+        this.loading = true;
+        this.error = null;
+
+        try {
+            await nauliteClient.deleteNode(nodeId);
+            this.nodes = this.nodes.filter((entry) => entry.id !== nodeId);
+        } catch (err) {
+            this.setError(err);
+            throw err;
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
      * Loads backup runs from the admin API.
      *
      * @returns Nothing.

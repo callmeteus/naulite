@@ -1,0 +1,17 @@
+services:
+  gitea:
+    image: gitea/gitea:1.22-rootless
+    restart: unless-stopped
+    environment:
+      GITEA__server__ROOT_URL: http://localhost:3001/
+      GITEA__server__HTTP_PORT: "3001"
+      GITEA__webhook__ALLOWED_HOST_LIST: host.docker.internal,127.0.0.1,localhost
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3001:3001"
+    volumes:
+      - gitea-data:/data
+
+volumes:
+  gitea-data:

@@ -9,19 +9,6 @@ include:
       project_directory: ../packages/metrics/compose
 
 services:
-    minio:
-        image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-        restart: unless-stopped
-        command: server /data --console-address ":9001"
-        environment:
-            MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
-            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-        volumes:
-            - minio-data:/data
-        ports:
-            - "9000:9000"
-            - "9001:9001"
-
     traefik-dynamic-config:
         profiles: [traefik]
         image: node:22-alpine
@@ -91,8 +78,16 @@ services:
             CP_INSTANCE_ID: cp-1
             CP_PEER_URLS: http://control-plane-2:8080
             CP_PLUGINS: s3
-            S3_ENDPOINT: http://minio:9000
+            S3_ENDPOINT: ${S3_ENDPOINT:-http://ministack:4566}
+            S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://ministack:4566}
+            AWS_REGION: ${AWS_REGION:-us-east-1}
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
             S3_FORCE_PATH_STYLE: "true"
+            NAULITE_WEBHOOK_MOCK: ${NAULITE_WEBHOOK_MOCK:-on}
+            NAULITE_GITOPS_FILE_COPY: ${NAULITE_GITOPS_FILE_COPY:-1}
+            NAULITE_E7_NOTIFY_WEBHOOK_URL: ${NAULITE_E7_NOTIFY_WEBHOOK_URL:-}
+            NAULITE_E7_NOTIFY_WEBHOOK_SECRET: ${NAULITE_E7_NOTIFY_WEBHOOK_SECRET:-}
             PROMETHEUS_URL: ${PROMETHEUS_URL:-http://naulite-prometheus:9090}
             NAULITE_PROMETHEUS_FILE_SD_DIR: ${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}
             NAULITE_METRICS_SYNC_ENABLED: ${NAULITE_METRICS_SYNC_ENABLED:-true}
@@ -110,6 +105,7 @@ services:
         networks:
             - default
             - netbird
+            - ministack_default
 
     control-plane-2:
         build:
@@ -136,8 +132,16 @@ services:
             CP_INSTANCE_ID: cp-2
             CP_PEER_URLS: http://control-plane-1:8080
             CP_PLUGINS: s3
-            S3_ENDPOINT: http://minio:9000
+            S3_ENDPOINT: ${S3_ENDPOINT:-http://ministack:4566}
+            S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://ministack:4566}
+            AWS_REGION: ${AWS_REGION:-us-east-1}
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
             S3_FORCE_PATH_STYLE: "true"
+            NAULITE_WEBHOOK_MOCK: ${NAULITE_WEBHOOK_MOCK:-on}
+            NAULITE_GITOPS_FILE_COPY: ${NAULITE_GITOPS_FILE_COPY:-1}
+            NAULITE_E7_NOTIFY_WEBHOOK_URL: ${NAULITE_E7_NOTIFY_WEBHOOK_URL:-}
+            NAULITE_E7_NOTIFY_WEBHOOK_SECRET: ${NAULITE_E7_NOTIFY_WEBHOOK_SECRET:-}
             PROMETHEUS_URL: ${PROMETHEUS_URL:-http://naulite-prometheus:9090}
             NAULITE_PROMETHEUS_FILE_SD_DIR: ${NAULITE_PROMETHEUS_FILE_SD_DIR:-/var/lib/naulite/prometheus/file_sd}
             NAULITE_METRICS_SYNC_ENABLED: ${NAULITE_METRICS_SYNC_ENABLED:-true}
@@ -155,6 +159,7 @@ services:
         networks:
             - default
             - netbird
+            - ministack_default
 
     ui-backend:
         build:
@@ -227,8 +232,11 @@ services:
             - default
             - netbird
 
+networks:
+    ministack_default:
+        external: true
+
 volumes:
-    minio-data:
     cp-data-1:
     cp-data-2:
     traefik-acme:

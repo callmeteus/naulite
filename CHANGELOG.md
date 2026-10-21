@@ -140,3 +140,12 @@
 - Created `packages/shared`, `packages/sdk`, `packages/cli`, and `packages/ui`
 - Added `tests/harness/LocalTestCluster`, docker compose fixtures, unit tests, and e2e health smoke
 - Added `CONTEXT.md`, root `README.md`, legacy `docs/*` redirects, and GitHub Actions CI workflow
+
+## [Unreleased]
+
+### Added
+
+- Naulite lab: Tower UI com BFF (proxy /api) e doc de login no dogfood/lab
+- Naulite UI: i18n dos kinds de pipeline run (ci_pipeline, etc.)
+- Naulite: remover registro de node e abandonar provision na UI/CP
+- Naulite público: LuckyMaker só local (gitignore dogfood/lab, fixtures sample, bake-dev-sandbox)

@@ -26,6 +26,10 @@ export namespace ApplyStageRunner {
         executor: HostExecutor;
         vars?: Record<string, string>;
         createdBy?: string;
+        /**
+         * When false, the parent pipeline run owns final status (nested @naulite/apply).
+         */
+        ownsRunLifecycle?: boolean;
     }
 
     /**
@@ -46,7 +50,9 @@ export namespace ApplyStageRunner {
             vars: { ...options.manifest.vars, ...options.vars }
         };
 
-        return executePlan(options.runId, plan, options.executor, options.createdBy);
+        const ownsRunLifecycle = options.ownsRunLifecycle ?? true;
+
+        return executePlan(options.runId, plan, options.executor, options.createdBy, ownsRunLifecycle);
     }
 
     /**
@@ -93,7 +99,7 @@ export namespace ApplyStageRunner {
             pendingPlan: null
         });
 
-        const outcome = await executePlan(runId, plan, executor, approvedBy);
+        const outcome = await executePlan(runId, plan, executor, approvedBy, true);
         return outcome === "awaiting_approval" ? "running" : outcome;
     }
 
@@ -136,7 +142,8 @@ export namespace ApplyStageRunner {
         runId: string,
         plan: PendingTaskPlan,
         executor: HostExecutor,
-        actor?: string
+        actor?: string,
+        ownsRunLifecycle = true
     ): Promise<"running" | "awaiting_approval" | "succeeded" | "failed"> {
         for (let index = plan.cursor; index < plan.tasks.length; index += 1) {
             const task = plan.tasks[index];
@@ -164,7 +171,8 @@ export namespace ApplyStageRunner {
             }
 
             try {
-                const nodeId = task.target ?? task.targetGroup ?? "local";
+                const resolvedTarget = task.target?.trim() || task.targetGroup?.trim() || "";
+                const nodeId = resolvedTarget.length > 0 ? resolvedTarget : "local";
                 await PipelineRunService.emitEvent(runId, {
                     kind: "deploy.step.started",
                     message: task.name
@@ -187,9 +195,20 @@ export namespace ApplyStageRunner {
                 if (task.rescue && task.rescue.length > 0) {
                     plan.tasks.splice(index + 1, 0, ...task.rescue);
                 } else if (!task.ignoreErrors) {
-                    await PipelineRunService.completeRun(runId, "failed", {
-                        errorMessage: err instanceof Error ? err.message : String(err)
-                    });
+                    const errorMessage = err instanceof Error ? err.message : String(err);
+
+                    if (ownsRunLifecycle) {
+                        await PipelineRunService.completeRun(runId, "failed", {
+                            errorMessage
+                        });
+                    } else {
+                        await PipelineRunService.emitEvent(runId, {
+                            kind: "deploy.step.failed",
+                            message: errorMessage,
+                            level: "error"
+                        });
+                    }
+
                     return "failed";
                 }
             }
@@ -197,7 +216,10 @@ export namespace ApplyStageRunner {
             plan.cursor = index + 1;
         }
 
-        await PipelineRunService.completeRun(runId, "succeeded", {});
+        if (ownsRunLifecycle) {
+            await PipelineRunService.completeRun(runId, "succeeded", {});
+        }
+
         return "succeeded";
     }
 

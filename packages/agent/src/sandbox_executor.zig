@@ -184,7 +184,7 @@ pub fn executeBakeTask(allocator: std.mem.Allocator, body: []const u8) !SandboxT
     const parent = try readStringField(allocator, body, "parent");
     defer allocator.free(parent);
     const modules_volume = readOptionalString(body, "modulesVolume") orelse parent;
-    const script_path = readOptionalString(body, "script") orelse "/opt/naulite/dogfood/scripts/bake-luckymaker-sandbox.sh";
+    const script_path = readOptionalString(body, "script") orelse "/opt/naulite/dogfood/scripts/bake-dev-sandbox.sh";
 
     const shell_cmd = try std.fmt.allocPrint(
         allocator,

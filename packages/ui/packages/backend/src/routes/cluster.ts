@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { GitOpsWebhookBodySchema } from "@naulite/shared";
 import { z } from "zod";
 
 import { controlPlaneForRequest } from "../util/controlPlaneForRequest";
@@ -26,6 +27,15 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
 
         const client = controlPlaneForRequest(app, request);
         return client.getNode(params.id);
+    });
+
+    app.delete("/nodes/:id", async (request) => {
+        const params = z.object({
+            id: z.string().min(1)
+        }).parse(request.params);
+
+        const client = controlPlaneForRequest(app, request);
+        return client.deleteNode(params.id);
     });
 
     app.get("/nodes/:id/host/packages", async (request) => {
@@ -251,6 +261,13 @@ export async function registerClusterRoutes(app: FastifyInstance): Promise<void>
         }).parse(request.params);
 
         return app.controlPlane.rollbackGitOps(params.revisionId);
+    });
+
+    app.post("/gitops/webhook/mock", async (request) => {
+        const body = GitOpsWebhookBodySchema.parse(request.body);
+        const client = controlPlaneForRequest(app, request);
+
+        return client.gitOpsWebhookMock(body);
     });
 
     app.get("/backups", async (request) => {

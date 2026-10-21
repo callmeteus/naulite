@@ -100,7 +100,15 @@ export function resolveBffRoutePermissions(path: string, method: string): Naulit
     }
 
     if (path.startsWith("/gitops")) {
-        return path.includes("/rollback") ? ["gitops:rollback"] : ["gitops:read"];
+        if (path.includes("/rollback")) {
+            return ["gitops:rollback"];
+        }
+
+        if (path.includes("/webhook/mock") && !isRead) {
+            return ["manifests:apply"];
+        }
+
+        return ["gitops:read"];
     }
 
     if (path.startsWith("/cr") || path.startsWith("/gateway") || path.startsWith("/ingress")) {

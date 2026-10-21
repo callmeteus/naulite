@@ -5,11 +5,11 @@ import { describe, expect, it } from "vitest";
 
 import { ComposeParser } from "../../../packages/control-plane/src/orchestration/ComposeParser";
 
-describe("luckymaker-frontend sandbox fixture", () => {
+describe("sample-frontend sandbox fixture", () => {
     it("parses build task with sandbox parent and outputs", async () => {
         const fixturePath = path.resolve(
             import.meta.dirname,
-            "../../../dogfood/fixtures/luckymaker-frontend-sandbox.yaml"
+            "../../../dogfood/fixtures/sample-frontend-sandbox.yaml"
         );
         const yaml = await readFile(fixturePath, "utf8");
         const parser = new ComposeParser();
@@ -17,7 +17,7 @@ describe("luckymaker-frontend sandbox fixture", () => {
         const task = manifest.tasks[0];
 
         expect(task.module).toBe("build");
-        expect(task.sandbox?.parent).toBe("luckymaker-workspace");
-        expect(task.outputs).toEqual(["luckymaker-frontend/dist/"]);
+        expect(task.sandbox?.parent).toBe("naulite-dev-workspace");
+        expect(task.outputs).toEqual(["sample-frontend/dist/"]);
     });
 });

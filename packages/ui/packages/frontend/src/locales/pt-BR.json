@@ -385,7 +385,12 @@
             "rollback": "Reverter",
             "rollbackPlaceholder": "Selecione uma revisão",
             "rollbackConfirm": "Reverter para esta revisão?",
-            "rollbackSuccess": "Reversão iniciada."
+            "rollbackSuccess": "Reversão iniciada.",
+            "mockWebhookTitle": "Webhook de teste",
+            "mockWebhookHint": "Dispara um push mock no plano de controle (somente quando o mock está habilitado).",
+            "mockWebhookRepositoryUrl": "URL do repositório",
+            "mockWebhookDeliveryId": "ID de entrega (opcional)",
+            "mockWebhookSubmit": "Disparar push mock"
         },
         "instances": {
             "title": "Instâncias",
@@ -596,7 +601,10 @@
             "provisionSectionHint": "Instâncias na nuvem lançadas pela plataforma para entrar no cluster.",
             "emptyTitle": "Nenhum nó registrado ainda",
             "emptyDescription": "Os nós aparecem aqui após os agentes se registrarem no plano de controle. Implante cargas de trabalho ou provisione um nó na nuvem para começar.",
-            "emptyAction": "Ir para deploy"
+            "emptyAction": "Ir para deploy",
+            "deregister": "Remover registro",
+            "deregisterTitle": "Remover registro do nó?",
+            "deregisterConfirm": "Isso remove o nó do control plane. Cargas que já estiverem rodando no host não são paradas automaticamente."
         },
         "nodeDetail": {
             "title": "Detalhes do nó",
@@ -731,6 +739,7 @@
             "backToList": "Voltar à lista",
             "refresh": "Atualizar",
             "viewStatus": "Ver status",
+            "removeFromHistory": "Remover",
             "detailTitle": "Status do provisionamento",
             "detailHint": "Acompanhe o progresso até o nó entrar no cluster.",
             "detailSummary": "Resumo da solicitação",
@@ -849,8 +858,13 @@
             "nodeStepCount": "Etapas",
             "kinds": {
                 "ci_build": "Build",
-                "apply": "Deploy",
-                "gitops_sync": "Deploy",
+                "ci_pipeline": "Pipeline de CI",
+                "deploy": "Deploy",
+                "canary": "Canary",
+                "apply": "Apply de manifesto",
+                "gitops_sync": "Sync GitOps",
+                "gitops_apply": "Apply GitOps",
+                "infra": "Infraestrutura",
                 "node_event": "Evento de nó"
             },
             "statuses": {

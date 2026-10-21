@@ -22,7 +22,11 @@ export namespace ApplyPlaybookRunner {
     export async function runIfPresent(
         runId: string,
         manifest: Manifest,
-        createdBy?: string
+        createdBy?: string,
+        options: {
+            vars?: Record<string, string>;
+            ownsRunLifecycle?: boolean;
+        } = {}
     ): Promise<"running" | "awaiting_approval" | "succeeded" | "failed" | "skipped"> {
         const tasks = manifest.tasks ?? [];
 
@@ -36,7 +40,9 @@ export namespace ApplyPlaybookRunner {
             runId,
             manifest,
             executor: HostExecutorProvider.get(),
-            createdBy
+            createdBy,
+            vars: options.vars,
+            ownsRunLifecycle: options.ownsRunLifecycle
         });
 
         logPlaybook.debug("playbook finished runId=%s status=%s", runId, status);

@@ -11,6 +11,7 @@ export * from "./EnsureNetBirdGroupBodySchema";
 export * from "./ExecInstanceBodySchema";
 export * from "./GitOpsRevisionListResponseSchema";
 export * from "./GitOpsWebhookBodySchema";
+export * from "./PipelineTriggerBodySchema";
 export * from "./HealthLiveResponseSchema";
 export * from "./HealthReadyResponseSchema";
 export * from "./HealthSummaryResponseSchema";

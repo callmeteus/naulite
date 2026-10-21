@@ -273,6 +273,40 @@ export class NodeProvisionService {
     }
 
     /**
+     * Removes a provision from history, terminating the cloud VM when one exists.
+     *
+     * @param id Provision identifier
+     * @returns Deletion acknowledgement
+     * @throws {HTTP404Error} {@link HTTP404Error}
+     */
+    async abandonProvision(id: string): Promise<{ deleted: true; id: string }> {
+        const provision = await this.getProvision(id);
+
+        if (
+            provision.cloudInstanceId
+            && provision.status !== "terminated"
+            && provision.status !== "failed"
+        ) {
+            try {
+                const provider = this.registry.require(provision.provider);
+                await provider.terminate(provision.cloudInstanceId, provision.region);
+            } catch (err) {
+                logNodeProvision.warn("abandon provision terminate failed: %O", err);
+            }
+        }
+
+        const deleted = await this.store.deleteNodeProvision(id);
+
+        if (!deleted) {
+            throw new HTTP404Error(`Node provision not found: ${id}`);
+        }
+
+        logNodeProvision.debug("abandoned provisionId=%s", id);
+
+        return { deleted: true, id };
+    }
+
+    /**
      * Terminates a provisioned cloud machine and marks the request terminated.
      *
      * @param id Provision identifier

@@ -14,6 +14,7 @@ import {
     HostInventoryModel,
     HostUpdateRunModel,
     InstanceModel,
+    LogRotationRunModel,
     NodeModel,
     NodeProvisionModel,
     SecretModel,
@@ -166,6 +167,32 @@ export class ControlPlaneStore {
         });
 
         return RowMapper.node(row.get({ plain: true }));
+    }
+
+    /**
+     * Deregisters a node and removes control-plane rows that reference it.
+     *
+     * @param nodeId Node identifier
+     * @returns Whether a node was deleted
+     */
+    async deleteNode(nodeId: string): Promise<boolean> {
+        const row = await NodeModel.findByPk(nodeId);
+
+        if (!row) {
+            return false;
+        }
+
+        await InstanceModel.destroy({ where: { nodeId } });
+        await HostInventoryModel.destroy({ where: { nodeId } });
+        await HostUpdateRunModel.destroy({ where: { nodeId } });
+        await FunctionRunModel.destroy({ where: { nodeId } });
+        await BackupRunModel.destroy({ where: { nodeId } });
+        await LogRotationRunModel.destroy({ where: { nodeId } });
+        await SandboxInstanceModel.destroy({ where: { nodeId } });
+        await VolumeModel.destroy({ where: { nodeId } });
+        await row.destroy();
+
+        return true;
     }
 
     /**
@@ -1052,6 +1079,20 @@ export class ControlPlaneStore {
             createdAt: provision.createdAt,
             updatedAt: provision.updatedAt
         });
+    }
+
+    /**
+     * Deletes a node provision record from the control plane.
+     *
+     * @param id Provision identifier
+     * @returns Whether a row was deleted
+     */
+    async deleteNodeProvision(id: string): Promise<boolean> {
+        const deleted = await NodeProvisionModel.destroy({
+            where: { id }
+        });
+
+        return deleted > 0;
     }
 
     /**

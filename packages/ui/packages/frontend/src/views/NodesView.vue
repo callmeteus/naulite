@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { RouterLink } from "vue-router";
 
+import type { Node } from "@naulite/sdk";
 import { nauliteClient } from "../api/Client";
 import PageLayout from "../components/layout/PageLayout.vue";
+import ConfirmModal from "../components/ui/ConfirmModal.vue";
 import EmptyState from "../components/ui/EmptyState.vue";
 import ErrorAlert from "../components/ui/ErrorAlert.vue";
 import LoadingSpinner from "../components/ui/LoadingSpinner.vue";
@@ -29,6 +31,12 @@ const auth = useAuthStore();
 const canProvision = computed(() => auth.hasPermission("nodes:provision"));
 const canConnectAgent = computed(() => auth.hasPermission("netbird:read"));
 const canAddNode = computed(() => canProvision.value || canConnectAgent.value);
+const canDeregisterNode = computed(() => auth.hasPermission("nodes:write"));
+const canRemoveProvision = computed(() => auth.hasPermission("nodes:terminate"));
+
+const deregisterTarget = ref<Node | null>(null);
+const deregisterModalRef = ref<InstanceType<typeof ConfirmModal> | null>(null);
+const removingProvisionId = ref("");
 
 /**
  * How often the nodes table reloads status from the control plane.
@@ -76,6 +84,48 @@ async function refreshAll(): Promise<void> {
 
     if (canProvision.value) {
         await refreshHistory();
+    }
+}
+
+/**
+ * Opens the deregister confirmation modal for a cluster node.
+ *
+ * @param node Node row to remove from the control plane
+ * @returns Nothing.
+ */
+function requestDeregisterNode(node: Node): void {
+    deregisterTarget.value = node;
+    deregisterModalRef.value?.open();
+}
+
+/**
+ * Deregisters the selected node after operator confirmation.
+ *
+ * @returns Nothing.
+ */
+async function confirmDeregisterNode(): Promise<void> {
+    if (!deregisterTarget.value) {
+        return;
+    }
+
+    await store.deleteNode(deregisterTarget.value.id);
+    deregisterTarget.value = null;
+}
+
+/**
+ * Removes a stale node provision row from history.
+ *
+ * @param provisionId Node provision identifier
+ * @returns Nothing.
+ */
+async function removeProvisionFromHistory(provisionId: string): Promise<void> {
+    removingProvisionId.value = provisionId;
+
+    try {
+        await nauliteClient.abandonNodeProvision(provisionId);
+        await refreshHistory();
+    } finally {
+        removingProvisionId.value = "";
     }
 }
 </script>
@@ -138,6 +188,7 @@ async function refreshAll(): Promise<void> {
                                     <th>{{ t("common.status") }}</th>
                                     <th>{{ t("pages.metrics.nodeCpu") }}</th>
                                     <th>{{ t("pages.metrics.nodeMemory") }}</th>
+                                    <th v-if="canDeregisterNode">{{ t("common.actions") }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -152,6 +203,15 @@ async function refreshAll(): Promise<void> {
                                     <td><StatusPill :status="node.status" /></td>
                                     <td>{{ formatNodeCpuUsage(node.resources) }}</td>
                                     <td>{{ formatNodeMemoryUsage(node.resources) }}</td>
+                                    <td v-if="canDeregisterNode">
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline btn-error btn-sm"
+                                            @click="requestDeregisterNode(node)"
+                                        >
+                                            {{ t("pages.nodes.deregister") }}
+                                        </button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -206,12 +266,24 @@ async function refreshAll(): Promise<void> {
                                             {{ provision.instanceType }}
                                         </td>
                                         <td>
-                                            <RouterLink
-                                                :to="`/nodes/provisions/${provision.id}`"
-                                                class="btn btn-outline btn-sm"
-                                            >
-                                                {{ t("pages.provision.viewStatus") }}
-                                            </RouterLink>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <RouterLink
+                                                    :to="`/nodes/provisions/${provision.id}`"
+                                                    class="btn btn-outline btn-sm whitespace-nowrap"
+                                                >
+                                                    {{ t("pages.provision.viewStatus") }}
+                                                </RouterLink>
+                                                <button
+                                                    v-if="canRemoveProvision"
+                                                    type="button"
+                                                    class="btn btn-outline btn-error btn-sm whitespace-nowrap"
+                                                    :class="{ loading: removingProvisionId === provision.id }"
+                                                    :disabled="Boolean(removingProvisionId)"
+                                                    @click="removeProvisionFromHistory(provision.id)"
+                                                >
+                                                    {{ t("pages.provision.removeFromHistory") }}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -241,5 +313,20 @@ async function refreshAll(): Promise<void> {
                 </div>
             </section>
         </div>
+
+        <ConfirmModal
+            ref="deregisterModalRef"
+            title-key="pages.nodes.deregisterTitle"
+            confirm-label-key="pages.nodes.deregister"
+            danger
+            :handler="confirmDeregisterNode"
+        >
+            <p v-if="deregisterTarget" class="py-4">
+                <span class="font-mono text-sm">{{ deregisterTarget.hostname }}</span>
+                <span class="mt-2 block text-sm text-base-content/70">
+                    {{ t("pages.nodes.deregisterConfirm") }}
+                </span>
+            </p>
+        </ConfirmModal>
     </PageLayout>
 </template>

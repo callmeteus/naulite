@@ -1,0 +1,11 @@
+name: sample-ci-lab
+vars:
+  S3_BUCKET: naulite-lab-artifacts
+tasks:
+  - name: stub build
+    module: build
+    targetGroup: ci-builders
+    connect: agent
+    command: ["echo", "sample-ci-lab"]
+    outputs:
+      - out/

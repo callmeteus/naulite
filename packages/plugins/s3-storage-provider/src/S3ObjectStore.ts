@@ -233,10 +233,19 @@ export class S3ObjectStore {
             return this.injectedClient;
         }
 
+        const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+        const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
         return new S3Client({
             region: config.region,
             endpoint: config.endpoint,
             forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+            credentials: accessKeyId && secretAccessKey
+                ? {
+                    accessKeyId,
+                    secretAccessKey
+                }
+                : undefined,
             ...this.defaultClientConfig
         });
     }

@@ -1,157 +1,27 @@
-# ROADMAP - Naulite sandbox de workspace
+# Roadmap
 
-Plano de referência (checkout monorepo luckymaker-workspace): `.cursor/plans/naulite_workspace_sandbox_8d94210c.plan.md` (não editar).
+Stillmark root: `packages/naulite` (`stillmark --root=packages/naulite` ou `cd packages/naulite`).
 
-Última atualização: 2026-09-22 (fechamento automatizável completo).
+Checklist técnico do sandbox Incus: [docs/SandboxWorkspaceRoadmap.md](docs/SandboxWorkspaceRoadmap.md).
 
-## Objetivo
+## Backlog
 
-Cada task `build` com `sandbox:` roda em clone Incus CoW (pai + snapshot `base`), checkout opcional, exec, collect de `outputs`, destroy no `finally`. Template `luckymaker-workspace` é o primeiro adapter LuckyMaker.
+- [ ] **R-005** Naulite lab: fases EC2 deploy (2–4) e agent MiniStack
+  priority: high · status: planned · added: 2026-10-21
+- [ ] **R-006** Naulite: webhook E7 notify no lab
+  priority: medium · status: planned · added: 2026-10-21
+- [ ] **R-007** Naulite lab: sync estático PXG
+  priority: medium · status: planned · added: 2026-10-21
 
-## Legenda
+## Deferred
 
-- [x] Concluído e coberto por teste ou script verificável
-- [~] Parcial (funciona com ressalvas documentadas)
-- [ ] Pendente (manual ou ambiente)
+## Done
 
----
-
-## 1. Schema e validação
-
-| Item | Status |
-|------|--------|
-| `TaskSandbox` / campo `sandbox` em `Task.ts` | [x] |
-| Registry `build`: `sandbox.parent` obrigatório | [x] |
-| `SandboxTemplate` / `SandboxInstance` Zod + `CreateSandboxTemplateBody` | [x] |
-| Export `@naulite/shared` | [x] |
-
----
-
-## 2. Persistência (control plane)
-
-| Item | Status |
-|------|--------|
-| Migration `018_sandbox.sql` | [x] |
-| Models + `ControlPlaneStore` + facade `ControlPlaneService.Store` | [x] |
-
----
-
-## 3. Orquestração runtime
-
-| Item | Status |
-|------|--------|
-| `SandboxService` clone / exec / collect / destroy + warm pool | [x] |
-| CoW: `isCowSandboxNode` (zfs/btrfs) | [x] |
-| Falha de exec (rc/failed) antes do collect | [x] |
-| `AgentHostExecutor` + bootstrap | [x] |
-| `BuildService.resolveSandboxNode` | [x] |
-| Build `module: build` sem `sandbox` no agent (`/tasks/command`) | [x] teste unitário |
-| Build sem `sandbox` via builder legado de imagem Docker | [~] fora do escopo sandbox; host agent command é o caminho documentado |
-
----
-
-## 4. Agent (Zig)
-
-| Item | Status |
-|------|--------|
-| Rotas `/tasks/sandbox/*` + `sandbox_executor.zig` | [x] |
-| `POST /tasks/sandbox/bake` (script bash no host) | [x] |
-| Attach `modulesVolume` no clone | [x] |
-| Profile `naulite-sandbox.yaml` | [x] |
-| Registro: `incusPoolDriver` + cap `sandbox` (probe Incus) | [x] `cp_client.zig` |
-| `zig build` agent + CLI (Zig **0.16.0** pinado) | [x] `yarn build` 19/19 com `PATH` do 0.16 |
-
----
-
-## 5. Bake dogfood
-
-| Item | Status |
-|------|--------|
-| `ensure-incus-cow-pool.sh` | [x] |
-| `bake-luckymaker-sandbox.sh` (nvm, yarn, nayr, verc, lm, volume modules) | [x] |
-| `SandboxTemplateService.triggerBake` chama agent bake | [x] teste unitário |
-| POST `/sandboxes` registrar template | [x] |
-| Smoke real Incus no host | [ ] manual (seção 9) |
-
----
-
-## 6. Cron e API
-
-| Item | Status |
-|------|--------|
-| `SandboxBakeScheduler` + `bakeCron` | [x] |
-| CP GET list / GET id / PATCH / POST create / POST bake | [x] |
-| SDK list / get / create / update / bake | [x] |
-| BFF list / GET `:id` / PATCH / POST / bake | [x] |
-
----
-
-## 7. UI admin
-
-| Item | Status |
-|------|--------|
-| API/BFF sandboxes (lista, edit, bake) | [x] |
-| Página `/sandboxes` fora do menu (fluxo integrado em Entrega / runs) | [x] |
-| Run Tower: nome clone Incus | [x] |
-
----
-
-## 8. Fixtures e testes unitários
-
-| Item | Status |
-|------|--------|
-| Fixture YAML frontend sandbox | [x] |
-| `SandboxService` happy / sad / paralelo / exec fail / warm 0 | [x] |
-| `SandboxBakeScheduler` | [x] |
-| `SandboxTemplateService.triggerBake` | [x] |
-| `BuildService.resolveSandboxNode` | [x] |
-| `AgentHostExecutor` sandbox vs command vs build sem sandbox | [x] |
-| Suite dedicada (comando abaixo) | [x] **23 testes** |
-
-```bash
-yarn test:unit \
-  tests/unit/control-plane/SandboxService.test.ts \
-  tests/unit/control-plane/SandboxBakeScheduler.test.ts \
-  tests/unit/control-plane/SandboxTemplateService.test.ts \
-  tests/unit/control-plane/BuildService.sandbox.test.ts \
-  tests/unit/orchestration/TaskModuleRegistry.sandbox.test.ts \
-  tests/unit/ui/RunPresentation.sandbox.test.ts \
-  tests/unit/dogfood/LuckymakerFrontendSandboxFixture.test.ts \
-  tests/unit/runtime/AgentHostExecutor.test.ts \
-  tests/unit/control-plane/HostExecutorBootstrap.test.ts
-```
-
-Build monorepo (TS + agent):
-
-```bash
-# Instalar Zig 0.16.0 no PATH (pin do repo)
-export PATH="/caminho/para/zig-x86_64-linux-0.16.0:$PATH"
-yarn build
-```
-
----
-
-## 9. Verificação manual (operador)
-
-Somente com host Incus (zfs/btrfs) e credenciais git/lm. Não roda em CI genérico.
-
-| Passo | Status |
-|-------|--------|
-| `./dogfood/scripts/bake-luckymaker-sandbox.sh` | [ ] |
-| `POST /sandboxes` + apply fixture pipeline | [ ] |
-| `incus list` sem orphan `build-*` | [ ] |
-| Browser Entrega + run com sandbox no Tower | [ ] |
-
----
-
-## 10. Fora de escopo
-
-Firecracker, QEMU, Incus VM, overlay sujo, substituir `BuildService` de imagem Docker, multi-tenant untrusted.
-
----
-
-## Histórico
-
-- **2026-09-22**: Implementação inicial (schema, CP, agent, UI, cron, fixture).
-- **2026-09-22**: ROADMAP; gaps TS/SDK; POST template; exec fail; probe Incus; testes extras.
-- **2026-09-22**: CLI `exec_stream` termios Zig 0.16; Vite `build.target: es2022`; `yarn build` monorepo verde.
+- [x] **R-001** Naulite lab: Tower UI com BFF (proxy /api) e doc de login no dogfood/lab
+  priority: medium · status: done · done: 2026-10-21
+- [x] **R-002** Naulite UI: i18n dos kinds de pipeline run (ci_pipeline, etc.)
+  priority: medium · status: done · done: 2026-10-21
+- [x] **R-003** Naulite: remover registro de node e abandonar provision na UI/CP
+  priority: medium · status: done · done: 2026-10-21
+- [x] **R-004** Naulite público: LuckyMaker só local (gitignore dogfood/lab, fixtures sample, bake-dev-sandbox)
+  priority: medium · status: done · done: 2026-10-21

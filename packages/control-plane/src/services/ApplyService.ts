@@ -11,6 +11,8 @@ import { NetworkGroupId } from "../orchestration/NetworkGroupId";
 import type { PlannerDiff } from "../orchestration/Planner";
 import { TargetGroupResolver } from "../orchestration/TargetGroupResolver";
 
+import { ManifestInterpolator } from "../gitops/ManifestInterpolator";
+
 import { AgentDispatcher, type AgentDispatchResult } from "./AgentDispatcher";
 import { formatRolloutDispatchFailureMessage, explainDispatchFailure } from "./ApplyDispatchFailureMessage";
 import { ApplyPlaybookRunner } from "./ApplyPlaybookRunner";
@@ -53,6 +55,7 @@ export interface ApplyExecuteOptions {
     rolledBackFromId?: string;
     buildContextRoot?: string;
     runId?: string;
+    playbookVars?: Record<string, string>;
 }
 
 /**
@@ -397,7 +400,25 @@ export namespace ApplyService {
         } else
         // Playbook owns run completion, including awaiting_approval gates
         if ((manifest.tasks ?? []).length > 0) {
-            await ApplyPlaybookRunner.runIfPresent(applyRun.id, manifest);
+            const playbookManifest = buildPlaybookManifest(manifest, options);
+            const playbookStatus = await ApplyPlaybookRunner.runIfPresent(
+                applyRun.id,
+                playbookManifest,
+                undefined,
+                {
+                    vars: playbookManifest.vars,
+                    ownsRunLifecycle: !options.runId
+                }
+            );
+
+            if (playbookStatus === "failed") {
+                const failedRun = await PipelineRunService.getRun(applyRun.id);
+                const errorMessage = failedRun?.errorMessage ?? "Deploy playbook failed.";
+
+                throw new HTTP503Error(errorMessage, {
+                    runId: applyRun.id
+                });
+            }
         } else {
             RolloutWatcher.watch(applyRun.id, watchedInstanceIds);
         }
@@ -1012,5 +1033,33 @@ export namespace ApplyService {
         return {
             allFailed: instanceIds.length > 0 && dispatchedCount === 0
         };
+    }
+
+    /**
+     * Interpolates playbook tasks and vars before execution on agents.
+     *
+     * @param manifest Parsed apply manifest
+     * @param options Apply options with branch, commit, and extra vars
+     * @returns Manifest ready for ApplyStageRunner
+     */
+    function buildPlaybookManifest(manifest: Manifest, options: ApplyExecuteOptions): Manifest {
+        const mergedVars: Record<string, string> = {
+            ...(manifest.vars ?? {}),
+            ...(options.playbookVars ?? {})
+        };
+
+        if (options.branch) {
+            mergedVars.BRANCH = options.branch;
+        }
+
+        if (options.commitSha) {
+            mergedVars.COMMIT_SHA = options.commitSha;
+        }
+
+        const interpolated = ManifestInterpolator.interpolate(manifest, {
+            vars: mergedVars
+        });
+
+        return ManifestInterpolator.coerceNumericFields(interpolated) as Manifest;
     }
 }

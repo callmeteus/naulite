@@ -12,15 +12,22 @@ export namespace NodeAgentUrlResolver {
         const trimmed = registeredAgentUrl.replace(/\/$/, "");
         const viaHost = process.env.NAULITE_AGENT_FETCH_VIA_HOST?.trim();
 
-        if (!viaHost) {
-            return trimmed;
-        }
-
         let parsed: URL;
 
         try {
             parsed = new URL(trimmed);
         } catch {
+            return trimmed;
+        }
+
+        // Agents in Docker often register host.docker.internal; a host-native control plane reaches them on loopback.
+        if (parsed.hostname.toLowerCase() === "host.docker.internal") {
+            parsed.hostname = "127.0.0.1";
+
+            return parsed.toString().replace(/\/$/, "");
+        }
+
+        if (!viaHost) {
             return trimmed;
         }
 

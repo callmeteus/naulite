@@ -140,6 +140,25 @@ export {
 } from "./TargetGroup";
 
 export {
+    PipelineDefinitionSchema,
+    PipelineGeneratorSchema,
+    PipelineStageSchema,
+    PipelineJobSchema,
+    PipelineFanoutRuleSchema,
+    PipelineRolloutSchema,
+    PipelineJobStepSchema,
+    PipelineCoalesceSchema,
+    type PipelineDefinition,
+    type PipelineGenerator,
+    type PipelineStage,
+    type PipelineJob,
+    type PipelineJobStep,
+    type PipelineFanoutRule,
+    type PipelineMatchExpression,
+    type PipelineRollout
+} from "./PipelineDefinition";
+
+export {
     ManifestSchema,
     ManifestServiceSchema,
     ManifestFunctionSchema,

@@ -15,10 +15,13 @@ import { useClusterStore } from "../../stores/Cluster";
 import { formatRunElapsed } from "../../utils/RunPresentation";
 import {
     formatRunsListLaunchedBy,
+    isPipelineRunKind,
+    pipelineRunKindLabel,
+    RUNS_LIST_KIND_FILTER_VALUES,
     RUNS_LIST_STATUS_FILTER_VALUES
 } from "../../utils/RunsListPresentation";
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
@@ -91,21 +94,9 @@ watch(
 function applyRouteQuery(): void {
     const kind = String(route.query.kind ?? "");
 
-    if (kind === "ci_build" || kind === "apply" || kind === "gitops_sync" || kind === "node_event") {
+    if (isPipelineRunKind(kind)) {
         kindFilter.value = kind;
     }
-}
-
-/**
- * Returns a localized label for a pipeline run kind.
- *
- * @param kind Pipeline run kind
- * @returns Localized label
- */
-function kindLabel(kind: string): string {
-    const key = `pages.runs.kinds.${kind}`;
-
-    return t(key) === key ? kind : t(key);
 }
 
 /**
@@ -191,10 +182,13 @@ const emptyActionLabelKey = computed(() => {
                 <span class="label-text">{{ t("pages.runs.kindFilter") }}</span>
                 <select v-model="kindFilter" class="select select-bordered select-sm w-full">
                     <option value="">{{ t("pages.runs.filterAll") }}</option>
-                    <option value="ci_build">{{ t("pages.runs.kinds.ci_build") }}</option>
-                    <option value="apply">{{ t("pages.runs.kinds.apply") }}</option>
-                    <option value="gitops_sync">{{ t("pages.runs.kinds.gitops_sync") }}</option>
-                    <option value="node_event">{{ t("pages.runs.kinds.node_event") }}</option>
+                    <option
+                        v-for="kind in RUNS_LIST_KIND_FILTER_VALUES"
+                        :key="kind"
+                        :value="kind"
+                    >
+                        {{ pipelineRunKindLabel(t, te, kind) }}
+                    </option>
                 </select>
             </label>
             <label class="form-control w-full max-w-xs">
@@ -271,7 +265,7 @@ const emptyActionLabelKey = computed(() => {
                                         {{ run.id }}
                                     </RouterLink>
                                 </td>
-                                <td>{{ kindLabel(run.kind) }}</td>
+                                <td>{{ pipelineRunKindLabel(t, te, run.kind) }}</td>
                                 <td><StatusPill :status="run.status" /></td>
                                 <td>{{ run.serviceName ?? run.manifestName ?? "-" }}</td>
                                 <td class="whitespace-nowrap text-sm text-base-content/80">

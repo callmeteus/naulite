@@ -13,3 +13,12 @@ data/
 **/control-plane.db
 *.db-wal
 *.db-shm
+
+# LuckyMaker-only dogfood (keep in private monorepo; never push to public Naulite)
+dogfood/fixtures/luckymaker-frontend-sandbox.yaml
+tests/fixtures/luckymaker-backend.naulite.yml
+tests/unit/dogfood/LuckymakerFrontendSandboxFixture.test.ts
+
+# Stillmark
+.stillmark/plans/
+.stillmark/learnings/design/

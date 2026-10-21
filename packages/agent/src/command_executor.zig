@@ -16,10 +16,22 @@ pub const CommandTaskResult = struct {
 /// Executes a playbook `command` module payload from the control plane.
 ///
 /// @param allocator Allocator for JSON and captured output
-/// @param body JSON body with a `command` argv array
+/// @param body JSON body with a `command` argv array and optional `env` map
 /// @returns JSON body with rc, stdout, and stderr
 pub fn executeCommandTask(allocator: std.mem.Allocator, body: []const u8) !CommandTaskResult {
-    const argv = readCommandArgv(allocator, body) catch |err| {
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch |err| {
+        log_command.debug("invalid command payload err={s}", .{@errorName(err)});
+        return failedResult(allocator, "Invalid command task payload.");
+    };
+    defer parsed.deinit();
+
+    const root = parsed.value;
+
+    if (root != .object) {
+        return failedResult(allocator, "Invalid command task payload.");
+    }
+
+    const argv = readCommandArgvFromRoot(allocator, root) catch |err| {
         log_command.debug("invalid command payload err={s}", .{@errorName(err)});
         return failedResult(allocator, "Invalid command task payload.");
     };
@@ -29,9 +41,32 @@ pub fn executeCommandTask(allocator: std.mem.Allocator, body: []const u8) !Comma
         return failedResult(allocator, "command must not be empty");
     }
 
+    var env_map: ?std.process.EnvMap = null;
+    var env_map_active = false;
+    errdefer if (env_map_active) env_map.?.deinit();
+
+    if (readTaskEnvOverrides(allocator, root)) |overrides| {
+        defer freeEnvOverrides(allocator, overrides);
+
+        if (overrides.len > 0) {
+            env_map = try std.process.getEnvMap(allocator);
+            env_map_active = true;
+
+            for (overrides) |entry| {
+                try env_map.?.put(entry.key, entry.value);
+            }
+        }
+    } else |err| {
+        log_command.debug("invalid env payload err={s}", .{@errorName(err)});
+        return failedResult(allocator, "Invalid command task payload.");
+    }
+
     log_command.debug("execute argv0={s} argc={d}", .{ argv[0], argv.len });
 
-    const captured = process_cmd.runCapture(allocator, argv) catch |err| {
+    const env_ptr: ?*const std.process.EnvMap = if (env_map_active) &env_map.? else null;
+    defer if (env_map_active) env_map.?.deinit();
+
+    const captured = process_cmd.runCaptureEnv(allocator, argv, env_ptr) catch |err| {
         log_command.debug("command spawn failed argv0={s} err={s}", .{ argv[0], @errorName(err) });
         return failedResult(allocator, "Command execution failed.");
     };
@@ -78,12 +113,12 @@ fn failedResult(allocator: std.mem.Allocator, message: []const u8) !CommandTaskR
     };
 }
 
-fn readCommandArgv(allocator: std.mem.Allocator, body: []const u8) ![]const []const u8 {
-    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, body, .{});
-    defer parsed.deinit();
+const EnvOverride = struct {
+    key: []const u8,
+    value: []const u8,
+};
 
-    const root = parsed.value;
-
+fn readCommandArgvFromRoot(allocator: std.mem.Allocator, root: std.json.Value) ![]const []const u8 {
     if (root != .object) {
         return error.InvalidCommandTask;
     }
@@ -122,6 +157,59 @@ fn readCommandArgv(allocator: std.mem.Allocator, body: []const u8) ![]const []co
     }
 
     return argv;
+}
+
+/// Reads optional string env overrides from a command task body.
+///
+/// @param allocator Allocator for duplicated keys and values
+/// @param root Parsed JSON root object
+/// @returns Owned override list (empty when `env` is absent)
+fn readTaskEnvOverrides(allocator: std.mem.Allocator, root: std.json.Value) ![]EnvOverride {
+    if (root != .object) {
+        return error.InvalidCommandTask;
+    }
+
+    const env_value = root.object.get("env") orelse {
+        return try allocator.alloc(EnvOverride, 0);
+    };
+
+    if (env_value != .object) {
+        return error.InvalidCommandTask;
+    }
+
+    var overrides: std.ArrayList(EnvOverride) = .empty;
+    errdefer {
+        for (overrides.items) |entry| {
+            allocator.free(entry.key);
+            allocator.free(entry.value);
+        }
+
+        overrides.deinit(allocator);
+    }
+
+    var iterator = env_value.object.iterator();
+
+    while (iterator.next()) |entry| {
+        if (entry.value_ptr.* != .string) {
+            return error.InvalidCommandTask;
+        }
+
+        try overrides.append(allocator, .{
+            .key = try allocator.dupe(u8, entry.key_ptr.*),
+            .value = try allocator.dupe(u8, entry.value_ptr.string),
+        });
+    }
+
+    return try overrides.toOwnedSlice(allocator);
+}
+
+fn freeEnvOverrides(allocator: std.mem.Allocator, overrides: []EnvOverride) void {
+    for (overrides) |entry| {
+        allocator.free(entry.key);
+        allocator.free(entry.value);
+    }
+
+    allocator.free(overrides);
 }
 
 fn freeArgv(allocator: std.mem.Allocator, argv: []const []const u8) void {
@@ -164,6 +252,22 @@ test "command executor runs echo" {
     try std.testing.expectEqualStrings("succeeded", result.status);
     try std.testing.expect(std.mem.indexOf(u8, result.body, "gated-before") != null);
     try std.testing.expect(std.mem.indexOf(u8, result.body, "\"failed\":false") != null);
+}
+
+test "command executor applies env overrides" {
+    const allocator = std.testing.allocator;
+    const result = try executeCommandTask(
+        allocator,
+        "{\"command\":[\"/bin/sh\",\"-c\",\"printf %s \\\"$TASK_ENV_PROBE\\\"\"],\"env\":{\"TASK_ENV_PROBE\":\"from-payload\"}}",
+    );
+    defer allocator.free(result.status);
+    defer allocator.free(result.body);
+    if (result.error_message) |error_message| {
+        defer allocator.free(error_message);
+    }
+
+    try std.testing.expectEqualStrings("succeeded", result.status);
+    try std.testing.expect(std.mem.indexOf(u8, result.body, "from-payload") != null);
 }
 
 test "command executor rejects empty argv" {

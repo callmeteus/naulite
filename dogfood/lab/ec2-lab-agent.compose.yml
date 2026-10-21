@@ -1,0 +1,26 @@
+services:
+  ec2-lab-agent:
+    build:
+      context: ../..
+      dockerfile: dogfood/lab/ec2-lab-agent.Dockerfile
+    restart: unless-stopped
+    environment:
+      NAULITE_CP_URL: ${NAULITE_CP_URL:-http://host.docker.internal:18080}
+      NAULITE_API_KEY: ${NAULITE_API_KEY:-naulite-dev-agent}
+      NODE_ID: ${NAULITE_DEV_AGENT_ID:?set NAULITE_DEV_AGENT_ID to the provisioned node id}
+      HOSTNAME: ${NAULITE_DEV_AGENT_HOSTNAME:-ec2-lab}
+      AGENT_URL: ${AGENT_URL:-http://127.0.0.1:${LAB_EC2_AGENT_PORT:-9471}}
+      AGENT_PORT: "9470"
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://host.docker.internal:4566}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      NETBIRD_SETUP_KEY: ${NETBIRD_SETUP_KEY:-}
+    ports:
+      - "${LAB_EC2_AGENT_PORT:-9471}:9470"
+      - "${LAB_EC2_BACKEND_PUBLISH_PORT:-9481}:3000"
+    volumes:
+      - ../../packages/agent/zig-out/bin/naulite-agent:/usr/local/bin/naulite-agent:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

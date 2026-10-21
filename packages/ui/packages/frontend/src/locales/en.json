@@ -385,7 +385,12 @@
             "rollback": "Rollback",
             "rollbackPlaceholder": "Select a revision",
             "rollbackConfirm": "Roll back to this revision?",
-            "rollbackSuccess": "Rollback started."
+            "rollbackSuccess": "Rollback started.",
+            "mockWebhookTitle": "Test webhook",
+            "mockWebhookHint": "Sends a mock push to the control plane (only when mock mode is enabled).",
+            "mockWebhookRepositoryUrl": "Repository URL",
+            "mockWebhookDeliveryId": "Delivery id (optional)",
+            "mockWebhookSubmit": "Send mock push"
         },
         "instances": {
             "title": "Instances",
@@ -596,7 +601,10 @@
             "provisionSectionHint": "Cloud instances launched by the platform to join the cluster.",
             "emptyTitle": "No nodes registered yet",
             "emptyDescription": "Nodes appear here after agents register with the control plane. Deploy workloads or provision a cloud node to get started.",
-            "emptyAction": "Go to deploy"
+            "emptyAction": "Go to deploy",
+            "deregister": "Deregister",
+            "deregisterTitle": "Deregister node?",
+            "deregisterConfirm": "This removes the node from the control plane. Workloads already running on the host are not stopped automatically."
         },
         "nodeDetail": {
             "title": "Node details",
@@ -731,6 +739,7 @@
             "backToList": "Back to list",
             "refresh": "Refresh",
             "viewStatus": "View status",
+            "removeFromHistory": "Remove",
             "detailTitle": "Provision status",
             "detailHint": "Follow launch progress until the node joins the cluster.",
             "detailSummary": "Request summary",
@@ -849,8 +858,13 @@
             "nodeStepCount": "Steps",
             "kinds": {
                 "ci_build": "Build",
-                "apply": "Deploy",
-                "gitops_sync": "Deploy",
+                "ci_pipeline": "CI pipeline",
+                "deploy": "Deploy",
+                "canary": "Canary",
+                "apply": "Manifest apply",
+                "gitops_sync": "GitOps sync",
+                "gitops_apply": "GitOps apply",
+                "infra": "Infrastructure",
                 "node_event": "Node event"
             },
             "statuses": {

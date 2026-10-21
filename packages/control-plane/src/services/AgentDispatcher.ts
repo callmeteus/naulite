@@ -2,6 +2,7 @@ import type { ExecutionPlan, Node } from "@naulite/shared";
 
 import { formatAgentHttpFailureMessage } from "@naulite/shared";
 
+import { HostProcessDispatcher } from "./HostProcessDispatcher";
 import { NodeAgentUrlResolver } from "./NodeAgentUrlResolver";
 
 /**
@@ -192,5 +193,21 @@ export namespace AgentDispatcher {
         }
 
         return results;
+    }
+
+    /**
+     * Runs a shell command on a node agent (`/tasks/command`).
+     *
+     * @param node Target node
+     * @param command argv vector
+     * @param chdir Optional working directory
+     * @returns Agent response body
+     */
+    export async function dispatchCommand(
+        node: Node,
+        command: string[],
+        chdir?: string
+    ): Promise<Record<string, unknown>> {
+        return HostProcessDispatcher.dispatchCommand(node, command, chdir);
     }
 }

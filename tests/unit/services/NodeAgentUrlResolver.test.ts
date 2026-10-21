@@ -8,6 +8,11 @@ describe("NodeAgentUrlResolver", () => {
             .toBe("http://100.79.236.16:9470");
     });
 
+    it("rewrites host.docker.internal to loopback for host-native control planes", () => {
+        expect(NodeAgentUrlResolver.resolveControlPlaneFetchUrl("http://host.docker.internal:9474"))
+            .toBe("http://127.0.0.1:9474");
+    });
+
     it("rewrites loopback and NetBird agent URLs through the dev ingress host", () => {
         const previousHost = process.env.NAULITE_AGENT_FETCH_VIA_HOST;
         process.env.NAULITE_AGENT_FETCH_VIA_HOST = "host.docker.internal";

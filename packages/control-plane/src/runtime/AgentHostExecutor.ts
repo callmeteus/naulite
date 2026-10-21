@@ -2,6 +2,7 @@ import type { Node, Task } from "@naulite/shared";
 
 import { ControlPlaneService } from "../ControlPlaneService";
 import { Logger } from "../Logger";
+import { AgentPlaybookCommandBuilder } from "../services/deploy-playbook/AgentPlaybookCommandBuilder";
 import { AgentProxyService } from "../services/AgentProxyService";
 import { SandboxService, type SandboxBuildContext } from "../services/SandboxService";
 
@@ -73,6 +74,37 @@ export class AgentHostExecutor implements HostExecutor {
             if (result.failed || (result.rc !== undefined && result.rc !== 0)) {
                 const detail = result.stderr?.trim() || result.stdout?.trim() || `exit ${result.rc ?? 1}`;
                 throw new Error(`Build failed on ${node.id}: ${detail}`);
+            }
+
+            return {
+                changed: result.changed ?? true,
+                failed: false,
+                rc: result.rc ?? 0,
+                stdout: result.stdout ?? ""
+            };
+        }
+
+        const playbookArgv = AgentPlaybookCommandBuilder.buildArgv(task);
+
+        if (playbookArgv) {
+            const node = await resolveAgentNode(nodeId);
+            const agentUrl = node.agentUrl;
+
+            if (!agentUrl) {
+                throw new Error(`Node ${node.id} does not expose an agent URL.`);
+            }
+
+            const raw = await AgentProxyService.postTask(agentUrl, "/tasks/command", {
+                command: playbookArgv,
+                chdir: task.chdir,
+                env: AgentPlaybookCommandBuilder.buildEnv(task),
+                context
+            });
+            const result = parseCommandResult(raw);
+
+            if (result.failed || (result.rc !== undefined && result.rc !== 0)) {
+                const detail = result.stderr?.trim() || result.stdout?.trim() || `exit ${result.rc ?? 1}`;
+                throw new Error(`Task ${task.name} failed on ${node.id}: ${detail}`);
             }
 
             return {
@@ -195,7 +227,9 @@ async function resolveAgentNode(nodeId: string): Promise<Node> {
 
     if (nodeId === "local") {
         const nodes = await ControlPlaneService.Store.listNodes();
-        const localNode = nodes.find((node) => Boolean(node.agentUrl));
+        const localNode = nodes.find((node) => {
+            return node.status === "online" && Boolean(node.agentUrl);
+        });
 
         if (localNode) {
             return requireAgentUrl(localNode);

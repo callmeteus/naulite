@@ -1,5 +1,8 @@
 import { execFile } from "node:child_process";
+import { cp, mkdir } from "node:fs/promises";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
+
 import { Logger } from "../Logger";
 const logGitops = Logger.create("gitops");
 
@@ -79,6 +82,10 @@ export namespace GitRepository {
             workDir
         );
 
+        if (shouldCopyFileRepository(repositoryUrl)) {
+            return copyFileRepositoryCheckout(repositoryUrl, workDir, commitSha);
+        }
+
         if (commitSha) {
             await runner.exec(["clone", repositoryUrl, workDir]);
             await runner.exec(["checkout", commitSha], { cwd: workDir });
@@ -99,6 +106,49 @@ export namespace GitRepository {
         const resolvedSha = stdout.trim();
 
         logGitops.debug("checkout resolved commitSha=%s", resolvedSha);
+
+        return { commitSha: resolvedSha };
+    }
+
+    /**
+     * Returns whether file:// checkouts should copy the tree instead of git clone.
+     *
+     * @param repositoryUrl Repository URL from the webhook
+     * @returns True when NAULITE_GITOPS_FILE_COPY is enabled for file URLs
+     */
+    function shouldCopyFileRepository(repositoryUrl: string): boolean {
+        const enabled = process.env.NAULITE_GITOPS_FILE_COPY?.trim().toLowerCase();
+
+        if (enabled !== "1" && enabled !== "true" && enabled !== "on") {
+            return false;
+        }
+
+        return repositoryUrl.startsWith("file://");
+    }
+
+    /**
+     * Copies a local directory into the GitOps work dir (lab file:// repos).
+     *
+     * @param repositoryUrl file:// source directory
+     * @param workDir Destination checkout directory
+     * @param commitSha Optional commit label to return
+     * @returns Resolved commit SHA label
+     */
+    async function copyFileRepositoryCheckout(
+        repositoryUrl: string,
+        workDir: string,
+        commitSha?: string
+    ): Promise<GitCloneCheckoutResult> {
+        const sourcePath = fileURLToPath(repositoryUrl);
+        await mkdir(workDir, { recursive: true });
+        await cp(sourcePath, workDir, {
+            recursive: true,
+            force: true
+        });
+
+        const resolvedSha = commitSha?.trim() || "local";
+
+        logGitops.debug("file copy checkout source=%s workDir=%s commitSha=%s", sourcePath, workDir, resolvedSha);
 
         return { commitSha: resolvedSha };
     }

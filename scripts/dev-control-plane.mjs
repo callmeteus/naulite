@@ -4,7 +4,7 @@
  * Defaults to 18080 so it does not collide with other Fastify apps on 8080.
  * Reuses traefik-mock and an existing control plane when their health checks pass.
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,7 +25,13 @@ const controlPlaneHost = process.env.HOST;
 process.env.NAULITE_BOOTSTRAP_ADMIN_USERNAME ??= "admin@example.com";
 process.env.NAULITE_BOOTSTRAP_ADMIN_PASSWORD ??= "admin";
 process.env.NAULITE_AGENT_API_KEY ??= DevAgentHelpers.DEFAULT_API_KEY;
+process.env.NAULITE_GITOPS_FILE_COPY ??= "1";
+process.env.NAULITE_WEBHOOK_GITEA ??= "on";
 process.env.NAULITE_ALLOW_DOCKER_BRIDGE ??= "1";
+process.env.AWS_ENDPOINT_URL ??= "http://127.0.0.1:4566";
+process.env.AWS_ACCESS_KEY_ID ??= "test";
+process.env.AWS_SECRET_ACCESS_KEY ??= "test";
+process.env.AWS_REGION ??= "us-east-1";
 process.env.NAULITE_NETBIRD_MOCK ??= "1";
 process.env.NAULITE_PUBLIC_URL ??= `http://127.0.0.1:${controlPlanePort}`;
 process.env.NETBIRD_PUBLIC_MANAGEMENT_URL ??= "http://127.0.0.1:9081";
@@ -72,6 +78,63 @@ async function waitForHealthy(url, timeoutMs = 10_000) {
     }
 
     throw new Error(`Service did not become ready at ${url}`);
+}
+
+/**
+ * Returns whether a TCP port has at least one listener on this host (Linux `fuser`).
+ *
+ * @param port TCP port number
+ * @returns `true` when something is bound to the port
+ */
+function isTcpPortInUse(port) {
+    if (process.platform === "win32") {
+        return false;
+    }
+
+    const result = spawnSync("fuser", [`${port}/tcp`], {
+        stdio: "ignore"
+    });
+
+    return result.status === 0;
+}
+
+/**
+ * Sends SIGKILL to processes listening on a TCP port so dev can bind again.
+ *
+ * @param port TCP port number
+ * @returns Nothing.
+ */
+function releaseTcpPort(port) {
+    if (process.platform === "win32") {
+        return;
+    }
+
+    spawnSync("fuser", ["-k", `${port}/tcp`], {
+        stdio: "inherit"
+    });
+}
+
+/**
+ * Waits until an HTTP health endpoint stops responding successfully.
+ *
+ * @param url Health check URL
+ * @param timeoutMs Maximum wait time in milliseconds
+ * @returns Nothing.
+ */
+async function waitForHealthDown(url, timeoutMs = 8_000) {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+        if (!await isHealthy(url)) {
+            return;
+        }
+
+        await new Promise((resolve) => {
+            setTimeout(resolve, 100);
+        });
+    }
+
+    console.warn(`[dev] port listener still responds at ${url} after release; starting anyway may fail.`);
 }
 
 /**
@@ -262,19 +325,23 @@ if (canReuseControlPlane && await isHealthy(controlPlaneHealthUrl)) {
     console.log(`[dev] reusing control plane at http://${controlPlaneHost}:${controlPlanePort}`);
     console.warn("[dev] Reused control plane will not reload code until you stop it or unset NAULITE_DEV_REUSE.");
 } else {
-    if (!canReuseControlPlane && await isHealthy(controlPlaneHealthUrl)) {
-        console.warn(
-            `[dev] control plane already listening on http://${controlPlaneHost}:${controlPlanePort}; starting a watched instance is skipped. Stop the other process or set NAULITE_DEV_REUSE=1 to reuse it.`
-        );
-    } else {
-        managingDevControlPlane = true;
+    const portBusy = isTcpPortInUse(controlPlanePort) || await isHealthy(controlPlaneHealthUrl);
 
-        if (buildControlPlane({ includeProviders: true })) {
-            server = await startControlPlaneServer();
-            console.log(`[dev] Naulite control plane listening on http://${server.host}:${server.port}`);
-        } else {
-            console.error("[dev] control plane build failed; fix TypeScript errors and save to retry.");
-        }
+    if (portBusy) {
+        console.log(
+            `[dev] replacing listener on port ${controlPlanePort} (NAULITE_DEV_REUSE is off; fresh build + watch reload)`
+        );
+        releaseTcpPort(controlPlanePort);
+        await waitForHealthDown(controlPlaneHealthUrl);
+    }
+
+    managingDevControlPlane = true;
+
+    if (buildControlPlane({ includeProviders: true })) {
+        server = await startControlPlaneServer();
+        console.log(`[dev] Naulite control plane listening on http://${server.host}:${server.port}`);
+    } else {
+        console.error("[dev] control plane build failed; fix TypeScript errors and save to retry.");
     }
 }
 

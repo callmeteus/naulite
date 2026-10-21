@@ -27,6 +27,19 @@ export namespace NotificationDestinationRuntime {
                 : destination.allowedKinds
         }));
 
+        const e7WebhookUrl = process.env.NAULITE_E7_NOTIFY_WEBHOOK_URL?.trim();
+
+        if (e7WebhookUrl) {
+            entries.push({
+                id: "e7-webhook",
+                provider: new WebhookNotificationProvider({
+                    webhookUrl: e7WebhookUrl,
+                    webhookSecret: process.env.NAULITE_E7_NOTIFY_WEBHOOK_SECRET?.trim()
+                }),
+                allowedKinds: null
+            });
+        }
+
         RunNotificationDispatcher.replaceAll(entries);
         logNotifications.debug("destinations synced count=%d", entries.length);
     }

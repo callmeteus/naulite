@@ -1,0 +1,15 @@
+name: sample-frontend-sandbox
+tasks:
+  - name: yarn build
+    module: build
+    targetGroup: ci-builders
+    connect: agent
+    sandbox:
+      parent: naulite-dev-workspace
+      workdir: /workspace
+      checkout:
+        root: naulite-dev-workspace
+        branch: "${GIT_BRANCH}"
+    command: ["yarn", "build"]
+    outputs:
+      - sample-frontend/dist/

@@ -5,6 +5,7 @@ import { CronExpressionSchema, DurationSchema, SecretReferenceSchema } from "./C
 import { AppsCatalogSchema, ManifestVarsSchema } from "./ComposeExtends";
 import { IngressSchema } from "./Ingress";
 import { LogRotationPolicySchema } from "./LogRotationTask";
+import { PipelineDefinitionSchema } from "./PipelineDefinition";
 import { TaskSchema } from "./Task";
 
 /**
@@ -78,15 +79,10 @@ export const BuildOptionsSchema = ManifestBuildBaseSchema.omit({ context: true }
 });
 
 /**
- * Optional per-manifest notification overrides.
+ * @deprecated Use PipelineDefinitionSchema.notifications instead.
  */
-export const ManifestPipelineNotificationsSchema = z.object({
-    notifications: z.object({
-        slack: z.object({
-            enabled: z.boolean().default(true),
-            channel: z.string().optional()
-        }).optional()
-    }).optional()
+export const ManifestPipelineNotificationsSchema = PipelineDefinitionSchema.pick({
+    notifications: true
 });
 
 /**
@@ -237,5 +233,5 @@ export const ManifestSchema = z.object({
     networks: z.record(z.string(), ManifestNetworkSchema).default({}),
     registries: z.record(z.string(), ManifestRegistrySchema).default({}),
     defaults: ManifestDefaultsSchema.optional(),
-    pipeline: ManifestPipelineNotificationsSchema.optional()
+    pipeline: PipelineDefinitionSchema.optional()
 });

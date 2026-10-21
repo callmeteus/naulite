@@ -209,6 +209,14 @@ export namespace ControlPlaneService {
 
         /**
          * @param nodeId Node identifier
+         * @returns Whether the node was deregistered
+         */
+        export function deleteNode(nodeId: string): ReturnType<ControlPlaneStore["deleteNode"]> {
+            return backing().deleteNode(nodeId);
+        }
+
+        /**
+         * @param nodeId Node identifier
          * @returns Cached host inventory when present
          */
         export function getHostInventory(nodeId: string): ReturnType<ControlPlaneStore["getHostInventory"]> {
@@ -871,6 +879,16 @@ export namespace ControlPlaneService {
             id: string
         ): ReturnType<ControlPlaneContext["nodeProvisionService"]["terminateProvision"]> {
             return ControlPlaneService.requireContext().nodeProvisionService.terminateProvision(id);
+        }
+
+        /**
+         * @param id Provision identifier
+         * @returns Deletion acknowledgement
+         */
+        export function abandonProvision(
+            id: string
+        ): ReturnType<ControlPlaneContext["nodeProvisionService"]["abandonProvision"]> {
+            return ControlPlaneService.requireContext().nodeProvisionService.abandonProvision(id);
         }
 
         /**

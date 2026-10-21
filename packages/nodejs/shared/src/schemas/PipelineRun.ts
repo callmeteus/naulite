@@ -16,6 +16,9 @@ export const PipelineRunStatusSchema = z.enum([
  */
 export const PipelineRunKindSchema = z.enum([
     "ci_build",
+    "ci_pipeline",
+    "deploy",
+    "canary",
     "apply",
     "gitops_sync",
     "gitops_apply",
@@ -45,7 +48,18 @@ export const PipelineEventKindSchema = z.enum([
     "deploy.step.started",
     "deploy.step.finished",
     "deploy.step.failed",
-    "deploy.gate.awaiting"
+    "deploy.gate.awaiting",
+    "ci.pipeline.started",
+    "ci.pipeline.finished",
+    "ci.stage.started",
+    "ci.stage.finished",
+    "ci.job.started",
+    "ci.job.finished",
+    "ci.item.selected",
+    "canary.item.started",
+    "canary.item.finished",
+    "canary.soak.started",
+    "canary.soak.finished"
 ]);
 
 /**

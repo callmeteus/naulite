@@ -427,6 +427,19 @@ export class NauliteClient {
     }
 
     /**
+     * Deregisters a node from the control plane.
+     *
+     * @param nodeId Node identifier
+     * @returns Deletion acknowledgement
+     */
+    async deleteNode(nodeId: string): Promise<{ deleted: true; id: string }> {
+        return this.request<{ deleted: true; id: string }>(
+            "DELETE",
+            `/nodes/${encodeURIComponent(nodeId)}`
+        );
+    }
+
+    /**
      * Returns the cached host package inventory for a node.
      *
      * @param nodeId Node identifier
@@ -1356,11 +1369,18 @@ export class NauliteClient {
     }
 
     /**
-     * Terminates a cloud instance for a node provision request.
+     * Removes a node provision from history (and terminates the VM when applicable).
      *
      * @param provisionId Node provision identifier
-     * @returns Updated node provision record
+     * @returns Deletion acknowledgement
      */
+    async abandonNodeProvision(provisionId: string): Promise<{ deleted: true; id: string }> {
+        return this.request<{ deleted: true; id: string }>(
+            "DELETE",
+            `/nodes/provisions/${encodeURIComponent(provisionId)}`
+        );
+    }
+
     async terminateNodeProvision(provisionId: string): Promise<NodeProvision> {
         return this.request<NodeProvision>(
             "POST",
@@ -1483,6 +1503,16 @@ export class NauliteClient {
         const result = await this.request<ApplyResultPayload | ApplyResponse>("POST", "/gitops/webhook", payload);
 
         return normalizeApplyResponse(result);
+    }
+
+    /**
+     * Sends a mock GitOps push webhook (lab / dev only on the control plane).
+     *
+     * @param payload Webhook body matching {@link GitOpsWebhookBodySchema}
+     * @returns Control plane acceptance payload
+     */
+    async gitOpsWebhookMock(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+        return this.request<Record<string, unknown>>("POST", "/gitops/webhook/mock", payload);
     }
 
     /**

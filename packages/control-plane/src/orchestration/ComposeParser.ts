@@ -2,6 +2,7 @@ import { parse as parseYaml } from "yaml";
 import { ZodError } from "zod";
 import {
     ManifestSchema,
+    PipelineDefinitionSchema,
     TaskSchema,
     type Manifest,
     type ManifestBuild,
@@ -353,25 +354,13 @@ export class ComposeParser {
             return undefined;
         }
 
-        const pipeline = rawPipeline as Record<string, unknown>;
-        const notifications = pipeline.notifications as Record<string, unknown> | undefined;
+        const parsed = PipelineDefinitionSchema.safeParse(rawPipeline);
 
-        if (!notifications) {
+        if (!parsed.success) {
             return undefined;
         }
 
-        const slack = notifications.slack as Record<string, unknown> | undefined;
-
-        return {
-            notifications: slack
-                ? {
-                    slack: {
-                        enabled: slack.enabled !== false,
-                        channel: typeof slack.channel === "string" ? slack.channel : undefined
-                    }
-                }
-                : undefined
-        };
+        return parsed.data;
     }
 
     /**

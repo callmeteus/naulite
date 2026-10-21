@@ -7,7 +7,10 @@ const AGENT_DEPENDENT_RUN_KINDS = new Set<PipelineRunKind>([
     "gitops_sync",
     "gitops_apply",
     "infra",
-    "ci_build"
+    "ci_build",
+    "ci_pipeline",
+    "deploy",
+    "canary"
 ]);
 
 const UNREACHABLE_NODE_STATUSES = new Set<Node["status"]>([
