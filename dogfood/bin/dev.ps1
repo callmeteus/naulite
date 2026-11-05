@@ -104,7 +104,8 @@ if (-not $env:NAULITE_AGENT_USER) {
 }
 
 $netbirdConfig = Join-Path $dogfood "infra\netbird\config.yaml"
-if (-not (Test-Path $netbirdConfig)) {
+$netbirdDashboardEnv = Join-Path $dogfood "infra\netbird\dashboard.env"
+if (-not (Test-Path $netbirdConfig) -or -not (Test-Path $netbirdDashboardEnv)) {
     if (-not $env:NETBIRD_DOMAIN) {
         $env:NETBIRD_DOMAIN = "netbird.local"
     }
@@ -122,7 +123,7 @@ if (-not (Test-Path $netbirdConfig)) {
 
     bash "$dogfood/scripts/init-netbird-config.sh"
 } else {
-    Write-Host "[dev] NetBird config already present at infra/netbird/config.yaml"
+    Write-Host "[dev] NetBird config already present (config.yaml, dashboard.env)"
 }
 
 Write-Host "[dev] Starting docker compose (build + detached) ..."

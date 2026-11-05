@@ -42,7 +42,7 @@ On first run:
 
 1. Creates `dogfood/.env` from `.env.example` when missing.
 2. Derives `NETBIRD_PUBLIC_MANAGEMENT_URL` from NetBird env vars when unset.
-3. Bootstraps NetBird config under `infra/netbird/` when `config.yaml` is absent.
+3. Bootstraps NetBird config under `infra/netbird/` when `config.yaml` or `dashboard.env` is absent.
 4. Runs `docker compose up -d --build`.
 5. Creates `ADMIN_API_KEY` and `NETBIRD_SETUP_KEY` via control plane loopback when empty.
 

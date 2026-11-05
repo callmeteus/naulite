@@ -80,13 +80,14 @@ if [[ -z "${NAULITE_AGENT_USER:-}" ]] && [[ -S /var/run/docker.sock ]]; then
 fi
 
 NETBIRD_CONFIG="$DOGFOOD/infra/netbird/config.yaml"
-if [[ ! -f "$NETBIRD_CONFIG" ]]; then
+NETBIRD_DASHBOARD_ENV="$DOGFOOD/infra/netbird/dashboard.env"
+if [[ ! -f "$NETBIRD_CONFIG" || ! -f "$NETBIRD_DASHBOARD_ENV" ]]; then
     export NETBIRD_DOMAIN="${NETBIRD_DOMAIN:-netbird.local}"
     export NETBIRD_HTTP_PROTOCOL="${NETBIRD_HTTP_PROTOCOL:-http}"
     echo "[dev] Initializing NetBird config (NETBIRD_DOMAIN=$NETBIRD_DOMAIN) ..."
     bash "$DOGFOOD/scripts/init-netbird-config.sh"
 else
-    echo "[dev] NetBird config already present at infra/netbird/config.yaml"
+    echo "[dev] NetBird config already present (config.yaml, dashboard.env)"
 fi
 
 echo "[dev] Starting docker compose (build + detached) ..."
